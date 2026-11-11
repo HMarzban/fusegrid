@@ -579,6 +579,10 @@ export const recTabHit = (x, y, L, _page, touch) => { const m = recMod(); return
 export const scoresHit = (x, y, L, touch) => { const m = recMod(); return m ? m.scoresHit(x, y, frameOf(L, touch)) : -2; };
 /* STATS: a key code (KeyC / KeyR / KeyT), "back", "plate" (inert) or, armed, "cancel" (records.js statsHit); "plate" while loading. */
 export const statsHit = (x, y, L, arm, _tabs, touch) => { const m = recMod(); return m ? m.statsHit(x, y, frameOf(L, touch), arm) : "plate"; };
+/* A RECORDS tab's page count on this box (records.js recPages: 1 where its body fits unpaged, and while the module loads); page scores | stats | medals. */
+export const recPages = (L, touch, page) => { const m = recMod(); return m ? m.recPages(frameOf(L, touch), page) : 1; };
+/* A RECORDS tab's page keys under a tap: -1 (▲), 1 (▼), else 0. */
+export const recPageHit = (x, y, L, touch, page) => { const m = recMod(); return m ? m.pageKeyHit(x, y, frameOf(L, touch), page) : 0; };
 /* A lazy page's stand-in (R20): the room of level opaque over the box (MENU's own layer when MENU last painted this box), one small kit plate and
    LOADING, so a covered frame never shows a frozen board. */
 function recLoading(c, F, level) { // RECORDS' LOADING stand-in (named apart from the SETTINGS / GRAPHICS loadingPage below; one plate is the R1 kit harmonisation's)

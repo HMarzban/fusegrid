@@ -263,6 +263,13 @@ function menuUi(app, touch, getCab) {
 
 /* FPS METER (GRAPHICS row 7) paints after every screen's chrome, GAME
    included, against the same box that screen measures with. */
+const REC_PAGE = { [SCREEN.SCORES]: "scores", [SCREEN.STATS]: "stats", [SCREEN.TROPHIES]: "medals" };
+/** A RECORDS tab's page count on the box drawShell paints it on (the same frame as the RECORDS branch below): the app's ↑ / ↓ and page keys clamp to it. */
+export function recPagesOf(canvas, kind, screen) {
+  if (!REC_PAGE[screen]) return 1;
+  const { cw, ch, lg, css } = dims(canvas, kind);
+  return menudraw.recPages(menudraw.layout(cw, ch, lg, css), touchLay(canvas), REC_PAGE[screen]);
+}
 export function drawShell(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   const s = app.screen;
   stepLookNote(app);
@@ -324,9 +331,9 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   }
   if (s === SCREEN.SCORES || s === SCREEN.STATS || s === SCREEN.TROPHIES) { // RECORDS' pages (pages/records.js): one frame for draw and tap, the room opaque under them
     const t = touchLay(canvas), Lr = menudraw.layout(cw, chh, logoY, css), focus = app.recFocus === 0 ? "tabs" : "body";
-    if (s === SCREEN.SCORES) { const sd = scoreData(app, getScores, getPlaques); return menudraw.drawScores(c, { level: app.level, focus, heat: app.scoreHeat, scores: sd.s, plaques: sd.p }, Lr, app.subT, t); }
-    if (s === SCREEN.STATS) { const st = app.stats || {}; return menudraw.drawStats(c, { level: app.level, focus, view: st.view, notes: st.notes, wipe: st.wipe, arm: !!app.resetArm, toast: app.toast && app.toast.t > 0 ? app.toast : null, unlocked: !!app.pactUnlocked }, Lr, app.subT, t); }
-    return menudraw.drawTrophies(c, { level: app.level, focus, rows: app.stats && app.stats.trophies }, Lr, app.subT, t);
+    if (s === SCREEN.SCORES) { const sd = scoreData(app, getScores, getPlaques); return menudraw.drawScores(c, { level: app.level, focus, heat: app.scoreHeat, scores: sd.s, plaques: sd.p, spage: app.recPage | 0 }, Lr, app.subT, t); }
+    if (s === SCREEN.STATS) { const st = app.stats || {}; return menudraw.drawStats(c, { level: app.level, focus, view: st.view, notes: st.notes, wipe: st.wipe, arm: !!app.resetArm, toast: app.toast && app.toast.t > 0 ? app.toast : null, unlocked: !!app.pactUnlocked, spage: app.recPage | 0 }, Lr, app.subT, t); }
+    return menudraw.drawTrophies(c, { level: app.level, focus, rows: app.stats && app.stats.trophies, spage: app.recPage | 0 }, Lr, app.subT, t);
   }
   const L = menudraw.layout(cw, chh, logoY);
   if (s === SCREEN.LEVEL) {

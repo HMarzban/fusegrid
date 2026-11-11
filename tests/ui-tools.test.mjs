@@ -559,7 +559,7 @@ test("screens: exemptPhone exempts on .phone captures only, on the same rules (R
 });
 
 test("screens: every name has a recipe and a state; aliases; capture names round trip", () => {
-  assert.deepEqual(ORDER, ["title", "menu", "level", "options", "graphics", "controls", "guide", "howto", "items", "enemies", "floor", "scores", "stats", "statsreset", "medals", "scoresfull", "statsfull", "play", "pause", "win", "lose"]);
+  assert.deepEqual(ORDER, ["title", "menu", "level", "options", "graphics", "controls", "guide", "howto", "items", "enemies", "floor", "scoresidle", "scores", "stats", "statsreset", "statspage2", "medals", "scoresfull", "statsfull", "play", "pause", "win", "lose"]);
   for (const n of ORDER) assert.ok(SCREENS[n] && SCREENS[n].state, n);
   assert.equal(canon("settings"), "options");
   assert.equal(canon("SETTINGS"), "options");

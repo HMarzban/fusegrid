@@ -89,6 +89,7 @@ export const LEVEL_WORDS = Object.freeze({
 export const REC_WORDS = Object.freeze({
   MENU: "MENU", BACK: "BACK", TAB: LABEL.TAB, TABS: LABEL.TABS, LOADING: "LOADING", BADGES: "BADGES", RANK: "RANK", SCORE: "SCORE", DATE: "DATE",
   NONE: "—", NO_MODS: "NO " + LABEL.MODIFIERS, EARNED: "EARNED", TAP: "TAP A TAB · TAP OUTSIDE TO GO BACK",
+  PAGE: "PAGE", OF: "OF",
 });
 export const BADGE_NAMES = Object.freeze(["CLEAR", DIFF[1], DIFF[2], "CROWN"]);
 export const noRunsYet = (h) => "NO " + diffTag(h) + " RUNS YET";

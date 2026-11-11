@@ -11,7 +11,7 @@ const LEVEL_TAP_ROW = Object.freeze({ room: "LEVEL", lock: "LEVEL", heat: "DIFFI
    first, in the constructor), so swallow it here — otherwise the latched
    intent.fire re-enters as a rising-edge confirm on the next frame
    (auto-start after skip, toggles bouncing back, subscreens bouncing). */
-export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, layout: menuLayout } }) {
+export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, recPageHit = () => 0, layout: menuLayout } }) {
   let statsC = false; // a touch pointerdown carries no activation, so a touch C tap copies on its pointerup
   const onDown = (ev) => {
     if (app.screen === SCREEN.GAME) {
@@ -93,6 +93,8 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       if (ti === -2) return; // the RECORDS page module is still loading: inert
       if (ti >= 0 && app.screen === SCREEN.STATS && app.resetArm) return void (app.resetArm = false); // armed: the confirm plate is modal; a tab tap only cancels it
       if (ti >= 0) return void app.recTab(ti - p); // a RECORDS tab: that tab, the tab row focused; recTab disarms an armed STATS, the tab shown included
+      const pk = p >= 0 && !(app.screen === SCREEN.STATS && app.resetArm) ? recPageHit(x, y, L, touchLay(cv), ["scores", "stats", "medals"][p]) : 0;
+      if (pk) return void app.recPageStep(pk); // a small phone's page keys (records.js PAGER), any RECORDS tab; tap mode keeps them
       if (app.screen === SCREEN.SCORES) { const i = scoresHit(x, y, L, touchLay(cv)); if (i >= 0) app.recFocus = 1; return i >= 0 ? void app.move(i - app.scoreHeat, 0) : i === -1 ? app.confirm() : null; } // a difficulty tab is in the body
       if (app.screen === SCREEN.STATS) {
         const hit = statsHit(x, y, L, app.resetArm, app.recFocus === 0, touchLay(cv)); // KeyC / KeyR / KeyT, "back", "plate" (inert) or, armed, "cancel"

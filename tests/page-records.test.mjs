@@ -70,6 +70,8 @@ function frame(F, ui, o = {}) {
   return { t, calls: t.calls.slice(n0), miss: cache._dbg.misses - m0 };
 }
 const snap = (F, ui) => { probe.setOn(true); const f = frame(F, ui); const s = probe.snapshot(); probe.setOn(false); return { ...f, s }; };
+/* a paged tab (fix round 1b) read over every page: one probe snapshot per page, in page order */
+const pagesOf = (F, ui) => Array.from({ length: RP.recPages(F, ui.page) }, (_, p) => snap(F, { ...ui, spage: p }).s);
 
 /* ---- the frame: the mock's metrics (round 7 S7-pages d-08-records-stats: plate 980 wide centred, tabs 150 x 36 in the trough, the foot under it) ---- */
 {
@@ -130,7 +132,7 @@ for (const b of ["d1366", "p393", "c600"]) {
 /* ---- SCORES: the table, the modifiers count (R10), the badges, the empty state; the longest strings whole at 1 and 1.25 ---- */
 for (const b of ALL) for (const ts of [1, 1.25]) {
   setTextScale(ts);
-  const F = BOX[b], G = RP.recordsGeom(F), { s } = snap(F, UI({ focus: "body", heat: 2 })), T = s.texts, B = G.d.bodies.scores, u = G.u;
+  const F = BOX[b], G = RP.recordsGeom(F), Ps = pagesOf(F, UI({ focus: "body", heat: 2 })), s = Ps[0], T = Ps.flatMap((q) => q.texts), B = G.d.bodies.scores, u = G.u;
   const rowsBox = { x: B.rows.x * u - 9 * u, y: B.head.y * u, w: B.rows.w * u + 18 * u, h: (B.rows.y + B.rows.h - B.head.y) * u + 0.01 };
   const plan0 = RP._dbg.last.P.scores.table, mc = plan0.stack ? null : plan0.cols.find((c) => c.n === W.LABEL.MODIFIERS), mx = mc ? (B.rows.x + mc.x * B.k) * u : (B.rows.x + plan0.l2x * B.k) * u;
   const scoresTx = T.filter((t) => /^\d{1,3}(,\d{3})+$/.test(t.s)), modsTx = T.filter((t) => Math.abs(t.x - mx) < 0.5 && t.y > (B.head.y + B.head.h) * u - 1 && (mc || / · |MODIFIER/.test(t.s)));
@@ -140,8 +142,8 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
   const noOverlap = cols.every((c, i) => i === 0 || c.x >= cols[i - 1].x + cols[i - 1].w);
   check(`SCORES strings whole (${b}${ts > 1 ? " t125" : ""}): ten 7-digit scores, every table cell inside the table and every text inside the plate (or the foot); no ellipsis; the columns never overlap`,
     scoresTx.length === 10 && tbl.every((t) => inside(t, rowsBox, 0.6)) && allIn && !T.some((t) => /…/.test(t.s)) && noOverlap, J({ n: scoresTx.length, out: tbl.filter((t) => !inside(t, rowsBox, 0.6)).slice(0, 3), level: plan.level }));
-  check(`SCORES modifiers (${b}${ts > 1 ? " t125" : ""}): a count by words.js modsCount (4 MODIFIERS, 1 MODIFIER; — for none in a column, a bare count where it steps down; a narrow table's second line names them, NO MODIFIERS, then the full date), never the old L/B/T/S letters`,
-    modsTx.length === 10 && (plan.stack ? J(modsTx.map((t) => t.s.split(" · ")[0])) === J(["4 MODIFIERS", "1 MODIFIER", "NO MODIFIERS", "2 MODIFIERS", "3 MODIFIERS", "1 MODIFIER", "2 MODIFIERS", "1 MODIFIER", "2 MODIFIERS", "4 MODIFIERS"]) && modsTx.every((t, i) => t.s.split(" · ")[1] === LONG[i].d) : plan.level >= 1 ? modsTx.map((t) => t.s).join() === "4,1,—,2,3,1,2,1,2,4" : modsTx.map((t) => t.s).join() === ["4 MODIFIERS", "1 MODIFIER", "—", "2 MODIFIERS", "3 MODIFIERS", "1 MODIFIER", "2 MODIFIERS", "1 MODIFIER", "2 MODIFIERS", "4 MODIFIERS"].join()) && !T.some((t) => /^[LBTS]+$/.test(t.s)), J(modsTx.map((t) => t.s)));
+  check(`SCORES modifiers (${b}${ts > 1 ? " t125" : ""}): a count by words.js modsCount (4 MODIFIERS, 1 MODIFIER; — for none in a column, a bare count where it steps down; a narrow table's second line names them, NO MODIFIERS, then the full date, or its month and day where a page at full size cannot hold the year: fix round 1b), never the old L/B/T/S letters`,
+    modsTx.length === 10 && (plan.stack ? J(modsTx.map((t) => t.s.split(" · ")[0])) === J(["4 MODIFIERS", "1 MODIFIER", "NO MODIFIERS", "2 MODIFIERS", "3 MODIFIERS", "1 MODIFIER", "2 MODIFIERS", "1 MODIFIER", "2 MODIFIERS", "4 MODIFIERS"]) && modsTx.every((t, i) => t.s.split(" · ")[1] === LONG[i].d || t.s.split(" · ")[1] === LONG[i].d.slice(5)) : plan.level >= 1 ? modsTx.map((t) => t.s).join() === "4,1,—,2,3,1,2,1,2,4" : modsTx.map((t) => t.s).join() === ["4 MODIFIERS", "1 MODIFIER", "—", "2 MODIFIERS", "3 MODIFIERS", "1 MODIFIER", "2 MODIFIERS", "1 MODIFIER", "2 MODIFIERS", "4 MODIFIERS"].join()) && !T.some((t) => /^[LBTS]+$/.test(t.s)), J(modsTx.map((t) => t.s)));
   setTextScale(1);
 }
 {
@@ -183,13 +185,14 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
    and the iso guard) ---- */
 for (const b of ALL) for (const ts of [1, 1.25]) {
   setTextScale(ts);
-  const F = BOX[b], G = RP.recordsGeom(F), { s } = snap(F, UI({ page: "medals" })), T = s.texts, tiles = s.rects.filter((r) => /^medal /.test(r.name));
-  const ofTile = (r) => T.filter((t) => inside(t, r, 0.6)), whole = MEDAL_ROWS.every(([n, desc], i) => { const tx = ofTile(tiles[i]); return tx[0] && tx[0].s === n && tx.slice(1).map((t) => t.s).join(" ") === desc; });
-  const count = T.filter((t) => t.y < tiles[0].y).map((t) => t.s), on = ROWS8.map((r) => r[2]);
+  const F = BOX[b], G = RP.recordsGeom(F), Ps = pagesOf(F, UI({ page: "medals" })), s = { pairs: Ps.flatMap((q) => q.pairs) }, T = Ps.flatMap((q) => q.texts);
+  const tiles = Ps.flatMap((q) => q.rects.filter((r) => /^medal /.test(r.name)).map((r) => ({ ...r, q })));
+  const ofTile = (r) => r.q.texts.filter((t) => inside(t, r, 0.6)), whole = MEDAL_ROWS.every(([n, desc], i) => { const tx = ofTile(tiles[i]); return tx[0] && tx[0].s === n && tx.slice(1).map((t) => t.s).join(" ") === desc; });
+  const count = Ps[0].texts.filter((t) => t.y < tiles[0].y).map((t) => t.s), on = ROWS8.map((r) => r[2]);
   const glyphs = s.pairs.filter((p) => /^medal glyph /.test(p.name)).map((p) => p.col);
   check(`MEDALS (${b}${ts > 1 ? " t125" : ""}): eight tiles inside the pane, each with its name and its whole goal inside it, no ellipsis; 4/8 EARNED above them`,
     tiles.length === 8 && tiles.every((r) => inside(r, { x: G.d.pane.x * G.u, y: G.d.pane.y * G.u, w: G.d.pane.w * G.u, h: G.d.pane.h * G.u }, 0.6)) && whole && !T.some((t) => /…/.test(t.s)) && count.join(" ").indexOf("EARNED") >= 0 && J(count.slice(-2)) === J(["4/8", "EARNED"]),
-    J({ count, first: ofTile(tiles[0]).map((t) => t.s), tiles: tiles.length }));
+    J({ count, first: ofTile(tiles[0]).map((t) => t.s), tiles: tiles.length, inPane: tiles.map((r) => inside(r, { x: G.d.pane.x * G.u, y: G.d.pane.y * G.u, w: G.d.pane.w * G.u, h: G.d.pane.h * G.u }, 0.6)), whole: MEDAL_ROWS.filter(([n, desc], i) => { const tx = ofTile(tiles[i]); return !(tx[0] && tx[0].s === n && tx.slice(1).map((t) => t.s).join(" ") === desc); }).map(([n, d]) => n + ": " + d), ell: T.filter((t) => /…/.test(t.s)).map((t) => t.s) }));
   check(`MEDALS (${b}${ts > 1 ? " t125" : ""}): an earned medal's glyph is the medal colour (with its dot), a goal's the quiet t2 outline; earned names in ink, goals in t2`,
     J(glyphs) === J(on.map((x) => (x ? CONST.medal : CONST.t2))) && MEDAL_ROWS.every(([n], i) => T.find((t) => t.s === n).col === (on[i] ? CONST.ink : CONST.t2)), J(glyphs));
   setTextScale(1);
@@ -428,11 +431,13 @@ for (const b of ["d1366", "p393", "c600"]) for (const ui of [UI({ plaques: 15 })
 /* STATS draws the facts it is handed, whole, at 1 and 1.25 in every box; armed, the confirm plate says the sentence, whole */
 for (const b of ALL) for (const ts of [1, 1.25]) {
   setTextScale(ts);
-  const F = BOX[b], G = RP.recordsGeom(F), { s } = snap(F, SUI({})), T = s.texts.map((t) => t.s), joined = T.join("|");
+  /* a paged body (fix round 1b) is read over every page: each fact on some page, every text of every page inside the plate */
+  const F = BOX[b], G = RP.recordsGeom(F), np = RP.statsPages(F), shots = Array.from({ length: np }, (_, p) => snap(F, SUI({ spage: p })).s), s = shots[0];
+  const all = shots.flatMap((q) => q.texts), T = all.map((t) => t.s), joined = T.join("|");
   const want = ["BEST SCORE", "8", "1", "2", "0", "FURTHEST LEVEL 5 · ARENA", "RUNS", "47", "PLAY TIME", "3h12m", "MEDALS", "3/8", "LIFETIME", "LEVELS CLEARED", "132", "KILLS", "588", "POWER-UPS", "214", "DEATHS", "61", "DAYS PLAYED", "9", "4,820", "8,120", "3,100", "NORMAL DIFFICULTY", "HARD DIFFICULTY", "EXPERT DIFFICULTY", "LEVEL 3"];
   const miss = want.filter((w) => !T.includes(w)), plateBox = { x: G.plate.x, y: G.plate.y, w: G.plate.w, h: G.plate.h + (G.foot ? G.foot.y + G.foot.h - G.plate.y - G.plate.h : 0) };
-  const out = s.texts.filter((t) => !inside(t, plateBox, 0.6));
-  check(`STATS (${b}${ts > 1 ? " t125" : ""}): every fact drawn (the hero's qualifier, digits, course, the tiles, LIFETIME, BEST BY DIFFICULTY), inside the plate, no ellipsis`, miss.length === 0 && out.length === 0 && !/…/.test(joined) && T.some((x) => /HARD DIFFICULTY/.test(x)), J({ miss, out: out.slice(0, 3) }));
+  const out = all.filter((t) => !inside(t, plateBox, 0.6));
+  check(`STATS (${b}${ts > 1 ? " t125" : ""}${np > 1 ? ", " + np + " pages" : ""}): every fact drawn (the hero's qualifier, digits, course, the tiles, LIFETIME, BEST BY DIFFICULTY), inside the plate, no ellipsis`, miss.length === 0 && out.length === 0 && !/…/.test(joined) && T.some((x) => /HARD DIFFICULTY/.test(x)), J({ miss, out: out.slice(0, 3) }));
   const B = G.d.bodies.stats, kl = RP._dbg.last.P.stats.bestK, kt = kl.map((l) => s.texts.find((t) => t.s === l));
   /* fix round 1: at 100 % too, measured at the recorder's +8 % width: each kicker line ends before the wall course and inside its column */
   if (B.div) check(`STATS (${b}${ts > 1 ? " t125" : ""}): the BEST BY DIFFICULTY kicker breaks once where one line would pass its column; each line ends before the wall course`, kt.every((t) => t && t.x + t.w <= B.div.x * G.u + 0.01 && t.x + t.w <= (B.bestK.x + B.bestK.w) * G.u + 0.01) && (kl.length === 2 || kt[0].w <= B.bestK.w * G.u), J({ kl, kt, div: B.div.x * G.u }));
@@ -460,6 +465,122 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
   check("STATS on a 375x812 phone at 100 %: k 1 (the tiles tighten before the body scales)", B3.k === 1 && B3.tl === RP.TILE.t, J({ k: B3.k }));
   const D = RP.recordsGeom(BOX.d1366).d.bodies.stats;
   check("STATS on the desk keeps the mock's layout: two-line bests and the level course", D.one === false && !!D.course && D.k === 1, J({ one: D.one, k: D.k }));
+}
+/* fix round 1b (lead ruling, lane rules lesson 1): STATS on a small phone PAGES instead of scaling under the floors. 360x780, 375x667 and 393x852 at
+   100 %: the body unscaled (k 1), every text on every page at the phone floors (primary 11, secondary 9, hud 11 cap CSS px), whole sections per page
+   (each fact on exactly one page), the ▲ / ▼ page keys >= 44 CSS px and >= 8 apart, drawn in tap mode too; a tap on them is PageUp / PageDown */
+{
+  const FL = { primary: 11, secondary: 9, hud: 11 }, rep = [];
+  for (const [w, h] of [[360, 780], [375, 667], [393, 852]]) for (const ts of [1, 1.25]) {
+    setTextScale(ts);
+    const PS = shellGeo(w, h), F = { W: PS.w, H: PS.h, touch: true, shell: true, css: PS.s }, G = RP.recordsGeom(F), B = G.d.bodies.stats, n = RP.statsPages(F), u = G.u;
+    const bad = [], seen = new Map();
+    for (let p = 0; p < n; p++) {
+      const { s } = snap(F, SUI({ spage: p }));
+      for (const t of s.texts) {
+        if (FL[t.role] != null && t.capH / u < FL[t.role] - 0.05) bad.push([p, t.s, t.role, +(t.capH / u).toFixed(2)]);
+        if (/^(BEST SCORE|RUNS|LIFETIME|NORMAL DIFFICULTY)$/.test(t.s)) seen.set(t.s, (seen.get(t.s) || 0) + 1);
+      }
+      if (n > 1) {
+        const up = s.rects.find((r) => r.name === "PAGE UP"), dn = s.rects.find((r) => r.name === "PAGE DOWN");
+        const css = (r) => ({ w: r.w / u, h: r.h / u }), gap = (dn.x - (up.x + up.w)) / u;
+        if (!up || !dn || css(up).h < 43.95 || css(up).w < 43.95 || css(dn).h < 43.95 || gap < 7.95 || !up.touch) bad.push([p, "page keys", up && css(up), gap]);
+        if (!s.texts.some((t) => t.s === "PAGE " + (p + 1) + " OF " + n)) bad.push([p, "no PAGE n OF m"]);
+        const mid = (r) => [r.x + r.w / 2, r.y + r.h / 2];
+        if (RP.statsHit(...mid(up), F, false) !== "PageUp" || RP.statsHit(...mid(dn), F, false) !== "PageDown" || ["PageDown", "KeyR"].includes(RP.statsHit(...mid(dn), F, true))) bad.push([p, "page key hits"]); // armed, the confirm plate is modal: never a page step, never the erase
+      }
+    }
+    const once = ["BEST SCORE", "RUNS", "LIFETIME", "NORMAL DIFFICULTY"].every((x) => seen.get(x) === 1);
+    rep.push(`${w}x${h}@${ts}: ${n} page(s), k ${B.k.toFixed(3)}`);
+    if (ts === 1) check(`STATS on a ${w}x${h} phone at 100 %: unscaled (k 1), ${n} page(s) of whole sections (each fact on exactly one page), every text at the phone floors, the page keys 44 CSS px and 8 apart, tapping PageUp / PageDown (armed: the modal plate's, never a page or the erase)`,
+      B.k === 1 && bad.length === 0 && once && (w === 393 ? n === 1 : n > 1), J({ k: B.k, n, bad: bad.slice(0, 4), seen: [...seen] }));
+    else check(`STATS on a ${w}x${h} phone at 125 %: unscaled (k 1), paged where it must be, every text at the floors`, B.k === 1 && bad.length === 0 && once, J({ k: B.k, n, bad: bad.slice(0, 4) }));
+    setTextScale(1);
+  }
+  console.log("  (report) " + rep.join(" | "));
+  /* tap mode keeps the page keys (setHints(null) on a touch box is tap mode) */
+  const PS = shellGeo(360, 780), F = { W: PS.w, H: PS.h, touch: true, shell: true, css: PS.s };
+  setHints(null);
+  const t = snap(F, SUI({ spage: 1 })).s;
+  check("STATS paged, tap mode: the page keys are drawn (PAGE 2 OF n, ▲ on, ▼ a well on the last page)", t.rects.some((r) => r.name === "PAGE UP" && r.fill !== worldTokens(1).well) && t.texts.some((x) => /^PAGE 2 OF/.test(x.s)));
+  /* the armed confirm plate stays one page: the same plate on page 0 and the last page */
+  const A0 = snap(F, SUI({ arm: true, spage: 0 })).s.rects.find((r) => r.name === "confirm"), A1 = snap(F, SUI({ arm: true, spage: RP.statsPages(F) - 1 })).s.rects.find((r) => r.name === "confirm");
+  check("STATS paged, armed: the confirm plate is one page, the same on every page", !!A0 && J(A0) === J(A1), J([A0, A1]));
+}
+/* the armed confirm plate on the small phones (fix round 1b): one page, under the tabs and the trough (never over them), AGAIN ERASES above the idle
+   COPY STATS / RESET keys, its sentence at the body floor (14.1 font px) and its title and cancel line at their cap floors, at 1 and 1.25 */
+{
+  const bad = [];
+  for (const [w, h] of [[360, 780], [375, 667], [393, 852], [375, 812]]) for (const ts of [1, 1.25]) {
+    setTextScale(ts);
+    const PS = shellGeo(w, h), F = { W: PS.w, H: PS.h, touch: true, shell: true, css: PS.s }, G = RP.recordsGeom(F), f = G.d.confirm, u = G.u, a = G.d.bodies.stats.acts;
+    const { s } = snap(F, SUI({ arm: true })), low = s.texts.filter((t) => (t.role === "body" ? t.px / u < 14.1 - 0.05 : t.role === "primary" ? t.capH / u < 10.95 : t.role === "secondary" ? t.capH / u < 8.95 : false) && t.y > f.box.y * u);
+    if (f.box.y < G.d.trough.y + G.d.trough.h || f.again.y + f.again.h > a.copy.y || low.length) bad.push([w, h, ts, f.box.y < G.d.trough.y + G.d.trough.h, f.again.y + f.again.h > a.copy.y, low.map((t) => t.s).slice(0, 2)]);
+    setTextScale(1);
+  }
+  check("STATS armed on the small phones: the confirm plate under the tabs, AGAIN ERASES above the idle keys, every word at its floor (1 and 1.25)", bad.length === 0, J(bad));
+}
+/* keys, a controller and taps carry the page (menuapp, every RECORDS tab): STATS and SCORES: ↓ into the body then down the pages, ↑ back up and out
+   to the tab row; MEDALS (no body): ↓ / ↑ on the tab row walk its pages; the page keys step and clamp; every tab arrival opens page 0 */
+{
+  const { createMenuApp, ITEMS: IT } = await import("../src/app/menuapp.js");
+  let n = 3;
+  const a = createMenuApp({ recPages: (scr) => (scr === SCREEN.STATS || scr === SCREEN.SCORES || scr === SCREEN.TROPHIES ? n : 1), onStats() {}, onMedals() {} });
+  a.screen = SCREEN.MENU; a.cursor = IT.indexOf("RECORDS"); a.confirm(); a.recTab(1);
+  const walk = () => { const t = [[a.recFocus, a.recPage]]; for (const d of [1, 1, 1, 1, -1, -1, -1, -1]) { a.move(d, 1); t.push([a.recFocus, a.recPage]); } return t; };
+  const BODY = [[0, 0], [1, 0], [1, 1], [1, 2], [1, 2], [1, 1], [1, 0], [0, 0], [0, 0]];
+  const st = walk();
+  check("STATS paged by keys / a controller's D-PAD (move on the vertical axis): tabs → page 1 → 2 → 3 (clamped), then back up to the tab row", J(st) === J(BODY), J(st));
+  a.recTab(-1); const sc = walk();
+  check("SCORES paged the same way (its body is the difficulty filter, ←/→ unchanged)", a.screen === SCREEN.SCORES && J(sc) === J(BODY), J(sc));
+  a.recTab(2); const md = walk();
+  check("MEDALS (no body): ↓ / ↑ on the tab row walk its pages, the focus never leaves the tab row", a.screen === SCREEN.TROPHIES && J(md) === J([[0, 0], [0, 1], [0, 2], [0, 2], [0, 2], [0, 1], [0, 0], [0, 0], [0, 0]]), J(md));
+  a.recTab(-1); a.recFocus = 0;
+  const taps = [a.recPageStep(1), a.recPage, a.recFocus, a.recPageStep(1), a.recPageStep(1), a.recPage, a.recPageStep(-1), a.recPage];
+  check("STATS page keys (taps): one page a tap, clamped, the body focused", J(taps) === J([true, 1, 1, true, false, 2, true, 1]), J(taps));
+  a.resetArm = true; a.recPageStep(-1);
+  check("a page-key tap cancels an armed reset (input that is not the second R)", a.resetArm === false);
+  a.recTab(1); a.recTab(-1);
+  check("every tab arrival opens page 0", a.recPage === 0 && a.screen === SCREEN.STATS);
+  n = 1; a.recFocus = 1; const one = a.move(1, 1);
+  check("an unpaged tab: ↓ in the body does nothing, ↑ returns to the tabs", one === false && a.recPage === 0 && (a.move(-1, 1), a.recFocus === 0));
+}
+/* SCORES and MEDALS on the small phones page too (fix round 1b): unscaled, every text at the phone floors on every page, ten rows and eight medals
+   across the pages, each once; the page keys tap -1 / +1 through pageKeyHit */
+{
+  const FL = { primary: 11, secondary: 9, hud: 11 }, rep = [];
+  for (const [w, h] of [[360, 780], [375, 667], [393, 852]]) for (const ts of [1, 1.25]) {
+    setTextScale(ts);
+    const PS = shellGeo(w, h), F = { W: PS.w, H: PS.h, touch: true, shell: true, css: PS.s }, G = RP.recordsGeom(F), u = G.u, bad = [];
+    const sb = G.d.bodies.scores, mb = G.d.bodies.medals;
+    for (const [page, ui] of [["scores", UI({ focus: "body" })], ["medals", UI({ page: "medals" })]]) {
+      const Ps = pagesOf(F, ui), T = Ps.flatMap((q) => q.texts);
+      for (const t of T) if (FL[t.role] != null && t.capH / u < FL[t.role] - 0.05) bad.push([page, t.s, +(t.capH / u).toFixed(2)]);
+      const n = Ps.length, items = page === "scores" ? T.filter((t) => /^\d{1,3}(,\d{3})+$/.test(t.s)).length : Ps.flatMap((q) => q.rects.filter((r) => /^medal /.test(r.name))).length;
+      if (items !== (page === "scores" ? 10 : 8)) bad.push([page, "items", items]);
+      if (n > 1) {
+        const b = G.d.bodies[page].pager, mid = (r) => [(r.x + r.w / 2) * u, (r.y + r.h / 2) * u];
+        if (RP.pageKeyHit(...mid(b.up), F, page) !== -1 || RP.pageKeyHit(...mid(b.dn), F, page) !== 1 || b.up.h * u / u < 43.95) bad.push([page, "keys"]);
+      }
+      rep.push(`${page} ${w}x${h}@${ts}: ${n}`);
+    }
+    check(`SCORES and MEDALS on a ${w}x${h} phone at ${ts === 1 ? "100" : "125"} %: unscaled (k 1), every text at the phone floors on every page, ten rows and eight medals across the pages`,
+      sb.k === 1 && mb.k === 1 && bad.length === 0, J({ sk: sb.k, mk: mb.k, bad: bad.slice(0, 4) }));
+    setTextScale(1);
+  }
+  console.log("  (report pages) " + rep.join(" | "));
+}
+/* the pointer: a tap on a page key (any RECORDS tab) is app.recPageStep, never a back-out */
+{
+  const { mountPointer } = await import("../src/app/pointer.js"), sc = await import("../src/render/scenes.js"), log = [];
+  for (const [scr, k] of [[SCREEN.STATS, -1], [SCREEN.SCORES, 1], [SCREEN.TROPHIES, 1]]) {
+    const HIT = { overlayBox: sc.overlayBox, pauseHit: sc.pauseHit, touchLay: sc.touchLay, controlsHit: SV.controlsHit, dims: SV.dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, levelHit: md.levelHit, scoresHit: () => -1, statsHit: () => "back", recTabHit: () => -1, recPageHit: () => k, layout: md.layout };
+    const LL = {}, cv = { width: 600, height: 520, getBoundingClientRect: () => ({ left: 0, top: 0, width: 600, height: 520 }), addEventListener(ty, fn) { (LL[ty] = LL[ty] || []).push(fn); } };
+    const app = { screen: scr, recFocus: 1, resetArm: false, confirm: () => log.push("confirm"), back: () => log.push("back"), recPageStep: (d) => log.push("page " + d) };
+    mountPointer({ canvas: cv, fit: null, input: { _intent: { fire: false }, onUiKey: (c) => log.push(c) }, app, world: { state: "PLAY" }, kind: () => "2d", ctl: () => null, hit: HIT });
+    LL.pointerdown.forEach((fn) => fn({ clientX: 300, clientY: 300 }));
+  }
+  check("pointer: a tap on ▲ / ▼ steps the page on STATS, SCORES and MEDALS, and nothing else (no back-out)", J(log) === J(["page -1", "page 1", "page 1"]), J(log));
 }
 /* no best run yet: the hero says so and shows no score or course; the three bests each draw "—" (fix round 1, the old R12 coverage) */
 {

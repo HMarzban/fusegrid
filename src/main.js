@@ -10,8 +10,8 @@ import { createRenderer } from "./render/renderer.js";
 import { loadRendererPx } from "./render/pixel/load.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
-import { controlsHit, dims, drawShell, guidePageCount, kindSize, loadControlsArt, shellMode, shellCovers } from "./render/shellview.js";
-import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, recTabHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
+import { controlsHit, dims, drawShell, guidePageCount, kindSize, loadControlsArt, shellMode, shellCovers, recPagesOf } from "./render/shellview.js";
+import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, recTabHit, recPageHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
 import { hints, setHints } from "./render/hintcopy.js";
 import { SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
@@ -263,6 +263,7 @@ export function createGame(canvas, opts = {}) {
   /* GA4, opt-in (src/app/analytics.js): nothing is sent before ALLOW; opens are its page_view */
   const ga = mountAnalytics({ get: () => ({ app, SCREEN, busy: () => upd.shown }), dry: flags.debug, now: () => new Date(), days: loadStats().a.days, look: () => urlKind || (settings.r3d ? "3d" : settings.px ? "px" : "2d"), onChange: (v) => { app.analytics = v; } });
   const app = createMenuApp({
+    recPages: (scr) => recPagesOf(shBox || canvas, curKind, scr), // a RECORDS tab's pages on the box it is drawn on (a small phone pages it, records.js PAGER)
     level: 1,
     sound: settings.snd !== 0,
     pactUnlocked: loadPactUnlocked(),
@@ -449,7 +450,7 @@ export function createGame(canvas, opts = {}) {
   };
   input.onPause = onPause;
 
-  if (canvas) mountPointer({ canvas, fit, input, app, world, kind: () => curKind, ctl: () => ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, layout: menuLayout } }); // taps on #c and #sh: skip / confirm / play, the PAUSE rows, the C1 fire swallow (src/app/pointer.js)
+  if (canvas) mountPointer({ canvas, fit, input, app, world, kind: () => curKind, ctl: () => ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, recPageHit, layout: menuLayout } }); // taps on #c and #sh: skip / confirm / play, the PAUSE rows, the C1 fire swallow (src/app/pointer.js)
   /* pad taps bubble to #stage: play from ATTRACT too (spec §4 tap-to-play). */
   {
     const stageEl =
@@ -482,7 +483,7 @@ export function createGame(canvas, opts = {}) {
   function effKind() {
     return kindOf(urlKind, app);
   }
-  let curKind = effKind();
+  let curKind = effKind(), shBox = null; // shBox: the #sh box the last frame drew the shell on (RECORDS' page counts read it)
   const rc = mountRenderers({ canvas, opts, rig, make: { "2d": createRenderer }, size: kindSize, fit: () => fit, kind: effKind, perf: () => frames.knobs(), loadRenderer3D, loadRendererPx, bar: { afterFirstRender, lookPlan, paintYield }, eager: urlKind === "3d" || !!opts.render3d, eagerPx: urlKind === "px" || !!opts.pixel, idle: idleNow, poke: () => frames.poke(), debug: !!flags.debug, world: () => (app.screen === SCREEN.ATTRACT && demo ? demo.world : show ? show.world : world), hold: () => app.lookHold(), onJob: (j) => { app.lookJob = j; }, onSwap: (r, k) => { renderer = r; curKind = k; swapped = true; }, onReady: () => { app.boardReady = true; }, onFail: (k, on) => app.lookFailed(k, on), prefetch: true, onLost: () => { if (app.screen === SCREEN.GAME && world.state === "PLAY") onPause(); } });
   let renderer = rc.get(curKind), pick = curKind, swapped = false, gPrev = world.grid; // pick = the RENDER choice, curKind = the look on screen (rcache swaps on ready)
   app.boardReady = rc.shownKind() === curKind;
@@ -672,6 +673,7 @@ export function createGame(canvas, opts = {}) {
     renderer.render(attract && demo ? demo.world : show ? show.world : world, dt, ro);
     c.restore();
     const sh = fit && fit.shell(shellMode(app.screen, world)); // MENU + plated pages on #sh's own box; a run end shows it click-through (shellview shellMode)
+    shBox = sh ? sh.box : null;
     drawShell(sh ? sh.ctx : c, app, world, sh ? sh.box : canvas, curKind, getScoresForHeat, getPlaquesFn, getCab);
     if (swapped || world.grid !== gPrev) { swapped = false; gPrev = world.grid; last = null; } // G5: a look swap, run start or room start drops this long frame from the next dt
   }

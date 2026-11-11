@@ -110,6 +110,7 @@ export function createMenuApp(opts = {}) {
   const onStart = o.onStart || null;
   const onSource = o.onSource || null;
   const onStats = o.onStats || null;
+  const recPages = typeof o.recPages === "function" ? o.recPages : () => 1; // a RECORDS tab's page count on the box it draws on, by screen (main hands shellview's; 1 = one page)
   const onMedals = o.onMedals || null; // the MEDALS page's rows, read on every arrival; never the STATS opt-in (a tap may skip STATS)
   const onSettings = o.onSettings || null;
   const onPauseCmd = o.onPauseCmd || null;
@@ -129,6 +130,7 @@ export function createMenuApp(opts = {}) {
     foeTip: false, // ENEMIES: its points tooltip is open (on keys it follows focus, arrival included; a pad move closes it; Enter / SOUTH or a tap opens it; Esc / Backspace / EAST close it before leaving)
     infoPg: 0, // HOW TO PLAY, POWER-UPS, FLOOR: the page shown where the box pages them (opts.pageCount); every arrival lands on the first
     recFocus: 0, // RECORDS: 0 the tab row, 1 the page body; every arrival lands on the tab row
+    recPage: 0, // a RECORDS tab paged on a small phone (pages/records.js PAGER): the page shown; every tab arrival opens page 0
     levelRow: 0, // LEVEL SELECT's focused row (LEVEL_ROWS); every entry lands on LEVEL
     modOpen: false, // LEVEL SELECT's MODIFIERS list is open inline, modeCur its cursor
     pauseCursor: 0,
@@ -657,6 +659,7 @@ export function createMenuApp(opts = {}) {
       this.parked = false;
       const s = RECORD_SCREENS[j];
       if (s === SCREEN.STATS && onStats) onStats();
+      this.recPage = 0;
       if (s === SCREEN.TROPHIES && onMedals) onMedals();
       this.screen = s; // no _push: the repeat state stays, so a held arrow and its own key press make one step, never two
       this.recFocus = 0;
@@ -664,11 +667,31 @@ export function createMenuApp(opts = {}) {
       this.togT = -1;
       return this._feel("move");
     },
-    /* ↓ from the tab row into the page body where it has one, ↑ back; MEDALS has no body. */
+    /* ↓ from the tab row into the page body where it has one, ↑ back; MEDALS has no body. A paged tab (fix round 1b): ↓ in the body (MEDALS: on the
+       tab row) opens the next page, ↑ the one before, and ↑ on the first page goes back to the tab row; a controller's D-PAD rides the same move. */
     _recFocus(dir) {
+      const med = this.screen === SCREEN.TROPHIES;
+      if (this.recFocus === 1 || med) {
+        const n = Math.max(1, recPages(this.screen) | 0), p = Math.max(0, Math.min(n - 1, this.recPage | 0));
+        if (dir > 0 && p < n - 1 && (this.recFocus === 1 || med)) { this.recPage = p + 1; return true; }
+        if (dir < 0 && p > 0) { this.recPage = p - 1; return true; }
+        if (dir > 0 && this.recFocus === 1) return false;
+      }
       const f = dir > 0 ? 1 : 0;
       if (f === this.recFocus || (f && this.screen === SCREEN.TROPHIES)) return false;
       this.recFocus = f;
+      return true;
+    },
+    /* A RECORDS tab's page keys (a tap on ▲ / ▼): one page, clamped to the pages the box draws; SCORES' and STATS' body takes the focus, as a key's
+       ↓ would (MEDALS has no body). Input that is not the second R: it cancels an armed STATS reset. */
+    recPageStep(d) {
+      if (!isRecords(this.screen)) return false;
+      this.idleT = 0;
+      this.resetArm = false;
+      const n = Math.max(1, recPages(this.screen) | 0), p = Math.max(0, Math.min(n - 1, (this.recPage | 0) + Math.sign(d || 0)));
+      if (p === (this.recPage | 0)) return false;
+      this.recPage = p;
+      if (this.screen !== SCREEN.TROPHIES) this.recFocus = 1;
       return true;
     },
     /* The [ ] keys, a controller's shoulders and a GAME SPEED tap; ←→ on the GAME SPEED row step the same _pace through move(). */

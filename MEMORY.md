@@ -24,6 +24,9 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-07 — v201 pushed: controller play, rebinding, CONTROLS page
 - Owner: "make it ready and push it up", a day before the planned Sunday. Released as one squashed commit on `origin/main`'s v200 tip (`feature/controls` and `feature/delivery` are never pushed); CHANGELOG and sitemap dated 2026-11-07; the brand of the test controller left the tracked docs (A5). 578 tests; the stubbed-pad browser pass re-run on the release tree, its leftover fails all stale against `e1384f5` or timing (record's go/no-go). M1-M7 ship open by the owner's call. The new share card (`og.png` + alt text) ships beside it as its own commit; the owner re-uploads Social preview by hand.
+## 2026-11-11 — UI upgrade Task 4.2 fix round 1b: STATS pages on small phones (lane-4-records)
+- A narrow touch STATS that does not fit after the tight steps pages (whole sections, ▲ / ▼ 44 CSS px keys, keys / controller / taps) instead of scaling, and SCORES (rows) and MEDALS (tiles) page the same way; 360x780 / 375x667 / 393x852 hold the floors unscaled at 1 and 1.25. shots rows `statspage2` and `scoresidle` (RECORDS through the real lazy.idle() load).
+
 ## 2026-11-11 — UI upgrade Tasks 4.1 / 4.2 fix round 1, stats and reset (lane-4-records)
 - STATS: BEST SCORE and FURTHEST LEVEL as two facts (lead ruling: the bests store keeps them as separate maxima); the BEST BY kicker breaks wherever it would pass its column; a foot zone answers only in its painted armed state; the inline load card and the consent card body disarm (`reset.js guardLoadCard`); `resetSentence` names every group or throws; phone tiles step; `__GAME__.seedRecords` for filled captures.
 

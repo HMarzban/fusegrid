@@ -713,7 +713,7 @@ function check(name, cond, detail) {
   check(
     "shellview passes app.scoreHeat into the (memoised) getter and into drawScores",
     /getScores\(app\.scoreHeat\)/.test(shellSrc) && /getPlaques \? getPlaques\(\)/.test(shellSrc) &&
-      /drawScores\(c, \{ level: app\.level, focus, heat: app\.scoreHeat, scores: sd\.s, plaques: sd\.p \}, Lr, app\.subT, t\)/.test(shellSrc),
+      /drawScores\(c, \{ level: app\.level, focus, heat: app\.scoreHeat, scores: sd\.s, plaques: sd\.p, spage: app\.recPage \| 0 \}, Lr, app\.subT, t\)/.test(shellSrc),
     shellSrc.match(/menudraw\.drawScores\([^;]*\);/s)?.[0],
   );
   const mainSrc = readFileSync("src/main.js", "utf8");
