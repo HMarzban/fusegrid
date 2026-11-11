@@ -20,10 +20,11 @@
    of each gap beside it, out to its row's band.
    drawLevelPage(c, F, ui, t): ui = {level, heat, pace, pact, time, unlocked, best (a formatted time or null), row (the focused row's name), open, cur
    (the list's cursor), trig (a controller's TRIGGER cursor with the list shut, -1 none), tap (tap mode: no focus model, START focused as the page's one
-   action), lockR, lockT (the locked level a refusal named and when), reduced, enterT}. Cached (kit cache.js, recency touched on a steady frame; see sizes()):
-   the room with the plate at the room's dpr, the rampart's strips, the head, the rows at rest, START at rest, the card, the LEVEL row's focus, the list
-   and the desk feet, all made at once so a focus move never misses, keyed by what they show. Live: the other rows', START's and a list entry's focus,
-   the door's teaser, the help line, START's tag and keycap, the lock tip. The room's dpr gives way so the rest and a 1 MiB reserve fit the budget. A context that cannot measure plans on a
+   action), lockR, lockT (the locked level a refusal named and when), reduced, enterT, rev (MENU's build tag: the shared room's dpr)}. Cached (kit
+   cache.js, recency touched on a steady frame; see sizes()): MENU's own room layer at MENU's room dpr (menu.js roomDpr, one key, so a MENU / LEVEL
+   SELECT switch never refills it), the plate (rampart and bed) as its own layer at 1 device px per box unit, the rampart's strips, the head, the rows
+   at rest, START at rest, the card, the LEVEL row's focus, the list and the desk feet, all made at once so a focus move never misses, keyed by what
+   they show. Live: the other rows', START's and a list entry's focus, the door's teaser, the help line, START's tag and keycap, the lock tip. A context that cannot measure plans on a
    0.6 em estimate; with no canvas source (Node) everything paints straight onto the target over one flat fill; a context with no clip or rect gets the
    plan only. Under the probe it records its rects, texts and pairs outside any layer paint. */
 import {isFinale, roomCap} from "../../core/config.js";
