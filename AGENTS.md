@@ -398,8 +398,8 @@ layers (`release`, handed in by main) after `KIT_FREE` 10 s of GAME PLAY on a PL
 Under the probe a page records `begin(page, {w, h, dpr, el})`, its rects (touch, set, focus, fill), texts (role, cap height, colour) and
 squint pairs outside any layer paint; its `tools/ui/lib/screens.mjs` row exempts what it has none of (MENU: chosen, locked; LEVEL SELECT: ring, locked; SETTINGS: ring, locked, chosen only by
 `exemptIfNo` (no two-state part drawn); GRAPHICS: ring, locked, chosen by the same `exemptIfNo` (R1 cohesion 12); GUIDE and ENEMIES: chosen, locked;
-HOW TO, POWER-UPS, FLOOR also band, ring and gap, HOW TO and FLOOR info; SCORES, MEDALS: locked; RECORDS' rows `exemptPhone` ring and band (a phone
-capture in tap mode shows no focus)), and a lazy page's row waits for it (`wait: "records"`). Text under an open tooltip is not recorded. With no canvas
+HOW TO, POWER-UPS, FLOOR also band, ring and gap, HOW TO and FLOOR info; SCORES, MEDALS: locked; RECORDS' rows `exemptPhone` ring and band, SETTINGS' and
+GRAPHICS' band, GUIDE's band and ring (a phone capture is tap mode, which shows no focus: R1 cohesion ruling 5)), and a lazy page's row waits for it (`wait: "records"`). Text under an open tooltip is not recorded. With no canvas
 source (Node) it paints straight onto the target over a flat fill; a context with no clip or rect (the headless renderer's) gets the plan only.
 Lazy pages (R20): `src/render/pages/lazy.js` is the ONE loader (boot; `LOAD` has one line per page, `want(name)` imports, `get(name)` is the
 module or null, `idle()` asks for every page in the first idle after MENU's first frame: shellview calls it on MENU). A lazy page is in
