@@ -26,12 +26,13 @@ import {POWER, FOES, helpOf} from "../../core/entities.js";
 import {TILE_HELP, TILE_NAME} from "../../core/feat.js";
 import {LABEL, DIFF, levelsOf} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
-import {key, cap, capW, plate, band, focusBomb, glyph, wallCell, floorCell} from "../kit/paint.js";
-import {T, DEV, dsp, measure, textScale} from "../kit/type.js";
+import {key, cap, capW, plate, band, focusBomb, glyph, wallCell, floorCell, plaque, rpath as rp} from "../kit/paint.js";
+import {T, DEV, dsp, measure, textScale, measurer as mOf, CAP_K} from "../kit/type.js";
+import {deep, R, sc, okBox, inR} from "../kit/geom.js";
 import {layer, capDpr, touch as hold, keyOf, canMake, BUDGET} from "../kit/cache.js";
 import {roomLayer} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
-import {menuGeom, roomDpr, FOOT_H, TZ, CAP_K, TOUCH_U, TOP_MIN, GUT} from "./menu.js";
+import {menuGeom, roomDpr, FOOT_H, TZ, TOUCH_U, TOP_MIN, GUT} from "./menu.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {drawEnemyBody} from "../sprites.js";
 import {drawItemBody} from "../itemdraw.js";
@@ -40,7 +41,6 @@ import {pixelArt, itemCell, foeCell as pxFoe, blitCell, blitAnim, foeAnim, seedO
 import {foeM, blinkAt} from "../motion.js";
 import {hints, tapMode} from "../hintcopy.js";
 
-const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
 export const GUIDE = "GUIDE", HOW = "HOW TO PLAY", PU = LABEL.POWER_UPS, EN = "ENEMIES", FL = "FLOOR";
 /* the doors in menuapp GUIDE_ROWS order (tests/page-guide pins it equal) */
 export const DOORS = Object.freeze([HOW, PU, EN, FL]);
@@ -76,9 +76,6 @@ export const TOP = 70, FOOT_GAP = 18, EST = 0.66, TIP_T = deep({d: 8, p: 6}), SL
 /* the text floors (appendix 11): the least desk scale that keeps primary 14, secondary 11 and body 17.9 px at this text scale */
 export const uFloor = (ts) => Math.max(17.9 / (DEV.d.bod * ts), 11 / (DEV.d.sec * ts * CAP_K), 14 / (DEV.d.pri * ts * CAP_K));
 const est = (s, px) => String(s).length * EST * px;
-const R = (x, y, w, h) => ({x, y, w, h});
-const sc = (r, u) => (r ? {x: r.x * u, y: r.y * u, w: r.w * u, h: r.h * u} : null);
-const okBox = (F) => !!F && F.W > 0 && F.H > 0 && Number.isFinite(F.W) && Number.isFinite(F.H);
 const firstLevel = (rooms) => +String(rooms).match(/\d+/)[0];
 const inRooms = (rooms, n) => String(rooms).split(",").some((p) => { const [a, b] = p.trim().split("-").map(Number); return n >= a && n <= (b || a); });
 /* a teaser breaks only at its " · " (each part whole on its line), the words.js step-down for a "2 RULES · 6 CONTROLS" pair */
@@ -350,7 +347,6 @@ function tipGeom(D, B, i, d, body) {
   const ptr = up ? {x: cx, y: box.y + box.h + Tt + 3, w: pw, h: phh, dir: 1} : {x: cx, y: box.y - Tt - 2, w: pw, h: phh, dir: -1};
   return {r: box, U, up, cover, ptr, n: need.n, Tt, pad, page: it.page, hd: B.tipHd};
 }
-const inR = (r, x, y) => !!r && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
 const onPlate = (G, x, y) => { const p = G.plate; return x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h; };
 const clampPg = (G, pg) => Math.max(0, Math.min(G.pages - 1, pg | 0));
 /** The page a focused door or foe shows on (0 when nothing is focused). */
@@ -384,13 +380,6 @@ export function readHit(x, y, F, page, pg = 0) {
 
 /* ---- plan: every part as a display list in design px; the plate layer of each page paints `rest` (ops with no page, and that page's), the frame
    paints the focused part and the tip live ---- */
-const EST_C = {font: "", measureText(s) { const m = /(\d+(?:\.\d+)?)px/.exec(this.font); return {width: String(s).length * 0.6 * (m ? +m[1] : 10)}; }};
-const mOK = new WeakMap(), mOf = (c) => {
-  if (!c || (typeof c !== "object" && typeof c !== "function")) return EST_C;
-  let v = mOK.get(c);
-  if (v === undefined) { const q = typeof c.measureText === "function" ? c.measureText("M") : null; mOK.set(c, (v = !!q && typeof q.width === "number")); }
-  return v ? c : EST_C;
-};
 const Wm = (c, f, s) => measure(c, f, s);
 /* the one wrap rule: greedy by the real measure into as many lines as the string needs. The geometry gave the slot those lines with the same
    measure (or a wider estimate), so a wrapped string is never dropped and never runs out of its slot. */
@@ -611,7 +600,6 @@ function tileArt(c, k, room, heat, x, y, s, A) {
   if (A && A.feat) return blitCell(c, [A.feat(room - 1, sp, 0)], x + s / 2, y + s / 2, s >= 40 ? 2 : 1);
   drawSpec(c, BIOMES[(room - 1) % BIOMES.length], sp, Math.round(x), Math.round(y), s);
 }
-const rp = (c, x, y, w, h, r) => { c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
 function wedge(c, o, col) {
   c.fillStyle = col; c.beginPath();
   if (o.dir === 2 || o.dir === -2) { c.moveTo(o.x, o.y - o.w / 2); c.lineTo(o.x, o.y + o.w / 2); c.lineTo(o.x + (o.dir > 0 ? o.h : -o.h), o.y); }
@@ -736,9 +724,7 @@ function footPlan(c, G, ui) {
 }
 function tri(c, n, x, y, s, col) { c.save(); c.translate(x, y); c.scale(s / 16, s / 16); c.fillStyle = col; c.beginPath(); if (n === "lf") { c.moveTo(11, 3); c.lineTo(5, 8); c.lineTo(11, 13); } else { c.moveTo(5, 3); c.lineTo(11, 8); c.lineTo(5, 13); } c.closePath(); c.fill(); c.restore(); }
 function paintFoot(c, P, tok) {
-  const {x, y, w, h} = P, rr = (x0, y0, w0, h0, r0, col) => { c.fillStyle = col; c.beginPath(); rp(c, x0, y0, w0, h0, r0); c.fill(); };
-  rr(x, y + 4, w, h, 8, CONST.ol); rr(x, y, w, h, 8, CONST.ol); rr(x + 2, y + 2, w - 4, h - 4, 6, tok.bed);
-  c.fillStyle = tok.keyhi; c.fillRect(x + 6, y + 2, w - 12, 2);
+  plaque(c, P.x, P.y, P.w, P.h, tok);
   for (const p of P.parts) {
     c.font = P.f; c.textAlign = "left"; c.textBaseline = "middle";
     if (p.sep) { c.fillStyle = CONST.off; c.fillText(p.sep, p.x, P.mid); }

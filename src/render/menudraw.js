@@ -24,6 +24,7 @@ import { plate as kitPlate } from "./kit/paint.js";
 import { dsp as kitDsp, lbl as kitLbl, lbl } from "./kit/type.js";
 import { canMake, capDpr } from "./kit/cache.js";
 import { roomLayer } from "./kit/room.js";
+import { FOOT_TAP, LOOK_NAME, lookVal } from "./kit/copy.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
   MUTED = "#7385ad";
@@ -610,8 +611,8 @@ const want = () => {
   if (!asking && nowMs() - failAt >= RETRY_MS) { asking = true; lazy.want("settings").then(() => { asking = false; failAt = -Infinity; }, () => { asking = false; failAt = nowMs(); }); }
   return failAt > -Infinity;
 };
-/* OPTIONS and GRAPHICS share the tap model on a touch layout (row = Enter, off the plate = back); CONTROLS' foot reads it too. */
-export const FOOT_TAP = "TAP A ROW TO CHANGE IT · TAP OUTSIDE TO GO BACK";
+/* OPTIONS and GRAPHICS share the tap model on a touch layout (row = Enter, off the plate = back); CONTROLS' foot reads it too (kit/copy.js). */
+export { FOOT_TAP, LOOK_NAME, lookVal };
 const LOAD_W = 360, LOAD_H = 128;
 function loadBox(F) {
   const k = Math.min(1, (F.W - 52) / LOAD_W, (F.H - 52) / LOAD_H), w = LOAD_W * k, h = LOAD_H * k;
@@ -651,9 +652,8 @@ export function drawSettings(c, L, t, ui) {
    slow when jobs.js hands them); lookNote is the pure memo step shellview runs
    every frame: a live wait shows nothing new for NOTE_HOLD, a finished one that
    was shown reads READY for READY_T, a failure shows at once. */
-export const LOOK_NAME = Object.freeze({ px: "PIXEL", "3d": "REAL 3D" });
 export const NOTE_HOLD = 0.4, READY_T = 0.8;
-const PH_ORDER = ["bake", "build", "shaders", "warm"], PH_WORD = { bake: "ART", build: "BUILDING", shaders: "SHADERS" };
+const PH_ORDER = ["bake", "build", "shaders", "warm"];
 /* 0..1, or -1 = no count (still stripes, never a made-up share). Without
    job.fill: files own [0, .5), each prepare phase a fixed eighth after them. */
 export function jobFill(j) {
@@ -681,15 +681,6 @@ export function lookNote(m, job, now, pick) {
     if (now - m.readyT < READY_T) return { m, n: { k: m.k, st: "ready", fill: 1 } };
   }
   return { m: null, n: null };
-}
-/* The value's words, longest first; the row keeps the first that fits its slot. */
-export function lookVal(n, touch) {
-  const L = LOOK_NAME[n.k] || "";
-  if (n.st === "fail") { const r = tapMode(touch) ? "TAP TO RETRY" : hints().ok + " RETRY"; return [L + " · DID NOT LOAD · " + r, "DID NOT LOAD · " + r, r]; } // r alone, in the danger colour: the narrowest box, where ART STYLE (longer than RENDER) leaves less room
-  if (n.st === "ready") return [L + " · READY", "READY"];
-  const cnt = n.total > 0 ? n.done + " / " + n.total : "";
-  const s = n.st === "loading" ? (n.slow ? "SLOW, STILL TRYING" : cnt || "LOADING") : PH_WORD[n.phase] && cnt ? PH_WORD[n.phase] + " " + cnt : "PREPARING";
-  return [L + " · " + s, s];
 }
 /* LEVEL SELECT's START tag: the first of cands that fits room at the value type, else the last one clipped. */
 export function fitVal(c, cands, room) {

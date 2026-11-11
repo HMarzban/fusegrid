@@ -25,8 +25,8 @@ import {T, DEV, measure, textScale} from "../kit/type.js";
 import {lane, laneGrid, foeCell, tileCell} from "../kit/room.js";
 import {layer, canMake} from "../kit/cache.js";
 import {drawIcon, rr} from "../icons.js";
+import {deep} from "../kit/geom.js";
 
-export const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
 /* pad [y, x] inside the slot (the wall-cell frame T sits in it); lane [least, most] rows; foe the cell sizes tried, largest first (grow: the phone's
    most, from slack); gap the section gaps tried; cg / rg a foe item's column / row gap; tile the floor tile cell; heart the LIVES heart (the appendix's item size) */
 export const CARD = deep({

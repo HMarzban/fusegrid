@@ -30,15 +30,16 @@
 import {isFinale, roomCap} from "../../core/config.js";
 import {LABEL, DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, DEFAULT_RULES, modWords, tagFor, runParts, LEVEL_WORDS as LW} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
-import {key, cap, capW, plate, band, focusBomb, glyph} from "../kit/paint.js";
-import {T, DEV, measure, textScale} from "../kit/type.js";
+import {key, cap, capW, plate, band, focusBomb, glyph, plaque, rpath as rp} from "../kit/paint.js";
+import {T, DEV, measure, textScale, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
+import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
 import {roomLayer} from "../kit/room.js";
 import {roomDpr} from "./menu.js";
 import * as probe from "../kit/probe.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
-import {deep, cardPlan, paintCard, recordCard} from "./card.js";
+import {cardPlan, paintCard, recordCard} from "./card.js";
 
 /* the rows by name: menuapp LEVEL_ROWS, pinned equal to these words in tests/words.test.mjs (src/render may not import src/app) */
 export const LV = Object.freeze({LEVEL: LABEL.LEVEL, DIFF: LABEL.DIFFICULTY, SPEED: LABEL.GAME_SPEED, MODS: LABEL.MODIFIERS, START: LABEL.START});
@@ -60,10 +61,6 @@ export const PHONE = deep({
 /* compact (CSS px): every target at the 44 px floor, the least gaps that keep them 8 apart across sets; under these the page scales as one piece */
 export const COMPACT = deep({side: 12, padX: 8, top: 12, bot: 13, pad: 8, back: [104, 44], cue: 22, g: 6, lg: 4, kh: 44, kgMax: 6, bank: 50, door: 44, dgap: 8, wmax: 600, lh: 44, lgap: 8});
 export const TOUCH = Object.freeze({h: 44, g: 8}), TOUCH_U = 0.8, FOOT_H = 54, GUT = 8;
-const big = (ts) => ts > 1.1;
-const R = (x, y, w, h) => ({x, y, w, h});
-const sc = (r, u) => (r ? {x: r.x * u, y: r.y * u, w: r.w * u, h: r.h * u} : null);
-const okBox = (F) => !!F && F.W > 0 && F.H > 0 && Number.isFinite(F.W) && Number.isFinite(F.H);
 const labH = (dv, ts) => dv.sec * ts * 1.2;
 
 /* the five list entries in Digit1-5 order: the four modifier bits, then TIME TRIAL */
@@ -206,7 +203,6 @@ export function levelGeom(F, o = {}) {
   gm.set(mk, deep(G));
   return gm.get(mk);
 }
-const inR = (r, x, y, ex = 0, ey = ex) => !!r && x >= r.x - ex && x < r.x + r.w + ex && y >= r.y - ey && y < r.y + r.h + ey;
 /** A tap on LEVEL SELECT: see the header for what it returns. */
 export function levelHit(x, y, F, o = {}) {
   if (!okBox(F)) return {k: "none"};
@@ -231,13 +227,6 @@ export function levelHit(x, y, F, o = {}) {
 }
 
 /* ---- words ---- */
-const EST = {font: "", measureText(s) { const m = /(\d+(?:\.\d+)?)px/.exec(this.font); return {width: String(s).length * 0.6 * (m ? +m[1] : 10)}; }};
-const mOK = new WeakMap(), mOf = (c) => {
-  if (!c || (typeof c !== "object" && typeof c !== "function")) return EST;
-  let v = mOK.get(c);
-  if (v === undefined) { const m = typeof c.measureText === "function" ? c.measureText("M") : null; mOK.set(c, (v = !!m && typeof m.width === "number")); }
-  return v ? c : EST;
-};
 const W = (c, f, s) => measure(c, f, s);
 /* the first candidate that fits room; two: one break, at a " · " first, else at a space, into two lines that each fit */
 function fitLines(c, f, cands, room, two) {
@@ -370,8 +359,6 @@ function footPlan(c, G, items) {
 const verbOf = (ui) => (ui.tap ? (ui.open ? "taplist" : "tap") : ui.open ? "list" : ui.row === LV.MODS ? "mods" : ui.row === LV.START ? "start" : "value");
 
 /* ---- paint ---- */
-const canCap = (c) => mOf(c) === c;
-function text(c, s, x, y, f, col, align) { c.font = f; c.fillStyle = col; c.textAlign = align || "left"; c.textBaseline = "middle"; c.fillText(s, x, y); }
 function dspText(c, s, x, y, f, px, col) {
   const em = px * textScale();
   c.font = f; c.textAlign = "left"; c.textBaseline = "middle"; c.lineJoin = "round"; c.lineWidth = em * 0.12; c.strokeStyle = c.fillStyle = CONST.ol;
@@ -413,7 +400,6 @@ function paintKey(c, q, tok, ph) {
   else if (q.fin) glyph(c, "flag", q.x + q.nw + 3, q.y + dy - q.gs / 2, q.gs, col);
 }
 function bankFrame(c, b) { c.fillStyle = CONST.ol; c.beginPath(); rp(c, b.x, b.y, b.w, b.h, 8); c.fill(); }
-const rp = (c, x, y, w, h, r) => { c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
 /* one row's controls and label, at rest or focused (band, bomb, label at its focused x) */
 function paintRowPart(c, G, P, tok, l, foc) {
   const d = G.d, ph = d.dev === "p", dv = DEV[d.dev], r = d.rows[l], o = P.rows[l];
@@ -465,9 +451,7 @@ function paintRest(g, G, P, tok, dpr) {
   paintStart(g, G, P, tok, false, "bare");
 }
 function paintFoot(c, F, tok) {
-  const {x, y, w, h} = F, rr = (x0, y0, w0, h0, r0, col) => { c.fillStyle = col; c.beginPath(); rp(c, x0, y0, w0, h0, r0); c.fill(); };
-  rr(x, y + 4, w, h, 8, CONST.ol); rr(x, y, w, h, 8, CONST.ol); rr(x + 2, y + 2, w - 4, h - 4, 6, tok.bed);
-  c.fillStyle = tok.keyhi; c.fillRect(x + 6, y + 2, w - 12, 2);
+  plaque(c, F.x, F.y, F.w, F.h, tok);
   for (const p of F.parts) {
     if (p.sep) text(c, p.sep, p.x, F.mid, F.f, CONST.off);
     else if (p.cap) { const cy = F.mid - DEV.d.caph / 2; if (Array.isArray(p.cap)) arrowCap(c, p.x, cy, p.w, DEV.d.caph, p.cap[0], tok); else if (canCap(c)) cap(c, p.x, cy, p.cap, {tok}); }
@@ -487,7 +471,6 @@ function paintTip(c, r, P, tok) {
 }
 
 /* ---- probe ---- */
-const CAP_K = 0.705;
 function record(G, P, ui, foc, dpr, el, touchy, verb, tipR, tok) {
   const u = G.u, d = G.d, b = (r) => [r.x * u, r.y * u, r.w * u, r.h * u], ts = textScale();
   probe.begin("level", {w: G.W, h: G.H, dpr, el});

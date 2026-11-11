@@ -11,6 +11,8 @@
           size x size box (a row puts it 8 px in), cy = the row's centre (the box top sits 46 % of size above it).
    glyph  a row's small mark in col, top-left x y, s px square: chev (a door's chevron), ext (a link out), up / dn (the arrow keycaps' legends),
           flag (a finale level's mark, appendix 7.2 mark()).
+   plaque the foot's sign plaque: radius 8, a 2 px #0b0609 outline over a hard 4 px drop, the bed inside, a 2 px keyhi strip along its top.
+   rpath rfill  the rounded-rect path and its fill (every page's own rounded parts).
    wallCell floorCell brickCell  the board's own cell painters (wallart, floorart, sprites paintBrick) on tok.biome, scaled to s. Hard edges only.
    A painter scales the caller's globalAlpha and leaves it as it found it. A missing tok (or focusBomb size) throws a named error; a degenerate size
    (a ring T, bed tile or wall-tile step under 1 px, or a span that is not finite) skips that part, so no loop can run away. */
@@ -30,8 +32,10 @@ const dev = (o) => DEV[o && o.phone ? "p" : "d"];
 const need = (tok, who) => { if (!tok || !tok.biome) throw new Error("kit " + who + ": tok is required (worldTokens(level))"); };
 /* loop guards: a step under 1 px or a span that is not finite would never end (or take forever), so that part is skipped */
 const runs = (step, ...span) => step >= 1 && span.every((v) => Number.isFinite(v));
-const sp = (c, x, y, w, h, r) => { c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
-const rf = (c, x, y, w, h, r, col) => { c.fillStyle = col; c.beginPath(); sp(c, x, y, w, h, r); c.fill(); };
+export const rpath = (c, x, y, w, h, r) => { c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
+const sp = rpath;
+export const rfill = (c, x, y, w, h, r, col) => { c.fillStyle = col; c.beginPath(); sp(c, x, y, w, h, r); c.fill(); };
+const rf = rfill;
 /* an inset shadow with no blur inside the clipped padding box: the box minus itself moved by dy, or minus itself shrunk by s */
 const inset = (c, x, y, w, h, col, dy, s = 0) => { c.fillStyle = col; c.beginPath(); sp(c, x, y, w, h, 4); if (s) sp(c, x + s, y + s, w - 2 * s, h - 2 * s, Math.max(0, 4 - s)); else sp(c, x, y + dy, w, h, 4); c.fill("evenodd"); };
 const FACE = {
@@ -115,6 +119,12 @@ export function band(c, x, y, w, h, tok) {
   need(tok, "band");
   rf(c, x, y, w, h, 6, tok.band);
   c.fillStyle = OL; c.beginPath(); sp(c, x, y, w, h, 6); sp(c, x + 2, y + 2, w - 4, h - 4, 4); c.fill("evenodd");
+}
+
+export function plaque(c, x, y, w, h, tok) {
+  need(tok, "plaque");
+  rf(c, x, y + 4, w, h, 8, OL); rf(c, x, y, w, h, 8, OL); rf(c, x + 2, y + 2, w - 4, h - 4, 6, tok.bed);
+  c.fillStyle = tok.keyhi; c.fillRect(x + 6, y + 2, w - 12, 2);
 }
 
 const BOMB = Object.freeze({timer: 1, variant: null}), BARE = Object.freeze({bare: true});

@@ -26,8 +26,9 @@
 import {biomeOf} from "../../core/config.js";
 import {LABEL, MENU_ROWS, MENU_WORDS as M, ART_STYLES, DIFF, tagFor, runParts} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
-import {key, cap, capW, plate, band, focusBomb, glyph} from "../kit/paint.js";
-import {T, DEV, measure, textScale} from "../kit/type.js";
+import {key, cap, capW, plate, band, focusBomb, glyph, plaque} from "../kit/paint.js";
+import {T, DEV, measure, textScale, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
+import {R, sc, okBox, big, deep} from "../kit/geom.js";
 import {layer, capDpr, touch, keyOf, canMake, BUDGET} from "../kit/cache.js";
 import {roomLayer} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
@@ -35,7 +36,7 @@ import {drawLogo2d, deviceScale} from "../logo/draw2d.js";
 import {PLATE as LOGO} from "../logo/worlds.js";
 import {layout as logoLay} from "../logo/glyphs.js";
 import {hints, tapMode} from "../hintcopy.js";
-import {TZ, deep, cardPlan, paintCard, recordCard} from "./card.js";
+import {TZ, cardPlan, paintCard, recordCard} from "./card.js";
 
 export const DESK = deep({
   d: {top: 70, w: 1060, pad: [30, 26, 26, 26], list: 480, col: 26, hero: 64, door: 46, card: 420, foot: 18},
@@ -45,7 +46,7 @@ export const PHONE = deep({
   p: {top: 40, bot: 20, side: 12, pad: [12, 12, 14, 12], hero: 62, door: 50, tile: 58, card: 120, max: 600},
   p125: {top: 26, bot: 20, side: 12, pad: [12, 12, 14, 12], hero: 62, door: 50, tile: 84, card: 120, max: 600},
 });
-export const PITCH = 8, BRK = 24, GAP = 10, FOOT_H = 54, TOP_MIN = 26, GUT = 8, CARD_MIN = 360, CAP_K = 0.705;
+export const PITCH = 8, BRK = 24, GAP = 10, FOOT_H = 54, TOP_MIN = 26, GUT = 8, CARD_MIN = 360;
 /* the cached feet's reserve: the three verbs' feet (START, OPEN, the controller's SOURCE line) planned with no note or sign at the text scale in force,
    their layer widths summed and rounded up to FEET_STEP device px, so a key / controller flip (within a few px of each other) lands on the same room
    key and the room's dpr never moves with the words; feet wider in all (a note, the signpost, long rebound caps) paint live instead */
@@ -63,10 +64,6 @@ export const COMPACT = deep({
 const LOGO_CAP = LOGO.menu.cap, ENV = logoLay(LOGO.menu.build).env, LOGO_H = ENV.h * LOGO_CAP, EDGE = 2, RESERVE = 3 * 1024 * 1024;
 const LOGO_MIN = 20;
 const PLAY = MENU_ROWS[0], LS = LABEL.LEVEL_SELECT, GUIDE = "GUIDE", SOURCE = "SOURCE";
-const big = (ts) => ts > 1.1;
-
-const R = (x, y, w, h) => ({x, y, w, h});
-const sc = (r, u) => (r ? {x: r.x * u, y: r.y * u, w: r.w * u, h: r.h * u} : null);
 /* fl (a touch box): the floors in box units ({h, g}); a row's height and a gap in design px are then max(design, floor / u), and u is the largest
    scale whose floored page fits the box (the floored part is fixed in box units, so the fit is monotone in u: a bisection finds it) */
 function desk(F, rows, t125, fl) {
@@ -149,7 +146,6 @@ function compact(F, rows, t125) {
 }
 let gm = null;
 const sameRows = (a, b) => a === b || (a.length === b.length && a.every((l, i) => l === b[i]));
-const okBox = (F) => !!F && F.W > 0 && F.H > 0 && Number.isFinite(F.W) && Number.isFinite(F.H);
 export function menuGeom(F, rows = MENU_ROWS) {
   const ts = F.ts > 0 ? F.ts : textScale(), t125 = big(ts), touchy = !!F.touch, shell = !!F.shell, css = F.css > 0 ? F.css : 1, isPhone = shell && touchy && F.H > F.W * 1.3;
   if (gm && gm.W === F.W && gm.H === F.H && gm.touch === touchy && gm.shell === shell && gm.t125 === t125 && gm.css === css && sameRows(gm.rows, rows)) return gm.G;
@@ -196,13 +192,6 @@ export function playTags(ui) {
   if (!t) return [lv];
   return [...new Set([t, runParts(run, {count: true}).join(" · "), runParts(run, {count: true, terse: true}).join(" · "), lv])];
 }
-const EST = {font: "", measureText(s) { const m = /(\d+(?:\.\d+)?)px/.exec(this.font); return {width: String(s).length * 0.6 * (m ? +m[1] : 10)}; }};
-const mOK = new WeakMap(), mOf = (c) => {
-  if (!c || (typeof c !== "object" && typeof c !== "function")) return EST;
-  let v = mOK.get(c);
-  if (v === undefined) { const m = typeof c.measureText === "function" ? c.measureText("M") : null; mOK.set(c, (v = !!m && typeof m.width === "number")); }
-  return v ? c : EST;
-};
 const lblF = (px) => T.label(px), W = (c, f, s) => measure(c, f, s);
 function fitCands(c, f, cands, room, two) {
   for (const s of cands) {
@@ -286,8 +275,6 @@ export function plan(c0, G, ui) {
   return {rows, foot, verbs, card, reserve};
 }
 
-const canCap = (c) => mOf(c) === c;
-function text(c, s, x, y, f, col, align) { c.font = f; c.fillStyle = col; c.textAlign = align || "left"; c.textBaseline = "middle"; c.fillText(s, x, y); }
 /* part: "bare" paints PLAY's key and word only (the plate layer), "dev" its tag and keycap only (live: they follow the device and the run); else all */
 function paintRow(c, o, tok, ph, foc, part) {
   const r = o.r, dv = DEV[ph ? "p" : "d"];
@@ -308,11 +295,8 @@ function paintRow(c, o, tok, ph, foc, part) {
   if (o.tz) o.tz.lines.forEach((s, i) => text(c, s, o.tz.align === "left" && foc ? o.tz.fx : o.tz.x, o.tz.ys[i], o.tz.f, o.tz.col, o.tz.align));
   if (!(foc && o.glyph.focHide)) glyph(c, o.glyph.n, o.glyph.x, o.glyph.y, o.glyph.s, CONST.t2);
 }
-const rp = (c, x, y, w, h, r) => { c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
 function paintFoot(c, P, tok) {
-  const {x, y, w, h} = P, rr = (x0, y0, w0, h0, r0, col) => { c.fillStyle = col; c.beginPath(); rp(c, x0, y0, w0, h0, r0); c.fill(); };
-  rr(x, y + 4, w, h, 8, CONST.ol); rr(x, y, w, h, 8, CONST.ol); rr(x + 2, y + 2, w - 4, h - 4, 6, tok.bed);
-  c.fillStyle = tok.keyhi; c.fillRect(x + 6, y + 2, w - 12, 2);
+  plaque(c, P.x, P.y, P.w, P.h, tok);
   for (const p of P.parts) {
     if (p.sep) text(c, p.sep, p.x, P.mid, P.f, CONST.off);
     else if (p.cap) {

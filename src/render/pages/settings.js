@@ -26,17 +26,17 @@
    outside any layer paint. */
 import {LABEL, ART_STYLES} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
-import {key, plate, band, focusBomb, glyph, wallCell, capW, cap} from "../kit/paint.js";
-import {T, DEV, measure, textScale, dsp} from "../kit/type.js";
+import {key, plate, band, focusBomb, glyph, wallCell, capW, cap, plaque, rfill as rr} from "../kit/paint.js";
+import {T, DEV, measure, textScale, dsp, measurer as mOf, text, CAP_K} from "../kit/type.js";
+import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch as touchK, keyOf, canMake, BUDGET} from "../kit/cache.js";
 import {roomLayer} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
-import {lookVal, FOOT_TAP} from "../menudraw.js";
+import {lookVal, FOOT_TAP} from "../kit/copy.js";
 import {roomDpr} from "./menu.js";
 
-const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
 export const DESK = deep({
   d: {pad: [16, 22, 20, 22], list: 480, pane: 400, gap: 20, row: 38, grp: 12, kick: true, below: 12, paneMin: 452},
   d125: {pad: [12, 22, 14, 22], list: 540, pane: 440, gap: 20, row: 36, grp: 12, kick: false, below: 10, paneMin: 452},
@@ -55,11 +55,6 @@ export const COPY = deep({
   of: "OF", row: "ROW", change: "CHANGE", back: "BACK", tapRow: "TAP A ROW TO CHANGE IT", loading: "LOADING", build: "BUILD", perf: "PERFORMANCE · BATTERY", page: "PAGE",
 });
 const CAM_NAME = ["STANDARD", "WIDE", "FAR"];
-const big = (ts) => ts > 1.1;
-const R = (x, y, w, h) => ({x, y, w, h});
-const sc = (r, u) => (r ? {x: r.x * u, y: r.y * u, w: r.w * u, h: r.h * u} : null);
-const okBox = (F) => !!F && F.W > 0 && F.H > 0 && Number.isFinite(F.W) && Number.isFinite(F.H);
-const inR = (r, x, y) => !!r && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
 
 /* the rows' vertical run: heights hs and the gap before each (a course before a GROUP row), design px; on a touch box (fl, the floors in box
    units) every row is >= 44 CSS px and every gap >= 8 (lead ruling, fix round 1) */
@@ -254,13 +249,6 @@ function gfxSpec(r, phoneM) {
 }
 
 /* ---- the plan: every part's place and words, measured once per change ---- */
-const EST = {font: "", measureText(s) { const m = /(\d+(?:\.\d+)?)px/.exec(this.font); return {width: String(s).length * 0.6 * (m ? +m[1] : 10)}; }};
-const mOK = new WeakMap(), mOf = (c) => {
-  if (!c || (typeof c !== "object" && typeof c !== "function")) return EST;
-  let v = mOK.get(c);
-  if (v === undefined) { const m = typeof c.measureText === "function" ? c.measureText("M") : null; mOK.set(c, (v = !!m && typeof m.width === "number")); }
-  return v ? c : EST;
-};
 const W = (c, f, s) => measure(c, f, s);
 function wrap(c, f, s, w) {
   const out = [];
@@ -476,9 +464,6 @@ function plan(c0, G, u, specs, touchy, words) {
 }
 
 /* ---- painting ---- */
-const rp = (c, x, y, w, h, r) => { c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
-const rr = (c, x, y, w, h, r, col) => { c.fillStyle = col; c.beginPath(); rp(c, x, y, w, h, r); c.fill(); };
-function text(c, s, x, y, f, col, align) { c.font = f; c.fillStyle = col; c.textAlign = align || "left"; c.textBaseline = "middle"; c.fillText(s, x, y); }
 /* the meter's cell: a small key, radius 3; lit = the brick standing up 2 px with its brickHi strip, mid = the brick's darker step, well = sunk */
 function cell(c, r, kind, tok) {
   const y = r.y - (kind === "lit" ? 2 : 0), ix = r.x + 2, iy = y + 2, iw = r.w - 4, ih = r.h - 4;
@@ -575,9 +560,8 @@ function slab(c, P, tok) {
   c.strokeStyle = CONST.ol; c.lineWidth = 2; c.strokeRect(P.x + 1, P.y + 1, P.w - 2, P.h - 2); c.strokeRect(P.x + SLAB - 1, P.y + SLAB - 1, P.w - 2 * SLAB + 2, P.h - 2 * SLAB + 2);
 }
 function paintFoot(c, F, tok, ph) {
-  const {x, y, w, h} = F, dv = DEV[ph ? "p" : "d"];
-  rr(c, x, y + 4, w, h, 8, CONST.ol); rr(c, x, y, w, h, 8, CONST.ol); rr(c, x + 2, y + 2, w - 4, h - 4, 6, tok.bed);
-  c.fillStyle = tok.keyhi; c.fillRect(x + 6, y + 2, w - 12, 2);
+  const dv = DEV[ph ? "p" : "d"];
+  plaque(c, F.x, F.y, F.w, F.h, tok);
   for (const L of F.lines) for (const p of L.ps) {
     if (p.sep) text(c, p.sep, p.x, p.y, F.f, CONST.off);
     else if (p.cap) {
@@ -626,7 +610,6 @@ function paintGfxPane(c, P) {
 }
 
 /* ---- the probe record (outside any layer paint) ---- */
-const CAP_K = 0.705;
 function record(G, Pl, foc, ui, dpr, el, touchy, gp, pg) {
   const u = G.u, d = G.d, b = (r) => [r.x * u, r.y * u, r.w * u, r.h * u], tok = worldTokens(ui.level), ts = textScale(), dv = DEV[d.dev];
   const txt = (s, x, y, w, px, col, role, o = {}) => probe.text(s, x * u, (y - px * ts * CAP_K / 2) * u, Math.max(0.01, w * u), px * ts * CAP_K * u, {role, col, px: px * u, ...o});

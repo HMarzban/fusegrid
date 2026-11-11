@@ -354,6 +354,10 @@ same room key (Task 3.2; was three feet as wide as the box); feet wider in all (
 1.5 there leaves room for under one foot), the cache <= 23.99 MB of 24 MiB. A zero or non-finite box draws
 nothing (`menuHit` -1). `glyph` (chev, ext, up, dn, flag) is a kit part (`kit/paint.js`), `canMake` the kit cache's one copy (the logo painter's too). Page plumbing, for every page task: a page module exports one `*Geom` (rects by name, box units; `G.d` design px)
 for draw and hit, a painter fed names and values by shellview (never indices), and its hit; menudraw keeps the entry names and delegates.
+The kit (`src/render/kit/`, R1 kit harmonisation): `tokens` (world colours), `type` (faces, `measure`, `measurer` / `measures` (a 0.6 em estimate
+for a context that cannot measure), `text`, `CAP_K`), `geom` (`deep`, `R`, `sc`, `okBox`, `inR`, `big`), `paint` (key, cap, plate, band, `plaque` the
+foot's sign plaque, `rpath` / `rfill`, glyph, the cell painters), `copy` (`FOOT_TAP`, `LOOK_NAME`, `lookVal`: words two pages paint; menudraw
+re-exports them), `cache`, `room`, `probe`. A part two or more pages use lives here; a part one page uses stays in its page.
 Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box, LEVEL SELECT's included, at one room dpr:
 MENU's rule, `pages/menu.js` `roomDpr`, its dpr giving way so MENU's plate, its foot reserve and a 3 MiB logo reserve fit `BUDGET`; so a MENU /
 LEVEL SELECT switch never refills the room; a page keeps its plate out of the room layer), made at once so a cursor move never misses, `touch()`ed on a steady frame (`cache.touch(key)`: a held layer

@@ -2,10 +2,11 @@
    labels 700, body 400, numbers 800 in fixed-width digit cells (nums: canvas has no tabular-nums, so every digit takes the widest digit's cell), units unspaced.
    DEV is the appendix section 2 device table (d desktop, p phone; pri sec hud bod ttl are type px before the text scale, tile is the plate bed tile). The text scale
    (R14) is module level, default 1, set only by tests and shots.mjs --t125; it is not a player setting. measure memoizes per context on (font, text, text scale);
-   a hit does not set c.font. */
+   a hit does not set c.font. measurer(c) is c when it can measure, else a 0.6 em estimate (a context with no measureText plans on it); text paints
+   one string middle-aligned (the pages' one text call); CAP_K is the cap height per em the probe records a text box with. */
 import {CONST} from "./tokens.js";
+import {deep} from "./geom.js";
 
-const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
 export const SANS = "system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
 export const DEV = deep({
   d: {pri: 21, sec: 16, hud: 27, bod: 18, ttl: 40, rowh: 40, keyh: 30, btnh: 50, capw: 34, caph: 30, rkw: 64, mcw: 12, mch: 26, bkh: 36, lch: 40, lcw: 40, sdw: 38, sdh: 52, sdf: 34, tg: 26, bombs: 30, labx: 50, T: 16, tile: 80},
@@ -32,6 +33,17 @@ export function measure(c, font, text) {
   return w;
 }
 
+const EST = {font: "", measureText(s) { const m = /(\d+(?:\.\d+)?)px/.exec(this.font); return {width: String(s).length * 0.6 * (m ? +m[1] : 10)}; }};
+const mOK = new WeakMap();
+export function measurer(c) {
+  if (!c || (typeof c !== "object" && typeof c !== "function")) return EST;
+  let v = mOK.get(c);
+  if (v === undefined) { const m = typeof c.measureText === "function" ? c.measureText("M") : null; mOK.set(c, (v = !!m && typeof m.width === "number")); }
+  return v ? c : EST;
+}
+export const measures = (c) => measurer(c) === c;
+export const CAP_K = 0.705;
+export function text(c, s, x, y, f, col, align) { c.font = f; c.fillStyle = col; c.textAlign = align || "left"; c.textBaseline = "middle"; c.fillText(s, x, y); }
 const set = (c, font, col, o) => { c.font = font; c.fillStyle = col; c.textAlign = o.align || "left"; c.textBaseline = o.base || "middle"; };
 export function dsp(c, text, x, y, px, o = {}) {
   const font = T.display(px), em = px * K, s = String(text), dy = em * 0.08;

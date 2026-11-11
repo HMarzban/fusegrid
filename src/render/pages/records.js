@@ -32,8 +32,9 @@ import {FOES, POWER} from "../../core/entities.js";
 import {drawEnemyBody} from "../sprites.js";
 import {drawIcon} from "../icons.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
-import {key, cap, capW, plate, focusBomb, wallCell} from "../kit/paint.js";
-import {T, DEV, measure, textScale, nums} from "../kit/type.js";
+import {key, cap, capW, plate, focusBomb, wallCell, plaque, rpath as sp, rfill as rf} from "../kit/paint.js";
+import {T, DEV, measure, textScale, nums, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
+import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch, keyOf, canMake, BUDGET} from "../kit/cache.js";
 import {roomLayer} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
@@ -41,7 +42,6 @@ import {roomDpr as menuRoomDpr} from "./menu.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
 
-const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
 export const PAGES = Object.freeze(["scores", "stats", "medals"]);
 export const DESK = deep({
   d: {w: 980, pad: [16, 24, 22, 24], tabW: 150, pane: [22, 30, 24, 30], foot: 24, bank: 130, kick: 150, row: 26, statL: 400},
@@ -51,12 +51,7 @@ export const PHONE = deep({
   p: {side: 12, top: 16, bot: 16, pad: [12, 10, 12, 10], back: 120, pane: [18, 8, 12, 8], max: 600, row: 28},
   p125: {side: 12, top: 16, bot: 16, pad: [12, 10, 12, 10], back: 140, pane: [14, 8, 12, 8], max: 600, row: 28},
 });
-export const TROUGH = 11, PANE_GAP = 10, FOOT_H = 54, GUT = 8, CAP_K = 0.705, TAB_GAP = 6, BANK_GAP = 4;
-const big = (ts) => ts > 1.1;
-const R = (x, y, w, h) => ({x, y, w, h});
-const sc = (r, u) => (r ? {x: r.x * u, y: r.y * u, w: r.w * u, h: r.h * u} : null);
-const inR = (r, x, y) => !!r && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
-const okBox = (F) => !!F && F.W > 0 && F.H > 0 && Number.isFinite(F.W) && Number.isFinite(F.H);
+export const TROUGH = 11, PANE_GAP = 10, FOOT_H = 54, GUT = 8, TAB_GAP = 6, BANK_GAP = 4;
 
 /* the bodies, laid out in a box iw wide at the device dv and text scale ts: design px relative to the body's top-left. SCORES: the DIFFICULTY kicker and
    bank stay at their size (they are touch targets); under them the badges and the table take the height left (avail), scaled by tk where they need
@@ -384,13 +379,6 @@ export function plateHit(x, y, F) {
 }
 
 /* measuring: a context that cannot measure plans on a 0.6 em estimate */
-const EST = {font: "", measureText(s) { const m = /(\d+(?:\.\d+)?)px/.exec(this.font); return {width: String(s).length * 0.6 * (m ? +m[1] : 10)}; }};
-const mOK = new WeakMap(), mOf = (c) => {
-  if (!c || (typeof c !== "object" && typeof c !== "function")) return EST;
-  let v = mOK.get(c);
-  if (v === undefined) { const m = typeof c.measureText === "function" ? c.measureText("M") : null; mOK.set(c, (v = !!m && typeof m.width === "number")); }
-  return v ? c : EST;
-};
 const W = (c, f, s) => measure(c, f, s);
 const sep3 = (n) => String(n | 0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 /* fit: the first candidate that fits room, else "" (a word steps down or drops, never clipped) */
@@ -502,9 +490,6 @@ export function plan(c0, G, ui) {
 }
 
 /* ---------- painters ---------- */
-const sp = (c, x, y, w, h, r) => { c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
-const rf = (c, x, y, w, h, r, col) => { c.fillStyle = col; c.beginPath(); sp(c, x, y, w, h, r); c.fill(); };
-function text(c, s, x, y, f, col, align) { c.font = f; c.fillStyle = col; c.textAlign = align || "left"; c.textBaseline = "middle"; c.fillText(s, x, y); }
 /* the page's own icons on the appendix 4.1 16-unit grid (medal, lock, back, the four arrow legends) */
 function ic(c, n, x, y, s, col) {
   c.save(); c.translate(x, y); c.scale(s / 16, s / 16);
@@ -816,11 +801,8 @@ function footPlan(c, G, items) {
   for (const p of parts) { if (p.sep) continue; if (p.t != null) { it++; zones.push({x0: p.x, x1: p.x + p.w, key: items[it].key || null}); } else zones[zones.length - 1].x1 = p.x + p.w; }
   return {x, y: d.foot.y, w: fw, h: FOOT_H, f, px: dv.sec, parts, zones, mid: d.foot.y + FOOT_H / 2};
 }
-const canCap = (c) => mOf(c) === c;
 function paintFoot(c, P, tok) {
-  const {x, y, w, h} = P;
-  rf(c, x, y + 4, w, h, 8, CONST.ol); rf(c, x, y, w, h, 8, CONST.ol); rf(c, x + 2, y + 2, w - 4, h - 4, 6, tok.bed);
-  c.fillStyle = tok.keyhi; c.fillRect(x + 6, y + 2, w - 12, 2);
+  plaque(c, P.x, P.y, P.w, P.h, tok);
   for (const p of P.parts) {
     if (p.sep) text(c, p.sep, p.x, P.mid, P.f, CONST.off);
     else if (p.cap) {
@@ -987,7 +969,7 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
   }
 }
 /* the probe's text widths come from the measuring context the plan used (the page's canvas), here through the memo */
-let MC = EST;
+let MC = mOf(null); // the estimate until a page plans
 const measureOr = (s, px, disp) => W(MC, disp ? T.display(px) : T.label(px), s);
 const nWOr = (s, px) => nW(MC, T.num(px), s);
 
