@@ -99,11 +99,14 @@ function statsBody(dv, ts, iw, D, narrow) {
   const lifeK = R(rx, ry, rw, sec); ry += sec + 6;
   const life = [0, 1, 2, 3, 4].map((i) => R(rx, ry + i * lh, rw, lh)); ry += 5 * lh;
   let by = narrow ? ry + g : y + g;
-  const bk = narrow ? 2 : 1, bestK = R(0, by, L, bk * sec); by += bk * sec + 6; // narrow: the kicker breaks once (BEST BY DIFFICULTY / NO MODIFIERS · NORMAL SPEED)
+  /* the kicker breaks once (BEST BY DIFFICULTY / NO MODIFIERS · NORMAL SPEED) on a narrow body and at 125 % (one line there ran past the column into
+     the wall course); at 100 % it keeps the mock's one line */
+  const bk = narrow || ts > 1 ? 2 : 1, bestK = R(0, by, L, bk * sec); by += bk * sec + 6;
   const best = [0, 1, 2].map((i) => R(0, by + i * lh2, L, lh2)); by += 3 * lh2;
   const notes = narrow ? null : R(rx, ry + 12, rw, 3 * sec), h = narrow ? by : Math.max(by, ry + 12 + 3 * sec);
-  return {kick, qual, digits, course, reached, tiles, lifeK, life, bestK, best, notes, lh, lh2, div: narrow ? null : R(L + 18, 0, 3, h), narrow, h};
+  return {kick, qual, digits, course, reached, tiles, lifeK, life, bestK, bk, best, notes, lh, lh2, div: narrow ? null : R(L + 18, 0, 3, h), narrow, h};
 }
+const bestKick = () => [ST.BY_DIFF, RW.NO_MODS + " · " + speedTag(0)];
 /* the armed reset's confirm plate (appendix 7.3) inside the pane: desk centred, 700 wide (680 at 125 %), its keys side by side (stacked at 125 %); touch at
    the pane's foot, its keys stacked full width over TAP ANYWHERE ELSE TO CANCEL. Lines are counted at a generous 0.66 em, so the measured wrap fits. */
 const estLines = (s, px, w) => { let n = 1, cur = 0; for (const wd of String(s).split(" ")) { const ww = (wd.length + 1) * 0.7 * px; if (cur && cur + ww > w) { n++; cur = ww; } else cur += ww; } return n; };
@@ -480,7 +483,7 @@ function statsPlan(c, G, ui) {
   if (b.notes) for (const n of ui.notes || []) { const ls = wrap(c, sf, String(n), b.notes.w / k, 3) || []; for (const l of ls) if (notes.length < 3) notes.push(l); }
   const conf = d.confirm, fk = conf.fk, cf = T.body(dv.bod * fk), sentence = resetSentence(ui.wipe ? ui.wipe[0] : null, ui.wipe ? ui.wipe[1] : null) || RESET_DEFAULT;
   const titleF = T.display(dv.ttl * 0.72 * fk), tl = wrap(c, titleF, ST.TITLE, conf.title.w - 34, conf.tl) || [ST.TITLE];
-  const bk = ST.BY_DIFF + " · " + RW.NO_MODS + " · " + speedTag(0), bestK = !b.narrow || W(c, sf, bk) <= b.bestK.w / k ? [bk] : [ST.BY_DIFF, RW.NO_MODS + " · " + speedTag(0)];
+  const bk2 = bestKick(), bk = bk2.join(" · "), bestK = b.bk === 1 || W(c, sf, bk) <= b.bestK.w / k ? [bk] : bk2;
   return {bestK, hero: h, qual, digits: h ? [...sep3(h.s)] : [], reached: h ? ST.REACHED + " " + h.r + " · " + biomeOf(h.r).name : "", life, bests, top, notes,
     tiles: [[ST.RUNS, sep3(v.runs | 0), "bomb"], [ST.PLAY_TIME, hm(v.secs), "clock"], [ST.MEDALS, (v.medals | 0) + "/8", "medal"]],
     confirm: {title: tl, body: wrap(c, cf, sentence, conf.body.w, conf.bl) || [sentence], sentence, tf: titleF}};

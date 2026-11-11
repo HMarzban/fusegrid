@@ -339,6 +339,8 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
   const miss = want.filter((w) => !T.includes(w)), plateBox = { x: G.plate.x, y: G.plate.y, w: G.plate.w, h: G.plate.h + (G.foot ? G.foot.y + G.foot.h - G.plate.y - G.plate.h : 0) };
   const out = s.texts.filter((t) => !inside(t, plateBox, 0.6));
   check(`STATS (${b}${ts > 1 ? " t125" : ""}): every fact drawn (the hero's qualifier, digits, course, the tiles, LIFETIME, BEST BY DIFFICULTY), inside the plate, no ellipsis`, miss.length === 0 && out.length === 0 && !/…/.test(joined) && T.some((x) => /HARD DIFFICULTY/.test(x)), J({ miss, out: out.slice(0, 3) }));
+  const B = G.d.bodies.stats, kl = RP._dbg.last.P.stats.bestK, kt = kl.map((l) => s.texts.find((t) => t.s === l));
+  if (B.div && ts > 1) check(`STATS (${b} t125): the BEST BY DIFFICULTY kicker breaks once and each line ends before the wall course (one line ran into it)`, kl.length === 2 && kt.every((t) => t && t.x + t.w <= B.div.x * G.u + 0.01), J({ kl, kt, div: B.div.x * G.u }));
   const a = snap(F, SUI({ arm: true })).s, f = a.rects.find((r) => r.name === "confirm"), body = a.texts.filter((t) => t.role === "body");
   check(`STATS armed (${b}${ts > 1 ? " t125" : ""}): ERASE ALL RECORDS? and the whole sentence inside the confirm plate, AGAIN ERASES focused, COPY beside it`,
     !!f && body.map((t) => t.s).join(" ") === W.RESET_DEFAULT && body.every((t) => inside(t, f, 0.6)) && a.texts.some((t) => /ERASE ALL/.test(t.s)) && a.rects.some((r) => r.name === "AGAIN ERASES" && r.focus) && a.rects.some((r) => /^COPY/.test(r.name)), J({ f, body: body.map((t) => t.s) }));
