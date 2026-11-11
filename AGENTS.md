@@ -46,7 +46,31 @@ settles (`app.boardReady`, set on resolve or reject).
 
 The wordmark is logo B (LIT FUSE), drawn by ONE painter, `src/render/logo/draw2d.js`
 `drawLogo2d` (UI upgrade Task 7.2), from `glyphs.js` / `worlds.js` `plan()` alone,
-in the world of `app.level`, the CLASSIC build in every look until Task 7.3. The
+in the world of `app.level`, in the look on screen (Task 7.3): `shellview.drawShell`
+calls `setLogoLook(kind)` once a frame (`curKind`, so a look still loading paints
+CLASSIC) and each lazy tree calls `registerLogo(kind, f)` when it loads; `f` swaps only
+the world-layer fill, the spark sprite, the tip and the face colours, while placement,
+plate (`paintPlate`), memo, cache and the spark clock stay `drawLogo2d`'s, the look and a
+registry epoch in the memo and the look in every layer key. PIXEL is
+`src/render/pixel/logo.js` over the palette-slot grids in `pixel/art/logo.js` (the
+appendix 8.6 / 8.7 hand grids; the 24 cap sampled from the vector glyphs at pixel
+centres with `inGlyph`, never a pixel read; title 24 art px a cap, MENU 12 in the
+cream `eye` build; drawn NEAREST at ceil(u x dpr) device px an art px, then scaled
+smoothed, R20; at true scale, u = cap / A: its envelope is taller and wider than
+CLASSIC's, so the look's `grow` widens the layer round it, the title inside its plate's
+bed, MENU by the box's width, its taller envelope standing into the plate header above
+and below `G.lbox`), imported by `pixel/renderer.js`: 8,858 B, over the plan's 8 KB
+budget, pinned in `tests/logo-looks.test.mjs` pending the lead's ruling, and written
+dense (no spaces round operators, `three/wrapper.js`'s style) to get near it. REAL 3D
+is `src/render/logo/draw3d.js` (Canvas 2D only: no `vendor/` or `render/three`
+import), loaded beside `wrapper.js` by `three/load.js` (precached with the 3D look);
+`three/wrapper.js` never imports `logo/`. Its side is the built 70 / 30 lip / world mix
+(`SIDE.variant` "mix"; "lip" is the spec's, the owner's veto option, its own layer key);
+its blurred shadows are stacked offset fills (no filter). Under the probe the logo
+records its look (`logo px` / `logo 3d` / `logo 2d`), the title plate and each face
+against bare bed as a locked info pair (`logoProbe()`, after the page); the title
+records `begin("title")` and its prompt, so `gates.mjs` judges the title (its row
+exempts chosen, band, ring, locked, touch and gap). The
 title (`menudraw.drawIntroChrome`, `titleLogoBox`) is the full-colour build on the
 kit plate, line on `d` / `l`, stacked on `p`, inside a 12 px margin of `#c` above
 the prompt: the geometry's FITTED title (`worlds.js` `titleFit`, `plan({fit})`,

@@ -15,20 +15,27 @@
    read before any transient transform), css (CSS px per box unit, 1 when the caller does not know it), touch, t (page clock s), run (0..1: the
    run-up along the cord, which nothing asks for today; TITLE_RUNUP says whether the title's exit runs it), reduced (REDUCE FLASH), spark (false:
    none), scale (a transient zoom about the logo's centre)}. EDGE caller units stay free on every side of the box for the layer's whole device px
-   and the blit's snap. Returns the placement (reused per place), or null when no canvas can be made (Node). _dbg records only while _dbg.on;
-   _seam.plan is the plan the painter calls (a test spies on it). */
+   and the blit's snap. Returns the placement (reused per place, its look named), or null when no canvas can be made (Node). _dbg records only
+   while _dbg.on; _seam.plan is the plan the painter calls (a test spies on it).
+   Looks (Task 7.3): this is the one entry for every look. setLogoLook(kind) is the look on screen (shellview, once a frame); registerLogo(kind, f)
+   is called by each lazy tree when it loads (PIXEL pixel/logo.js, REAL 3D logo/draw3d.js). Until the look's tree is in, the CLASSIC build paints,
+   so the swap is the next frame and never a blank one. f(G, o) changes only what its look draws: the world layer fill (fw), the spark sprite
+   (fs, cell, sw, half), the spark's tip, the face colours and grow (the extent its art needs round the logo canvas, centred, when that is more
+   than CLASSIC's: the layer grows, G.room is what the caller's box allows); placement, plate, memo, cache, snapping and the spark clock stay here. The look and
+   a registry epoch are in the memo, and the look in every layer key. */
 import {P, BD, BOMB, SPARK, glyph, layout, cord, bomb, spark, sparkAt, fit, flat} from "./glyphs.js";
 import {PLATE, plan, motif, worldOf} from "./worlds.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
 import {plate as kitPlate} from "../kit/paint.js";
 import {worldTokens} from "../kit/tokens.js";
+import * as kp from "../kit/probe.js";
 
 export const TITLE_RUNUP = false;
 export const _dbg = {on: false, ran: 0, place: "", run: undefined, last: null};
 export const _seam = {plan};
 const TAU = 2 * Math.PI, N = 7, F0 = 0, F1 = 1, SIDE = 2, INK = 3, BOMBC = 4, CINK = 5, ROPE = 6, EDGE = 2, K0 = {look: "2d", textScale: 1};
 
-const mk = (w, h) => { if (typeof OffscreenCanvas === "function") return new OffscreenCanvas(w, h); const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
+export const mk = (w, h) => { if (typeof OffscreenCanvas === "function") return new OffscreenCanvas(w, h); const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
 let mqf = null, mql = null;
 export function reduceMotion() {
   const m = globalThis.matchMedia;
@@ -38,7 +45,7 @@ export function reduceMotion() {
 }
 export function deviceScale(c) { const m = c && typeof c.getTransform === "function" ? c.getTransform() : null; return m && typeof m.a === "number" && m.a > 0 ? Math.hypot(m.a, m.b || 0) : 1; }
 
-function ops(c, d, x = 0, y = 0) {
+export function ops(c, d, x = 0, y = 0) {
   for (const o of d) {
     const k = o[0];
     if (k === "M") c.moveTo(o[1] + x, o[2] + y);
@@ -50,7 +57,7 @@ function ops(c, d, x = 0, y = 0) {
   }
 }
 const rr = (c, x, y, w, h, r) => { c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
-function part(c, q) {
+export function part(c, q) {
   c.save();
   if (q.tf) { c.translate(q.tf[0], q.tf[1]); c.rotate(q.tf[2]); }
   if (q.clip === "body") { c.beginPath(); c.ellipse(0, BOMB.oy, BOMB.rx, BOMB.ry, 0, 0, TAU); c.clip(); }
@@ -72,9 +79,9 @@ function part(c, q) {
 const reach = (q) => q.k === "disc" ? Math.hypot(q.x, q.y) + q.r
   : q.k === "rect" ? Math.max(...[[q.x, q.y], [q.x + q.w, q.y], [q.x, q.y + q.h], [q.x + q.w, q.y + q.h]].map(([a, b]) => Math.hypot(a, b)))
   : Math.max(...flat(q.d).flatMap((s) => s.pts.map(([a, b]) => Math.hypot(a, b)))) + (q.k === "line" ? q.w / 2 : 0);
-function word(c, L, w) { for (const l of L.letters) if (l.word === w) for (const d of glyph(l.ch).d) { c.beginPath(); ops(c, d, l.x, l.y); c.fill("evenodd"); } }
-const body = (c, L) => { c.beginPath(); c.ellipse(L.bomb.x, L.bomb.y + BOMB.oy * BD, BOMB.rx * BD, BOMB.ry * BD, 0, 0, TAU); };
-function grown(c, L, g) {
+export function word(c, L, w) { for (const l of L.letters) if (l.word === w) for (const d of glyph(l.ch).d) { c.beginPath(); ops(c, d, l.x, l.y); c.fill("evenodd"); } }
+export const body = (c, L) => { c.beginPath(); c.ellipse(L.bomb.x, L.bomb.y + BOMB.oy * BD, BOMB.rx * BD, BOMB.ry * BD, 0, 0, TAU); };
+export function grown(c, L, g) {
   c.lineJoin = "round"; c.lineWidth = 2 * g;
   for (const l of L.letters) for (const d of glyph(l.ch).d) { c.beginPath(); ops(c, d, l.x, l.y); c.fill("evenodd"); c.stroke(); }
   body(c, L); c.fill(); c.stroke();
@@ -85,8 +92,8 @@ function oct(r) {
   const p = r * 0.9737, a = Math.round(p / 2.4142), b = Math.round(p / 3.4142);
   return [[1, 0, a], [0, 1, a], [1, 1, b], [1, -1, b]].filter((q) => q[2] > 0);
 }
-const fresh = (cv) => { const x = cv.getContext("2d"); x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = "source-over"; x.globalAlpha = 1; x.imageSmoothingEnabled = false; x.clearRect(0, 0, cv.width, cv.height); return x; };
-function dil(dst, src, r, tmp) {
+export const fresh = (cv) => { const x = cv.getContext("2d"); x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = "source-over"; x.globalAlpha = 1; x.imageSmoothingEnabled = false; x.clearRect(0, 0, cv.width, cv.height); return x; };
+export function dil(dst, src, r, tmp) {
   let from = src, k = 0;
   const put = (o) => { const to = k++ & 1 ? tmp : dst, x = fresh(to); for (const [dx, dy] of o) x.drawImage(from, dx, dy); from = to; };
   for (const [ux, uy, h] of oct(r)) {
@@ -96,34 +103,51 @@ function dil(dst, src, r, tmp) {
   if (from !== dst) fresh(dst).drawImage(from, 0, 0);
 }
 function inv(dst, src) { const x = fresh(dst); x.fillStyle = "#000"; x.fillRect(0, 0, dst.width, dst.height); x.globalCompositeOperation = "destination-out"; x.drawImage(src, 0, 0); x.globalCompositeOperation = "source-over"; }
-function close(a, b, r, t) { dil(b, a, r, t); inv(a, b); dil(b, a, r, t); inv(a, b); }
+export function close(a, b, r, t) { dil(b, a, r, t); inv(a, b); dil(b, a, r, t); inv(a, b); }
 
 const lev = (o) => o.level | 0 || 1;
-const same = (G, o) => !!G && G.in.level === lev(o) && G.in.dev === o.dev && G.in.k === o.k && G.in.dpr === o.dpr && G.in.css === o.css && G.in.touch === !!o.touch && G.in.cy === o.cy
+const LOOKS = {}, ST = {look: "2d", ep: 0}, PEND = [];
+export const setLogoLook = (k) => { ST.look = k; };
+export function registerLogo(k, L) { LOOKS[k] = L; ST.ep++; }
+export const logoLook = () => (ST.look !== "2d" && LOOKS[ST.look] ? ST.look : "2d");
+const same = (G, o, lk) => !!G && G.in.lk === lk && G.in.ep === ST.ep && G.in.level === lev(o) && G.in.dev === o.dev && G.in.k === o.k && G.in.dpr === o.dpr && G.in.css === o.css && G.in.touch === !!o.touch && G.in.cy === o.cy
   && G.in.bx === o.box.x && G.in.by === o.box.y && G.in.bw === o.box.w && G.in.bh === o.box.h;
-function geo(o) {
+function geo(o, lk) {
   const w = worldOf(lev(o)), title = o.place === "title", dev = o.dev === "p" ? "p" : "d", k = o.k > 0 ? o.k : 1, css = o.css > 0 ? o.css : 1, B = o.box;
   const dprB = capDpr(o.dpr > 0 ? o.dpr : 1, !!o.touch), dprL = dprB * k, bw = (B.w - 2 * EDGE) * k, bh = (B.h - 2 * EDGE) * k;
   const capM = title ? 0 : fit(PLATE.menu.build, {fitW: bw, fitH: bh, capMax: PLATE.menu.cap * k});
   const Pl = title ? _seam.plan(w.name, {fit: {w: bw, h: bh}, dev, dpr: dprB, css}) : _seam.plan(w.name, {cap: capM, ver: PLATE.menu.ver, dpr: dprB, css, build: PLATE.menu.build, dev, place: "menu"});
   const L = layout(Pl.build), env = L.env, capB = Pl.cap, capL = capB / k, s = capB * dprB, px = capB * css, tier = Pl.tier, pl = Pl.layers.find((l) => l.id === "plate");
-  const G = {in: {level: lev(o), dev: o.dev, k: o.k, dpr: o.dpr, css: o.css, touch: !!o.touch, cy: o.cy, bx: B.x, by: B.y, bw: B.w, bh: B.h},
+  const G = {in: {lk, ep: ST.ep, level: lev(o), dev: o.dev, k: o.k, dpr: o.dpr, css: o.css, touch: !!o.touch, cy: o.cy, bx: B.x, by: B.y, bw: B.w, bh: B.h},
     w, L, env, build: Pl.build, ver: title ? "full" : PLATE.menu.ver, dev, place: o.place, k, capL, capB, px, dprB, dprL, s, P: Pl, Wd: Math.ceil(env.w * s), Hd: Math.ceil(env.h * s)};
   G.outer = pl ? {x: pl.outer.x / k, y: pl.outer.y / k, w: pl.outer.w / k, h: pl.outer.h / k} : {x: 0, y: 0, w: env.w * capL, h: env.h * capL};
-  G.Wc = Math.ceil(G.outer.w * dprL); G.Hc = Math.ceil(G.outer.h * dprL);
-  G.dxL = Math.round(-G.outer.x * dprL); G.dyL = Math.round(-G.outer.y * dprL);
-  G.ox = B.x + (B.w - G.outer.w) / 2;
-  G.oy = o.cy != null ? Math.max(B.y + EDGE, Math.min(B.y + B.h - G.outer.h - EDGE, o.cy - G.outer.h / 2)) : B.y + (B.h - G.outer.h) / 2;
+  const put = () => {
+    G.Wc = Math.ceil(G.outer.w * dprL); G.Hc = Math.ceil(G.outer.h * dprL);
+    G.dxL = Math.round(-G.outer.x * dprL); G.dyL = Math.round(-G.outer.y * dprL);
+    G.ox = B.x + (B.w - G.outer.w) / 2;
+    G.oy = o.cy != null ? Math.max(B.y + EDGE, Math.min(B.y + B.h - G.outer.h - EDGE, o.cy - G.outer.h / 2)) : B.y + (B.h - G.outer.h) / 2;
+  };
+  put();
+  G.room = {w: B.w - 2 * EDGE, h: B.h - 2 * EDGE};
   G.hasSpark = Pl.layers.some((l) => l.id === "spark");
   G.sparks = [[0, false], [1, false], [0, true]].map(([f, red]) => spark(f, {reduced: red, tier, px}));
   G.cell = 2 * Math.ceil(Math.max(...G.sparks.flatMap((sp) => sp.parts.map(reach))) * s + 1);
   G.tip = sparkAt(G.build, tier);
   const name = "." + G.build + "." + G.ver + "." + capB.toFixed(2) + "." + css;
+  const K = {...K0, look: lk};
+  G.lk = lk; G.fw = fillWorld; G.fs = fillSpark; G.sw = 3 * G.cell; G.face = (Pl.layers.find((l) => l.id === "face") || {col: [P.yel, P.cor]}).col;
   G.mk = {layer: "logo.mask" + name, biome: "", level: 0, W: G.Wd, H: G.Hd * N, dpr: dprB, ...K0};
-  G.wk = {layer: "logo." + o.place + "." + dev + name, biome: w.name, level: w.level, W: G.Wc, H: G.Hc, dpr: dprL, ...K0};
-  G.sk = {layer: "logo.spark." + tier + name, biome: "", level: 0, W: 3 * G.cell, H: G.cell, dpr: dprB, ...K0};
+  G.wk = {layer: "logo." + o.place + "." + dev + name, biome: w.name, level: w.level, W: G.Wc, H: G.Hc, dpr: dprL, ...K};
+  if (lk !== "2d") LOOKS[lk](G, o);
+  if (G.grow) {
+    const gx = Math.max(0, G.grow.w - G.outer.w) / 2, gy = Math.max(0, G.grow.h - G.outer.h) / 2;
+    G.outer = {x: G.outer.x - gx, y: G.outer.y - gy, w: G.outer.w + 2 * gx, h: G.outer.h + 2 * gy};
+    put(); G.wk.W = G.Wc; G.wk.H = G.Hc;
+  }
+  G.half = G.half || G.cell / 2 / dprL;
+  G.sk = {layer: "logo.spark." + tier + name, biome: "", level: 0, W: G.sw, H: G.cell, dpr: dprB, ...K};
   G.wkS = keyOf(G.wk); G.skS = keyOf(G.sk);
-  G.out = {cap: capB, capL, tier, build: G.build, ver: G.ver, dev, place: o.place, dpr: dprB, css, cell: G.cell, w: G.Wc / dprL, h: G.Hc / dprL, x: 0, y: 0, lx: 0, ly: 0, spark: null};
+  G.out = {look: lk, cap: capB, capL, tier, build: G.build, ver: G.ver, dev, place: o.place, dpr: dprB, css, cell: G.cell, w: G.Wc / dprL, h: G.Hc / dprL, x: 0, y: 0, lx: 0, ly: 0, spark: null};
   G.world = G.sprite = null;
   return G;
 }
@@ -191,10 +215,7 @@ function fillWorld(x, G) {
   x.imageSmoothingEnabled = false;
   for (const l of Pl.layers) {
     switch (l.id) {
-      case "plate":
-        x.setTransform(G.dprB, 0, 0, G.dprB, dxL, dyL);
-        kitPlate(x, l.box.x, l.box.y, l.box.w, l.box.h, worldTokens(l.level), {phone: l.phone, T: l.T, tile: l.tile});
-        break;
+      case "plate": paintPlate(x, G); break;
       case "ringOuter": case "ringInner": case "outline": tint(mask(l.id), pp, pp, l.col); break;
       case "side": tint(A, 0, SIDE * Hd, l.col); break;
       case "gilt": {
@@ -232,6 +253,13 @@ function fillWorld(x, G) {
   for (const c of pool) c.width = c.height = 0;
 }
 
+/* the kit plate a title sits on (plan's plate layer), into a world layer at its origin: every look's */
+export function paintPlate(x, G) {
+  const l = G.P.layers.find((q) => q.id === "plate");
+  if (!l) return;
+  x.setTransform(G.dprB, 0, 0, G.dprB, G.dxL, G.dyL);
+  kitPlate(x, l.box.x, l.box.y, l.box.w, l.box.h, worldTokens(l.level), {phone: l.phone, T: l.T, tile: l.tile});
+}
 function fillSpark(x, G) {
   G.sparks.forEach((sp, i) => {
     x.setTransform(G.s, 0, 0, G.s, i * G.cell + G.cell / 2, G.cell / 2);
@@ -243,12 +271,13 @@ const MEMO = {title: null, menu: null};
 export function drawLogo2d(c, o) {
   if (_dbg.on) { _dbg.ran++; _dbg.place = o.place; _dbg.run = o.run; }
   if (!canMake()) return null;
+  const lk = logoLook();
   let G = MEMO[o.place];
-  if (!same(G, o)) G = MEMO[o.place] = geo(o);
-  if (!G.world || !G.world.width) G.world = layer(G.wk, G.Wc, G.Hc, (x) => fillWorld(x, G));
+  if (!same(G, o, lk)) G = MEMO[o.place] = geo(o, lk);
+  if (!G.world || !G.world.width) G.world = layer(G.wk, G.Wc, G.Hc, (x) => G.fw(x, G));
   else touch(G.wkS);
   const sk = G.hasSpark && o.spark !== false;
-  if (sk && (!G.sprite || !G.sprite.width)) G.sprite = layer(G.sk, 3 * G.cell, G.cell, (x) => fillSpark(x, G));
+  if (sk && (!G.sprite || !G.sprite.width)) G.sprite = layer(G.sk, G.sw, G.cell, (x) => G.fs(x, G));
   else if (sk) touch(G.skS);
   if (_dbg.on) _dbg.last = {world: G.world, spark: sk ? G.sprite : null, atlas: G.atlas};
   const sc = o.scale > 0 ? o.scale : 1, m = sc === 1 && typeof c.getTransform === "function" ? c.getTransform() : null;
@@ -261,12 +290,33 @@ export function drawLogo2d(c, o) {
   c.drawImage(G.world, R.x, R.y, R.w, R.h);
   R.spark = null;
   if (sk) {
-    const red = !!o.reduced || reduceMotion(), p = !red && o.run != null && o.run < 1 ? sparkAt(G.build, R.tier, o.run) : G.tip, h = G.cell / 2 / G.dprL, f = red ? 2 : Math.floor((o.t || 0) * SPARK.hz) & 1;
+    const red = !!o.reduced || reduceMotion(), p = !red && !G.noRun && o.run != null && o.run < 1 ? sparkAt(G.build, R.tier, o.run) : G.tip, h = G.half, f = red ? 2 : Math.floor((o.t || 0) * SPARK.hz) & 1;
     const sx = snx(R.lx + (p.x - G.env.l) * G.capL), sy = sny(R.ly + (p.y - G.env.t) * G.capL);
     R.spark = G.at || (G.at = {x: 0, y: 0, frame: 0});
     R.spark.x = sx; R.spark.y = sy; R.spark.frame = f;
     c.drawImage(G.sprite, f * G.cell, 0, G.cell, G.cell, sx - h, sy - h, 2 * h, 2 * h);
   }
+  if (kp.probe.on) note(c, o, G, R);
   c.restore();
   return R;
+}
+/* Under the kit probe (shots.mjs only) the logo says what it drew, for the Chrome face gate: which look painted, the title's plate, each word's
+   face (a rect with its fill, so the yellow gate counts FUSE) and that face against a strip of bare bed (the title plate's left pad; above U..S in
+   the MENU header), lock floor 3:1 (appendix 8.8 L1). It is held until logoProbe(), which shellview calls after the page (MENU's page record
+   begins after the logo paints). Box px. */
+function note(c, o, G, R) {
+  const m = c.getTransform(), d = o.dpr > 0 ? o.dpr : 1, E = G.env, k = G.capL, L = G.L, bx = (x, y, w, h) => [(m.a * x + m.e) / d, (m.d * y + m.f) / d, (m.a * w) / d, (m.d * h) / d];
+  const C = (x0, y0, x1, y1) => bx(R.lx + (x0 - E.l) * k, R.ly + (y0 - E.t) * k, (x1 - x0) * k, (y1 - y0) * k), at = (ch) => L.letters.find((l) => l.ch === ch);
+  const F = at("F"), I = at("I"), pl = G.P.layers.find((l) => l.id === "plate"), b = pl ? [pl.box.x / G.k, pl.box.y / G.k, pl.box.w / G.k, pl.box.h / G.k] : null;
+  const bed = pl ? bx(R.lx + b[0] * .8, R.ly + (F.y + .2 - E.t) * k, -b[0] * .6, .6 * k) : C(.7, -.38, 2, -.17);
+  PEND.push({look: G.lk, logo: bx(R.lx, R.ly, E.w * k, E.h * k), plate: pl && bx(R.lx + b[0], R.ly + b[1], b[2], b[3]), T: pl && (pl.T / G.k) * (m.a / d), bed,
+    faces: [[C(F.x + .04, F.y + .3, F.x + .22, F.y + .9), G.face[0], "FUSE"], [C(I.x + .04, I.y + .12, I.x + .24, I.y + .88), G.face[1], "GRID"]]});
+}
+export function logoProbe() {
+  if (kp.probe.on && kp.probe.page) for (const e of PEND) {
+    kp.rect("logo " + e.look, ...e.logo);
+    if (e.plate) kp.rect("logo plate", ...e.plate, {plate: e.T});
+    for (const [a, col, n] of e.faces) { kp.rect("logo " + n, ...a, {fill: col}); kp.pair("info", a, e.bed, {col, lock: true, name: "logo " + n + " face"}); }
+  }
+  PEND.length = 0;
 }

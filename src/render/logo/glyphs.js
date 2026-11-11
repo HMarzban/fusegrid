@@ -167,7 +167,7 @@ export function inGlyph(ch, x, y, shape) {
 }
 export const wordW = (w) => [...w].reduce((a, ch, i) => a + GL[ch].w + (i ? GAP[w[i - 1] + ch] : 0), 0);
 
-const bez = (Q, t) => { const u = 1 - t; return [0, 1].map((k) => u * u * u * Q[0][k] + 3 * u * u * t * Q[1][k] + 3 * u * t * t * Q[2][k] + t * t * t * Q[3][k]); };
+export const bez = (Q, t) => { const u = 1 - t; return [0, 1].map((k) => u * u * u * Q[0][k] + 3 * u * u * t * Q[1][k] + 3 * u * t * t * Q[2][k] + t * t * t * Q[3][k]); };
 const CP = {line: [[.31, .73], [.39, .82], [.40, 1.03], [.54, 1.18]], stack: [[.31, .73], [.45, .95], [.22, 1.55], [.42, 2.46]]};
 const LAY = new Map();
 export function layout(build) {

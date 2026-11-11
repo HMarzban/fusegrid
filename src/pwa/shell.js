@@ -97,6 +97,7 @@ const SRC = Object.freeze([
   "src/render/kit/tokens.js",
   "src/render/kit/type.js",
   "src/render/logo/draw2d.js",
+  "src/render/logo/draw3d.js",
   "src/render/logo/glyphs.js",
   "src/render/logo/worlds.js",
   "src/render/menudraw.js",
@@ -121,6 +122,7 @@ const SRC = Object.freeze([
   "src/render/pixel/art/foes.js",
   "src/render/pixel/art/fx.js",
   "src/render/pixel/art/index.js",
+  "src/render/pixel/art/logo.js",
   "src/render/pixel/art/items.js",
   "src/render/pixel/art/mako.js",
   "src/render/pixel/art/tiles.js",
@@ -130,6 +132,7 @@ const SRC = Object.freeze([
   "src/render/pixel/grid.js",
   "src/render/hudart.js",
   "src/render/pixel/load.js",
+  "src/render/pixel/logo.js",
   "src/render/pixel/manifest.js",
   "src/render/pixel/oneshot.js",
   "src/render/pixel/palette.js",
@@ -211,6 +214,7 @@ const isPixel = (p) =>
   p === "./src/render/featpxcells.js";
 const is3d = (p) =>
   p === "./vendor/three.module.js" ||
+  p === "./src/render/logo/draw3d.js" ||
   (p.startsWith("./src/render/three/") &&
     p !== "./src/render/three/camrig.js" &&
     p !== "./src/render/three/load.js");

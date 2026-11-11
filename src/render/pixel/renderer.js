@@ -49,6 +49,7 @@ import {drawHudChips, drawAbilityBar, drawOverlay, overlayBox, drawCoach, drawCo
 import {onEvent, updateFx, getShake as fxShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
 import {createAtlas, atlasBuilder} from "./atlas.js";
 import {setPixelArt, hudIcon} from "../hudart.js";
+import "./logo.js";
 import {createView, resetView, drawPixelWorld, trackGrid} from "./world.js";
 import {createOneShots, feedShot} from "./oneshot.js";
 import {animClock, newClock} from "./anim.js";

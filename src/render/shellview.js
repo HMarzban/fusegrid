@@ -16,6 +16,7 @@ import * as menudraw from "./menudraw.js";
 import * as lazy from "./pages/lazy.js";
 import { CACHE_NAME } from "../pwa/shell.js";
 import { hints } from "./hintcopy.js";
+import { setLogoLook, logoProbe } from "./logo/draw2d.js";
 
 export function kindSize(kind) {
   const iso = kind === "iso";
@@ -263,7 +264,9 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques, ge
   const s = app.screen;
   stepLookNote(app);
   if (s === SCREEN.MENU || s === SCREEN.GAME) lazy.idle(); // the lazy pages load in the first idle after MENU's (or a deep link's run's) first frame
+  setLogoLook(kind);
   shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab);
+  logoProbe();
   loaderSpot(app, world, canvas);
   prevScreen = s;
   if (s === SCREEN.BOOT || !app.settings || app.settings.fpm !== 1) return;

@@ -8,6 +8,7 @@ import { hints, tapAt } from "./hintcopy.js";
 import { drawLogo2d, deviceScale, TITLE_RUNUP } from "./logo/draw2d.js";
 import * as menuPage from "./pages/menu.js";
 import * as levelPage from "./pages/level.js";
+import * as kitProbe from "./kit/probe.js";
 import { rosterOf } from "./pages/card.js";
 import * as lazy from "./pages/lazy.js";
 import { capDpr } from "./kit/cache.js";
@@ -358,6 +359,7 @@ export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1, o = {}) {
     touch = lay === "p" || lay === "l",
     show = stage === 1,
     dpr = deviceScale(c);
+  if (kitProbe.probe.on) kitProbe.begin("title", { w: W, h: H, dpr, el: "c" });
   const v0 = show ? 0.45 + (0.12 - 0.45) * easeInOutCubic(seg(t, 0, 8 * SHOW_STEP)) : 0.45;
   c.fillStyle = "rgba(7,10,18," + (rk >= 1 ? v0 : 1 - clamp01(rk) * (1 - v0)) + ")";
   c.fillRect(0, 0, W, H);
@@ -390,6 +392,7 @@ export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1, o = {}) {
     c.fillStyle = ACCENT;
     c.fillText(prompt, L.cx, L.footY);
     c.globalAlpha = 1;
+    if (kitProbe.probe.on) { const w = c.measureText(prompt).width; kitProbe.text(prompt, L.cx - w / 2, L.footY - 0.35 * px, w, 0.7 * px, { role: "primary", col: ACCENT, px }); }
   }
   const ha = show ? easeOutCubic(seg(t, SKIP_GUARD, SKIP_GUARD + 0.3)) : 0;
   if (ha > 0) {
