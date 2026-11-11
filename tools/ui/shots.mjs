@@ -6,7 +6,8 @@
      --screens a,b    screens to capture (default all): title, menu, level, options (alias settings), graphics, controls, guide, howto, items,
                       enemies, floor, scores, stats, statsreset (STATS armed), medals, scoresfull / statsfull (a seeded cabinet,
                       __GAME__.seedRecords()), statspage2 (STATS' second page on a paged phone), scoresidle (RECORDS through the real lazy.idle() load: no want()), pause, win, lose,
-                      play; captured in that canonical order
+                      play; optionskeys / graphicskeys / guidekeys (SETTINGS, GRAPHICS, GUIDE reached by real key presses, so a phone capture
+                      shows the keyboard focus); captured in that canonical order
                       whatever the order given
      --look 2d,px,3d  art styles (default 2d); one page load per look and world
      --world 1,2,8    worlds, levels 1..8 (default 1): app.level before the title (6..8 also open rooms 6-8, app.pactUnlocked, as after a first CLEAR);
@@ -198,7 +199,7 @@ async function group(c, port, a, look, world, rep) {
         await confirm(); await P.adv(50);
       }
       if (!ok) { L.close(base); continue; }
-      for (const k of [].concat(R.key || [])) { if (a.phone) await ev(`(window.__GAME__.app.key(${JSON.stringify(k)}),true)`); else await key(k, k.replace(/^Key/, "").toLowerCase()); await P.adv(50); } // a key or a list, pressed in order
+      for (const k of [].concat(R.key || [])) { if (a.phone && !R.real) await ev(`(window.__GAME__.app.key(${JSON.stringify(k)}),true)`); else await key(k, k.replace(/^Key/, "").toLowerCase()); await P.adv(50); } // a key or a list, pressed in order
       if (R.wait === "controls" && !(await poll("!!window.__GAME__.app.controls&&!window.__GAME__.app.controls.loading", 10000))) warn("the CONTROLS page never loaded");
       if (R.wait === "records" && !(await poll("import('/src/render/pages/lazy.js').then((m)=>(m.want('records').catch(()=>{}),!!m.get('records')))", 10000))) warn("the RECORDS page never loaded");
       if (R.wait === "records-idle" && !(await poll("import('/src/render/pages/lazy.js').then((m)=>!!m.get('records'))", 10000))) { L.fail(base, "the RECORDS page never loaded through lazy.idle()"); L.close(base); continue; } // never want(): the page's own idle load

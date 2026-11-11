@@ -563,8 +563,13 @@ test("screens: exemptPhone exempts on .phone captures only, on the same rules (R
 });
 
 test("screens: every name has a recipe and a state; aliases; capture names round trip", () => {
-  assert.deepEqual(ORDER, ["title", "menu", "level", "options", "graphics", "controls", "guide", "howto", "items", "enemies", "floor", "scoresidle", "scores", "stats", "statsreset", "statspage2", "medals", "scoresfull", "statsfull", "play", "pause", "win", "lose"]);
+  assert.deepEqual(ORDER, ["title", "menu", "level", "options", "graphics", "controls", "guide", "howto", "items", "enemies", "floor", "optionskeys", "graphicskeys", "guidekeys", "scoresidle", "scores", "stats", "statsreset", "statspage2", "medals", "scoresfull", "statsfull", "play", "pause", "win", "lose"]);
   for (const n of ORDER) assert.ok(SCREENS[n] && SCREENS[n].state, n);
+  /* R1 release (c): the key-driven twins of SETTINGS / GRAPHICS / GUIDE press real keys on a phone and gate the focus there (no exemptPhone) */
+  for (const [k, base, gates] of [["optionskeys", "options", ["band"]], ["graphicskeys", "graphics", ["band"]], ["guidekeys", "guide", ["band", "ring"]]]) {
+    assert.ok(SCREENS[k].real && SCREENS[k].state === SCREENS[base].state && !SCREENS[k].exemptPhone, k);
+    for (const g of gates) { assert.ok(SCREENS[k].needPhone.includes(g), k + " needs " + g + " on a phone"); assert.ok(!SCREENS[base].needPhone.includes(g), base + " (tap) keeps its exemption"); }
+  }
   assert.equal(canon("settings"), "options");
   assert.equal(canon("SETTINGS"), "options");
   assert.equal(canon("nope"), null);
