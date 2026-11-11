@@ -504,7 +504,10 @@ function record(G, P, ui, foc, dpr, el, touchy, verb, tipR, tok) {
     if (lit) chosen[q.set] = q; else if (q.kind === "well" && !unchosen[q.set]) unchosen[q.set] = q;
     if (q.kind === "wall" && !lockedK) lockedK = q;
     if (q.set === "level" && q.kind === "well" && !wellK) wellK = q;
-    if (q.fin && !q.lock) probe.pair("info", b(R(q.x + q.nw + 3, q.y - (lit ? 2 : 0) - q.gs / 2, q.gs, q.gs)), b(R(q.x + q.nw - 2, q.y - q.gs, q.gs + 10, 2 * q.gs)), {col: FLAG_INK[q.kind], name: "flag " + q.s});
+    if (q.fin && !q.lock) { // a: the flag and its 2 px antialiased bleed; b: round it, inside the key's face (a 667 phone's key is small: never its outline or lip)
+      const f = R(q.x + q.nw - 2, q.y - q.gs, q.gs + 10, 2 * q.gs), k = R(q.r.x + 5, q.r.y + 5 - (lit ? 2 : 0), q.r.w - 10, q.r.h - 12), x0 = Math.max(f.x, k.x), y0 = Math.max(f.y, k.y);
+      probe.pair("info", b(R(q.x + q.nw + 1, q.y - (lit ? 2 : 0) - q.gs / 2 - 2, q.gs + 4, q.gs + 4)), b(R(x0, y0, Math.min(f.x + f.w, k.x + k.w) - x0, Math.min(f.y + f.h, k.y + k.h) - y0)), {col: FLAG_INK[q.kind], name: "flag " + q.s});
+    }
   }
   for (const s of ["level", "heat", "pace"]) if (chosen[s] && unchosen[s]) probe.pair("chosen", b(chosen[s].r), b(unchosen[s].r), {name: s + " chosen vs not"});
   /* the locked key against the chosen one; its texture against an open well's own lip (the same sub-rect the gate reads, clear of the legend) */
