@@ -1193,6 +1193,34 @@ for (const code of ["Space", "Enter"]) {
   press(g, "KeyP");
   check("LOSE P does not pause a finished run", g.world.state === "LOSE", g.world.state);
 }
+// ---- run ends, R19 (v202 Task 5.2): Esc (and Backspace never) goes to MENU at a run end; a mid-run WIN keeps it inert ----
+{
+  const g = run(); g.tick(5); g.world.state = "LOSE"; g.tick(3);
+  const seed = g.world.seed;
+  press(g, "Escape"); g.tick(5);
+  check("LOSE Esc -> MENU, the run's world left in MENU (no GAME OVER behind the menu), nothing planted", g.app.screen === SCREEN.MENU && g.world.state === "MENU" && g.world.seed === seed && live(g.world) === 0, g.app.screen + "/" + g.world.state);
+  press(g, "Enter");
+  check("after LOSE Esc, MENU's Enter starts a fresh run at room 1", g.app.screen === SCREEN.GAME && g.world.state === "PLAY" && g.world.level === 1, g.app.screen + "/" + g.world.state);
+}
+{
+  const g = run(); g.tick(5); g.world.state = "LOSE"; g.tick(3);
+  press(g, "Backspace"); g.tick(3);
+  check("LOSE Backspace is not Esc: the run end stays", g.app.screen === SCREEN.GAME && g.world.state === "LOSE", g.app.screen + "/" + g.world.state);
+}
+{
+  const g = run(); clearRoom(g);
+  const won = g.world.state === "WIN" && g.world.level === 1;
+  press(g, "Escape"); g.tick(5);
+  check("mid-run WIN Esc: nothing (no run end, no MENU)", won && g.app.screen === SCREEN.GAME && g.world.state === "WIN", g.app.screen + "/" + g.world.state);
+}
+{
+  const g = menu(); toRow(g, 1); press(g, "Enter");
+  for (let i = 0; i < 4; i++) press(g, "ArrowRight");
+  press(g, "Enter"); clearRoom(g);
+  const won = g.world.state === "WIN" && g.world.level === 5;
+  press(g, "Escape"); g.tick(5);
+  check("finale WIN Esc -> MENU through the sim's own edge: Pact unlocked, the score saved", won && g.app.screen === SCREEN.MENU && g.app.pactUnlocked === true && "nb.highscores.v1" in mem, won + "/" + g.app.screen);
+}
 
 // ---- seam units: copyText / toastTick ----
 {
@@ -1348,7 +1376,7 @@ for (const code of ["Space", "Enter"]) {
     "GAME PAUSE": { boot: pPause, E: (g) => g.world.state === "PLAY", START: (g) => g.world.state === "PLAY", S: (g) => g.world.state === "PLAY" },
     "GAME PAUSE OPTIONS": { boot: () => { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("SETTINGS")); tap(g, "S"); return g; }, E: paused(0), START: paused(0) },
     "GAME WIN": { boot: () => { const g = pRun(); clearRoom(g); return g; }, E: (g) => g.world.state === "WIN", S: (g) => g.world.state !== "WIN", START: (g) => g.world.state !== "WIN" },
-    "GAME LOSE": { boot: () => { const g = pRun(); g.world.state = "LOSE"; g.tick(); return g; }, E: (g) => g.world.state === "LOSE", S: (g) => g.world.state !== "LOSE" },
+    "GAME LOSE": { boot: () => { const g = pRun(); g.world.state = "LOSE"; g.tick(); return g; }, E: (g) => g.app.screen === SCREEN.MENU && g.world.state === "MENU", S: (g) => g.world.state !== "LOSE" }, // EAST = Esc: MENU at a run end (R19)
     "ATTRACT": { boot: () => { const g = pMenu(); g.app.enterAttract(); g.tick(); return g; }, E: onScr(SCREEN.MENU), S: onScr(SCREEN.GAME), START: onScr(SCREEN.GAME) },
   };
   for (const [name, row] of Object.entries(MATRIX)) for (const [LK, blob] of LOOKS) for (const id of ["S", "E", "START", "SELECT", "dR"]) {

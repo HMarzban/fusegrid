@@ -907,7 +907,7 @@ const rec = () => {
        nothing else. */
     "B9 (Minor-4): the finale WIN branch is EXACTLY endRun() + stat(\"win_finale\", ...), nothing else",
     /if \(isFinale\(world\.level\)\) \{ endRun\(\); stat\("win_finale", null, dateStr\(\)\); \}/.test(src) &&
-      /import \{ CFG, isFinale \} from "\.\/core\/config\.js";/.test(src),
+      /import \{ CFG, isFinale, roomCap \} from "\.\/core\/config\.js";/.test(src),
     (src.match(/if \(isFinale\(world\.level\)\)[^\n]*/) || [])[0],
   );
   check(
@@ -920,9 +920,9 @@ const rec = () => {
   check(
     /* the review's own M9/M10 class: a wiring pin so a dropped field regresses
        the ruling silently rather than only in a player's overlay. */
-    "B11 (Minor-3): the ro.run literal carries fromStart so deltaOf can gate the FURTHEST forms",
-    /run: \{[^}]*fromStart: runFromStart[^}]*\}/.test(src),
-    (src.match(/run: \{[^}]*\}/) || [""])[0],
+    "B11 (Minor-3): the ro.run literal (main's runInfo, v202 Task 5.2) carries fromStart so deltaOf can gate the FURTHEST forms",
+    /const runInfo = \(\) => \(\{[^}]*fromStart: runFromStart[^}]*\}\);/.test(src) && /run: runInfo\(\),/.test(src),
+    (src.match(/const runInfo = [^\n]*/) || [""])[0],
   );
 }
 

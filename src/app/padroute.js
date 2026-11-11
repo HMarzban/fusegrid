@@ -52,7 +52,7 @@ export function createPadRouter({ input, app, SCREEN, binds, world, onPause, onU
     const enter = () => { if (!ok) { ok = true; if (go) app.levelFocus(LEVEL_ROWS.indexOf("START")); onUiKey("Enter"); } };
     for (const id of press) {
       if (onPage && page && page.feedBtn(id, t)) continue;
-      if (ended) { if (id === "S" || id === "START") enter(); else if (END_COPY[id]) onUiKey(END_COPY[id]); }
+      if (ended) { if (id === "S" || id === "START") enter(); else if (id === "E") onUiKey("Escape"); else if (END_COPY[id]) onUiKey(END_COPY[id]); } // EAST = Esc: MENU at a run end (R19)
       else if (game) {
         if (id === "S") enter();
         else if (onPage && BRACKET[id]) onUiKey(BRACKET[id]); // before the alias: a shoulder bound as PAUSE still changes tab here

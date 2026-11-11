@@ -3,12 +3,12 @@
    (BOOT→INTRO→MENU⇄subs→GAME, src/app/menuapp.js): the sim steps ONLY while
    the shell is in GAME; other screens render the frozen arena behind menu
    chrome (src/render/shellview.js). The sim never sees any of this. */
-import { CFG, isFinale } from "./core/config.js";
+import { CFG, isFinale, roomCap } from "./core/config.js";
 import { createWorld, loadLevel, step } from "./core/sim.js";
 import { runSeed } from "./core/rng.js";
 import { createRenderer } from "./render/renderer.js";
 import { loadRendererPx } from "./render/pixel/load.js";
-import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay } from "./render/scenes.js";
+import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay, endHitAt } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { controlsHit, dims, drawShell, guidePageCount, kindSize, loadControlsArt, shellMode, shellCovers, recPagesOf, tapOf } from "./render/shellview.js";
 import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, recTabHit, recPageHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
@@ -163,9 +163,9 @@ export function createGame(canvas, opts = {}) {
      for a run that BEGINS at room 1 (the sim's retry after LOSE and RESTART
      both reload room 1, so only onStart can begin above it) — endRun
      withholds the room from recordBest otherwise; the score still records. */
-  let tally = newTally(), runT = 0, bestRun = null, runEnded = true, runFromStart = true, runMode = "run";
+  let tally = newTally(), runT = 0, bestRun = null, runEnded = true, runFromStart = true, runMode = "run", roomK0 = 0, roomP0 = 0, endT = 0; // roomK0 / roomP0: the tally at the room start (a level clear's own counts); endT: seconds on WIN / LOSE (the end page's motion clock)
   const startRunState = (fromStart) => {
-    tally = newTally(); runT = 0; runEnded = false; runFromStart = fromStart; coach2 = { kind: null, t: 0 };
+    tally = newTally(); runT = 0; runEnded = false; runFromStart = fromStart; coach2 = { kind: null, t: 0 }; roomK0 = roomP0 = 0;
     bestRun = bestOfRun(loadBests(), bestKey(world));
     ga.event("run_start", { mode: runMode, room: fromStart ? 1 : world.level | 0, heat: world.heat | 0, pact: world.pact | 0, pace: world.pace | 0 });
   };
@@ -408,6 +408,12 @@ export function createGame(canvas, opts = {}) {
     if (qualifies(en.s, sc)) stat("score_set", { h: world.heat | 0 }, dateStr());
     saveScores(recordScore(sc, en));
   };
+  /* what drawOverlay's end pages and main's run-end tap read (o.run, o.time): the run tally and its run-start best, the room's own counts and
+     time, DAILY / fixed board, the level cap, the medals settled at the end, the end clock, REDUCE FLASH, and the layout and stage scale of #c */
+  const layNow = () => { const b = typeof document !== "undefined" && document && document.body, l = b && b.getAttribute && b.getAttribute("data-lay"); return l === "p" || l === "l" ? l : "d"; };
+  const runInfo = () => ({ r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn),
+    medals: medalRows(tally.mn).filter((m) => m[2]), lk: tally.k - roomK0, lp: tally.p - roomP0, fixed: runFixed, cap: roomCap(app.pactUnlocked), et: endT, reduced: !!settings.flx, lay: layNow(), css: canvas && canvas.css > 0 ? canvas.css : 1 });
+  const timeInfo = () => ({ on: !!app.timeAttack, t: roomT, best: bestPrev });
   const toast = app.toast = createToast(); // C / B note on the WIN / LOSE overlay, C on STATS (src/app/endkeys.js)
   app.padCards = [upd.padCard, loadCard()]; setModeFocus(() => app.modeCur); // what a pad may answer (src/app/padroute.js); the MODES ring (menudraw.js)
   if (typeof document !== "undefined") guardLoadCard(document, () => { app.resetArm = false; }); // the inline load card's answers cancel an armed reset
@@ -424,7 +430,7 @@ export function createGame(canvas, opts = {}) {
     }
     if (code === "KeyC" && app.screen === SCREEN.STATS) { copyText(statsPayload(loadStats(), loadBests(), loadTimes(), dateStr()), toast, "COPIED"); return; }
     // WIN / LOSE: Enter = Space, C / B copy with a note; elsewhere C still reaches app.key (ATTRACT plays)
-    if (endKey(code, app, world, input, toast, () => dailyDate ? dailyStamp(dailyDate, world.level | 0, world.score | 0) : copyPayload(world))) return;
+    if (endKey(code, app, world, input, toast, () => dailyDate ? dailyStamp(dailyDate, world.level | 0, world.score | 0) : copyPayload(world), () => { world.state = "MENU"; app.toMenu(); prevSt = null; })) return; // Esc on GAME OVER: MENU (the LOSE edge saved the run)
     if (code === "KeyM" && app.screen !== SCREEN.INTRO && app.screen !== SCREEN.ATTRACT) { // INTRO / ATTRACT: M and R fall through to app.key (show: skip; title: no-op; ATTRACT: a run)
       if (app.screen === SCREEN.GAME && app.worldState === "PAUSE") {
         persistScore();
@@ -451,7 +457,7 @@ export function createGame(canvas, opts = {}) {
   };
   input.onPause = onPause;
 
-  if (canvas) mountPointer({ canvas, fit, input, app, world, kind: () => curKind, ctl: () => ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, recPageHit: (x, y, L, t, pg) => recPageHit(x, y, L, t, pg, getScoresForHeat(app.scoreHeat).length), layout: menuLayout } }); // taps on #c and #sh: skip / confirm / play, the PAUSE rows, the C1 fire swallow (src/app/pointer.js)
+  if (canvas) mountPointer({ canvas, fit, input, app, world, kind: () => curKind, ctl: () => ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, recPageHit: (x, y, L, t, pg) => recPageHit(x, y, L, t, pg, getScoresForHeat(app.scoreHeat).length), endHit: (x, y) => endHitAt(x, y, curKind, world, runInfo(), timeInfo()), layout: menuLayout } }); // taps on #c and #sh: skip / confirm / play, the PAUSE rows, the C1 fire swallow (src/app/pointer.js)
   /* pad taps bubble to #stage: play from ATTRACT too (spec §4 tap-to-play). */
   {
     const stageEl =
@@ -541,12 +547,13 @@ export function createGame(canvas, opts = {}) {
       }
       // endRun() on this LOSE edge is now covered by persistScore() above (same gate)
       if ((prevSt === "WIN" || prevSt === "LOSE") && world.state === "PLAY") {
-        roomT = 0; bestPrev = null; rig.dist = camPreset(settings.cam); // WIN->next room, LOSE->new run
+        roomT = 0; bestPrev = null; rig.dist = camPreset(settings.cam); roomK0 = tally.k; roomP0 = tally.p; // WIN->next room, LOSE->new run
         if (prevSt === "LOSE") startRunState(true); // R1: a retry never calls onStart
         stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0, ld: todayStr() }, dateStr());
       }
       if (!runFixed && world.nextSeed == null) world.nextSeed = runSeed(bootSeed, ++runI); // the sim's startGame (GAME OVER / finale restart) dealt the armed seed: re-arm
       prevSt = world.state;
+      endT = world.state === "WIN" || world.state === "LOSE" ? endT + dt : 0;
       /* The shell machine runs during GAME too — unconditionally, not only
          while paused. prevConfirm is only written inside update(), so skipping
          PLAY frames would leave it false and a player holding fire when they
@@ -665,8 +672,8 @@ export function createGame(canvas, opts = {}) {
                   : 0,
               coach2: world.state === "PLAY" ? { a: coachAlpha(coach2), s: coachTip(coach2.kind, undefined, world, hints()), k: coach2.kind } : { a: 0, s: "" },
               pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0, note: app.padNote, next: app.lookNext, tap: tapOf(app, canvas), css: canvas && canvas.css }, toast: toastOf(toast),
-              time: { on: !!app.timeAttack, t: roomT, best: bestPrev }, ghost: ghostAt(ghost, world, roomT),
-              run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn) },
+              time: timeInfo(), ghost: ghostAt(ghost, world, roomT),
+              run: runInfo(),
             }
           : { hud: false, covered: shellCovers(app.screen) }; // a page that paints the room look opaque hides the board: no look rasters it
     // BRIGHTNESS is 3D only — CLASSIC 2D blits the authored hex unregraded.

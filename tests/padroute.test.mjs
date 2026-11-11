@@ -209,7 +209,7 @@ const fires=(inp,n)=>{let s="";for(let k=0;k<n;k++){s+=inp.intent().fire?"1":"0"
     const y=rig({state:st});y.dn(START);
     check(st+": START = Enter, no pause",eq(y.ui,["Enter"])&&y.pauses===0);
     const z=rig({state:st});z.dn(E);
-    check(st+": EAST nothing",z.ui.length===0&&z.pauses===0&&z.input._intent.remote===false);
+    check(st+": EAST is Esc (MENU at a run end, R19)",eq(z.ui,["Escape"])&&z.pauses===0&&z.input._intent.remote===false);
   }
 }
 {
@@ -651,7 +651,7 @@ for(const st of ["WIN","LOSE"]){
   const x=rig({state:st});x.dn(W);
   check(st+": WEST sends C",eq(x.ui,["KeyC"]));
   x.up(W);x.dn(N);check(st+": NORTH sends B",eq(x.ui,["KeyC","KeyB"]));
-  x.up(N);x.dn(E);check(st+": EAST still nothing",x.ui.length===2);
+  x.up(N);x.dn(E);check(st+": EAST is still Esc",eq(x.ui,["KeyC","KeyB","Escape"]));
 }
 {
   const x=rig({state:"PAUSE"});x.dn(W);x.up(W);x.dn(N);

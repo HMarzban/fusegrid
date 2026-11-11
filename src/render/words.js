@@ -39,6 +39,8 @@ export const diffWord = (h) => DIFF[clampHeat(h)];
 export const speedWord = (p) => SPEED[clampPace(p) + 1];
 export const diffTag = (h) => diffWord(h) + " DIFFICULTY";
 export const speedTag = (p) => speedWord(p) + " SPEED";
+/* the saved-score multiplier, named: "×2 HARD DIFFICULTY" (score × difficulty is what the score tables keep) */
+export const multTag = (h) => "×" + (clampHeat(h) + 1) + " " + diffTag(h);
 export const modWords = (mask) => MOD_BITS.filter((b) => clampPact(mask) & b).map((b) => MOD[b]);
 export const modCount = (mask) => modWords(mask).length;
 /* "1 MODIFIER", "4 MODIFIERS", "" for none. */

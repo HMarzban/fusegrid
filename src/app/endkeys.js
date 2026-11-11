@@ -4,9 +4,14 @@
    "COPY FAILED" otherwise, so the note can never claim a copy that did not
    happen. Enter rides Input.pulse(): ONE fire edge for step(), never a latch,
    so the next room never inherits a held fire. STATS C rides the same note
-   (main hangs the one toast on app.toast for shellview to paint). */
+   (main hangs the one toast on app.toast for shellview to paint).
+   Esc (R19, v202 Task 5.2) goes to MENU at a run end only: a finale WIN takes
+   the same fire edge as Enter (the sim's MENU edge is where main saves the
+   finale), GAME OVER calls main's toMenu (the LOSE edge already saved the run);
+   a mid-run WIN is no run end, so Esc does nothing there. */
 import { SCREEN } from "./menuapp.js";
 import { encodeChallenge } from "./code.js";
+import { isFinale } from "../core/config.js";
 
 export const TOAST_T = 1.5;
 export const BOARD_URL = "https://hmarzban.github.io/fusegrid/?code=";
@@ -20,9 +25,15 @@ export function copyText(text, toast, okMsg) {
   try { Promise.resolve(cb.writeText(text)).then(() => set(true), () => set(false)); } catch (e) { set(false); }
 }
 const ended = (world) => world.state === "WIN" || world.state === "LOSE";
-export function endKey(code, app, world, input, toast, resultLine) {
+const finale = (world) => world.state === "WIN" && (isFinale(world.level) || !!world.finale);
+export function endKey(code, app, world, input, toast, resultLine, toMenu) {
   if (app.screen !== SCREEN.GAME || !ended(world)) return false;
   if (code === "Enter" || code === "NumpadEnter") { input.pulse(); return true; }
+  if (code === "Escape") {
+    if (world.state === "LOSE") { if (toMenu) toMenu(); return true; }
+    if (finale(world)) { input.pulse(); return true; }
+    return false;
+  }
   if (code === "KeyC") { copyText(resultLine(), toast, "COPIED"); return true; }
   if (code === "KeyB") {
     copyText(BOARD_URL + encodeChallenge({ seed: world.seed, heat: world.heat, pact: world.pact, pace: world.pace, gen: world.gen }), toast, "BOARD LINK COPIED");

@@ -346,7 +346,15 @@ The GUIDE pages draw foes, pickups and tiles with the board's own painters (CLAS
 PIXEL, a pure function of the page clock). From PAUSE the same page is
 inline `pauseView 2` (0 list / 1 SETTINGS / 2 GRAPHICS / 3 CONTROLS; Esc steps 2 → 1 and 3 → 1, onto
 the door, and 1 → 0 onto the SETTINGS row), never a SCREEN. WIN/LOSE run summaries are **not** a SCREEN — they
-live in `drawOverlay`.
+live in `drawOverlay`. Their routing (v202 Task 5.2, R19): `src/render/pages/endgeom.js` (boot) is the one draw / tap
+contract (`endMode` clear / fin / lose, `endFacts` every word and claim, `endGeom` rects by name in `overlayBox`, keys
+`main` / `menu` / `copy` / `map`, `endHit`); main hands the run facts as `o.run` (`runInfo`: the tally, the run-start
+best, the room's own kills and power-ups `lk` / `lp`, `fixed` for a DAILY / code board, `cap` = `roomCap`, the newly
+saved `medals`, the end clock `et`, REDUCE FLASH, `lay` and `css` of `#c`). Esc and the controller's EAST go to MENU
+at a run end only: GAME OVER through main's `toMenu` (world state `MENU`; the LOSE edge already saved the run), a
+finale WIN through the same fire edge as Enter (main saves the finale on the sim's MENU edge); a mid-run WIN keeps
+them inert. A run-end tap is the key under it (`scenes.endHitAt`), acted on its pointerup on the same key; off the
+keys it does nothing. A mode whose page is not registered keeps today's summary and its tap is the main key.
 
 MENU page (UI upgrade v202 Task 3.1, `src/render/pages/menu.js`; the round 7 S7-menu / L7-logo frames). The world dresses it: the room look of
 `app.level` (kit `room.js` `roomLayer`) opaque over the whole canvas from MENU's first frame, the plate in that room's rampart; PLAY the one yellow
@@ -516,7 +524,7 @@ not shell screens. Do not add them as `SCREEN` values.
   (`bootRender` / `kindOf` / `renderVal` / `renderBits`),
   `src/app/controlswire.js` (`mountControls`, v201: binds `gamepad.js`, `padroute.js`, `capture.js`, `controlspage.js`, `controls.js`, `hints.js`, `rumble.js` and render's `controlsgeo.js`, `controlsdraw.js`, `padart.js`, `hintcopy.js` to main, frameloop and unlock; see the CONTROLS paragraph), `src/app/debughook.js`
   (`window.__GAME__`), `src/app/pointer.js` (`mountPointer`: the ONE tap handler, bound on `#c` and `#sh`; `main.js` hands it the hit functions as `hit` because `src/app` never imports `src/render`, and `kind` / `ctl` as getters), `src/app/endkeys.js` (WIN/LOSE keys: Enter =
-  Space through `Input.pulse()`, one fire tick and never a latch; C/B copy.
+  Space through `Input.pulse()`, one fire tick and never a latch; C/B copy; Esc → MENU at a run end, R19.
   Every copy reports COPIED / COPY FAILED through the ONE `app.toast` — on
   the WIN/LOSE overlay, and on STATS as a tag at the right end of the title row;
   `toastTick(toast,world,dt,app)` ages it only there and zeroes it anywhere

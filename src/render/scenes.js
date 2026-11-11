@@ -7,6 +7,7 @@ import { LABEL, diffTag, speedTag, runParts } from "./words.js";
 import { abilityList, abilityText, abilityOrd, getStrip } from "./fx.js";
 import { drawPause, VEIL as PAUSE_VEIL } from "./pages/pause.js";
 import { hints } from "./hintcopy.js";
+import { endTap } from "./pages/endgeom.js";
 
 /* Scene UI: HUD, and the CLEARED / GAME OVER / PAUSED overlays.
    Pure draw; reads world + (optionally) DOM for HUD. The MENU logo is the MENU
@@ -183,6 +184,15 @@ export const touchLay = (el) => {
   return l === "p" || l === "l";
 };
 const touchOf = (c) => touchLay(c && c.canvas);
+/* The run-end pages by mode (v202 Tasks 5.2-5.4): a mode with no page here keeps today's summary and its tap-anywhere; a registered one draws
+   its page once the lazy module is in, a LOADING plate until then, and its taps go through endgeom's keys. endReady(mode) is that state for
+   endTap: null (no page), false (loading), true. */
+const END_PAGES = Object.freeze({});
+const endPage = (mode) => (END_PAGES[mode] ? END_PAGES[mode]() : undefined);
+export const endReady = (mode) => { const p = endPage(mode); return p === undefined ? null : !!p; };
+/* main's run-end tap: x y in the overlay box of the look (overlayBox), run / tm as main hands them to drawOverlay (run.lay, run.css: the layout
+   and the stage's CSS px per box unit) */
+export const endHitAt = (x, y, kind, world, run, tm) => endTap(x, y, overlayBox(kind), world, run, tm, { lay: run && run.lay, css: run && run.css }, endReady);
 export function drawOverlay(
   c,
   world,

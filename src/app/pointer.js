@@ -11,20 +11,28 @@ const LEVEL_TAP_ROW = Object.freeze({ room: "LEVEL", lock: "LEVEL", heat: "DIFFI
    first, in the constructor), so swallow it here — otherwise the latched
    intent.fire re-enters as a rising-edge confirm on the next frame
    (auto-start after skip, toggles bouncing back, subscreens bouncing). */
-export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, recPageHit = () => null, layout: menuLayout } }) {
+/* WIN / LOSE (R19, v202 Task 5.2): a tap on a drawn key is that key's own path (main ENTER, MENU ESC, COPY RESULT C, COPY MAP B through
+   input.onUiKey), acted on its pointerup on the same key: Input's own pointerup drops a fire raised before the tick, and a touch pointerdown
+   carries no clipboard activation. Off the keys a tap does nothing. */
+const END_KEY = Object.freeze({ main: "Enter", menu: "Escape", copy: "KeyC", map: "KeyB" });
+export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, recPageHit = () => null, endHit, layout: menuLayout } }) {
   let statsC = false; // a touch pointerdown carries no activation, so a touch C tap copies on its pointerup
   /* THE page-key branch (R1 cohesion): every page answers a ▲ / ▼ tap with the kit's {k: "page", d, to}; one app.pageKey step, one sound and feel */
   const pageKey = (h) => !!h && typeof h === "object" && h.k === "page" && (app.pageKey(h.d, h.to), true);
+  let endK = null; // the run-end key under the pointerdown, acted on its pointerup
+  const at = (ev) => {
+    const r = canvas.getBoundingClientRect(), k = canvas.width / (r.width || canvas.width);
+    return [(ev.clientX - r.left) * k, (ev.clientY - r.top) * k];
+  };
+  const ended = () => app.screen === SCREEN.GAME && (world.state === "WIN" || world.state === "LOSE");
   const onDown = (ev) => {
     if (app.screen === SCREEN.GAME) {
+      if (ended()) { input._intent.fire = false; endK = endHit ? endHit(...at(ev)) : null; return; }
       if (world.state !== "PAUSE") return;
       input._intent.fire = false;
       /* Client px times k (buffer px per CSS px) of the OVERLAY canvas —
          never #gl's Retina drawing buffer, which the wrapper owns. */
-      const r = canvas.getBoundingClientRect();
-      const k = canvas.width / (r.width || canvas.width);
-      const px = (ev.clientX - r.left) * k,
-        py = (ev.clientY - r.top) * k;
+      const [px, py] = at(ev);
       const B = overlayBox(kind());
       if (app.pauseView === 3) return void ctl().tap(controlsHit(app.controls.view(app.ctlT), px, py, canvas, kind(), true));
       if (app.pauseView) {
@@ -114,8 +122,13 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
   };
   for (const el of [canvas, fit && fit.sh]) if (el) {
     el.addEventListener("pointerdown", onDown);
-    el.addEventListener("pointerup", () => { if (statsC && app.screen === SCREEN.STATS) input.onUiKey("KeyC"); statsC = false; });
-    for (const t of ["pointercancel", "pointerleave"]) el.addEventListener(t, () => { statsC = false; }); // a cancelled C touch never copies on a later pointerup
+    el.addEventListener("pointerup", (ev) => {
+      if (statsC && app.screen === SCREEN.STATS) input.onUiKey("KeyC");
+      statsC = false;
+      const k = endK; endK = null;
+      if (k && ended() && el === canvas && endHit(...at(ev)) === k) input.onUiKey(END_KEY[k]);
+    });
+    for (const t of ["pointercancel", "pointerleave"]) el.addEventListener(t, () => { statsC = false; endK = null; }); // a cancelled C touch never copies on a later pointerup
     if (el !== canvas) el.addEventListener("contextmenu", (e) => e.preventDefault()); // #c's camera controls swallow it there; on #sh a right-click confirms a row as it did on #c, with no browser menu
   }
 }

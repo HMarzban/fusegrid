@@ -76,6 +76,8 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-11 — UI upgrade Task 3.3: LEVEL SELECT on the world kit
 - `src/render/pages/level.js` (one levelGeom, opaque, the selected level's room; level keys, banks, MODIFIERS door + inline list, the one card with BEST, START); old painter deleted from menudraw; tap mode follows app.lastDev (ruling 4); CROWN card copy ALL NINE · ONE OF EACH. Compact pages its groups on the least landscape phones (never under 44 px); a controller gets a cue line on phone and compact.
+## 2026-11-11 — UI upgrade Task 5.2: end-screen routing (lane-5-ends, held for R2)
+- `src/render/pages/endgeom.js` (draw / tap contract of WIN and GAME OVER, boot), Esc / EAST → MENU at a run end (finale via the fire edge), run-end taps on endgeom keys on pointerup; main's `runInfo` / `timeInfo`. The old summary stays until 5.3 / 5.4 register their pages.
 
 ## 2026-11-11 — UI upgrade Task 3.6: DOM cards on the world kit
 - `#upd`, `#ana`, `#load` now use `--k-*` world-1 kit properties (pinned to `tokens.js` in hidden-css.test); keycaps last; failure copy names ART STYLE. Left: the REAL 3D/PIXEL row copy `SOUTH RETRY` in menudraw (renderrow.test:87) still keycap-first, for the SETTINGS lane.

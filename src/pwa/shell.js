@@ -102,6 +102,7 @@ const SRC = Object.freeze([
   "src/render/menudraw.js",
   "src/render/padart.js",
   "src/render/pages/card.js",
+  "src/render/pages/endgeom.js",
   "src/render/pages/menu.js",
   "src/render/pages/level.js",
   "src/render/pages/lazy.js",

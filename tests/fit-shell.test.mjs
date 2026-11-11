@@ -423,6 +423,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     g.world.state = "LOSE"; frame();
     check("LOSE (a run end): #sh shown, click-through, nothing drawn on it; the end overlay on #c", !D.sh.hidden && D.sh.style.pointerEvents === "none" && shText.length === 0 && cText.length > 0, J([D.sh.hidden, D.sh.style.pointerEvents, shText.length]));
     cv.fire("pointerdown", { clientX: 700, clientY: 300, button: 0, pointerType: "mouse", preventDefault() {} });
+    cv.fire("pointerup", { clientX: 700, clientY: 300, button: 0, pointerType: "mouse", preventDefault() {} }); // a run-end tap acts on its pointerup (v202 Task 5.2)
     tick(3);
     check("LOSE: a tap on #c is the game's Space, as today: a fresh run at room 1", g.world.state === "PLAY" && g.world.level === 1 && D.sh.hidden, g.world.state + "/" + g.world.level);
     cv.fire("pointerup", { pointerType: "mouse" }); tick(3);

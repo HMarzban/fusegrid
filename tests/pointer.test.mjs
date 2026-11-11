@@ -40,7 +40,7 @@ function mkEl(w, h, rect, lay) {
 const REAL = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, layout };
 function mkHit(over = {}) {
   const calls = [], hit = {};
-  for (const [k, f] of Object.entries(REAL)) hit[k] = (...a) => { const r = (over[k] || f)(...a); calls.push({ f: k, a, r }); return r; };
+  for (const [k, f] of Object.entries({ ...REAL, ...over })) hit[k] = (...a) => { const r = (over[k] || f)(...a); calls.push({ f: k, a, r }); return r; };
   return { hit, calls, of: (k) => calls.filter((c) => c.f === k), last: (k) => calls.filter((c) => c.f === k).pop() };
 }
 const SHELL = ["confirm", "back", "pauseBack", "playFromAttract", "skipShow", "move", "adjustPace", "recTab", "levelFocus", "foeTap", "foeClose", "pageKey"];
@@ -73,11 +73,27 @@ const SENT = { sentinel: 1 };
   check("mount: no #sh (or no fit) binds #c alone", J(a.canvas.adds) === J(want) && J(b.canvas.adds) === J(want));
 }
 
-// ---- GAME, not PAUSE: the tap belongs to Input's fire latch (the WIN / LOSE overlay's tap is Space) ----
-for (const st of ["PLAY", "WIN", "LOSE"]) {
+// ---- GAME PLAY: the tap belongs to Input's fire latch ----
+for (const st of ["PLAY"]) {
   const r = rig({ app: { screen: SCREEN.GAME }, state: st });
   r.down(300, 306);
   check("GAME " + st + ": no swallow, no hit test, no shell call (the latched fire stays)", r.input._intent.fire === true && r.H.calls.length === 0 && r.log.length === 0 && r.canvas.rects === 0, J(r.log));
+}
+// ---- WIN / LOSE (R19, v202 Task 5.2): main's endHit names the key under the tap, in #c's overlay box; it acts on its pointerup on the same key ----
+for (const st of ["WIN", "LOSE"]) {
+  const keyAt = (x) => (x < 200 ? "main" : x < 300 ? "menu" : x < 400 ? "copy" : x < 500 ? "map" : null), hits = [];
+  const cv = mkEl(600, 520, { left: 0, top: 0, width: 300, height: 260 });
+  const r = rig({ app: { screen: SCREEN.GAME }, state: st, canvas: cv, over: { endHit: (x, y) => { hits.push([x, y]); return keyAt(x); } } }); // main's closure (endHitAt): no REAL twin
+  r.down(50, 100);
+  check("GAME " + st + ": a tap swallows the fire, asks endHit in the overlay's buffer px, calls no shell method and sends nothing on pointerdown", r.input._intent.fire === false && J(hits[0]) === J([100, 200]) && r.log.length === 0 && r.input.keys.length === 0, J(hits) + J(r.input.keys));
+  cv.fire("pointerup", { clientX: 50, clientY: 100 });
+  check("GAME " + st + ": its pointerup on the same key sends that key's code (main = Enter)", J(r.input.keys) === J(["Enter"]), J(r.input.keys));
+  for (const [x, code] of [[120, "Escape"], [170, "KeyC"], [220, "KeyB"]]) { r.down(x, 10); cv.fire("pointerup", { clientX: x, clientY: 10 }); check("GAME " + st + ": " + code + " key tap sends " + code, r.input.keys.at(-1) === code, J(r.input.keys)); }
+  const n = r.input.keys.length;
+  r.down(50, 10); cv.fire("pointerup", { clientX: 120, clientY: 10 });
+  r.down(50, 10); cv.fire("pointercancel", {}); cv.fire("pointerup", { clientX: 50, clientY: 10 });
+  r.down(280, 10); cv.fire("pointerup", { clientX: 280, clientY: 10 });
+  check("GAME " + st + ": an up on another key, a cancelled tap and a tap off the keys send nothing", r.input.keys.length === n, J(r.input.keys.slice(n)));
 }
 
 // ---- PAUSE list: scaled tap through #c, pauseHit, Enter on the row ----
