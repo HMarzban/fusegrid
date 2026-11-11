@@ -441,6 +441,25 @@ for (const b of TOUCHB) for (const page of ["GUIDE", "ENEMIES", "HOW TO PLAY"]) 
   md.drawEnemiesHelp(t.ctx, L, 0, "2d", false, { level: 2 });
   const loading = t.texts.filter((x) => x.s === "LOADING").length;
   check("not loaded: GUIDE and ENEMIES paint the LOADING plate; guideHit and enemiesHit are -2 (inert: a tap while it loads never backs out); guideGeom is null", loading === 2 && md.guideHit(683, 300, L, 4, false) === -2 && md.enemiesHit(683, 300, L, false) === -2 && md.guideGeom(L, false) === null);
+  /* R1 kit: GUIDE's LOADING is THE plate (kit room.js loadingPlate: title + one line), and every LOADING frame asks for the module again, so a
+     failed import recovers (lane rules lesson 5; GUIDE used to wait for lazy.idle() alone) and the plate says DID NOT LOAD while it has failed */
+  {
+    await new Promise((r) => setTimeout(r, 0)); // the plates above asked already: let those asks land first
+    lazy._set("guide", null);
+    const asks = [], w0 = md._rec.want;
+    let n = 0;
+    md._rec.want = (name) => { asks.push(name); return ++n === 1 ? Promise.reject(new Error("network blip")) : (lazy._set("guide", P), Promise.resolve(P)); };
+    const t1 = rec({ widthK: K8 });
+    md.drawFloorHelp(t1.ctx, L, 0, "2d", false, { level: 2 });
+    await new Promise((r) => setTimeout(r, 0));
+    const t2 = rec({ widthK: K8 });
+    md.drawFloorHelp(t2.ctx, L, 0, "2d", false, { level: 2 });
+    const failed = t2.texts.some((x) => x.s === "DID NOT LOAD") && t2.texts.some((x) => x.s === "FLOOR");
+    await new Promise((r) => setTimeout(r, 0));
+    check("GUIDE LOADING: the title and LOADING; a LOADING frame asks for the page, a failed import shows DID NOT LOAD and the next frame asks again and lands",
+      t1.texts.some((x) => x.s === "FLOOR") && t1.texts.some((x) => x.s === "LOADING") && failed && J(asks) === J(["guide", "guide"]) && lazy.get("guide") === P, J({ asks, failed }));
+    md._rec.want = w0;
+  }
   lazy._set("guide", P);
   /* shellview hands the page app.level, ENEMIES' focus and tooltip */
   const app = createMenuApp({ settings: {} });

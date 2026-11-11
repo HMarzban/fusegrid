@@ -103,9 +103,8 @@ cancels. A desk foot zone answers only in the armed state it was painted in (`fo
 paints is never the second R. On those pages `Q` / `E` never also confirm. Esc, Backspace, Enter, EAST and START from any of them:
 MENU on RECORDS.
 RECORDS page (UI upgrade v202 Task 4.1; `src/render/pages/records.js`, LAZY: one `pages/lazy.js` entry `records`, loaded in the first idle
-after MENU's first frame; until it lands menudraw paints `loadingPage` (the room, a small plate, LOADING) and every RECORDS hit is -2, inert,
-so a tap never backs out of a page still loading; every LOADING frame asks `want("records")` again (menudraw `_rec`, the test seam), so a failed
-import is retried and a network blip recovers; tests `want` / `_set` it). The room of `app.level` opaque under it (MENU's own room layer
+after MENU's first frame; until it lands menudraw paints THE LOADING plate (`loadingPage`, see Lazy pages) and every RECORDS hit is -2, inert,
+so a tap never backs out of a page still loading; tests `want` / `_set` it). The room of `app.level` opaque under it (MENU's own room layer
 at MENU's room dpr (`kit/room.js` `roomDpr`, MENU's rule, with `rev`; R1 train: the one rule of MENU, LEVEL SELECT, SETTINGS and GUIDE, no logo reserve, the page's own fit the floor), whatever MENU last painted: no re-raster on a MENU <-> RECORDS trip; `shellCovers` SCORES, STATS and TROPHIES). `recordsGeom(F)`
 (F = MENU's frame: W, H, touch, shell, css, ts; the pointer hands RECORDS `layout(cw, ch, lg, css)`) is one plate for every tab: desk
 (keyboard boxes; the S7-pages frame, plate 980 wide, 1080 at 125 %, kicker MENU over the RECORDS title, tabs 150 x 36 over an 11 px trough,
@@ -270,7 +269,7 @@ FLOOR; keyboard GUIDE is a 2x2 of doors, touch four stacked rows), backs out to
 GUIDE. `drawFloorHelp` lists the eight floor tiles at CORE / PLUS / MAX in the
 current look (`featdraw.drawSpec`, PIXEL `atlas.feat`), each with its rule line
 (`TILE_HELP`). GUIDE pages (UI upgrade v202 Task 3.5) are `src/render/pages/guide.js`, lazy (`pages/lazy.js` `guide`; until it is in a page
-paints the kit plate with LOADING and its hits are -2), on the world kit: the room of `app.level` opaque behind (MENU's own room layer: its dpr
+paints THE LOADING plate, see Lazy pages, and its hits are -2), on the world kit: the room of `app.level` opaque behind (MENU's own room layer: its dpr
 from MENU's rule, `roomDpr`, so a hop never re-rasters the world), the rampart plate, a head (kicker GUIDE / MENU and the display title; a phone
 or compact page a BACK key that stays 44 CSS px), the foot under the plate (label first, keycap last: `PICK ▲▼◀▶ · OPEN ENTER · BACK ESC`,
 `MOVE … · POINTS ENTER · BACK ESC`, HOW TO `BACK ESC ENTER`; a touch desk `TAP A DOOR · TAP OUTSIDE TO GO BACK`). Desk, phone (one column, CSS
@@ -372,8 +371,12 @@ chosen, locked; HOW TO, POWER-UPS, FLOOR also band, ring and gap, HOW TO and FLO
 source (Node) it paints straight onto the target over a flat fill; a context with no clip or rect (the headless renderer's) gets the plan only.
 Lazy pages (R20): `src/render/pages/lazy.js` is the ONE loader (boot; `LOAD` has one line per page, `want(name)` imports, `get(name)` is the
 module or null, `idle()` asks for every page in the first idle after MENU's first frame: shellview calls it on MENU). A lazy page is in
-`src/pwa/shell.js` SRC and `LATER`, never BOOT; until it lands its menudraw entry names paint a LOADING plate on the room (`loadingPage`) and its
-hit is -2 on that plate, -1 off it. Tests import the page or hand it in with `lazy._set`. `src/app` never imports it.
+`src/pwa/shell.js` SRC and `LATER`, never BOOT; until it lands its menudraw entry names paint THE LOADING plate (R1 kit: one painter, kit
+`room.js` `loadingPlate` through menudraw `loadingPage`: MENU's room at `roomDpr`, none on a PAUSE view, then a 360 x 128 kit plate scaled into
+the box with the page's title and one line, LOADING, or DID NOT LOAD while its last import failed). Every LOADING frame asks for the module
+again (menudraw `lazyMod`; `lazy.want` keeps one import in flight): a failed import is asked again on the next frame (a blip recovers), then at most
+every 3 s, never every frame; `_rec.want` is the test seam for every lazy page. Hits keep each page's rule: SETTINGS / GRAPHICS -2 on the plate,
+-1 off it; GUIDE and RECORDS -2 everywhere. Tests import the page or hand it in with `lazy._set`. `src/app` never imports it.
 
 SETTINGS page (UI upgrade v202 Task 3.4, `src/render/pages/settings.js`, lazy; the round 7 S7-menu 04-settings / 04-settings-3d frames): SETTINGS and
 GRAPHICS, and PAUSE views 1 / 2 inside `overlayBox` (a paused box: no room, the plate over the board under PAUSE's veil, kept off the HUD strip

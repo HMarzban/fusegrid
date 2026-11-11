@@ -19,7 +19,10 @@
    roomFit    (F, dpr, held) the dpr left once held bytes sit in BUDGET, never above dpr nor under 0.5 (3 places).
    shareRoom  (rule) MENU installs its rule (its plate, foot reserve and ROOM_RESERVE for the logo; pages/menu.js roomDpr) when it loads.
    roomDpr    (c, F, ui, dpr) that rule's dpr for the box F; throws until it is installed, so no page can fall back to a different room.
-   pageRoomDpr (c, F, ui, dpr, held) the lower of MENU's and the page's own fit (its layers held, no logo reserve): the room gives way only there. */
+   pageRoomDpr (c, F, ui, dpr, held) the lower of MENU's and the page's own fit (its layers held, no logo reserve): the room gives way only there.
+   loadingPlate (c, F, o) THE stand-in every lazy page paints until its module lands (R20): MENU's room at roomDpr (o.dpr, o.rev; none on a PAUSE
+              view, o.paused; a flat veil with no canvas source), then a 360 x 128 kit plate scaled into the box (loadBox) with o.title and one line
+              (o.line). A context with no clip gets nothing. */
 import {CFG, T, key, biomeOf} from "../../core/config.js";
 import {stampStart} from "../../core/fair.js";
 import {heatRoster} from "../../core/heat.js";
@@ -30,8 +33,10 @@ import {drawSpec} from "../featdraw.js";
 import {rr} from "../icons.js";
 import {floorVar} from "../floorart.js";
 import {borderCode} from "../wallvar.js";
-import {wallCell, floorCell, brickCell} from "./paint.js";
-import {CONST, toL} from "./tokens.js";
+import {wallCell, floorCell, brickCell, plate} from "./paint.js";
+import {CONST, toL, worldTokens} from "./tokens.js";
+import {dsp, lbl} from "./type.js";
+import {canMake} from "./cache.js";
 import {layer, BUDGET} from "./cache.js";
 
 const C = CFG.COLS, R = CFG.ROWS, TS = 40, BW = C * TS, BH = R * TS, SEED = 7;
@@ -82,6 +87,25 @@ export function roomDpr(c, F, ui, dpr) {
   return rule(c, F, ui, dpr);
 }
 export const pageRoomDpr = (c, F, ui, dpr, held) => Math.min(roomDpr(c, F, ui, dpr), roomFit(F, dpr, held));
+
+const LOAD_W = 360, LOAD_H = 128;
+export function loadBox(F) {
+  const k = Math.min(1, (F.W - 52) / LOAD_W, (F.H - 52) / LOAD_H), w = LOAD_W * k, h = LOAD_H * k;
+  return {x: (F.W - w) / 2, y: (F.H - h) / 2, w, h, k};
+}
+export function loadingPlate(c, F, o) {
+  const level = o.level | 0 || 1, tok = worldTokens(level), B = loadBox(F);
+  if (!(F.W > 0 && F.H > 0) || typeof c.clip !== "function") return;
+  if (!o.paused) {
+    if (canMake()) c.drawImage(roomLayer({w: F.W, h: F.H}, level, tok, {dpr: roomDpr(c, F, {rev: o.rev}, o.dpr), look: "2d", textScale: 1}), 0, 0, F.W, F.H);
+    else { c.fillStyle = toL(tok.bg1, 0.004); c.fillRect(0, 0, F.W, F.H); }
+  }
+  c.save(); c.translate(B.x, B.y); c.scale(B.k, B.k);
+  plate(c, 0, 0, LOAD_W, LOAD_H, tok);
+  dsp(c, o.title, LOAD_W / 2, 50, 34, {align: "center"});
+  lbl(c, o.line, LOAD_W / 2, 96, 16, {align: "center", col: CONST.t2});
+  c.restore();
+}
 
 export function laneGrid(level) {
   const g = new Uint8Array(C * R), b = biomeOf(level), [fx, fy] = FOE_AT, [tx, ty] = TILE_AT;

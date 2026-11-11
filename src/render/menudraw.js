@@ -7,7 +7,7 @@
 import { CFG, BIOMES } from "../core/config.js";
 import { FOES } from "../core/entities.js";
 import { HEAT_COL, clampHeat } from "../core/heat.js";
-import { DIFF, TIME_TRIAL, LABEL, REC_WORDS, runParts } from "./words.js";
+import { DIFF, TIME_TRIAL, LABEL, runParts } from "./words.js";
 import { drawEnemyBody } from "./sprites.js";
 import { HOME, TILE_HELP, TILE_NAME } from "../core/feat.js";
 import { rr } from "./icons.js";
@@ -19,12 +19,9 @@ import * as menuPage from "./pages/menu.js";
 import * as levelPage from "./pages/level.js";
 import { rosterOf } from "./pages/card.js";
 import * as lazy from "./pages/lazy.js";
-import { worldTokens, CONST, toL } from "./kit/tokens.js";
-import { plate as kitPlate } from "./kit/paint.js";
-import { dsp as kitDsp, lbl as kitLbl, lbl } from "./kit/type.js";
-import { canMake, capDpr } from "./kit/cache.js";
-import { roomLayer, roomDpr } from "./kit/room.js";
-import { FOOT_TAP, LOOK_NAME, lookVal } from "./kit/copy.js";
+import { capDpr } from "./kit/cache.js";
+import { loadingPlate, loadBox } from "./kit/room.js";
+import { FOOT_TAP, LOOK_NAME, lookVal, LOAD_WORDS } from "./kit/copy.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
   MUTED = "#7385ad";
@@ -521,6 +518,29 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
   levelPage.drawLevelPage(c, frameOf(L, touch), { level: lv, heat, pace, pact: U ? pact | 0 : 0, time: U && !!timeAttack, unlocked: U, best: (I.best || [])[lv - 1] || null, row: I.row || LABEL.LEVEL, open: !!I.open, cur: I.cur, trig: modeFocus(), tap: I.tap, lockR: I.lockR, lockT: I.lockT, enterT: I.enterT, rev: I.rev }, t);
 }
 
+/* LAZY PAGES (R20; R1 kit: one plate, one ask). lazyMod(name) is the module once it is in; until then every LOADING frame asks again (lazy.want
+   keeps one import in flight), a failed import is asked again on the next frame (a blip before the worker caches the file recovers), then at
+   most every RETRY_MS, never every frame, and the plate says DID NOT LOAD while the last import failed. _rec.want is the test seam (every page). */
+export const _rec = { want: (n) => lazy.want(n) };
+const RETRY_MS = 3000, nowMs = () => (globalThis.performance && typeof performance.now === "function" ? performance.now() : 0), asks = {};
+function lazyMod(name) {
+  const m = lazy.get(name);
+  if (m) return m;
+  const a = asks[name] || (asks[name] = { fails: 0, at: -Infinity, seen: null });
+  if (a.fails < 2 || nowMs() - a.at >= RETRY_MS)
+    Promise.resolve().then(() => {
+      const p = _rec.want(name);
+      return Promise.resolve(p).then(() => { a.fails = 0; }, () => { if (a.seen !== p) { a.seen = p; a.fails++; a.at = nowMs(); } });
+    });
+  return null;
+}
+/** THE LOADING plate every lazy page paints until its module lands (kit room.js loadingPlate): MENU's room (none on a PAUSE view), the kit plate,
+    the title and LOADING, or DID NOT LOAD while name's last import failed (ui.failed forces it). ui: {level, rev, paused, failed}. */
+export function loadingPage(c, F, title, ui, name) {
+  const u = ui || {}, a = asks[name];
+  loadingPlate(c, F, { level: u.level, rev: u.rev, paused: u.paused, title, dpr: capDpr(deviceScale(c), !!F.touch), line: u.failed || (a && a.fails > 0) ? LOAD_WORDS.failed : LOAD_WORDS.loading });
+}
+
 /* GUIDE art in PIXEL (W5, R19): kind "px" swaps only the scaled vector glyph
    for the atlas cell (hudart.js); LEVEL SELECT's room card reads it. */
 const pxArt = (kind) => (kind === "px" ? pixelArt() : null);
@@ -529,26 +549,18 @@ const BACK_TAP = "TAP OUTSIDE TO GO BACK";
 /* GUIDE and its four pages are src/render/pages/guide.js (UI upgrade v202 Task 3.5), lazy (pages/lazy.js "guide"): one geometry for draw and
    tap, names by label. These keep the entry names shellview, the pointer and the tests call; L is layout(W, H, lg, css) for the box the page draws
    on, touch body[data-lay] p / l, o = {level (the world), foe (ENEMIES' focused foe), tip (its tooltip open)}. Until the module is in, a page
-   paints the kit plate with LOADING over its world and its hits find nothing (-2: inert, so a tap while it loads never backs out). */
+   paints the LOADING plate (loadingPage) and its hits find nothing (-2: inert, so a tap while it loads never backs out). */
 const guideMod = () => lazy.get("guide");
 const gui = (page, kind, L, o, focus) => ({ page, focus, tip: !!(o && o.tip), pg: (o && o.pg) | 0, level: (o && o.level) | 0 || 1, look: kind === "px" ? "px" : "2d", narrow: !!L.narrow, rev: o && o.rev });
-function guideLoading(c, L, title, o) {
-  const tok = worldTokens((o && o.level) | 0 || 1), w = Math.min(360, L.W - 60), h = 120, x = (L.W - w) / 2, y = (L.H - h) / 2;
-  if (typeof c.rect !== "function" || !(w > 0)) return; // the headless renderer's context: the plan only
-  c.fillStyle = tok.bed;
-  c.fillRect(0, 0, L.W, L.H);
-  kitPlate(c, x, y, w, h, tok, { T: Math.min(16, L.W / 40) });
-  lbl(c, title, x + 22, y + 40, 21);
-  lbl(c, "LOADING", x + 22, y + 80, 16, { col: "#dccbb8" });
-}
-const guidePage = (page) => (c, L, t, kind, touch, o) => { const g = guideMod(); if (!g) return guideLoading(c, L, page, o); g.drawGuidePage(c, frameOf(L, touch), gui(page, kind, L, o, o && o.foe != null ? o.foe : null), t); };
+const guideLoading = (c, L, touch, title, o) => loadingPage(c, frameOf(L, touch), title, { level: o && o.level, rev: o && o.rev }, "guide");
+const guidePage = (page) => (c, L, t, kind, touch, o) => { const g = lazyMod("guide"); if (!g) return guideLoading(c, L, touch, page, o); g.drawGuidePage(c, frameOf(L, touch), gui(page, kind, L, o, o && o.foe != null ? o.foe : null), t); };
 export const drawHowTo = guidePage("HOW TO PLAY");
 export const drawItemsHelp = guidePage(LABEL.POWER_UPS);
 export const drawEnemiesHelp = guidePage("ENEMIES");
 export const drawFloorHelp = guidePage("FLOOR");
 export function drawGuide(c, L, t, cursor, kind, touch, o) {
-  const g = guideMod();
-  if (!g) return guideLoading(c, L, "GUIDE", o);
+  const g = lazyMod("guide");
+  if (!g) return guideLoading(c, L, touch, "GUIDE", o);
   g.drawGuidePage(c, frameOf(L, touch), gui("GUIDE", kind, L, o, g.DOORS[cursor | 0]), t);
 }
 /** The GUIDE page's geometry (pages/guide.js guideGeom), null until the module is in. */
@@ -564,14 +576,10 @@ export const guidePages = (L, touch, page) => { const g = guideMod(); return g ?
    lands they paint the LOADING plate and every hit is inert (-2, or "plate"). The entry names stay: shellview, the pointer and the tests call them. ui is
    the page's (records.js drawRecordsPage); L is layout(W, H, lg, css) for the box the page draws on, touch body[data-lay] p / l. */
 const recMod = () => lazy.get("records");
-/* every LOADING frame asks again: want() keeps one import in flight and a failed one is retried by the next ask, so a network blip before the
-   worker caches the file recovers on the next frame (fix round 1, I2). _rec.want is the test seam. */
-export const _rec = { want: (n) => lazy.want(n) };
 const recDraw = (page) => (c, ui, L, t, touch) => {
-  const m = recMod(), F = frameOf(L, touch);
+  const m = lazyMod("records"), F = frameOf(L, touch);
   if (m) return m.drawRecordsPage(c, F, { ...ui, page }, t);
-  Promise.resolve().then(() => _rec.want("records")).catch(() => {});
-  return recLoading(c, F, ui || {});
+  return loadingPage(c, F, LABEL.RECORDS, ui || {}, "records");
 };
 export const drawScores = recDraw("scores"), drawStats = recDraw("stats"), drawTrophies = recDraw("medals");
 /* The RECORDS tab under a tap, else -1; -2 while the page module is still loading (inert). */
@@ -584,18 +592,6 @@ export const statsHit = (x, y, L, arm, _tabs, touch) => { const m = recMod(); re
 export const recPages = (L, touch, page, rows) => { const m = recMod(); return m ? m.recPages(frameOf(L, touch), page, rows) : 1; };
 /* A RECORDS tab's page keys under a tap: -1 (▲), 1 (▼), else 0 (rows: SCORES' rows, whose count sets its pages). */
 export const recPageHit = (x, y, L, touch, page, rows) => { const m = recMod(); return m ? m.pageKeyHit(x, y, frameOf(L, touch), page, rows) : 0; };
-/* A lazy page's stand-in (R20): the room of level opaque over the box (MENU's own layer when MENU last painted this box), one small kit plate and
-   LOADING, so a covered frame never shows a frozen board. */
-function recLoading(c, F, ui) { // RECORDS' LOADING stand-in (named apart from the SETTINGS / GRAPHICS loadingPage below; one plate is the R1 kit harmonisation's)
-  if (!F || !(F.W > 0 && F.H > 0) || typeof c.fillRect !== "function") return;
-  const lv = ui.level | 0 || 1, tok = worldTokens(lv);
-  if (canMake() && typeof c.drawImage === "function") c.drawImage(roomLayer({ w: F.W, h: F.H }, lv, tok, { dpr: roomDpr(c, F, { rev: ui.rev }, capDpr(deviceScale(c), !!F.touch)), look: "2d", textScale: 1 }), 0, 0, F.W, F.H); // MENU's own room at MENU's room dpr
-  else { c.fillStyle = tok.bg1; c.fillRect(0, 0, F.W, F.H); }
-  if (typeof c.rect !== "function") return;
-  const w = Math.min(320, F.W - 40), h = 80, x = (F.W - w) / 2, y = (F.H - h) / 2;
-  kitPlate(c, x, y, w, h, tok, { phone: !!F.touch });
-  kitLbl(c, REC_WORDS.LOADING, F.W / 2, F.H / 2, 16, { align: "center", col: CONST.t2 });
-}
 
 /* SETTINGS and GRAPHICS (SCREEN.SETTINGS / GRAPHICS; PAUSE views 1 and 2): the page is src/render/pages/settings.js (UI upgrade v202 Task 3.4),
    lazy (R20) through pages/lazy.js. These keep the entry names shellview, the pointer and the tests call, with the same arguments for draw and
@@ -604,35 +600,8 @@ function recLoading(c, F, ui) { // RECORDS' LOADING stand-in (named apart from t
    it backs out (-1); once in, every call is synchronous. *Geom answers null until then. ui is the page's (see its header); rows the visible list. */
 const page = () => lazy.get("settings");
 const setFrame = (L, touch) => ({ ...frameOf(L, touch), paused: !!L.paused, focus: L.focus }); // a PAUSE view's box, the focused row (the page on screen)
-/* one ask in flight; a failed import shows DID NOT LOAD and is asked again at most every RETRY_MS, never every frame */
-let failAt = -Infinity;
-const RETRY_MS = 3000, nowMs = () => (globalThis.performance && typeof performance.now === "function" ? performance.now() : 0);
-let asking = false;
-const want = () => {
-  if (!asking && nowMs() - failAt >= RETRY_MS) { asking = true; lazy.want("settings").then(() => { asking = false; failAt = -Infinity; }, () => { asking = false; failAt = nowMs(); }); }
-  return failAt > -Infinity;
-};
 /* OPTIONS and GRAPHICS share the tap model on a touch layout (row = Enter, off the plate = back); CONTROLS' foot reads it too (kit/copy.js). */
 export { FOOT_TAP, LOOK_NAME, lookVal };
-const LOAD_W = 360, LOAD_H = 128;
-function loadBox(F) {
-  const k = Math.min(1, (F.W - 52) / LOAD_W, (F.H - 52) / LOAD_H), w = LOAD_W * k, h = LOAD_H * k;
-  return { x: (F.W - w) / 2, y: (F.H - h) / 2, w, h, k };
-}
-/** The LOADING plate a lazy page shows until its module lands: the room (none over PAUSE's board), the kit plate, the title, one line. */
-export function loadingPage(c, F, title, ui) {
-  const u = ui || {}, level = u.level | 0 || 1, tok = worldTokens(level), B = loadBox(F);
-  if (!(F.W > 0 && F.H > 0) || typeof c.clip !== "function") return;
-  if (!u.paused) {
-    if (canMake()) c.drawImage(roomLayer({ w: F.W, h: F.H }, level, tok, { dpr: roomDpr(c, F, { rev: u.rev }, capDpr(deviceScale(c), !!F.touch)), look: "2d", textScale: 1 }), 0, 0, F.W, F.H); // MENU's own room at MENU's room dpr (pages/menu.js roomDpr): the room MENU left, the one the page finds
-    else { c.fillStyle = toL(tok.bg1, 0.004); c.fillRect(0, 0, F.W, F.H); }
-  }
-  c.save(); c.translate(B.x, B.y); c.scale(B.k, B.k);
-  kitPlate(c, 0, 0, LOAD_W, LOAD_H, tok);
-  kitDsp(c, title, LOAD_W / 2, 50, 34, { align: "center" });
-  kitLbl(c, u.failed ? "DID NOT LOAD" : "LOADING", LOAD_W / 2, 96, 16, { align: "center", col: CONST.t2 });
-  c.restore();
-}
 const loadHit = (x, y, F) => { const B = loadBox(F); return x >= B.x && x < B.x + B.w && y >= B.y && y < B.y + B.h ? -2 : -1; };
 /** SETTINGS' geometry for the visible rows (pages/settings.js settingsGeom on this box); null until the page is in. */
 export const settingsGeom = (L, touch, rows) => { const m = page(); return m ? m.settingsGeom(setFrame(L, touch), rows) : null; };
@@ -642,8 +611,8 @@ export const settingsHit = (x, y, L, rows, touch) => { const m = page(), F = set
 export const graphicsHit = (x, y, L, _n, touch) => { const m = page(), F = setFrame(L, touch); return m ? m.graphicsHit(x, y, F) : loadHit(x, y, F); };
 export function drawSettings(c, L, t, ui) {
   const u = ui || {}, F = setFrame(L, u.touch), m = page();
-  if (m) return m.drawSettingsPage(c, F, u, t);
-  loadingPage(c, F, LABEL.SETTINGS, { ...u, failed: want() });
+  if (lazyMod("settings")) return m.drawSettingsPage(c, F, u, t);
+  loadingPage(c, F, LABEL.SETTINGS, u, "settings");
 }
 
 /* RENDER row job states (v202 delivery, design 2026-11-06 "What the player
@@ -694,8 +663,8 @@ export function fitVal(c, cands, room) {
 export const GFX_N = 8; // pinned equal to gfx.js GFX_ROWS.length
 export function drawGraphics(c, L, t, ui) {
   const u = ui || {}, F = setFrame(L, u.touch), m = page();
-  if (m) return m.drawGraphicsPage(c, F, u, t);
-  loadingPage(c, F, "GRAPHICS", { ...u, failed: want() });
+  if (lazyMod("settings")) return m.drawGraphicsPage(c, F, u, t);
+  loadingPage(c, F, "GRAPHICS", u, "settings");
 }
 
 
