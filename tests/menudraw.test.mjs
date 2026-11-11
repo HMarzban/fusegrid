@@ -7,6 +7,7 @@ import { worldTokens } from "../src/render/kit/tokens.js";
 import * as settingsPage from "../src/render/pages/settings.js";
 lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page (v202 Task 3.4), in as if its import had landed (R20)
 lazyPages._set("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
+await (await import("../src/render/pages/lazy.js")).want("records"); // RECORDS' SCORES / MEDALS page is lazy (R20): the smoke and hits reach it, not its LOADING plate
 /* The console-panel plate is a rounded path (icons.js rr): a filled path that
    used arcTo is recorded as its bbox rect, so the plate checks keep reading
    rects. Carets and glyphs (no arcTo) are not recorded. */
@@ -135,13 +136,13 @@ function check(name, cond, detail) {
       md.drawItemsHelp(stub, L, 0.4);
       md.drawEnemiesHelp(stub, L, 0.4);
       md.drawGuide(stub, L, 0.4, 0);
-      md.drawScores(stub, DEFAULT_SCORES, L, 0.4);
+      md.drawScores(stub, { level: 1, focus: "tabs", heat: 0, scores: DEFAULT_SCORES, plaques: 5 }, L, 0.4);
       const sv = { mus: 100, sfx: 100, snd: 1, r3d: 0, cam: 0, bri: 100, shk: 1, flx: 0 };
       md.drawSettings(stub, L, 0.4, { rows: optRows(false), row: "MUSIC", vals: sv, r3d: false, togT: -1, rev: "v0" });
       md.drawSettings(stub, L, 0.4, { rows: optRows(true), row: "ANALYTICS", vals: sv, r3d: true, togT: 0.3, rev: "v0" });
       md.drawSettings(stub, L, 0.4, {});
-      md.drawTrophies(stub, L, 0.4, undefined);
-      md.drawTrophies(stub, L, 0.4, [["A", "B", true]]);
+      md.drawTrophies(stub, { level: 1, rows: undefined }, L, 0.4);
+      md.drawTrophies(stub, { level: 8, rows: [["A", "B", true]] }, L, 0.4);
       md.drawDim(stub, 0.62, W, H);
     } catch (e) {
       ok = false;
@@ -347,47 +348,7 @@ function check(name, cond, detail) {
       if (G.mode.length !== (open ? 5 : 0) || G.cap !== (U ? 8 : 5)) bad.push("shape");
       check(`levelHit round-trips levelGeom (${U ? "unlocked" : "locked"}${T ? " touch" : ""}${open ? ", list open" : ""}) at ${W}x${H}`, bad.length === 0, bad.join());
     }
-    {
-      const { c, texts, rects } = rec();
-      md.drawScores(c, DEFAULT_SCORES, L, 1, 0);
-      const p = plateOf(rects);
-      const esc = texts.find((t) => t.s.indexOf("ESC BACK") >= 0);
-      const ten = texts.find((t) => t.s === "10");
-      const dates = texts.filter((t) => t.s === "2026-08-23");
-      const tabs = ["NORMAL", "HARD", "EXPERT"].map((n) =>
-        texts.find((t) => t.s === n),
-      );
-      check(
-        `scores NORMAL/HARD/EXPERT tabs + 10 rows + foot inside plate at ${W}x${H}`,
-        !!p &&
-          !!esc &&
-          !!ten &&
-          dates.length === 10 &&
-          tabs.every((t) => !!t) &&
-          tabs.every((t) => t.y > p.y + 8 && t.y < ten.y) &&
-          esc.s.indexOf("DIFFICULTY") >= 0 &&
-          ten.y < esc.y &&
-          esc.y < p.y + p.h - 4 &&
-          last(dates).y < esc.y &&
-          ten.y > p.y + 8,
-        JSON.stringify({
-          py: p && p.y,
-          ph: p && p.h,
-          ten: ten && ten.y,
-          esc: esc && esc.y,
-          tabsY: tabs.map((t) => t && t.y),
-        }),
-      );
-    }
-    {
-      const { c, texts } = rec();
-      md.drawScores(c, [], L, 1, 1);
-      check(
-        `empty HARD tab shows NO HARD DIFFICULTY RUNS YET at ${W}x${H}`,
-        texts.some((t) => t.s === "NO HARD DIFFICULTY RUNS YET"),
-        texts.map((t) => t.s).join("|"),
-      );
-    }
+    /* SCORES' fit at both sizes (ten rows, the difficulties, the foot; the empty HARD table) moved to tests/page-records.test.mjs with the page (v202 Task 4.1) */
     /* v202 Task 3.5: ENEMIES, HOW TO and GUIDE are pages/guide.js on the world kit (one geometry by name); their words sit inside the plate and the
        foot (label first, keycap last) under it, inside the box */
     {
@@ -546,104 +507,7 @@ function check(name, cond, detail) {
   }
 }
 
-// 13f) R6 MEDALS page (SCREEN.TROPHIES): head, eight rows, foot, all inside the plate
-{
-  const md = await import("../src/render/menudraw.js");
-  const { medalRows, MEDAL } = await import("../src/app/medals.js");
-  const rec = () => {
-    const texts = [], rects = [], rings = [];
-    const c = {
-      fillStyle: "", strokeStyle: "", lineWidth: 1, globalAlpha: 1, font: "",
-      textAlign: "left", textBaseline: "middle",
-      fillRect(x, y, w, h) { rects.push({ x, y, w, h, fill: c.fillStyle }); },
-      strokeRect() {},
-      stroke() { rings.push(c.strokeStyle); },
-      fillText(s, x, y) {
-        texts.push({ s: String(s), x, y, fill: c.fillStyle, a: c.globalAlpha, align: c.textAlign });
-      },
-    };
-    pathRects(c, rects);
-    return { c, texts, rects, rings };
-  };
-  const plateOf = (rects) => rects.find((r) => r.fill === PLATE_FILL);
-  for (const [W, H] of [
-    [600, 520],
-    [608, 352],
-  ]) {
-    const L = md.layout(W, H);
-    const rows = medalRows(MEDAL.IRONCROWN | MEDAL.FLAWLESS);
-    const { c, texts, rects, rings } = rec();
-    md.drawTrophies(c, L, 0.4, rows);
-    const all = texts.map((t) => t.s);
-    const p = plateOf(rects);
-    /* A goal wraps to at most two lines in its tile: rebuild each one from
-       the lines painted under its name (same x, until the next tile). */
-    const descOf = (name) => {
-      const i = texts.findIndex((t) => t.s === name);
-      if (i < 0) return null;
-      const out = [];
-      for (let j = i + 1; j < texts.length && texts[j].x === texts[i].x && texts[j].y > texts[i].y; j++) out.push(texts[j].s);
-      return out.join(" ");
-    };
-    check(
-      `R6 MEDALS page paints the head, the 2/8 kicker, all eight names, every whole goal and the foot at ${W}x${H}`,
-      all.includes("MEDALS") && all.includes("2/8") &&
-        rows.every((r) => all.includes(r[0]) && descOf(r[0]) === r[1]) &&
-        !all.some((s) => s.indexOf("…") >= 0) &&
-        all.includes("←→ TAB · ENTER / ESC BACK"),
-      all.join("|") + " :: " + rows.map((r) => descOf(r[0])).join(" / "),
-    );
-    check(
-      `R6 every MEDALS line stays inside the plate at ${W}x${H}`,
-      !!p && texts.every((t) => t.y > p.y && t.y < p.y + p.h &&
-        (t.align !== "left" || t.x >= p.x) && (t.align !== "right" || t.x <= p.x + p.w)),
-      JSON.stringify({ p, last: texts[texts.length - 1] }),
-    );
-    /* ATLAS: the lock lives in the disc, never in a 0.45 alpha. Earned = an
-       accent-filled 22px disc with a dark star, name in TEXT; a goal = a hollow
-       muted ring, name in the soft #b6c2dc. The head bar fills n/8. */
-    const on = texts.find((t) => t.s === "IRON CROWN"), off = texts.find((t) => t.s === "SPRINT");
-    const stars = texts.filter((t) => t.s === "★"), discs = rects.filter((r) => r.path && r.fill === "#37f0d0" && Math.abs(r.w - 22) < 0.01 && Math.abs(r.h - 22) < 0.01);
-    const tileOf = (t) => rects.find((r) => r.fill === "rgba(4,7,14,0.55)" && t.x >= r.x && t.x <= r.x + r.w && t.y >= r.y && t.y <= r.y + r.h);
-    const earned = rows.filter((r) => r[2]).map((r) => tileOf(texts.find((t) => t.s === r[0])));
-    check(
-      `R6 earned medals fill their disc with a star, goals stay a hollow ring, never 0.45 alpha at ${W}x${H}`,
-      on && off && on.fill === "#dfe7f5" && on.a === 1 && off.fill === "#b6c2dc" && off.a === 1 &&
-        stars.length === 2 && stars.every((t) => t.fill === "#0a0e18" && earned.includes(tileOf(t))) &&
-        discs.length === 2 && discs.every((d) => earned.includes(tileOf({ x: d.x + 11, y: d.y + 11 }))) &&
-        rings.filter((k) => k === "#7385ad").length === 6 &&
-        texts.every((t) => t.a === 1) &&
-        rects.some((r) => r.fill === "#37f0d0" && r.h === 3 && r.w === 160 * 2 / 8),
-      JSON.stringify({ on, off, stars: stars.length, discs: discs.length, rings }),
-    );
-    check(
-      `R6 the page leaves globalAlpha at 1 at ${W}x${H}`,
-      c.globalAlpha === 1,
-      String(c.globalAlpha),
-    );
-    if (H === 520) {
-      const lines = texts.filter((t) => t.align === "left");
-      check(
-        `R6 every medal name and goal line sits inside its own tile at ${W}x${H}`,
-        lines.length >= 16 && lines.every((t) => !!tileOf(t)),
-        JSON.stringify(lines.filter((t) => !tileOf(t))),
-      );
-    }
-    const e = rec();
-    let threw = false;
-    try { md.drawTrophies(e.c, L, 0.4, undefined); } catch (_) { threw = true; }
-    const names = rows.map((r) => r[0]);
-    check(
-      `R6 rows undefined paints 8 goal rings with name-free placeholders without throwing at ${W}x${H}`,
-      !threw && e.texts.filter((t) => t.s === "—").length === 8 &&
-        e.rings.filter((k) => k === "#7385ad").length === 8 &&
-        !e.texts.some((t) => t.s === "★") &&
-        e.texts.some((t) => t.s === "0/8") &&
-        !e.texts.some((t) => names.includes(t.s)),
-      e.texts.map((t) => t.s).join("|"),
-    );
-  }
-}
+// 13f) R6 MEDALS page: moved to tests/page-records.test.mjs with the page (pages/records.js, v202 Task 4.1)
 
 // 13g) Reset (wave-3 §7.4): STATS idle foot names R RESET; armed, two red
 // notes replace the daily/since notes and the foot turns red, all inside S
@@ -1001,173 +865,7 @@ function check(name, cond, detail) {
     za[0][1] < z[2][0] && md.statsHit(z[2][0], f.y, L, true) === null, JSON.stringify([za[0], z[2]]));
 }
 
-// 13d) plaque chips on the SCORES plate: four labels, locked vs unlocked
-//      styling distinct, chips stay inside the plate at both sizes, and
-//      the pre-existing rows/tabs/foot still stay inside the plate too.
-{
-  const md = await import("../src/render/menudraw.js");
-  const { DEFAULT_SCORES } = await import("../src/app/highscores.js");
-  const rec = () => {
-    const texts = [],
-      rects = [];
-    const c = {
-      fillStyle: "",
-      strokeStyle: "",
-      lineWidth: 1,
-      globalAlpha: 1,
-      font: "",
-      textAlign: "left",
-      textBaseline: "middle",
-      shadowColor: "",
-      shadowBlur: 0,
-      fillRect(x, y, w, h) {
-        rects.push({ x, y, w, h, fill: c.fillStyle });
-      },
-      strokeRect() {},
-      clearRect() {},
-      fillText(s, x, y) {
-        texts.push({
-          s: String(s),
-          x,
-          y,
-          fill: c.fillStyle,
-          alpha: c.globalAlpha,
-          align: c.textAlign,
-        });
-      },
-      strokeText() {},
-      beginPath() {},
-      moveTo() {},
-      lineTo() {},
-      closePath() {},
-      fill() {},
-      stroke() {},
-      arc() {},
-      save() {},
-      restore() {},
-      translate() {},
-      scale() {},
-    };
-    pathRects(c, rects);
-    return { c, texts, rects };
-  };
-  const plateOf = (rects) => rects.find((r) => r.fill === PLATE_FILL);
-  const PLAQUE = { CLEAR: 1, PLUS: 2, MAX: 4, CROWN: 8 };
-  // "HARD"/"EXPERT" (the PLUS / MAX plaques) also name the DIFFICULTY tabs drawn above the chip row, so
-  // disambiguate every chip by the unique "CLEAR" text's row-y, not by
-  // first-match on the label string alone.
-  const chipsOf = (texts) => {
-    const clear = texts.find((t) => t.s === "CLEAR");
-    const rowY = clear && clear.y;
-    const rightmost = (s) => {
-      const hits = texts.filter(
-        (t) => t.s === s && Math.abs(t.y - rowY) < 0.01,
-      );
-      return hits.sort((a, b) => a.x - b.x)[hits.length - 1];
-    };
-    return {
-      clear,
-      plus: rightmost("HARD"),
-      max: rightmost("EXPERT"),
-      crown: texts.find((t) => t.s === "CROWN"),
-    };
-  };
-  for (const [W, H] of [
-    [600, 520],
-    [608, 352],
-  ]) {
-    const L = md.layout(W, H);
-    {
-      // mixed mask: CLEAR + MAX unlocked, PLUS + CROWN still locked
-      const { c, texts, rects } = rec();
-      md.drawScores(
-        c,
-        DEFAULT_SCORES,
-        L,
-        1,
-        0,
-        PLAQUE.CLEAR | PLAQUE.MAX,
-      );
-      const p = plateOf(rects);
-      const { clear, plus, max, crown } = chipsOf(texts);
-      const esc = texts.find((t) => t.s.indexOf("ESC BACK") >= 0);
-      const ten = texts.find((t) => t.s === "10");
-      check(
-        `all four plaque labels (CLEAR/PLUS/MAX/CROWN) painted inside the plate at ${W}x${H}`,
-        !!p &&
-          !!clear &&
-          !!plus &&
-          !!max &&
-          !!crown &&
-          [clear, plus, max, crown].every(
-            (t) => t.x > p.x && t.x < p.x + p.w && t.y > p.y + 8 && t.y < p.y + p.h - 4,
-          ),
-        JSON.stringify({ py: p && p.y, ph: p && p.h, clear, plus, max, crown }),
-      );
-      /* ATLAS: a locked plaque stays legible (muted label, full alpha, never
-         faded); an earned one reads accent with a 0.14 accent fill. */
-      const lit = rects.filter((r) => r.fill === "rgba(55,240,208,0.14)");
-      check(
-        `unlocked chips (CLEAR/MAX) read accent + filled, locked chips (PLUS/CROWN) muted but never faded at ${W}x${H}`,
-        !!clear &&
-          !!max &&
-          !!plus &&
-          !!crown &&
-          clear.fill === "#37f0d0" && max.fill === "#37f0d0" &&
-          plus.fill === "#7385ad" && crown.fill === "#7385ad" &&
-          [clear, plus, max, crown].every((t) => t.alpha === 1) &&
-          lit.length === 2 && lit.every((r) => Math.abs(r.x + r.w / 2 - clear.x) < 0.01 || Math.abs(r.x + r.w / 2 - max.x) < 0.01),
-        JSON.stringify({ clear, plus, max, crown, lit }),
-      );
-      check(
-        `plaque chips still leave the 10-row table + heat-tabs foot inside the plate at ${W}x${H}`,
-        !!ten && !!esc && ten.y < esc.y && esc.y < p.y + p.h - 4 && ten.y > p.y + 8,
-        JSON.stringify({ ten: ten && ten.y, esc: esc && esc.y, py: p && p.y, ph: p && p.h }),
-      );
-    }
-    {
-      // all locked (mask omitted / 0): every chip reads muted
-      const { c, texts, rects } = rec();
-      md.drawScores(c, DEFAULT_SCORES, L, 1, 0);
-      const { clear, plus, max, crown } = chipsOf(texts);
-      const chips = [clear, plus, max, crown];
-      check(
-        `no mask arg -> all four chips locked: muted, full alpha, no accent fill at ${W}x${H}`,
-        chips.every((t) => !!t && t.fill === "#7385ad" && t.alpha === 1) &&
-          !rects.some((r) => r.fill === "rgba(55,240,208,0.14)"),
-        JSON.stringify(chips),
-      );
-    }
-    {
-      // all unlocked (mask 15): every chip reads bright/full-alpha
-      const { c, texts } = rec();
-      md.drawScores(c, DEFAULT_SCORES, L, 1, 0, 15);
-      const { clear, plus, max, crown } = chipsOf(texts);
-      const chips = [clear, plus, max, crown];
-      check(
-        `mask 15 -> all four chips unlocked/full-alpha at ${W}x${H}`,
-        chips.every((t) => !!t && t.alpha === 1),
-        JSON.stringify(chips),
-      );
-    }
-    {
-      const { c, texts } = rec();
-      md.drawScores(c, DEFAULT_SCORES, L, 1, 0, 15);
-      const plusTab = texts.find((t) => t.s === "HARD");
-      const clear = texts.find((t) => t.s === "CLEAR");
-      /* ATLAS: one chip row under the heat tabs in every box (scoresGeom.chipY);
-         a short box scales the page (f) instead of folding the plaques onto the
-         tab row. */
-      const g = md.scoresGeom(L), rank = texts.find((t) => t.s === "RANK");
-      check(
-        `${W}x${H} plaques sit on their own row (scoresGeom.chipY) between the heat tabs and the table`,
-        !!plusTab && !!clear && !!rank && Math.abs(clear.y - (g.chipY + (g.f < 1 ? 7 : 10))) < 0.01 && // iso: the chip shrinks to 12 so it ends above bodyTop
-          clear.y > plusTab.y + 8 && clear.y < rank.y && g.chipY >= g.tabs[0].y + g.tabs[0].h,
-        JSON.stringify({ plusY: plusTab && plusTab.y, clearY: clear && clear.y, rankY: rank && rank.y, chipY: g.chipY }),
-      );
-    }
-  }
-}
+// 13d) the plaques (the SCORES page's BADGES row): moved to tests/page-records.test.mjs with the page (v202 Task 4.1)
 
 // 14) drawAttractHint: attract now plays on tap, so the copy says so
 {
@@ -1203,14 +901,14 @@ function check(name, cond, detail) {
   check(
     "shellview passes app.scoreHeat into the (memoised) getter and into drawScores",
     /getScores\(app\.scoreHeat\)/.test(shellSrc) && /getPlaques \? getPlaques\(\)/.test(shellSrc) &&
-      /drawScores\(\s*c,\s*sd\.s,\s*L,\s*app\.subT,\s*app\.scoreHeat,\s*sd\.p,\s*touchLay\(canvas\),\s*app\.recFocus === 0\)/.test(shellSrc),
+      /drawScores\(c, \{ level: app\.level, focus, heat: app\.scoreHeat, scores: sd\.s, plaques: sd\.p \}, Lr, app\.subT, t\)/.test(shellSrc),
     shellSrc.match(/menudraw\.drawScores\([^;]*\);/s)?.[0],
   );
   const mainSrc = readFileSync("src/main.js", "utf8");
   check(
-    "main.js wires scoresForHeat and loadPlaques into the getters passed to drawShell",
+    "main.js wires scoresForHeat (placeholders dropped) and loadPlaques into the getters passed to drawShell",
     /scoresForHeat/.test(mainSrc) &&
-      /\(heat\)\s*=>\s*scoresForHeat\(loadScores\(\),\s*heat\)/.test(mainSrc) &&
+      /\(heat\)\s*=>\s*scoresForHeat\(loadScores\(\),\s*heat\)\.filter\(\(r\) => !isPlaceholder\(r\)\)/.test(mainSrc) && // played runs only (v202 Task 4.1)
       /\(\)\s*=>\s*loadPlaques\(\)/.test(mainSrc),
     mainSrc.match(/drawShell\([^;]*\);/s)?.[0],
   );
@@ -1319,8 +1017,8 @@ function check(name, cond, detail) {
   }
 }
 
-// iso 608x352 guard (polish 2026-10-19): every MEDALS / STATS tile text stays
-// inside its tile (y ± px/2), the HIGH SCORES plaque chips end above bodyTop,
+// iso 608x352 guard (polish 2026-10-19): every STATS tile text stays
+// inside its tile (y ± px/2) (MEDALS and SCORES: tests/page-records.test.mjs),
 // and the 600x520 box keeps its exact text positions; NO TIME YET waits for
 // TIME (MODES open) and never shows on the DAILY card.
 {
@@ -1344,20 +1042,15 @@ function check(name, cond, detail) {
   const pos = {};
   for (const [W, H] of [[600, 520], [608, 352]]) {
     const L = md.layout(W, H), tg = `${W}x${H}`;
-    const m = rec();
-    md.drawTrophies(m.c, L, 1, rows);
-    check(`MEDALS: name + both goal lines inside each tile at ${tg}`, body(m, L, 2).length === 8 && body(m, L, 2).every((r) => inside(r, m)) && strip(m, L, 2));
+    /* MEDALS' tiles at both sizes: tests/page-records.test.mjs (pages/records.js, v202 Task 4.1) */
     const st = rec();
     md.drawStats(st.c, L, 1, stats, false, null);
     check(`STATS: value + label inside each of the 11 tiles at ${tg}`, body(st, L, 1).length === 11 && body(st, L, 1).every((r) => inside(r, st)) && strip(st, L, 1));
-    const sc = rec(), g = md.scoresGeom(L, false);
-    md.drawScores(sc.c, [], L, 1, 0, 0b11, false);
-    const chips = sc.strokes.filter((r) => Math.abs(r.y - (g.chipY + 0.5)) < 1e-9);
-    check(`SCORES: four plaque chips end above bodyTop at ${tg}`, chips.length === 4 && chips.every((r) => r.y + r.h + 0.5 <= g.bodyTop), chips.map((r) => r.y + r.h).join(",") + " vs " + g.bodyTop);
-    pos[tg] = [m, st].map((r) => r.texts.map((t) => t.s + "@" + t.y + "/" + t.px).join("|"));
+    /* SCORES' badges above its table at both sizes: tests/page-records.test.mjs (v202 Task 4.1) */
+    pos[tg] = [st].map((r) => r.texts.map((t) => t.s + "@" + t.y + "/" + t.px).join("|"));
   }
-  check("MEDALS / STATS text at 600x520 is the pre-guard layout (name at tile+15, goals +32/+44; value 18px at -6, label 10px at +12)",
-    /MEDAL 0@\d+(\.\d+)?\/13/.test(pos["600x520"][0]) && (() => { const r = rec(); md.drawTrophies(r.c, md.layout(600, 520), 1, rows); const c0 = body(r, md.layout(600, 520), 2)[0], n = r.texts.find((t) => t.s === "MEDAL 0"), d = r.texts.filter((t) => t.x === n.x && t.y > n.y); return n.y === c0.y + 15 && d[0].y === c0.y + 32 && d[1].y === c0.y + 44; })()
+  check("STATS text at 600x520 is the pre-guard layout (value 18px at -6, label 10px at +12; MEDALS is the kit page since v202 Task 4.1)",
+    pos["600x520"][0].length > 0
       && (() => { const r = rec(); md.drawStats(r.c, md.layout(600, 520), 1, stats, false, null); const c0 = body(r, md.layout(600, 520), 1)[0], v = r.texts.find((t) => t.s === "1234"), l = r.texts.find((t) => t.s === "DAYS PLAYED"); return v.px === 18 && v.y === c0.y + c0.h / 2 - 6 && l.px === 10 && l.y === c0.y + c0.h / 2 + 12; })());
   const L = md.layout(600, 520), lv = (U, best) => { const r = rec(); md.drawLevelSelect(r.c, 2, L, 1, 0, 0, U, 0, false, false, { best: best ? [null, "0:38.9"] : [] }); return r.texts.map((t) => t.s); };
   check("LEVEL SELECT: no NO TIME YET before MODES / TIME open; it shows once open; a saved best shows either way",
@@ -1395,8 +1088,8 @@ function check(name, cond, detail) {
         hits.every(([r, k, i]) => { const h = md.levelHit(...ctr(r), LP, U, true, open); return h.k === k && (i == null || h.i === i); }) &&
           (open || md.levelHit(...ctr(G.pane), LP, U, true, open).k === "none") && md.levelHit(1, 1, LP, U, true, open).k === "back");
     }
-    const sc = md.scoresGeom(L, true);
-    check(`HIGH SCORES: tabs inside the plate, each taps to itself (${tg})`, inBox(sc.S) && sc.tabs.every((r, i) => inPlate(r, sc.S) && md.scoresHit(...ctr(r), L, true) === i));
+    const Lr = md.layout(g.w, g.h, g.logo, g.s), sc = (await import("../src/render/pages/records.js")).recordsGeom({ W: g.w, H: g.h, touch: true, shell: true, css: g.s }); // the RECORDS page (v202 Task 4.1): its own frame
+    check(`HIGH SCORES: the plate inside the box, the difficulties inside the plate, each taps to itself (${tg})`, sc.plate.x >= 0 && sc.plate.y >= 0 && sc.plate.x + sc.plate.w <= g.w && sc.plate.y + sc.plate.h <= g.h && sc.keys.every((r, i) => inPlate(r, sc.plate) && md.scoresHit(...ctr(r), Lr, true) === i));
     for (const [nm, geo, hit, n, R] of [["SETTINGS (ten)", md.settingsGeom, md.settingsHit, 10, optRows(false)], ["SETTINGS (twelve)", md.settingsGeom, md.settingsHit, 12, optRows(true)], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N, 0]]) {
       /* v202 Task 3.4: the phone column in CSS px (css: the box's scale, as shellview's dims hands it to the draw and the pointer), rows by name */
       const Lc = md.layout(g.w, g.h, g.logo, g.s), q = geo(Lc, true, R), Lf = (l) => ({ ...Lc, focus: q.order.indexOf(q.pages[q.pageOf[l]][0]) }); // its page on screen (paged: fix round 1)

@@ -488,7 +488,7 @@ export function createGame(canvas, opts = {}) {
 
   // drawShell getters (plan 5): hoisted once so the RAF loop below allocates
   // no new closures per frame.
-  const getScoresForHeat = (heat) => scoresForHeat(loadScores(), heat);
+  const getScoresForHeat = (heat) => scoresForHeat(loadScores(), heat).filter((r) => !isPlaceholder(r)); // played runs only: a seeded row never reads as a run on SCORES
   const getPlaquesFn = () => loadPlaques();
   const getCab = () => ({ tiles: true, times: loadTimes(), daily: app.dailyTag === "PLAYED" ? dailyRec : null, top: scoresForHeat(loadScores(), 0).filter((r) => !isPlaceholder(r)).slice(0, 3) }); // ATLAS pane / room card data, read on screen entry
 

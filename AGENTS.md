@@ -84,8 +84,9 @@ reorder.
 
 RECORDS (ruling R7) is no SCREEN: its row opens SCORES, and SCORES · STATS ·
 MEDALS (`SCREEN.SCORES` / `STATS` / `TROPHIES`, menuapp `RECORD_SCREENS` /
-`isRecords`) share one tab strip on the head's title line (menudraw
-`recTabsGeom`, draw = tap through `recTabHit`). `app.recFocus` 0 is the tab
+`isRecords`) share one tab strip (SCORES and MEDALS: the kit tabs of
+`src/render/pages/records.js`, bricks in a wall trough under the RECORDS title, one `recordsGeom` for draw and tap, Task 4.1;
+STATS: menudraw `recTabsGeom` until Task 4.2; menudraw `recTabHit` delegates by page). `app.recFocus` 0 is the tab
 row, the top of each page's ↑↓ walk, where every arrival lands; 1 is the body
 (SCORES' difficulty filter, STATS' foot actions; MEDALS has none). Tab steps
 go through `app.recTab(d)` (←/→ on the tab row, `Q` / `E` anywhere on the
@@ -96,6 +97,25 @@ already shown included; R arms and anything but a second R cancels it (any
 other key in main's `onUiKey`, any controller button in `padroute`, any tap
 off `R AGAIN`). On those pages `Q` / `E` never also confirm. Esc, Backspace,
 Enter, EAST and START from any of them: MENU on RECORDS.
+RECORDS page (UI upgrade v202 Task 4.1; `src/render/pages/records.js`, LAZY: one `pages/lazy.js` entry `records`, loaded in the first idle
+after MENU's first frame; until it lands menudraw paints `loadingPage` (the room, a small plate, LOADING) and every RECORDS hit is -2, inert,
+so a tap never backs out of a page still loading; tests `want` / `_set` it). The room of `app.level` opaque under it (MENU's own room layer
+when MENU last painted the box and level: no re-raster on a MENU <-> RECORDS trip; `shellCovers` SCORES and TROPHIES). `recordsGeom(F)`
+(F = MENU's frame: W, H, touch, shell, css, ts; the pointer hands RECORDS `layout(cw, ch, lg, css)`) is one plate for every tab: desk
+(keyboard boxes; the S7-pages frame, plate 980 wide, 1080 at 125 %, kicker MENU over the RECORDS title, tabs 150 x 36 over an 11 px trough,
+the pane as tall as the tallest body, the foot under the plate, label first, keycaps last; a small box scales as one piece), phone (a
+touch-portrait shell box, CSS px: BACK key and title, three equal 44 px tabs, the pane to the plate's foot; no foot) and compact (any other
+touch box: BACK, the title where it fits, the tabs in one header row; the plate at most 980 wide). SCORES: the DIFFICULTY bank (the R7 filter;
+its keys stay 44 CSS px on touch), BADGES (the four plaques, bits CLEAR / PLUS / MAX / CROWN as words.js `BADGE_NAMES`: earned in the medal
+outline, not yet a lock tag; two lines on a narrow table, dropped first where a short touch box would shrink the table under `BADGE_K` 0.8),
+the ten-row table RANK · SCORE · LEVEL · MODIFIERS (a count by `modsCount`, R10; no modifier glyph exists) · DATE, stepped down to a bare
+count, then the month and day; under 520 design px wide each row stacks its modifiers (NO MODIFIERS for none) and full date under the score.
+The rows arrive with `highscores.isPlaceholder` rows dropped (main's getter), so a fresh profile reads NO NORMAL DIFFICULTY RUNS YET. MEDALS:
+eight sunk tiles (earned: the medal outline and dot; a goal: the off ink), each goal whole (wrapped, never cut), `n/8 EARNED`. A body taller
+than its pane on a touch box scales into it (`k`; text floors give way only there, the landscape phones' #c). Cached: one page layer per tab
+and data (plate, header, trough, tabs at rest, pane, body at rest), one foot layer per focus, the room; live: the open tab (lit brick), the
+focus (bare bomb + 3 px ring on the open tab, or on the chosen difficulty in the body), the chosen difficulty and SCORES' rows. A focus move or a
+filter step misses nothing; a tab step paints its page and foot once.
 
 Names (UI upgrade v202, Task 2.1; owner: "we must use the name that users know
 about"; design record §3). Players read SETTINGS (was OPTIONS: MENU row, page
@@ -150,7 +170,7 @@ and off the plate are no row);
 off the rows a root list (MENU, PAUSE list) does nothing; on a page
 (SETTINGS, GRAPHICS, GUIDE, LEVEL SELECT, SCORES) a miss ON the plate is inert
 (hit -2) and only a tap OFF the plate (or on a phone page's BACK key) backs out (-1; LEVEL SELECT's phone and compact plates also carry a BACK key). `guideHit`, `enemiesHit`,
-`levelHit` / `levelGeom`, `scoresHit` and `recTabHit` share the geometry their pages
+`levelHit` / `levelGeom`, `scoresHit` and `recTabHit` (SCORES / MEDALS: pages/records.js `recordsGeom`) share the geometry their pages
 draw. Hints follow `data-lay` (keys vs taps; LEVEL SELECT's touch foot is
 `LEVEL_TAP` on the touch desk, the landscape tablets; its phone and compact plates have no foot, a BACK key, and a controller's cue line). SHELL BOX (owner GO 2026-10-19, shell v181, touch portrait; every
 layout since UI upgrade Task 1.0, owner pick "Full window"): MENU and every plated page
@@ -174,7 +194,7 @@ shellview `dims` hands on every touch layout, none on a keyboard one: fit.js wri
 stand-in and the stage scale it applied on `#c`, so paint and tap read one number and no frame measures a rect; MENU's touch floors, phone
 column and compact tiles are laid out in CSS px); `lg` = the centred board's 0.27 logo
 line in box units,
-`tall` / `narrow` (< 560) flags; narrow re-flows: MEDALS 1 col, SCORES tab width (the GUIDE
+`tall` / `narrow` (< 560) flags; narrow re-flows: none of the world-kit pages (MEDALS and SCORES re-flow on their own frame, pages/records.js; the GUIDE
 pages re-flow by their own measured widths and page instead: see GUIDE pages below); STATS is centred (not floor-pinned) in a tall box. LEVEL / HIGH SCORES chip
 taps are ONE call through the cued key path (`app.move` with a delta on the row the tap
 focused, `app.adjustPace`), so a change plays one `uiMove` and the chip already set is
@@ -311,11 +331,11 @@ Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by e
 MENU's rule, `pages/menu.js` `roomDpr`, its dpr giving way so MENU's plate, its foot reserve and a 3 MiB logo reserve fit `BUDGET`; so a MENU /
 LEVEL SELECT switch never refills the room; a page keeps its plate out of the room layer), made at once so a cursor move never misses, `touch()`ed on a steady frame (`cache.touch(key)`: a held layer
 goes LRU-recent, so a stale one is freed first); live on top: focus, ring, the logo's spark. `shellview.shellCovers(screen)` (MENU, LEVEL SELECT,
-SETTINGS and GRAPHICS, and GUIDE with its four pages since Task 3.5; each page task adds its screen) makes main pass `{covered: true}` to the renderer: no look rasters a board a page covers. `frameloop` frees the kit's
+SETTINGS and GRAPHICS, GUIDE with its four pages since Task 3.5, SCORES and TROPHIES since Task 4.1; each page task adds its screen) makes main pass `{covered: true}` to the renderer: no look rasters a board a page covers. `frameloop` frees the kit's
 layers (`release`, handed in by main) after `KIT_FREE` 10 s of GAME PLAY on a PLAY-only clock and on `pagehide`; the next shell frame refills.
 Under the probe a page records `begin(page, {w, h, dpr, el})`, its rects (touch, set, focus, fill), texts (role, cap height, colour) and
 squint pairs outside any layer paint; its `tools/ui/lib/screens.mjs` row exempts what it has none of (MENU: chosen, locked; GUIDE and ENEMIES:
-chosen, locked; HOW TO, POWER-UPS, FLOOR also band, ring and gap, HOW TO and FLOOR info). Text under an open tooltip is not recorded. With no canvas
+chosen, locked; HOW TO, POWER-UPS, FLOOR also band, ring and gap, HOW TO and FLOOR info; SCORES, MEDALS: locked), and a lazy page's row waits for it (`wait: "records"`). Text under an open tooltip is not recorded. With no canvas
 source (Node) it paints straight onto the target over a flat fill; a context with no clip or rect (the headless renderer's) gets the plan only.
 Lazy pages (R20): `src/render/pages/lazy.js` is the ONE loader (boot; `LOAD` has one line per page, `want(name)` imports, `get(name)` is the
 module or null, `idle()` asks for every page in the first idle after MENU's first frame: shellview calls it on MENU). A lazy page is in
@@ -1117,7 +1137,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 - Keep a visible path to the public repo: menu SOURCE opens https://github.com/HMarzban/fusegrid.
 - Keep POWER-UPS (the GUIDE door once named ITEMS), ENEMIES, and HOW TO as in-menu help so power-ups and foes are explained in the shell, not only as HUD chips.
 - Opening (2026-10-09): title, then press, then a ~4 s show (camera sweep, MAKO pop-in, fuse, the blast lands MENU: since v202 Task 3.1 the room look covers the board from MENU's first frame and the plate, logo and foot fade in over 0.25 s), with music from the press. Any key skips the show (the title waits for a press). First visits land on MENU at PLAY, not in a run. The title follows RENDER; the show plays the MENU theme throughout, and the `intro` track is kept unused.
-- Difficulty is Heat on LEVEL SELECT (CORE / PLUS / MAX). Global **pace** (EASY / NORM / HARD) is a separate LEVEL SELECT control (`[`/`]`), persisted in `nb.pace.v1`, scaling player/enemy move speed on `world.pace` — not frozen `CFG`. Pact (`1–4`) and rooms 6–8 unlock after the first FUSE/GRID CLEAR. Score × heat is persist-only; HIGH SCORES fifth column tags pact bitmask (`p`). Music uses WebAudio stereo panning on the oscillator engine (zero npm deps). Mid-run heat, always-on Sudden Death, and internet play stay parked.
+- Difficulty is Heat on LEVEL SELECT (CORE / PLUS / MAX). Global **pace** (EASY / NORM / HARD) is a separate LEVEL SELECT control (`[`/`]`), persisted in `nb.pace.v1`, scaling player/enemy move speed on `world.pace` — not frozen `CFG`. Pact (`1–4`) and rooms 6–8 unlock after the first FUSE/GRID CLEAR. Score × heat is persist-only; the HIGH SCORES (RECORDS' SCORES) modifiers column counts the pact bitmask (`p`, words.js `modsCount`, R10). Music uses WebAudio stereo panning on the oscillator engine (zero npm deps). Mid-run heat, always-on Sudden Death, and internet play stay parked.
 - Foes must read as arcade characters (distinct silhouette, face or lens, shading, facing) in CLASSIC 2D, PIXEL and REAL 3D, not flat colored tokens. `enemybody.js` is the 2D five-beat build; 3D matches via merged hulls in the four-mesh slot. Art only — do not retune AI.
 - Do not commit `.cursor/` or `e2e-artifacts/` (both gitignored).
 - PIXEL (hand-pixelled sprite look) SHIPPED in shell v178 (owner GO 2026-10-10: "work on the sprit version of the game, we have to let the user to chose between the sprit, 2d and then 3d in the menu … finish the job and not ask me anything at all"; supersedes the 2026-10-09 "planning only" ruling U3). It is the third RENDER look, CLASSIC 2D → PIXEL → REAL 3D, never a replacement — CLASSIC 2D stays the default. Judged on laptop AND phone, at today's board size (sharp-bilinear, no integer-snap shrink). Plan + rulings: `docs/superpowers/plans/2026-10-09-pixel-art-spike-plan.md`.

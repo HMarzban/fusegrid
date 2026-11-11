@@ -196,6 +196,7 @@ async function group(c, port, a, look, world, rep) {
       if (!ok) { L.close(base); continue; }
       for (const k of [].concat(R.key || [])) { if (a.phone) await ev(`(window.__GAME__.app.key(${JSON.stringify(k)}),true)`); else await key(k, k.replace(/^Key/, "").toLowerCase()); await P.adv(50); } // a key or a list, pressed in order
       if (R.wait === "controls" && !(await poll("!!window.__GAME__.app.controls&&!window.__GAME__.app.controls.loading", 10000))) warn("the CONTROLS page never loaded");
+      if (R.wait === "records" && !(await poll("import('/src/render/pages/lazy.js').then((m)=>(m.want('records').catch(()=>{}),!!m.get('records')))", 10000))) warn("the RECORDS page never loaded");
       await shoot(s, R.settle || 600);
     }
   } finally {

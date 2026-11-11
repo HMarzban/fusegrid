@@ -23,7 +23,8 @@ import { createLocalPair } from "../src/net/localpair.js";
 import { _set as setLazyPage } from "../src/render/pages/lazy.js";
 setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 // tab centres found through scoresHit itself (the one tap map), scanning the tab row band
-const mdScoreTabs=(L,t)=>{ for(let y=8;y<200;y++){ const xs=[]; for(let x=0;x<600;x++) if(scoresHit(x,y,L,t)>=0) xs.push([x,scoresHit(x,y,L,t)]); if(xs.length) return {y:y+12,x:(i)=>{const r=xs.filter(p=>p[1]===i).map(p=>p[0]);return (r[0]+r[r.length-1])/2;}}; } return null; };
+await (await import("../src/render/pages/lazy.js")).want("records"); // RECORDS' SCORES page is lazy (R20): in before any tap on it
+const mdScoreTabs=(L,t)=>{ let y0=-1,y1=-1; for(let y=8;y<520;y++){ let hit=false; for(let x=0;x<600&&!hit;x++) hit=scoresHit(x,y,L,t)>=0; if(hit){ if(y0<0)y0=y; y1=y; } else if(y0>=0)break; } if(y0<0) return null; const y=(y0+y1)/2, xs=[]; for(let x=0;x<600;x++) if(scoresHit(x,y,L,t)>=0) xs.push([x,scoresHit(x,y,L,t)]); return {y,x:(i)=>{const r=xs.filter(p=>p[1]===i).map(p=>p[0]);return (r[0]+r[r.length-1])/2;}}; }; // the difficulty band's middle (pages/records.js, v202 Task 4.1)
 // MENU taps land on the painted row (an off-row MENU tap is a no-op since the menu redesign)
 const menuTap=(i,k=1)=>{const r=menuGeom(menuLayout(600,520),7).rows[ITEMS[i]];return {clientX:(r.x+r.w/2)/k,clientY:(r.y+r.h/2)/k};}; // a row's centre (the MENU page's geometry, rows by name)
 const menuU=()=>menuGeom(menuLayout(600,520),7).u; // box units per design px: the page paints under this scale, so a raw fillText x / y maps through it
@@ -590,7 +591,7 @@ function mkCanvas(){
     g.loop(16); g.loop(32);
     const texts=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0]));
     check("R6 MEDALS page draws the stored medals end to end (onStats + shellview route)",
-      g.app.screen===SCREEN.TROPHIES&&texts.includes("2/8")&&texts.includes("FLAWLESS")
+      g.app.screen===SCREEN.TROPHIES&&texts.join("|").includes("2|/|8|EARNED")&&texts.includes("FLAWLESS") // the count in fixed-width digit cells (kit nums, v202 Task 4.1)
         &&texts.includes("IRON CROWN"),texts.join("|"));
   }finally{ delete globalThis.window; }
 }

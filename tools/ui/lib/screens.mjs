@@ -7,7 +7,8 @@
             BRIGHTNESS only in REAL 3D), so only a row above CAMERA has the same index in every look; the doors are reached by keys
      guide  GUIDE door labels (app.guideRow over GUIDE_ROWS), then confirm
      key    a key code, or a list of them pressed in order, on the page reached (RECORDS opens on SCORES; E steps one tab: STATS, then MEDALS)
-     wait   "controls": the lazy CONTROLS page must be in (app.controls.loading false) before the frames are stepped
+     wait   "controls": the lazy CONTROLS page must be in (app.controls.loading false) before the frames are stepped; "records": the lazy RECORDS
+            page (pages/lazy.js) must be in
      run    a run screen: play, pause, win or lose
      state  what window.__GAME__.state() must read before the capture; a mismatch is an error and no PNG
      settle virtual ms stepped before the capture (default 600)
@@ -30,9 +31,9 @@ const ROWS = {
   items: { menu: ["GUIDE"], guide: ["ITEMS", "POWER-UPS"], state: "ITEMS", exempt: { chosen: "GUIDE pages show no chosen / unchosen values: doors, foes and read-only rows", locked: "GUIDE pages show no locked value", band: "a read-only page has no focus: any tap or key backs out", ring: "a read-only page has no focus, so no ring", gap: "one tap target at most (the phone BACK key)" } },
   enemies: { menu: ["GUIDE"], guide: ["ENEMIES"], key: ["ArrowLeft", "Enter"], state: "ENEMIES", exempt: { chosen: "GUIDE pages show no chosen / unchosen values: doors, foes and read-only rows", locked: "GUIDE pages show no locked value" } }, // ← from WALKER wraps to KNIGHT and Enter opens its points tooltip (the round 6 frame; a key move alone opens it on a keyboard)
   floor: { menu: ["GUIDE"], guide: ["FLOOR"], state: "FLOOR", exempt: { chosen: "GUIDE pages show no chosen / unchosen values: doors, foes and read-only rows", locked: "GUIDE pages show no locked value", band: "a read-only page has no focus: any tap or key backs out", ring: "a read-only page has no focus, so no ring", gap: "one tap target at most (the phone BACK key)", info: "no non-text mark carries information: the tile cells are pictures, each row's words name them" } },
-  scores: { menu: ["RECORDS"], state: "SCORES" },
-  stats: { menu: ["RECORDS"], key: "KeyE", state: "STATS" },
-  medals: { menu: ["RECORDS"], key: ["KeyE", "KeyE"], state: "TROPHIES" },
+  scores: { menu: ["RECORDS"], wait: "records", state: "SCORES", exempt: { locked: "SCORES shows no locked value: the badges not yet earned are lock tags on a dark chip, not wall cells, and every key is open" } }, // v202 Task 4.1
+  stats: { menu: ["RECORDS"], key: "KeyE", wait: "records", state: "STATS" },
+  medals: { menu: ["RECORDS"], key: ["KeyE", "KeyE"], wait: "records", state: "TROPHIES", exempt: { locked: "MEDALS shows no locked value: a medal not yet earned is a goal tile, read-only, never a wall cell" } },
   play: { run: "play", state: "PLAY", settle: 900 },
   pause: { run: "pause", state: "PAUSE", settle: 300 },
   win: { run: "win", state: "WIN", settle: 1800 },

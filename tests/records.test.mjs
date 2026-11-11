@@ -15,8 +15,10 @@ import { setHints } from "../src/render/hintcopy.js";
 import { wordsOf } from "../src/app/hints.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
 import { rec } from "./lib/textrec.mjs";
-import { _set as setLazyPage } from "../src/render/pages/lazy.js";
-setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
+import * as probe from "../src/render/kit/probe.js";
+import * as lazy from "../src/render/pages/lazy.js";
+const RP = await lazy.want("records"); // RECORDS is a lazy page (R20): the tests paint and tap it, not its LOADING plate
+lazy._set("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -134,77 +136,100 @@ const open = (o) => { const a = mkApp(o); a.cursor = ITEMS.indexOf("RECORDS"); a
   check("a key press and its held axis on the same frame make one tab step, never two", c.screen === SCREEN.STATS && n === 1, c.screen + "/" + n);
 }
 
-/* ---- the one strip: draw and tap share recTabsGeom on every box ---- */
+/* ---- the one strip: draw and tap share one geometry on every box. SCORES and MEDALS are pages/records.js (v202 Task 4.1: the kit tabs, bricks in
+   a wall trough, recordsGeom for draw and tap); STATS keeps recTabsGeom until Task 4.2 ---- */
 const sgP = shellGeo(393, 852), sgL = shellGeo(1024, 768, 600, 520, "l");
 const BOXES = [
   ["600x520 d", md.layout(600, 520), false], ["608x352 iso", md.layout(608, 352), false], ["600x520 touch #c", md.layout(600, 520), true],
-  ["1366x768 d window", md.layout(1366, 768, 300), false], ["landscape #sh " + sgL.w + "x" + sgL.h, md.layout(sgL.w, sgL.h, sgL.logo), true],
-  ["portrait #sh " + sgP.w + "x" + sgP.h, md.layout(sgP.w, sgP.h, sgP.logo), true],
+  ["1366x768 d window", md.layout(1366, 768, 300), false], ["landscape #sh " + sgL.w + "x" + sgL.h, md.layout(sgL.w, sgL.h, sgL.logo, sgL.s), true],
+  ["portrait #sh " + sgP.w + "x" + sgP.h, md.layout(sgP.w, sgP.h, sgP.logo, sgP.s), true],
 ];
 const TOP = [{ s: 4210, l: 5, d: "2026-11-09", t: 0, p: 0 }];
+const FR = (L, touch) => ({ W: L.W, H: L.H, touch: !!touch, shell: !!L.shell, css: L.css });
+const RG = (L, touch) => RP.recordsGeom(FR(L, touch));
 const paintPage = (p, L, touch, tabs) => {
   const R = rec();
-  if (p === 0) md.drawScores(R.ctx, TOP, L, 1, 1, 0b11, touch, tabs);
+  probe.setOn(true);
+  if (p === 0) md.drawScores(R.ctx, { level: 1, focus: tabs ? "tabs" : "body", heat: 1, scores: TOP, plaques: 0b11 }, L, 1, touch);
   else if (p === 1) md.drawStats(R.ctx, L, 1, { rows: [["RUNS", 3]], notes: ["NOTE"], trophies: [] }, false, null, touch, tabs);
-  else md.drawTrophies(R.ctx, L, 1, undefined, touch, tabs);
+  else md.drawTrophies(R.ctx, { level: 1, focus: tabs ? "tabs" : "body", rows: undefined }, L, 1, touch);
+  R.snap = probe.snapshot();
+  probe.setOn(false);
   return R;
 };
-const near = (a, b) => Math.abs(a - b) < 0.01;
+const near = (a, b, e = 0.01) => Math.abs(a - b) < e;
 for (const [nm, L, touch] of BOXES) for (let p = 0; p < 3; p++) {
-  const S = md.recPlate(L, p, touch), T = md.recTabsGeom(S, touch), R = paintPage(p, L, touch, true);
-  const drawn = T.map((r) => R.rects.find((q) => q.fill && near(q.x, r.x) && near(q.y, r.y) && near(q.w, r.w) && near(q.h, r.h)));
-  check(`${PAGES[p]} (${nm}): the drawn tab rects are recTabsGeom's rects`, drawn.every(Boolean), J(T));
-  const labels = RECORD_TABS.map((s, i) => R.texts.find((t) => t.s === s && t.x - t.w / 2 >= T[i].x - 0.01 && t.x + t.w / 2 <= T[i].x + T[i].w + 0.01 && t.y > T[i].y && t.y < T[i].y + T[i].h));
+  const R = paintPage(p, L, touch, true);
+  if (p === 1) {
+    const S = md.recPlate(L), T = md.recTabsGeom(S, touch);
+    const drawn = T.map((r) => R.rects.find((q) => q.fill && near(q.x, r.x) && near(q.y, r.y) && near(q.w, r.w) && near(q.h, r.h)));
+    check(`${PAGES[p]} (${nm}): the drawn tab rects are recTabsGeom's rects`, drawn.every(Boolean), J(T));
+    const labels = RECORD_TABS.map((s, i) => R.texts.find((t) => t.s === s && t.x - t.w / 2 >= T[i].x - 0.01 && t.x + t.w / 2 <= T[i].x + T[i].w + 0.01 && t.y > T[i].y && t.y < T[i].y + T[i].h));
+    check(`${PAGES[p]} (${nm}): each tab word sits whole inside its tab`, labels.every(Boolean), J(labels.map((t) => !!t)));
+    check(`${PAGES[p]} (${nm}): the strip sits inside the plate, in the head, above the body`, T.every((r) => r.x >= S.x && r.x + r.w <= S.x + S.w && r.y >= S.y && r.y + r.h + 4 <= S.by), J([T, S.y, S.by]));
+    const hits = T.map((r) => md.recTabHit(r.x + r.w / 2, r.y + r.h / 2, L, p, touch));
+    check(`${PAGES[p]} (${nm}): each tab's centre taps to itself`, J(hits) === J([0, 1, 2]), J(hits));
+    check(`${PAGES[p]} (${nm}): the plate's middle and the outside are not a tab`, md.recTabHit(S.mid, S.y + S.h / 2, L, p, touch) === -1 && md.recTabHit(S.x - 6, T[0].y + 10, L, p, touch) === -1 && md.recTabHit(S.mid, S.y + S.h + 6, L, p, touch) === -1);
+    const notch = (Rx) => Rx.rects.some((q) => q.fill === md.ACCENT && near(q.x, T[p].x) && near(q.w, 3) && near(q.h, T[p].h));
+    check(`${PAGES[p]} (${nm}): the tab row's focus is the kit's notch on the current tab; none while the body has it`, notch(R) && !notch(paintPage(p, L, touch, false)));
+    continue;
+  }
+  const G = RG(L, touch), S = G.plate, T = G.tabs, rs = R.snap.rects;
+  const drawn = T.map((r, i) => rs.find((q) => q.name === "tab " + RECORD_TABS[i] && near(q.x, r.x) && near(q.w, r.w) && near(q.h, r.h) && (i === p ? near(q.y, r.y - 2 * G.u) : near(q.y, r.y))));
+  check(`${PAGES[p]} (${nm}): the drawn tab rects are recordsGeom's rects (the open tab stands 2 px up)`, drawn.every(Boolean), J([T, rs.filter((q) => /^tab /.test(q.name))]));
+  const labels = RECORD_TABS.map((s, i) => R.snap.texts.find((t) => t.s === s && t.x >= T[i].x - 0.01 && t.x + t.w <= T[i].x + T[i].w + 0.01 && t.y > T[i].y - 2 * G.u && t.y + t.capH < T[i].y + T[i].h));
   check(`${PAGES[p]} (${nm}): each tab word sits whole inside its tab`, labels.every(Boolean), J(labels.map((t) => !!t)));
-  check(`${PAGES[p]} (${nm}): the strip sits inside the plate, in the head, above the body`, T.every((r) => r.x >= S.x && r.x + r.w <= S.x + S.w && r.y >= S.y && r.y + r.h + 4 <= S.by), J([T, S.y, S.by]));
-  check(`${PAGES[p]} (${nm}): the page's own title is gone, the tab says which page it is`, !R.texts.some((t) => t.s === "HIGH SCORES" || (p === 2 && t.s === "MEDALS" && !labels.includes(t))));
+  check(`${PAGES[p]} (${nm}): the strip sits inside the plate, above the pane`, T.every((r) => r.x >= S.x && r.x + r.w <= S.x + S.w && r.y >= S.y && r.y + r.h <= G.pane.y), J([T, S, G.pane]));
   const hits = T.map((r) => md.recTabHit(r.x + r.w / 2, r.y + r.h / 2, L, p, touch));
   check(`${PAGES[p]} (${nm}): each tab's centre taps to itself`, J(hits) === J([0, 1, 2]), J(hits));
-  check(`${PAGES[p]} (${nm}): the plate's middle and the outside are not a tab`, md.recTabHit(S.mid, S.y + S.h / 2, L, p, touch) === -1 && md.recTabHit(S.x - 6, T[0].y + 10, L, p, touch) === -1 && md.recTabHit(S.mid, S.y + S.h + 6, L, p, touch) === -1);
+  check(`${PAGES[p]} (${nm}): the pane's middle and the outside are not a tab`, md.recTabHit(S.x + S.w / 2, G.pane.y + G.pane.h / 2, L, p, touch) === -1 && md.recTabHit(S.x - 6, T[0].y + 10, L, p, touch) === -1 && md.recTabHit(S.x + S.w / 2, S.y + S.h + 6, L, p, touch) === -1);
   if (p === 0) {
-    const g = md.scoresGeom(L, touch);
     let clash = 0;
     for (let y = S.y; y < S.y + S.h; y += 1) for (let x = S.x; x < S.x + S.w; x += 2) if (md.recTabHit(x, y, L, 0, touch) >= 0 && md.scoresHit(x, y, L, touch) >= 0) clash++;
-    check(`SCORES (${nm}): no point taps both a RECORDS tab and a difficulty tab`, clash === 0 && g.tabs.every((r) => r.y >= T[0].y + T[0].h + 4), clash);
+    check(`SCORES (${nm}): no point taps both a RECORDS tab and a difficulty`, clash === 0 && G.keys.every((r) => r.y >= T[0].y + T[0].h + 4), clash);
   }
-  const notch = (Rx) => Rx.rects.some((q) => q.fill === md.ACCENT && near(q.x, T[p].x) && near(q.w, 3) && near(q.h, T[p].h));
-  check(`${PAGES[p]} (${nm}): the tab row's focus is the kit's notch on the current tab; none while the body has it`, notch(R) && !notch(paintPage(p, L, touch, false)));
+  const ring = (Rx) => Rx.paints.some((q) => q.op === "stroke" && q.style === "#fff2df" && q.lw === 3 && q.box && q.box.x < T[p].x && q.box.x + q.box.w > T[p].x + T[p].w && q.box.y < T[p].y - 2 * G.u);
+  check(`${PAGES[p]} (${nm}): the tab row's focus is the kit's ring on the open tab${p ? "" : "; none while the body has it"}`, ring(R) && (p === 2 || !ring(paintPage(p, L, touch, false))));
 }
 {
-  /* the strip leaves each page's plate where it was: the strip sits in the head's title line, so no plate moves */
+  /* the strip never moves: SCORES and MEDALS draw one plate and one strip (recordsGeom has no page argument) */
+  for (const [nm, L, touch] of BOXES) {
+    const a = paintPage(0, L, touch, true).snap.rects, b = paintPage(2, L, touch, true).snap.rects, pick = (rs) => rs.filter((q) => q.name === "plate" || /^tab /.test(q.name)).map((q) => [q.name, q.x, q.w, q.h]);
+    check(`SCORES and MEDALS (${nm}): the same plate and the same tab strip`, J(pick(a)) === J(pick(b)) && pick(a).length === 4, J([pick(a), pick(b)]));
+  }
   const L = md.layout(600, 520);
-  check("SCORES plate at 600x520 keeps its size (no scale): f 1, h 392", md.scoresGeom(L, false).S.f === 1 && md.scoresGeom(L, false).S.h === 392, J(md.scoresGeom(L, false).S));
   check("STATS plate at 600x520 keeps its size and its floor pin", md.statsGeom(L).S.f === 1 && md.statsGeom(L).S.y + md.statsGeom(L).S.h === 492, J(md.statsGeom(L).S));
-  check("MEDALS plate at 600x520 keeps its size", md.recPlate(L, 2, false).f === 1 && md.recPlate(L, 2, false).h === 88 + 4 * 60 + 3 * 6, J(md.recPlate(L, 2, false)));
 }
 
-/* ---- foot hints by focus and device: no hint names a key that does nothing there ---- */
+/* ---- foot hints by focus and device: no hint names a key that does nothing there (SCORES / MEDALS: the kit foot under the plate, label first,
+   keycap last; STATS: its old foot until Task 4.2) ---- */
 {
-  const L = md.layout(600, 520), feet = (p, touch, tabs) => paintPage(p, L, touch, tabs).texts.map((t) => t.s);
-  const PAD = wordsOf("pad", DEF_CONTROLS), TOUCH = wordsOf("touch", DEF_CONTROLS);
-  check("SCORES tab row (keys): ←→ TAB · ↓ DIFFICULTY · ESC BACK", feet(0, false, true).includes("←→ TAB · ↓ DIFFICULTY · ESC BACK"));
-  check("SCORES body (keys): ↑ TABS leads back to the tabs, then today's foot", feet(0, false, false).includes("↑ TABS · ← → DIFFICULTY · ESC BACK"));
+  const L = md.layout(1366, 768, 300), L6 = md.layout(600, 520), feet = (p, touch, tabs) => paintPage(p, p === 1 ? L6 : L, touch, tabs).texts.map((t) => t.s);
+  const PAD = wordsOf("pad", DEF_CONTROLS), TOUCH = wordsOf("touch", DEF_CONTROLS), seq = (p, tabs) => { paintPage(p, L, false, tabs); return RP._dbg.last.S.feet.find((f) => f.v === (tabs ? "tabs" : "body")).fp.parts.map((q) => q.t || q.sep || (Array.isArray(q.cap) ? "[" + q.cap[0] + "]" : "[" + q.cap + "]")).join(" "); };
+  check("SCORES tab row (keys): TAB ←→ · DIFFICULTY ↓ · BACK ESC, each label before its keycaps", seq(0, true) === "TAB [lf] [rt] · DIFFICULTY [dn] · BACK [ESC]", seq(0, true));
+  check("SCORES body (keys): DIFFICULTY ←→ · TAB Q E · BACK ESC", seq(0, false) === "DIFFICULTY [lf] [rt] · TAB [Q] [E] · BACK [ESC]", seq(0, false));
   check("STATS tab row (keys): ←→ TAB, then today's foot", feet(1, false, true).includes("←→ TAB · T MEDALS · C COPY MY STATS · R RESET · ESC BACK"));
   check("STATS body (keys): ↑ TABS leads back to the tabs, then today's foot", feet(1, false, false).includes("↑ TABS · T MEDALS · C COPY MY STATS · R RESET · ESC BACK"));
   check("the two leads are the same length, so STATS' T / C / R zones do not move with the focus", md.TAB_LEAD.length === md.TABS_LEAD.length && md.TAB_LEAD === "←→ " + W.LABEL.TAB + " · " && md.TABS_LEAD === "↑ " + W.LABEL.TABS + " · ");
-  check("MEDALS (keys): ←→ TAB · ENTER / ESC BACK (Esc goes to MENU now, never BACK TO STATS)", feet(2, false, true).includes("←→ TAB · ENTER / ESC BACK") && !feet(2, false, true).some((s) => /TO STATS/.test(s)));
+  check("MEDALS (keys): TAB ←→ · BACK ESC (Esc goes to MENU, never BACK TO STATS)", seq(2, true) === "TAB [lf] [rt] · BACK [ESC]" && !feet(2, false, true).some((s) => /TO STATS/.test(s)), seq(2, true));
   setHints(PAD);
-  check("SCORES tab row (controller): ←→ TAB · ↓ DIFFICULTY · EAST BACK", feet(0, false, true).includes("←→ TAB · ↓ DIFFICULTY · EAST BACK"));
+  check("SCORES tab row (controller): TAB D-PAD · BACK EAST", seq(0, true) === "TAB [D-PAD] · BACK [EAST]", seq(0, true));
   check("STATS tab row (controller): ←→ TAB, then the controller foot, no wipe", feet(1, false, true).includes("←→ TAB · NORTH MEDALS · WEST COPY MY STATS · EAST BACK") && !feet(1, false, true).some((s) => /RESET/.test(s)));
-  check("SCORES and STATS body (controller): ↑ TABS leads back", feet(0, false, false).includes("↑ TABS · ← → DIFFICULTY · EAST BACK") && feet(1, false, false).includes("↑ TABS · NORTH MEDALS · WEST COPY MY STATS · EAST BACK"));
-  check("MEDALS (controller): ←→ TAB · SOUTH / EAST BACK", feet(2, false, true).includes("←→ TAB · SOUTH / EAST BACK"));
+  check("SCORES body (controller): DIFFICULTY D-PAD · BACK EAST; STATS body: ↑ TABS leads back", seq(0, false) === "DIFFICULTY [D-PAD] · BACK [EAST]" && feet(1, false, false).includes("↑ TABS · NORTH MEDALS · WEST COPY MY STATS · EAST BACK"), seq(0, false));
+  check("MEDALS (controller): TAB D-PAD · BACK EAST", seq(2, true) === "TAB [D-PAD] · BACK [EAST]", seq(2, true));
   setHints(TOUCH);
-  check("SCORES and MEDALS on a touch layout: the tap rule", feet(0, true, true).includes("TAP OUTSIDE TO GO BACK") && feet(2, true, true).includes("TAP OUTSIDE TO GO BACK") && !feet(0, true, true).some((s) => /TAB ·/.test(s)));
+  const Lt = md.layout(sgP.w, sgP.h, sgP.logo, sgP.s), tf = (p) => paintPage(p, Lt, true, true).snap;
+  check("SCORES and MEDALS on a touch layout: no foot, a BACK key in the header", [0, 2].every((p) => { const s = tf(p); return !s.rects.some((q) => q.name === "foot") && s.rects.some((q) => q.name === "BACK") && !s.texts.some((t) => /^TAB$|ESC/.test(t.s)); }));
   check("STATS for a touch player: no lead in either focus (the tabs are tapped), today's tappable foot", [true, false].every((tb) => feet(1, true, tb).includes("T MEDALS · C COPY MY STATS · R RESET · ESC BACK") && !feet(1, true, tb).some((s) => /TABS? ·/.test(s))));
-  { const S = md.statsGeom(L).S, s0 = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK", x0 = S.mid - s0.length * 3;
-    check("statsHit follows the touch foot on the tab row too: T MEDALS at its painted place", md.statsHit(x0 + 6 * 4, S.footY, L, false, true) === "KeyT"); }
+  { const S = md.statsGeom(L6).S, s0 = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK", x0 = S.mid - s0.length * 3;
+    check("statsHit follows the touch foot on the tab row too: T MEDALS at its painted place", md.statsHit(x0 + 6 * 4, S.footY, L6, false, true) === "KeyT"); }
   setHints(null);
   /* statsHit rides the painted foot in both focus states */
   for (const tabs of [true, false]) {
-    const R = paintPage(1, L, false, tabs), f = R.texts.find((t) => /T MEDALS/.test(t.s)), S = md.statsGeom(L).S, x0 = S.mid - f.s.length * 3;
+    const R = paintPage(1, L6, false, tabs), f = R.texts.find((t) => /T MEDALS/.test(t.s)), S = md.statsGeom(L6).S, x0 = S.mid - f.s.length * 3;
     const at = (tok) => { const a = f.s.indexOf(tok); return x0 + 6 * (a + tok.length / 2); };
-    const got = ["T MEDALS", "C COPY MY STATS", "R RESET", "ESC BACK"].map((tok) => md.statsHit(at(tok), S.footY, L, false, tabs));
-    check(`statsHit maps T / C / R at their painted place (${tabs ? "tab row" : "body"}); ESC and the lead are not taps`, J(got) === J(["KeyT", "KeyC", "KeyR", null]) && md.statsHit(at(tabs ? "←→ TAB" : "↑ TABS"), S.footY, L, false, tabs) === null, J(got));
+    const got = ["T MEDALS", "C COPY MY STATS", "R RESET", "ESC BACK"].map((tok) => md.statsHit(at(tok), S.footY, L6, false, tabs));
+    check(`statsHit maps T / C / R at their painted place (${tabs ? "tab row" : "body"}); ESC and the lead are not taps`, J(got) === J(["KeyT", "KeyC", "KeyR", null]) && md.statsHit(at(tabs ? "←→ TAB" : "↑ TABS"), S.footY, L6, false, tabs) === null, J(got));
   }
 }
 
@@ -266,34 +291,39 @@ function tapRig(kind, o = {}) {
 for (const kind of ["d", "l", "p"]) {
   const t = tapRig(kind), a = t.app;
   a.cursor = ITEMS.indexOf("RECORDS"); a.confirm();
-  const Lk = md.layout(t.surf.width, t.surf.height, t.surf.logo), tabLabel = (R, p, s) => { const S = md.recPlate(Lk, p, kind !== "d"); return R.texts.find((x) => x.s === s && x.y > S.y && x.y < S.by); }; // the strip's word, never STATS' MEDALS tile
+  const D = dims(t.surf, "2d"), Lk = md.layout(D.cw, D.ch, D.lg, D.css), Lo = md.layout(D.cw, D.ch), G = RG(Lk, kind !== "d"); // the pointer's own frame: lg and css for RECORDS (v202 Task 4.1)
+  const mid = (r) => [r.x + r.w / 2, r.y + r.h / 2];
+  const tabAt = (p, to) => (p === 1 ? mid(md.recTabsGeom(md.recPlate(Lo), kind !== "d")[to]) : mid(G.tabs[to])); // STATS keeps its strip until Task 4.2
   for (const [from, to] of [[0, 1], [1, 2], [2, 0], [0, 2], [2, 1], [1, 0]]) {
     a.recTab(from - RECORD_SCREENS.indexOf(a.screen)); a.recFocus = 1; t.cues.length = 0;
-    const R = t.draw(), lab = tabLabel(R, from, RECORD_TABS[to]);
-    t.tapAt(lab.x, lab.y);
+    t.draw();
+    t.tapAt(...tabAt(from, to));
     check(`tap (${kind}): on ${PAGES[from]}, the drawn ${PAGES[to]} tab opens ${PAGES[to]} with one cue, the tab row focused`, a.screen === RECORD_SCREENS[to] && a.recFocus === 0 && t.cues.join() === "uiMove", a.screen + "/" + t.cues.join());
     t.cues.length = 0;
-    const R2 = t.draw(), own = tabLabel(R2, to, RECORD_TABS[to]);
-    t.tapAt(own.x, own.y);
+    t.draw();
+    t.tapAt(...tabAt(to, to));
     check(`tap (${kind}): the tab already shown is silent (${PAGES[to]})`, a.screen === RECORD_SCREENS[to] && t.cues.length === 0, t.cues.join());
   }
   /* the rest of each page's tap rules stay */
   a.recTab(-2);
-  const L = md.layout(t.surf.width, t.surf.height, t.surf.logo), T = md.scoresGeom(L, kind !== "d").tabs[2];
+  const T = G.keys[2];
   t.cues.length = 0; a.scoreHeat = 0;
   t.tapAt(T.x + T.w / 2, T.y + T.h / 2);
-  check(`tap (${kind}): a SCORES difficulty tab from the tab row sets the filter (one cue), focus moves into the body`, a.screen === SCREEN.SCORES && a.scoreHeat === 2 && a.recFocus === 1 && t.cues.join() === "uiMove", a.scoreHeat + "/" + t.cues.join());
-  const S0 = md.recPlate(L, 0, kind !== "d");
-  t.tapAt(S0.mid, S0.y + S0.h - 30);
-  check(`tap (${kind}): SCORES on the plate off every tab is inert`, a.screen === SCREEN.SCORES);
-  t.tapAt(S0.x - 8, S0.y + 40);
+  check(`tap (${kind}): a SCORES difficulty from the tab row sets the filter (one cue), focus moves into the body`, a.screen === SCREEN.SCORES && a.scoreHeat === 2 && a.recFocus === 1 && t.cues.join() === "uiMove", a.scoreHeat + "/" + t.cues.join());
+  const S0 = G.plate, P0 = G.pane;
+  t.tapAt(P0.x + P0.w / 2, P0.y + P0.h - 10);
+  check(`tap (${kind}): SCORES on the plate off every tab and difficulty is inert`, a.screen === SCREEN.SCORES);
+  t.tapAt(S0.x - 8 * G.u, S0.y + 40);
   check(`tap (${kind}): SCORES off the plate backs out to MENU on RECORDS`, a.screen === SCREEN.MENU && a.cursor === ITEMS.indexOf("RECORDS"));
+  if (G.back) {
+    a.confirm(); t.tapAt(...mid(G.back));
+    check(`tap (${kind}): the BACK key backs out to MENU on RECORDS`, a.screen === SCREEN.MENU && a.cursor === ITEMS.indexOf("RECORDS"));
+  }
   a.confirm(); a.recTab(2);
-  const S2 = md.recPlate(L, 2, kind !== "d");
-  t.tapAt(S2.mid, S2.y + S2.h / 2);
+  t.tapAt(P0.x + P0.w / 2, P0.y + P0.h / 2);
   check(`tap (${kind}): MEDALS anywhere off a tab backs out to MENU on RECORDS`, a.screen === SCREEN.MENU && a.cursor === ITEMS.indexOf("RECORDS"));
   a.confirm(); a.recTab(1); a.key("KeyR");
-  const Ls = md.layout(t.surf.width, t.surf.height), S1 = md.statsGeom(Ls).S, T1 = md.recTabsGeom(md.recPlate(Ls, 1, kind !== "d"), kind !== "d");
+  const Ls = md.layout(t.surf.width, t.surf.height), S1 = md.statsGeom(Ls).S, T1 = md.recTabsGeom(md.recPlate(Ls), kind !== "d");
   t.tapAt(T1[0].x + T1[0].w / 2, T1[0].y + T1[0].h / 2);
   check(`tap (${kind}): a tab tap on an armed STATS disarms, moves, never wipes`, a.screen === SCREEN.SCORES && a.resetArm === false && a.n.reset === 0);
   a.recTab(1);
@@ -320,7 +350,7 @@ for (const kind of ["d", "l", "p"]) {
    each the reset is disarmed, and nothing is wiped except by R AGAIN ERASES, the documented second press. ---- */
 const RESET_TOKENS = ["R AGAIN ERASES", "OTHER KEYS CANCEL", "KEEPS SETTINGS + GAME SPEED", "C COPY"];
 for (const kind of ["d", "l", "p"]) for (const focus of [0, 1]) for (const pt of ["mouse", "touch"]) {
-  const t = tapRig(kind), a = t.app, touch = kind !== "d", L = md.layout(t.surf.width, t.surf.height), S = md.statsGeom(L).S, T = md.recTabsGeom(md.recPlate(L, 1, touch), touch);
+  const t = tapRig(kind), a = t.app, touch = kind !== "d", L = md.layout(t.surf.width, t.surf.height), S = md.statsGeom(L).S, T = md.recTabsGeom(md.recPlate(L), touch);
   const armed = () => { a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("RECORDS"); a.confirm(); a.recTab(1); if (focus) a.move(1, 1); a.key("KeyR"); return a.screen === SCREEN.STATS && a.recFocus === focus && a.resetArm === true; };
   const bad = [], cell = (name, x, y, wipes, then) => {
     const ok0 = armed(), r0 = a.n.reset;

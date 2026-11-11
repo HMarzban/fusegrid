@@ -6,9 +6,8 @@
    must not import from src/app. */
 import { CFG, BIOMES } from "../core/config.js";
 import { FOES } from "../core/entities.js";
-import { HEAT_COL, HEAT_MARK, clampHeat } from "../core/heat.js";
-import { pactLabel } from "../core/pact.js";
-import { DIFF, TIME_TRIAL, LABEL, RECORD_TABS, diffTag, speedTag, runParts } from "./words.js";
+import { HEAT_COL, clampHeat } from "../core/heat.js";
+import { DIFF, TIME_TRIAL, LABEL, RECORD_TABS, REC_WORDS, speedTag, runParts } from "./words.js";
 import { drawEnemyBody } from "./sprites.js";
 import { HOME, TILE_HELP, TILE_NAME } from "../core/feat.js";
 import { rr } from "./icons.js";
@@ -560,12 +559,6 @@ export const guideReadHit = (x, y, L, touch, page, pg) => { const g = guideMod()
 /** How many pages a GUIDE page takes on this box (1 until the module is in). */
 export const guidePages = (L, touch, page) => { const g = guideMod(); return g ? g.guideGeom(frameOf(L, touch), page).pages : 1; };
 
-/* Local cabinet plaques (plan 5): bit order matches src/app/plaques.js
-   PLAQUE = {CLEAR:1,PLUS:2,MAX:4,CROWN:8} — this file must not import
-   src/app, so the names are duplicated here rather than imported; the two
-   heat plaques read as their difficulty (words.js). */
-const PLAQUE_NAME = ["CLEAR", DIFF[1], DIFF[2], "CROWN"];
-
 /* RECORDS' tab strip (Task 2.2, ruling R7): SCORES · STATS · MEDALS as one segmented row on the head's title line of
    each of the three pages (no plate moves), the current tab marked by segs, the tab row's focus the kit's selection
    (the 3px notch on the current tab and the caret). recTabsGeom is the one geometry for draw and tap; recPlate is the
@@ -575,10 +568,12 @@ export function recTabsGeom(S, touch) {
   const tw = Math.min(touch ? 120 : 96, S.iw / 3), x0 = S.mid - (3 * tw) / 2;
   return [0, 1, 2].map((i) => ({ x: x0 + i * tw, y: S.y + 23, w: tw, h: 22 }));
 }
-export const recPlate = (L, page, touch) => (page === 0 ? scoresGeom(L, touch).S : page === 1 ? statsGeom(L).S : trophiesGeom(L).S);
-/* The RECORDS tab under a tap on page's plate, else -1. */
+export const recPlate = (L) => statsGeom(L).S;
+/* The RECORDS tab under a tap on page's plate, else -1; -2 while the RECORDS page module is still loading (inert). SCORES and MEDALS are
+   pages/records.js (its tab trough); STATS keeps this strip until Task 4.2. */
 export function recTabHit(x, y, L, page, touch) {
-  const S = recPlate(L, page, touch), T = recTabsGeom(S, touch);
+  if (page !== 1) { const m = lazy.get("records"); return m ? m.tabHit(x, y, frameOf(L, touch)) : -2; }
+  const S = recPlate(L), T = recTabsGeom(S, touch);
   if (y < S.y || y > T[0].y + T[0].h + 4) return -1;
   for (let i = 0; i < 3; i++) if (x >= T[i].x - (i ? 0 : 4) && x <= T[i].x + T[i].w + (i < 2 ? 0 : 4)) return i;
   return -1;
@@ -595,115 +590,25 @@ function recTabs(c, S, page, tabs, touch) {
    ↑ goes back to them. The same length, so STATS' tappable T / C / R sit in the same place in both focus states. */
 export const TAB_LEAD = "←→ " + LABEL.TAB + " · ", TABS_LEAD = "↑ " + LABEL.TABS + " · ";
 
-/* HIGH SCORES (RECORDS' SCORES tab; the strip on the head's title line): the
-   CORE / PLUS / MAX segmented control, the four plaques
-   (dim when locked), then a hugging ten-slot table. `scores` arrives already
-   filtered by heat (scoresForHeat lives in src/app/highscores.js — this file
-   must not import src/app); `plaques` is the unlocked bitmask. scoresGeom is
-   the one table for draw and tap (scoresHit). */
-export function scoresGeom(L, touch) {
-  const T = !!touch,
-    tabH = T ? 52 : 30,
-    rh = T ? 26 : 22,
-    S = pageBox(L, 480, tabH + 6 + 18 + 8 + 11 * rh, T),
-    f = S.f,
-    tw = Math.min(T ? 130 : 100, S.iw / 3),
-    tabs = [0, 1, 2].map((i) => ({ x: S.mid - (3 * tw) / 2 + i * tw, y: S.by, w: tw, h: tabH * f }));
-  return { S, f, tabs, chipY: S.by + (tabH + 6) * f, bodyTop: S.by + (tabH + 6 + 18 + 8) * f, rh: rh * f, T };
-}
-/* HIGH SCORES heat tab under a tap; -2 on the plate (inert), -1 off it
-   (main backs out). */
-export function scoresHit(x, y, L, touch) {
-  const g = scoresGeom(L, touch),
-    S = g.S;
-  for (let i = 0; i < 3; i++) if (inR(g.tabs[i], x, y, 4)) return i;
-  return x >= S.x && x <= S.x + S.w && y >= S.y && y <= S.y + S.h ? -2 : -1;
-}
-export function drawScores(c, scores, L, t, heat, plaques, touch, tabs) {
-  const g = scoresGeom(L, touch),
-    S = g.S,
-    T = g.T,
-    h = clampHeat(heat);
-  boxPlate(c, S);
-  head(c, S, "", "BEST RUNS BY " + LABEL.DIFFICULTY); // its tabs and plaques are difficulties; the touch foot names no key
-  recTabs(c, S, 0, tabs, T);
-  segs(c, g.tabs, DIFF, h, HEAT_COL.map((x, i) => (i ? x : TEXT)), T);
-  const pmask = plaques | 0,
-    chH = g.f < 1 ? Math.max(12, Math.floor((18 + 8) * g.f) - 4) : 18, // iso: the chip never reaches bodyTop
-    chipW = 74,
-    chipX0 = S.mid - (4 * chipW + 24) / 2;
-  for (let i = 0; i < 4; i++) {
-    const x = chipX0 + i * (chipW + 8),
-      on = (pmask & (1 << i)) !== 0;
-    if (on) {
-      c.fillStyle = "rgba(55,240,208,0.14)";
-      c.fillRect(x, g.chipY, chipW, chH);
-    }
-    c.strokeStyle = on ? ACCENT : EDGE; // locked plaques stay legible: muted, never faded out
-    c.lineWidth = 1;
-    c.strokeRect(x + 0.5, g.chipY + 0.5, chipW - 1, chH - 1);
-    c.fillStyle = on ? ACCENT : MUTED;
-    c.font = font(9, on ? "900" : "");
-    c.textAlign = "center";
-    c.textBaseline = "middle";
-    c.fillText(PLAQUE_NAME[i], x + chipW / 2, g.chipY + chH / 2 + 1);
-  }
-  const list = Array.isArray(scores) ? scores : [],
-    nShow = Math.min(10, list.length),
-    rh = g.rh,
-    bt = g.bodyTop,
-    foot0 = tapMode(T) ? BACK_TAP : tabs ? TAB_LEAD + "↓ " + LABEL.DIFFICULTY + " · " + hints().back + " BACK" : TABS_LEAD + "← → " + LABEL.DIFFICULTY + " · " + hints().back + " BACK"; // tab row: ←/→ step the tabs, ↓ reaches the filter; the body: ↑ back to the tabs
-  if (!nShow) {
-    c.fillStyle = MUTED;
-    c.font = font(T ? 15 : 12, "900");
-    c.textAlign = "center";
-    c.textBaseline = "middle";
-    c.fillText("NO " + diffTag(h) + " RUNS YET", S.mid, bt + 5 * rh);
-    c.font = font(T ? 13 : 10);
-    c.fillText("PICK " + diffTag(h) + " ON " + LABEL.LEVEL_SELECT + " TO SET ONE", S.mid, bt + 6.2 * rh);
-    foot(c, S, foot0);
-    return;
-  }
-  const gap = 10,
-    mc = T ? 62 : 52, // MODIFIERS: the header outgrew today's 36 px column
-    cw = [32, 64, 40, mc, Math.max(56, S.iw - 32 - 64 - 40 - mc - gap * 4)],
-    xs = [S.ix];
-  for (let i = 0; i < 4; i++) xs.push(xs[i] + cw[i] + gap);
-  const hy = bt + rh / 2;
-  c.font = font(T ? 11 : 9, "900");
-  c.fillStyle = MUTED;
-  c.textAlign = "left";
-  c.textBaseline = "middle";
-  c.fillText("RANK", xs[0], hy);
-  c.fillText(LABEL.LEVEL, xs[2], hy);
-  c.fillText(LABEL.MODIFIERS, xs[3], hy);
-  c.fillText("DATE", xs[4], hy);
-  c.textAlign = "right";
-  c.fillText("SCORE", xs[1] + cw[1], hy);
-  c.strokeStyle = LINE;
-  c.beginPath();
-  c.moveTo(S.ix, bt + rh - 1);
-  c.lineTo(S.ix + S.iw, bt + rh - 1);
-  c.stroke();
-  for (let i = 0; i < nShow; i++) {
-    const r = list[i],
-      y = bt + (i + 1.5) * rh;
-    if (i % 2 === 0) {
-      c.fillStyle = "rgba(55,240,208,0.05)";
-      c.fillRect(S.ix, y - rh / 2, S.iw, rh);
-    }
-    c.font = font(T ? 15 : 13);
-    c.fillStyle = TEXT;
-    c.textAlign = "left";
-    c.fillText(String(i + 1), xs[0], y);
-    c.fillText(String(r.l) + (HEAT_MARK[r.t | 0] || "·"), xs[2], y);
-    c.fillText(pactLabel(r.p | 0), xs[3], y);
-    c.fillText(String(r.d), xs[4], y);
-    c.textAlign = "right";
-    c.fillStyle = i === 0 ? ACCENT : TEXT;
-    c.fillText(String(r.s), xs[1] + cw[1], y);
-  }
-  foot(c, S, foot0);
+/* SCORES and MEDALS (RECORDS' first and third tabs) are src/render/pages/records.js (UI upgrade v202 Task 4.1), a lazy page (pages/lazy.js): until
+   it lands they paint the LOADING plate and every hit is inert (-2). The entry names stay: shellview, the pointer and the tests call them. ui is the
+   page's (records.js drawRecordsPage); L is layout(W, H, lg, css) for the box the page draws on, touch body[data-lay] p / l. */
+const recMod = () => lazy.get("records");
+export function drawScores(c, ui, L, t, touch) { const m = recMod(), F = frameOf(L, touch); return m ? m.drawRecordsPage(c, F, { ...ui, page: "scores" }, t) : recLoading(c, F, ui && ui.level); }
+export function drawTrophies(c, ui, L, t, touch) { const m = recMod(), F = frameOf(L, touch); return m ? m.drawRecordsPage(c, F, { ...ui, page: "medals" }, t) : recLoading(c, F, ui && ui.level); }
+/* SCORES: the difficulty under a tap, -2 on the plate (inert), -1 off it or on the BACK key (main backs out). */
+export const scoresHit = (x, y, L, touch) => { const m = recMod(); return m ? m.scoresHit(x, y, frameOf(L, touch)) : -2; };
+/* A lazy page's stand-in (R20): the room of level opaque over the box (MENU's own layer when MENU last painted this box), one small kit plate and
+   LOADING, so a covered frame never shows a frozen board. */
+function recLoading(c, F, level) { // RECORDS' LOADING stand-in (named apart from the SETTINGS / GRAPHICS loadingPage below; one plate is the R1 kit harmonisation's)
+  if (!F || !(F.W > 0 && F.H > 0) || typeof c.fillRect !== "function") return;
+  const lv = level | 0 || 1, tok = worldTokens(lv), m = menuPage._dbg.last, ms = m && m.S, room = ms && ms.box && ms.box.w === F.W && ms.box.h === F.H && (ms.ui.level | 0 || 1) === lv;
+  if (canMake() && typeof c.drawImage === "function") c.drawImage(roomLayer({ w: F.W, h: F.H }, lv, tok, { dpr: room ? ms.rd : 1, look: "2d", textScale: 1 }), 0, 0, F.W, F.H);
+  else { c.fillStyle = tok.bg1; c.fillRect(0, 0, F.W, F.H); }
+  if (typeof c.rect !== "function") return;
+  const w = Math.min(320, F.W - 40), h = 80, x = (F.W - w) / 2, y = (F.H - h) / 2;
+  kitPlate(c, x, y, w, h, tok, { phone: !!F.touch });
+  kitLbl(c, REC_WORDS.LOADING, F.W / 2, F.H / 2, 16, { align: "center", col: CONST.t2 });
 }
 
 const RESET_RED = "#ff5d73";
@@ -803,66 +708,6 @@ export function drawStats(c, L, t, ui, arm, toast, touch, tabs) {
   for (let i = 0; i < notes.length && i < 2; i++) c.fillText(clip(c, String(notes[i]), S.iw), S.mid, S.footY - (notes.length - i) * 14 - 2);
   if (arm) foot(c, S, RESET_FOOT, RESET_RED);
   else foot(c, S, statsFoot(tabs)[0]);
-}
-
-/* MEDALS (R6, SCREEN.TROPHIES): a 2x4 grid of medal tiles; the lock lives in
-   the disc (filled accent = earned, hollow ring = still a goal), never in a
-   0.45 alpha. rows=[name, desc, on] arrive finished from app/medals.js, so a
-   missing list paints eight name-free placeholders. n/8 is a head bar. RECORDS'
-   MEDALS tab: the strip on the head's title line, and no body under it. */
-export function trophiesGeom(L) {
-  const nc = L.narrow ? 1 : 2, // the narrow box: one column, so every goal reads whole
-    nr = 8 / nc;
-  return { S: pageBox(L, 552, nr * 60 + (nr - 1) * 6, false), nc };
-}
-export function drawTrophies(c, L, t, rows, touch, tabs) {
-  const r0 = rows || [],
-    { S, nc } = trophiesGeom(L),
-    f = S.f,
-    n = r0.filter((x) => x && x[2]).length,
-    tw = (S.iw - 8 * (nc - 1)) / nc;
-  boxPlate(c, S);
-  head(c, S, "", n + "/8");
-  recTabs(c, S, 2, tabs, touch);
-  c.fillStyle = LINE;
-  c.fillRect(S.mid - 80, S.y + 48, 160, 3);
-  c.fillStyle = ACCENT;
-  c.fillRect(S.mid - 80, S.y + 48, (160 * n) / 8, 3);
-  for (let i = 0; i < 8; i++) {
-    const [name, desc, on] = r0[i] || ["—", "", false],
-      r = { x: S.ix + (i % nc) * (tw + 8), y: S.by + 4 + Math.floor(i / nc) * (60 + 6) * f, w: tw, h: 60 * f },
-      dx = r.x + 22,
-      cy = r.y + r.h / 2;
-    cell(c, r, 0.55);
-    if (on) {
-      c.fillStyle = "rgba(55,240,208,0.08)";
-      c.fillRect(r.x, r.y, r.w, r.h);
-    }
-    rr(c, dx - 11, cy - 11, 22, 22, 11);
-    if (on) {
-      c.fillStyle = ACCENT;
-      c.fill();
-      c.fillStyle = "#0a0e18";
-      c.font = font(11, "900");
-      c.textAlign = "center";
-      c.textBaseline = "middle";
-      c.fillText("★", dx, cy + 1);
-    } else {
-      c.strokeStyle = MUTED;
-      c.lineWidth = 1.5;
-      c.stroke();
-    }
-    c.textAlign = "left";
-    c.textBaseline = "middle";
-    const sq = f < 1; // the iso 608x352 guard: a 44px tile packs name + two goal lines inside it
-    c.fillStyle = on ? TEXT : "#b6c2dc";
-    c.font = sans(13, "800");
-    c.fillText(String(name), r.x + 42, sq ? cy - 13 : r.y + 15);
-    c.fillStyle = MUTED;
-    c.font = font(10, "700");
-    wrap(c, String(desc), r.w - 52, 2).forEach((l, j) => c.fillText(l, r.x + 42, sq ? cy + 1 + j * 11 : r.y + 32 + j * 12));
-  }
-  foot(c, S, tapMode(touch) ? BACK_TAP : TAB_LEAD + hints().ok + " / " + hints().back + " BACK"); // no body: the tab row always has the focus; back is MENU
 }
 
 /* SETTINGS and GRAPHICS (SCREEN.SETTINGS / GRAPHICS; PAUSE views 1 and 2): the page is src/render/pages/settings.js (UI upgrade v202 Task 3.4),

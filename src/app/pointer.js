@@ -87,9 +87,10 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       if (h === "up" || h === "down") app.infoStep(h === "up" ? -1 : 1); else if (h !== -2) app.confirm();
     } else if (app.screen === SCREEN.LEVEL || isRecords(app.screen)) {
       /* A chip / tab tap sets it (modifiers ride their 1–5 keys); LEVEL: the tap first focuses the row it touched (levelFocus), only START starts, a locked level flashes its refusal, the MODIFIERS door opens or closes the list, the rest of the plate is inert, outside or BACK backs out (an open list closes first). */
-      const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width), { cw, ch, lg, css } = dims(cv, kind()), x = (ev.clientX - r.left) * k, y = (ev.clientY - r.top) * k, L = menuLayout(cw, ch);
+      const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width), { cw, ch, lg, css } = dims(cv, kind()), x = (ev.clientX - r.left) * k, y = (ev.clientY - r.top) * k, p = RECORD_SCREENS.indexOf(app.screen), L = p < 0 ? menuLayout(cw, ch) : menuLayout(cw, ch, lg, css); // RECORDS: the page's own frame (pages/records.js), as MENU's
       // every chip is ONE call through the cued key path: one uiMove per change, none on the chip already set
-      const p = RECORD_SCREENS.indexOf(app.screen), ti = p < 0 ? -1 : recTabHit(x, y, L, p, touchLay(cv));
+      const ti = p < 0 ? -1 : recTabHit(x, y, L, p, touchLay(cv));
+      if (ti === -2) return; // the RECORDS page module is still loading: inert
       if (ti >= 0) return void app.recTab(ti - p); // a RECORDS tab: that tab, the tab row focused; recTab disarms an armed STATS, the tab shown included
       if (app.screen === SCREEN.SCORES) { const i = scoresHit(x, y, L, touchLay(cv)); if (i >= 0) app.recFocus = 1; return i >= 0 ? void app.move(i - app.scoreHeat, 0) : i === -1 ? app.confirm() : null; } // a difficulty tab is in the body
       if (app.screen === SCREEN.STATS) {

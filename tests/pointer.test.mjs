@@ -13,6 +13,8 @@ import * as lazyPages from "../src/render/pages/lazy.js";
 import * as settingsPage from "../src/render/pages/settings.js";
 lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page, in as if its import had landed (R20)
 lazyPages._set("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages, as if their import had landed
+import { want } from "../src/render/pages/lazy.js";
+const RP = await want("records"); // RECORDS is a lazy page (R20): its hits are inert until it lands
 
 let pass = 0,
   fail = 0;
@@ -214,7 +216,7 @@ for (const [scr, fn, field, row, offAct, R] of [[SCREEN.MENU, "menuHit", "cursor
   const t1 = mid((x, y) => F(x, y) === 1), off = spot((x, y) => F(x, y) === -1), plate = spot((x, y) => F(x, y) === -2);
   r.down(t1.x, t1.y);
   check("SCORES tab 1: app.move(1 - scoreHeat, 0)", J(r.log) === J([["move", -1, 0]]) && r.input._intent.fire === false, J(r.log));
-  check("SCORES: scoresHit(x, y, layout(cw, ch), touchLay(cv))", J(r.H.last("scoresHit").a) === J([t1.x, t1.y, L0, false]) && r.H.last("layout").a.length === 2);
+  check("SCORES: scoresHit(x, y, layout(cw, ch, lg, css), touchLay(cv)) (RECORDS taps on the page's own frame, v202 Task 4.1)", J(r.H.last("scoresHit").a) === J([t1.x, t1.y, L0, false]) && r.H.last("layout").a.length === 4);
   r.log.length = 0; r.down(plate.x, plate.y);
   check("SCORES: -2 (the table) is inert", r.log.length === 0, J(r.log));
   r.down(off.x, off.y);
@@ -245,7 +247,7 @@ for (const [scr, fn, field, row, offAct, R] of [[SCREEN.MENU, "menuHit", "cursor
     r.down(CA.x, CA.y, { pointerType: "touch" });
     const k0 = r.input.keys.length;
     r.canvas.fire("pointerup", {});
-    check("STATS armed, C COPY on touch: deferred to pointerup too; statsHit gets app.resetArm", k0 === 0 && J(r.input.keys) === J(["KeyC"]) && r.H.last("statsHit").a[3] === true && r.H.last("layout").a.length === 2, J(r.input.keys));
+    check("STATS armed, C COPY on touch: deferred to pointerup too; statsHit gets app.resetArm", k0 === 0 && J(r.input.keys) === J(["KeyC"]) && r.H.last("statsHit").a[3] === true && r.H.last("layout").a.length === 4, J(r.input.keys));
   }
   for (const end of ["pointercancel", "pointerleave"]) {
     const r = rig({ app: { screen: SCREEN.STATS } });
@@ -332,14 +334,14 @@ for (const [s, label] of [["HOWTO", "HOW TO PLAY"], ["ITEMS", "POWER-UPS"], ["FL
   check("TROPHIES: any tap off the tabs confirms; the only hit test is the tab strip's", J(r.log) === J([["confirm"]]) && r.H.calls.every((c) => ["dims", "layout", "touchLay", "recTabHit"].includes(c.f)) && r.H.of("recTabHit").length === 1 && r.input._intent.fire === false, J(r.log) + " " + J(r.H.calls.map((c) => c.f)));
 }
 
-// ---- RECORDS' tab strip: recTabHit(x, y, layout(cw, ch), page, touchLay(cv)); a tab is app.recTab(tab - page), never a key ----
+// ---- RECORDS' tab strip: recTabHit(x, y, layout(cw, ch, lg, css), page, touchLay(cv)); a tab is app.recTab(tab - page), never a key ----
 for (const [scr, page] of [[SCREEN.SCORES, 0], [SCREEN.STATS, 1], [SCREEN.TROPHIES, 2]]) {
   for (let tab = 0; tab < 3; tab++) {
-    const r = rig({ app: { screen: scr, recFocus: 1, resetArm: false } }), T = recTabsGeom(recPlate(L0, page, false), false)[tab];
+    const r = rig({ app: { screen: scr, recFocus: 1, resetArm: false } }), T = page === 1 ? recTabsGeom(recPlate(L0), false)[tab] : RP.recordsGeom({ W: 600, H: 520, touch: false, shell: false, css: 1 }).tabs[tab]; // SCORES / MEDALS: pages/records.js (Task 4.1); STATS: its strip until Task 4.2
     r.down(T.x + T.w / 2, T.y + T.h / 2);
     const h = r.H.last("recTabHit");
     check("RECORDS tab " + tab + " on page " + page + ": app.recTab(" + (tab - page) + "), no key, no confirm, fire swallowed", J(r.log) === J([["recTab", tab - page]]) && r.input.keys.length === 0 && r.input._intent.fire === false &&
-      J(h.a) === J([T.x + T.w / 2, T.y + T.h / 2, L0, page, false]) && r.H.last("layout").a.length === 2, J(r.log));
+      J(h.a) === J([T.x + T.w / 2, T.y + T.h / 2, L0, page, false]) && r.H.last("layout").a.length === 4, J(r.log));
   }
 }
 {

@@ -16,6 +16,7 @@ import { statsRows, statsNotes, statsPayload } from "../src/app/stats.js";
 import * as md from "../src/render/menudraw.js";
 import { createGame } from "../src/main.js";
 import { drawShell } from "../src/render/shellview.js";
+await (await import("../src/render/pages/lazy.js")).want("records"); // RECORDS' SCORES / MEDALS page is lazy (R20)
 import "../src/core/board3.js";
 
 let pass = 0,
@@ -714,7 +715,7 @@ const TODAY = "2026-09-07";
       fillText(s) { texts.push(String(s)); },
       strokeText: noop, beginPath: noop, moveTo: noop, lineTo: noop,
       closePath: noop, fill: noop, stroke: noop, arc: noop, arcTo: noop,
-      ellipse: noop, quadraticCurveTo: noop, bezierCurveTo: noop,
+      ellipse: noop, quadraticCurveTo: noop, bezierCurveTo: noop, rect: noop, clip: noop, // the kit pages paint only on a context that can clip (pages/records.js)
       save: noop, restore: noop, translate: noop, scale: noop, rotate: noop,
       setTransform: noop, transform: noop, drawImage: noop,
       createLinearGradient: () => ({ addColorStop: noop }),
@@ -770,9 +771,9 @@ const TODAY = "2026-09-07";
       () => 0,
     );
     check(
-      "shellview routes SCREEN.SCORES to drawScores — BEST RUNS is painted" +
-        " (pre-existing gap, fairness baseline for Minor-7)",
-      texts.includes("BEST RUNS BY DIFFICULTY"),
+      "shellview routes SCREEN.SCORES to drawScores — its empty NORMAL table is painted" +
+        " (pre-existing gap, fairness baseline for Minor-7; the RECORDS page since v202 Task 4.1)",
+      texts.includes("NO NORMAL DIFFICULTY RUNS YET") && texts.includes("BADGES"),
       texts.join("|"),
     );
   }

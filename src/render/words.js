@@ -84,3 +84,12 @@ export const LEVEL_WORDS = Object.freeze({
   MOD_HELP: MOD_SENT, PAD_HELP: "TRIGGERS pick a modifier, NORTH toggles it.", // a controller's shortcut: TRIGGERS walk the list shut, NORTH toggles // by list entry: the four modifier bits in MOD_BITS order, then TIME TRIAL
   help: (n, open) => "Level " + n + " of 8. " + (open ? "Levels 5 and 8 end in a finale." : "Clear level 5 to open 6 to 8."),
 });
+/* RECORDS (v202 Tasks 4.1 / 4.2, pages/records.js): the page's own words. Badges are the four plaques (src/app/plaques.js bit order CLEAR, PLUS, MAX,
+   CROWN), the two difficulty ones read as their difficulty. */
+export const REC_WORDS = Object.freeze({
+  MENU: "MENU", BACK: "BACK", TAB: LABEL.TAB, TABS: LABEL.TABS, LOADING: "LOADING", BADGES: "BADGES", RANK: "RANK", SCORE: "SCORE", DATE: "DATE",
+  NONE: "—", NO_MODS: "NO " + LABEL.MODIFIERS, EARNED: "EARNED", TAP: "TAP A TAB · TAP OUTSIDE TO GO BACK",
+});
+export const BADGE_NAMES = Object.freeze(["CLEAR", DIFF[1], DIFF[2], "CROWN"]);
+export const noRunsYet = (h) => "NO " + diffTag(h) + " RUNS YET";
+export const pickToSet = (h) => "PICK " + diffTag(h) + " ON " + LABEL.LEVEL_SELECT + " TO SET ONE";

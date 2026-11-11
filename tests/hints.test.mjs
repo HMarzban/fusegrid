@@ -6,6 +6,8 @@ import { hints, setHints, tapMode } from "../src/render/hintcopy.js";
 import * as md from "../src/render/menudraw.js";
 import { drawShell, loadControlsArt } from "../src/render/shellview.js";
 await loadControlsArt(); // the CONTROLS paint is lazy (v202): in before any CONTROLS draw
+import { want as wantPage } from "../src/render/pages/lazy.js";
+const RP = await wantPage("records"); // RECORDS is a lazy page (R20) too
 import { SCREEN, OPT_ROWS, optRows, createMenuApp } from "../src/app/menuapp.js";
 import { helpOf } from "../src/app/hints.js";
 import { POWER } from "../src/core/entities.js";
@@ -60,6 +62,11 @@ const GFOOT = (f) => { const r = paint(f); return { r, foot: gfoot() }; };
 const GPAGE = { HOWTO: "HOW TO PLAY", ITEMS: "POWER-UPS", ENEMIES: "ENEMIES", FLOOR: "FLOOR", GUIDE: "GUIDE" };
 const STATS_UI = { rows: [], notes: [], trophies: [] };
 const LT = md.layout(1024, 768, 207);
+/* RECORDS' SCORES / MEDALS foot (v202 Task 4.1, pages/records.js): label first, keycaps last, read back from the page's plan like MENU's */
+const RCAP = { lf: "←", rt: "→", up: "↑", dn: "↓" };
+const recFoot = () => { const { S, foc } = RP._dbg.last, q = S.feet.find((f) => f.v === foc); return q ? q.fp.parts.map((x) => x.t || x.sep || (Array.isArray(x.cap) ? RCAP[x.cap[0]] : "[" + x.cap + "]")).join(" ") : ""; };
+const RF = (want) => Object.assign(() => recFoot() === want, { toString: () => want + " (records foot " + recFoot() + ")" });
+const MEDALS_P = (T, tabs = true) => (c) => md.drawTrophies(c, { level: 1, focus: tabs ? "tabs" : "body", rows: [] }, L, 9, T);
 const GFX = { rows: [] };
 /* Every page with a foot, keyboard or touch geometry. */
 const PAGES = {
@@ -69,7 +76,7 @@ const PAGES = {
   ENEMIES: (T) => (c) => md.drawEnemiesHelp(c, L, 9, "2d", T),
   FLOOR: (T) => (c) => md.drawFloorHelp(c, L, 9, "2d", T),
   GUIDE: (T) => (c) => md.drawGuide(c, L, 9, 0, "2d", T),
-  SCORES: (T) => (c) => md.drawScores(c, [], L, 9, 0, 0, T),
+  SCORES: (T) => (c) => md.drawScores(c, { level: 1, focus: "body", heat: 0, scores: [], plaques: 0 }, L, 9, T),
   /* SETTINGS / GRAPHICS on touch: the tablet's desk (#sh 1024x768), where the page has a foot; a touch 600x520 column pages its 44 CSS px rows
      and its page keys' strip stands where the foot was (v202 Task 3.4 fix round 1) */
   OPTIONS: (T) => (c) => md.drawSettings(c, T ? LT : L, 9, { rows: optRows(false), row: "MUSIC", vals: {}, touch: T }),
@@ -178,12 +185,12 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
 {
   const WANT = [
     ["LEVEL foot", PAGES.LEVEL(false), "CHANGE"], // the LEVEL row focused (v202 Task 2.3: the foot follows the row; Task 3.3: label first, keycap last, checked whole below)
-    ["SCORES foot", PAGES.SCORES(false), "↑ TABS · ← → DIFFICULTY · ESC BACK"], // the page body's foot (no tab-row flag): RECORDS' ↑ TABS lead
+    ["SCORES foot", PAGES.SCORES(false), RF("DIFFICULTY ← → · TAB [Q] [E] · BACK [ESC]")], // the page body's foot: the filter, the tab keys, back
     ["OPTIONS foot", sfoot(PAGES.OPTIONS(false), "ROW ▲ ▼ · CHANGE ◀ ▶ · BACK [ESC]"), "ROW ▲ ▼ · CHANGE ◀ ▶ · BACK [ESC]"],
     ["GRAPHICS foot", sfoot(PAGES.GRAPHICS(false), "ROW ▲ ▼ · CHANGE ◀ ▶ · BACK [ESC]"), "ROW ▲ ▼ · CHANGE ◀ ▶ · BACK [ESC]"],
     ["STATS foot", (c) => md.drawStats(c, L, 9, STATS_UI, false, null), "↑ TABS · T MEDALS · C COPY MY STATS · R RESET · ESC BACK"],
     ["STATS armed foot", (c) => md.drawStats(c, L, 9, STATS_UI, true, null), "R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS SETTINGS + GAME SPEED · C COPY"],
-    ["MEDALS foot", (c) => md.drawTrophies(c, L, 9, []), "←→ TAB · ENTER / ESC BACK"],
+    ["MEDALS foot", MEDALS_P(false), RF("TAB ← → · BACK [ESC]")],
     ["MENU foot verb on PLAY", menu(0), "START"],
     ["MENU foot verb on a door", menu(4), "OPEN"],
     ["MENU PLAY keycap", menu(0), "ENTER"],
@@ -199,7 +206,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["LEVEL foot, touch (a landscape tablet in tap mode)", (c) => md.drawLevelSelect(c, 1, md.layout(1024, 768, 200), 9, 0, 0, true, 0, false, true, { ...INFO, tap: true }), md.LEVEL_TAP],
     ["OPTIONS foot, touch", PAGES.OPTIONS(true), sp.COPY.tapRow], // the tablet desk's pane foot: FOOT_TAP's step-down (FOOT_TAP itself is wider than the pane)
   ];
-  for (const [nm, f, s] of WANT) { const r = paint(f); check("default: " + nm + " stays \"" + s + "\"", /^GUIDE sub/.test(nm) ? hasT(r, s) : r.has(s), r.strs().join("|")); }
+  for (const [nm, f, s] of WANT) { const r = paint(f); check("default: " + nm + " stays \"" + s + "\"", typeof s === "function" ? s() : /^GUIDE sub/.test(nm) ? hasT(r, s) : r.has(s), r.strs().join("|")); }
   /* v202 Task 3.5: the GUIDE pages' feet are label first, keycap last (the MENU page's grammar); every key the old foot named is still named */
   for (const [nm, f, s] of [["HOW TO foot", PAGES.HOWTO(false), "BACK [ESC] [ENTER]"], ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A POWER-UP TO COLLECT · BACK [ESC]"],
     ["ENEMIES foot", PAGES.ENEMIES(false), "MOVE ▲ ▼ ◀ ▶ · POINTS [ENTER] · BACK [ESC]"], ["FLOOR foot", PAGES.FLOOR(false), "BACK [ESC]"], ["GUIDE foot", PAGES.GUIDE(false), "PICK ▲ ▼ ◀ ▶ · OPEN [ENTER] · BACK [ESC]"]]) {
@@ -251,11 +258,11 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   const PADWANT = [
     ["LEVEL foot", PAGES.LEVEL(false), "D-PAD"],
     ["LEVEL foot's confirm", PAGES.LEVEL(false), "SOUTH"],
-    ["SCORES foot", PAGES.SCORES(false), "↑ TABS · ← → DIFFICULTY · EAST BACK"],
+    ["SCORES foot", PAGES.SCORES(false), RF("DIFFICULTY [D-PAD] · BACK [EAST]")],
     ["OPTIONS foot", sfoot(PAGES.OPTIONS(false), "ROW [D-PAD] · CHANGE [D-PAD] · BACK [EAST]"), "ROW [D-PAD] · CHANGE [D-PAD] · BACK [EAST]"],
     ["GRAPHICS foot", sfoot(PAGES.GRAPHICS(false), "ROW [D-PAD] · CHANGE [D-PAD] · BACK [EAST]"), "ROW [D-PAD] · CHANGE [D-PAD] · BACK [EAST]"],
     ["STATS foot offers no reset", (c) => md.drawStats(c, L, 9, STATS_UI, false, null), "↑ TABS · NORTH MEDALS · WEST COPY MY STATS · EAST BACK"],
-    ["MEDALS foot", (c) => md.drawTrophies(c, L, 9, []), "←→ TAB · SOUTH / EAST BACK"],
+    ["MEDALS foot", MEDALS_P(false), RF("TAB [D-PAD] · BACK [EAST]")],
     ["MENU foot's D-PAD keycap", menu(0, false, "v99"), "D-PAD"],
     ["MENU PLAY keycap", menu(0), "SOUTH"],
     ["MENU foot on a door", menu(4), "OPEN"],
@@ -273,7 +280,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["pad words on a touch layout: HOW TO", PAGES.HOWTO(true), "D-PAD / L-STICK"],
     ["pad words on a touch layout: show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "p"), "ANY BUTTON TO SKIP"],
   ];
-  for (const [nm, f, s] of PADWANT) { const r = paint(f); check("pad: " + nm + " = \"" + s + "\"", /^GUIDE sub/.test(nm) ? hasT(r, s) : r.has(s), r.strs().join("|")); }
+  for (const [nm, f, s] of PADWANT) { const r = paint(f); check("pad: " + nm + " = \"" + s + "\"", typeof s === "function" ? s() : /^GUIDE sub/.test(nm) ? hasT(r, s) : r.has(s), r.strs().join("|")); }
   for (const [nm, f, s] of [["HOW TO foot", PAGES.HOWTO(false), "REBIND IN SETTINGS › CONTROLS · BACK [EAST] [SOUTH]"], ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A POWER-UP TO COLLECT · BACK [EAST]"],
     ["ENEMIES foot", PAGES.ENEMIES(false), "MOVE [D-PAD] · POINTS [SOUTH] · BACK [EAST]"], ["FLOOR foot", PAGES.FLOOR(false), "BACK [EAST]"], ["GUIDE foot", PAGES.GUIDE(false), "PICK [D-PAD] · OPEN [SOUTH] · BACK [EAST]"]]) {
     const g = GFOOT(f);
@@ -315,8 +322,8 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
 
   setHints(null);
   const flat = (r) => r.rects.filter((x) => x[0] !== "rgba(4,7,14,0.9)");
-  const pages = { ...PAGES, MENU0: (T) => menu(0, T, "v99"), MENU3: (T) => menu(3, T, "v99"), MENU4: (T) => menu(4, T, "v99"), STATS: () => (c) => md.drawStats(c, L, 9, STATS_UI, false, null), MEDALS: () => (c) => md.drawTrophies(c, L, 9, []),
-    SCORES_TABS: (T) => (c) => md.drawScores(c, [], L, 9, 0, 0, T, true), STATS_TABS: (T) => (c) => md.drawStats(c, L, 9, STATS_UI, false, null, T, true), MEDALS_TABS: (T) => (c) => md.drawTrophies(c, L, 9, [], T, true) }; // MENU3 is RECORDS since v202 Task 2.2, MENU4 SETTINGS; *_TABS: RECORDS' tab row
+  const pages = { ...PAGES, MENU0: (T) => menu(0, T, "v99"), MENU3: (T) => menu(3, T, "v99"), MENU4: (T) => menu(4, T, "v99"), STATS: () => (c) => md.drawStats(c, L, 9, STATS_UI, false, null), MEDALS: () => MEDALS_P(false, false),
+    SCORES_TABS: (T) => (c) => md.drawScores(c, { level: 1, focus: "tabs", heat: 0, scores: [], plaques: 0 }, L, 9, T), STATS_TABS: (T) => (c) => md.drawStats(c, L, 9, STATS_UI, false, null, T, true), MEDALS_TABS: (T) => MEDALS_P(T) }; // MENU3 is RECORDS since v202 Task 2.2, MENU4 SETTINGS; *_TABS: RECORDS' tab row
   /* MENU (v202 Task 3.1; fix round 1): the foot's keycaps and PLAY's keycap are keys, sized by their legend (▲ ▼ + ENTER vs D-PAD + SOUTH). Only
      those cap rects are exempt. The foot's plaque is centred, so it moves by exactly the caps' advance (each cap's gap + width) that changed: its x by
      minus half of it, its w by all of it; every rect of the plaque compares by its offsets from the plaque's two edges, every other rect as it is, and
@@ -377,6 +384,11 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
       const geo = () => { const G = md.guideGeom(L, T, GPAGE[nm]), k = (r) => (cueOn && r ? [r.x, r.w, r.h] : r); return J([cueOn ? [G.plate.x, G.plate.w] : G.plate, Object.values(G.items).map(k), cueOn ? 0 : G.hit, k(G.back), G.foot && G.foot.y, G.mode]); };
       setHints(null); const ga = geo(), ca = md.guideGeom(L, T, GPAGE[nm]).d.head.cue; setHints(PAD); const gb = geo(), cb = md.guideGeom(L, T, GPAGE[nm]).d.head.cue; setHints(null);
       check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps its geometry (plate, slots, hits${cueOn ? "; plus the controller cue band only: every x and width holds, every slot's height" : ""})`, ga === gb && !ca && !!cb === cueOn, ga.length + " vs " + gb.length);
+      continue;
+    }
+    if (/^(SCORES|MEDALS)/.test(nm) && RP._dbg.last.G.mode === "desk") { // v202 Task 4.1: the kit foot under the plate is words and keycaps; everything above it keeps every rect
+      const fy = RP.recordsGeom({ W: L.W, H: L.H, touch: false, shell: false, css: 1 }).d.foot.y - 2, up = (r) => flat(r).filter((x) => x[2] + x[4] <= fy);
+      check(`a flip changes words only: ${nm} keeps every rect above its foot`, J(up(a)) === J(up(b)) && up(a).length > 20, up(a).length + " vs " + up(b).length);
       continue;
     }
     check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps every rect`, J(flat(a)) === J(flat(b)), J(flat(a)).length + " vs " + J(flat(b)).length);

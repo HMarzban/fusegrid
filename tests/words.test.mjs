@@ -36,6 +36,8 @@ globalThis.OffscreenCanvas = LayerCv;
 kitCache.setFactory((w, h) => new LayerCv(w, h));
 const withLayers = (R, n0) => { const T = R.texts.slice(); for (const cv of made.slice(n0)) T.push(...cv.r.texts); made.length = n0; return T; };
 import { drawShell, loadControlsArt } from "../src/render/shellview.js";
+import { want as wantPage } from "../src/render/pages/lazy.js";
+await wantPage("records"); // RECORDS is a lazy page (R20): the sweep paints it, not its LOADING plate
 import { drawOverlay, overlayBox, drawHudChips, drawAbilityBar, PAUSE_ROWS, runStamp, copyPayload, pauseKicker } from "../src/render/scenes.js";
 import { pickupLabel, labelText } from "../src/render/fx.js";
 import { setHints } from "../src/render/hintcopy.js";
@@ -294,7 +296,7 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
     "FURTHEST LEVEL YET", "MATCHED YOUR", "FROM YOUR", "DAILY 2026-11-10 · NORMAL SPEED", "PAUSED · LEVEL 3", "LEVEL ENDS", "THROW POWER-UP", "CLEAR LEVEL 5 TO OPEN", "REBIND IN SETTINGS",
     "KEEPS SETTINGS", "replaces POWER BOMB", "NO NORMAL DIFFICULTY RUNS YET", "BEST 4,210", "LEVELS 1-5 IN ONE RUN", "BESTS · NO MODIFIERS", "YOUR TRIES TODAY", "4 PAGES", "GITHUB", "CHANGE ART STYLE",
     "LEVEL 8 · CROWN", "the level you reach", "DID NOT LOAD · SETTINGS", "· next level", "Levels 5 and 8 end in a finale.", "Clear level 5 to open 6 to 8.", "NO VIBRATION AT ALL", "NO TIME YET", "Walls close in from 25s.", "ONE LIFE · FEWER ITEMS",
-    "UNDER 3:00 · DEFAULT RULES", "DAILY 2026-11-10 · LEVEL 3 · 1840", "RECORDS", "←→ TAB · ↓ DIFFICULTY", "←→ TAB · T MEDALS", "←→ TAB · ENTER / ESC BACK", "↑ TABS · ← → DIFFICULTY", "↑ TABS · T MEDALS", "BEST RUNS BY DIFFICULTY", "SPD MAX", "FRAME RATE MAX", "SENSITIVITY MAX", "LEVEL 8", "ROW", "CHANGE", "OPEN", "PICK", "TOGGLE", "SOUTH", "TAP OUTSIDE TO CLOSE", "TAP OUTSIDE TO GO BACK",
+    "DEFAULT RULES", "DAILY 2026-11-10 · LEVEL 3 · 1840", "RECORDS", "BADGES", "EARNED", "←→ TAB · T MEDALS", "↑ TABS · T MEDALS", "SPD MAX", "FRAME RATE MAX", "SENSITIVITY MAX", "LEVEL 8", "ROW", "CHANGE", "OPEN", "PICK", "TOGGLE", "SOUTH", "TAP OUTSIDE TO CLOSE", "TAP OUTSIDE TO GO BACK",
     "STANDARD", "CONTROLLER READY · VIBRATION MEDIUM · SETTINGS › CONTROLS", "NEEDS A CLICK OR ENTER", "TAP A ROW", "LEVEL 1 · JUNGLE"]; // Task 2.4: only the REAL 3D rows draw STANDARD (CAMERA's value); Task 3.1: the MENU page's teasers, foot and signpost (its old preview panes are gone)
   const all = [...found.keys()], miss = SEEN.filter((w) => !all.some((s) => s.indexOf(w) >= 0));
   check("the sweep reached every branch it claims (one marker each)", miss.length === 0, miss.join(" | "));

@@ -8,6 +8,7 @@
 const LOAD = {
   settings: () => import("./settings.js"),
   guide: () => import("./guide.js"),
+  records: () => import("./records.js"),
 };
 const mods = {}, wait = {};
 

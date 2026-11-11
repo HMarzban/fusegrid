@@ -32,6 +32,7 @@ function check(name, cond, detail) {
 }
 const J = (v) => JSON.stringify(v);
 await loadControlsArt(); // the CONTROLS paint is lazy (v202)
+const RP = await (await import("../src/render/pages/lazy.js")).want("records"); // RECORDS too (R20)
 
 /* A fake page for mountFit: window, document, body[data-lay] and an #sh canvas whose rect is its CSS box. */
 function mkDom(W, H, touch, dpr = 1) {
@@ -291,7 +292,8 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
   const GUIDE_PAGES = { GUIDE: ["HOW TO PLAY", "POWER-UPS", "ENEMIES", "FLOOR"], HOWTO: ["CLEAR EVERY ENEMY", "GOLD WALL NEVER BREAKS", "MOVE", "PAUSE"], ITEMS: POWER.map((p) => p.name), ENEMIES: FOES.map((f) => f.name), FLOOR: Object.values(TILE_NAME) };
   const guideWhole = (nm, T) => { const S = T.map((q) => q.s), all = " " + S.join(" ") + " "; return !S.some((x) => /…/.test(x)) && GUIDE_PAGES[nm].every((n) => all.includes(" " + n + " ")); }; // a rule that breaks onto two lines reads whole joined
   for (const lay of ["d", "l"]) each((nm, cur) => { base[lay + nm + cur] = shot(nm, boxOf({ w: 600, h: 520, s: 1 }, lay), cur); });
-  each((nm, cur) => { if (nm === "MENU" || nm === "LEVEL") base["lDesk" + nm + cur] = shot(nm, boxOf(shellGeo(1024, 768, 600, 520, "l"), "l"), cur); }); // LEVEL SELECT too (v202 Task 3.3): a 600x520 touch box is its compact arrangement (no card, the BACK key), the tablets its desk
+  const TAB_BASE = new Set(["MENU", "LEVEL", "SCORES", "TROPHIES"]); // pages whose 600x520 touch box is a compact arrangement (MENU; LEVEL SELECT since Task 3.3; RECORDS' SCORES / MEDALS since v202 Task 4.1, the title dropped there): the tablet reads the 1024x768 tablet's
+  each((nm, cur) => { if (TAB_BASE.has(nm)) base["lDesk" + nm + cur] = shot(nm, boxOf(shellGeo(1024, 768, 600, 520, "l"), "l"), cur); }); // a 600x520 touch box is their compact arrangement (LEVEL SELECT: no card, the BACK key), the tablets their desk
   {
     const bad = [];
     each((nm, cur) => {
@@ -306,13 +308,13 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     const out = [], same = [], tab = lay === "l" && W > 600;
     cardOut.s.length = 0; cardOutL.s.length = 0;
     each((nm, cur) => {
-      const T = shotAll(nm, box, cur), cmp = tab && nm === "MENU" ? words : nm === "LEVEL" ? stream : exact, desk = tab && (nm === "MENU" || nm === "LEVEL"), B = base[desk ? "lDesk" + nm + cur : lay + nm + cur];
+      const T = shotAll(nm, box, cur), cmp = tab && nm === "MENU" ? words : nm === "LEVEL" ? stream : exact, desk = tab && TAB_BASE.has(nm), B = base[desk ? "lDesk" + nm + cur : lay + nm + cur];
       if (T.some((q) => q.x < -0.5 || q.x + q.w > g.w + 0.5 || q.y < 0 || q.y > g.h)) out.push(nm + cur);
       if (GUIDE_PAGES[nm]) { if (!guideWhole(nm, T)) same.push(nm + cur); return; } // v202 Task 3.5: a GUIDE page wraps to its box (tests/page-guide holds every string whole)
       if (nm === "SETTINGS" || nm === "GRAPHICS" ? !planOk(T, B) : cmp(T) !== cmp(B)) same.push(nm + cur);
     });
     check(`every page's text sits inside the box (${tg})`, out.length === 0, out.join());
-    check(`every page prints exactly its 600x520 strings, in order${tab ? " (MENU: the 1024x768 tablet's words by token)" : ""}: nothing elided (${tg})`, same.length === 0, same.join());
+    check(`every page prints exactly its 600x520 strings, in order${tab ? " (MENU: the 1024x768 tablet's words by token; SCORES and MEDALS: the 1024x768 tablet's, exactly)" : ""}: nothing elided (${tg})`, same.length === 0, same.join());
     const cbad = cardOut.s.filter((q) => q.card.some((t) => /…/.test(t)) || !q.card.every((t) => q.drawn.includes(t)) || J(q.inCard) !== J(q.plan) || q.out.length || !["JUNGLE", "×2", "BOOSTER", "LIVES", "FUSE", "2.5s", "SCORE"].every((w) => q.card.includes(w)));
     const compact = lay === "l" && W === 600; // MENU's compact arrangement: no card slot, PLAY's tag carries the run
     check(`MENU's card (${tg}): ${compact ? "none (compact)" : "drawn in every MENU frame; the strings inside its rect are exactly its plan's, each inside the card and the box, whole; the world, WALKER's ×2, the floor tile and LIVES / FUSE / SCORE"}`, compact ? cardOut.s.length === 0 : cardOut.s.length === ITEMS.length && cbad.length === 0, JSON.stringify([cardOut.s.length, cbad.slice(0, 1)]));
@@ -334,8 +336,8 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
         S.x - G.T >= 0 && S.y - G.T >= 0 && S.x + S.w + G.T <= g.w && S.y + S.h + G.T <= g.h && rects.every((r) => inPlate(r, S)) && hits.every(([r, k, i]) => { const h = md.levelHit(...ctr(r), L, U, touch, open); return h.k === k && (i == null || h.i === i); }) &&
           md.levelHit(...inert, L, U, touch, open).k === "none" && md.levelHit(1, 1, L, U, touch, open).k === "back");
     }
-    const sc = md.scoresGeom(L, touch);
-    check(`HIGH SCORES: tabs in the plate, each taps to itself (${tg})`, inBox(sc.S) && sc.tabs.every((r, i) => inPlate(r, sc.S) && md.scoresHit(...ctr(r), L, touch) === i));
+    const Lr = md.layout(g.w, g.h, g.logo, g.s), sc = RP.recordsGeom({ W: g.w, H: g.h, touch, shell: true, css: g.s }), ring = { x: sc.plate.x - sc.T - 2 * sc.u, y: sc.plate.y - sc.T - 2 * sc.u, w: sc.plate.w + 2 * sc.T + 4 * sc.u, h: sc.plate.h + 2 * sc.T + 5 * sc.u, f: 1 }; // SCORES / MEDALS: pages/records.js (v202 Task 4.1), the page's own frame
+    check(`HIGH SCORES: the plate and its ring in the box, the difficulties in the plate, each taps to itself (${tg})`, inBox(ring) && sc.keys.every((r, i) => inPlate(r, sc.plate) && md.scoresHit(...ctr(r), Lr, touch) === i), J([ring, g.w, g.h]));
     for (const [nm, geo, hit, n, R] of [["SETTINGS (ten rows)", md.settingsGeom, md.settingsHit, 10, optRows(false)], ["SETTINGS (twelve rows)", md.settingsGeom, md.settingsHit, 12, optRows(true)], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N, 0]]) {
       const q = geo(L, touch, R), first = q.rows[q.order[0]]; // v202 Task 3.4: the page's geometry, rows by name (pages/settings.js); a row taps to itself with its page on screen (the focus)
       const Lf = (l) => ({ ...L, focus: q.order.indexOf(q.pages[q.pageOf[l]][0]) });
@@ -348,7 +350,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     const st = md.statsGeom(L).S;
     check(`STATS: in the box, foot T taps KeyT (${tg})`, inBox(st) && md.statsHit(st.mid - 47 * 3 + 24, st.footY, L, false) === "KeyT");
     check(`RECORDS: the tab strip of SCORES, STATS and MEDALS sits in each plate and each tab taps to itself (${tg})`,
-      [0, 1, 2].every((p) => { const S = md.recPlate(L, p, touch); return md.recTabsGeom(S, touch).every((r, i) => inPlate(r, S) && md.recTabHit(...ctr(r), L, p, touch) === i); }));
+      [0, 1, 2].every((p) => { const S = p === 1 ? md.recPlate(L) : sc.plate, T = p === 1 ? md.recTabsGeom(S, touch) : sc.tabs; return T.every((r, i) => inPlate(r, S) && md.recTabHit(...ctr(r), p === 1 ? L : Lr, p, touch) === i); }));
     const cg = controlsGeo(box, "2d", false);
     check(`CONTROLS: the painted geometry is the tapped one, every row taps to itself, a window corner is off the plate (${tg})`,
       J(cg) === J(geoFor(L, touch, L.narrow, g.s)) && cg.x >= 0 && cg.y >= 0 && cg.x + cg.w <= g.w && cg.y + cg.h <= g.h &&

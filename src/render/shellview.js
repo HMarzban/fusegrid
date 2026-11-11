@@ -48,9 +48,9 @@ export const isShellScreen = (s) => SHELL_ON.has(s);
    WIN, INTRO, ATTRACT). */
 export const shellMode = (s, world) => (SHELL_ON.has(s) ? 1 : s === SCREEN.GAME && isRunEnd(world) ? 2 : 0);
 /* The screens whose page paints the room look opaque over its whole canvas every frame it is up (v202 Task 3.1: MENU; Task 3.3: LEVEL
-   SELECT; Task 3.4: SETTINGS and GRAPHICS, their LOADING plate included; Task 3.5: the GUIDE pages; each page task adds its screen): main passes
+   SELECT; Task 3.4: SETTINGS and GRAPHICS, their LOADING plate included; Task 3.5: the GUIDE pages; Task 4.1: RECORDS' SCORES and MEDALS; each page task adds its screen): main passes
    {covered: true} to the renderer while one holds, so no look rasters a board nobody sees. PAUSE's views sit over the board and never cover it. */
-const COVERS = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.SETTINGS, SCREEN.GRAPHICS, SCREEN.GUIDE, SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR]);
+const COVERS = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.SETTINGS, SCREEN.GRAPHICS, SCREEN.GUIDE, SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR, SCREEN.SCORES, SCREEN.TROPHIES]);
 /* the GUIDE pages (v202 Task 3.5) are lazy (pages/lazy.js): asked for on every GUIDE frame until they are in, and with the rest in MENU's first idle */
 const GUIDE_ON = new Set([SCREEN.GUIDE, SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR]);
 const guideO = (app) => ({ level: app.level | 0 || 1, foe: app.foeRow | 0, tip: !!app.foeTip, pg: app.infoPg | 0, rev: REV }); // rev: MENU's foot reserve, so the room dpr (and key) is MENU's
@@ -322,6 +322,11 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     if (s !== SCREEN.ENEMIES) guidePg = menudraw.guidePages(LG, t, s === SCREEN.HOWTO ? "HOW TO PLAY" : s === SCREEN.ITEMS ? "POWER-UPS" : "FLOOR");
     return (s === SCREEN.HOWTO ? menudraw.drawHowTo : s === SCREEN.ITEMS ? menudraw.drawItemsHelp : s === SCREEN.ENEMIES ? menudraw.drawEnemiesHelp : menudraw.drawFloorHelp)(c, LG, app.subT, kind, t, o);
   }
+  if (s === SCREEN.SCORES || s === SCREEN.TROPHIES) { // RECORDS' pages (pages/records.js): one frame for draw and tap, the room opaque under them
+    const t = touchLay(canvas), Lr = menudraw.layout(cw, chh, logoY, css), focus = app.recFocus === 0 ? "tabs" : "body";
+    if (s === SCREEN.SCORES) { const sd = scoreData(app, getScores, getPlaques); return menudraw.drawScores(c, { level: app.level, focus, heat: app.scoreHeat, scores: sd.s, plaques: sd.p }, Lr, app.subT, t); }
+    return menudraw.drawTrophies(c, { level: app.level, focus, rows: app.stats && app.stats.trophies }, Lr, app.subT, t);
+  }
   const L = menudraw.layout(cw, chh, logoY);
   if (s === SCREEN.LEVEL) {
     /* opaque on the world kit (pages/level.js): the selected level's room; tap mode (ruling 4) is a touch layout last driven by touch: any key or
@@ -329,16 +334,9 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     const t = touchLay(canvas);
     menudraw.drawLevelSelect(c, app.level, menudraw.layout(cw, chh, logoY, css), app.subT, app.heat, app.pact, app.pactUnlocked, app.pace, app.timeAttack, t,
       { ...infoOf(app, kind, getScores, getCab), tap: t && app.lastDev === "touch", enterT: app.subT, rev: REV }); // rev: MENU's foot reserve, so the room dpr (and key) is MENU's
-  } else if (s === SCREEN.SCORES) { // RECORDS' three pages: recFocus 0 = the tab row has the focus
-    menudraw.drawDim(c, 0.72, cw, chh);
-    const sd = scoreData(app, getScores, getPlaques);
-    menudraw.drawScores(c, sd.s, L, app.subT, app.scoreHeat, sd.p, touchLay(canvas), app.recFocus === 0);
   } else if (s === SCREEN.STATS) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawStats(c, L, app.subT, app.stats, app.resetArm, app.toast && app.toast.t > 0 ? app.toast : null, touchLay(canvas), app.recFocus === 0);
-  } else if (s === SCREEN.TROPHIES) {
-    menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawTrophies(c, L, app.subT, app.stats && app.stats.trophies, touchLay(canvas), app.recFocus === 0);
   } else if (s === SCREEN.CONTROLS) {
     menudraw.drawDim(c, 0.72, cw, chh);
     if (app.controls) paintControls(c, app, canvas, kind, false);

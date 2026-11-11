@@ -104,6 +104,7 @@ const SRC = Object.freeze([
   "src/render/pages/lazy.js",
   "src/render/pages/settings.js",
   "src/render/pages/guide.js",
+  "src/render/pages/records.js",
   "src/render/pixel/anim.js",
   "src/render/pixel/art/walls.js",
   "src/render/pixel/art/blast.js",
@@ -211,7 +212,8 @@ const LATER = new Set(["./src/core/board3.js", "./src/core/featplace.js", "./src
   "./src/app/controlspage.js", "./src/app/capture.js", "./src/app/rumble.js", "./src/render/controlsdraw.js",
   "./src/render/controlsgeo.js", "./src/render/padart.js", "./src/net/localpair.js", "./src/net/lockstep.js",
   "./src/net/protocol.js", "./src/net/transport.js", "./src/render/r3d/scene3d.js",
-  "./src/render/pages/settings.js", "./src/render/pages/guide.js"]);
+  "./src/render/pages/settings.js", "./src/render/pages/guide.js",
+  "./src/render/pages/records.js"]);
 const isLater = (p) => LATER.has(p);
 export const LOOK_LATER = Object.freeze(FILES.filter(isLater));
 export const LOOK_PIXEL = Object.freeze(FILES.filter(isPixel));
