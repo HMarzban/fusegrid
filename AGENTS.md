@@ -245,7 +245,7 @@ MENU page (UI upgrade v202 Task 3.1, `src/render/pages/menu.js`; the round 7 S7-
 `app.level` (kit `room.js` `roomLayer`) opaque over the whole canvas from MENU's first frame, the plate in that room's rampart; PLAY the one yellow
 key (bare bomb + 3 px cream ring when focused); the doors are keys, a focused one wears the kit `band` + bomb + ring; no cord or spark but the logo's.
 Desk (every keyboard box; the 1366 x 768 frame at 1 box unit per CSS px): the logo in the plate's header, a 480 list (PLAY 64,
-doors 46, 8 px pitch, 24 px breaks after PLAY and before GUIDE; 125 %: 520, 72, 49) beside the next-run card's slot (Task 3.2), the foot under
+doors 46, 8 px pitch, 24 px breaks after PLAY and before GUIDE; 125 %: 520, 72, 49) beside the next-run card (Task 3.2, below), the foot under
 the plate (`MOVE ▲▼ · START ENTER | v201`, label first, keycap last; the verb follows focus: START on PLAY, OPEN on a door, and with a controller
 on SOURCE `NEEDS A CLICK OR ENTER`, no keycap; a touch layout reads `TAP A ROW`; a note leads it, the controller's signpost replaces it in cream).
 The plate keeps the mock's size and centres; a narrower window narrows only the card's column, the 70 px top margin gives way to a short one,
@@ -261,7 +261,16 @@ a 667 px phone, breaks once at its space, and a teaser takes the lines the tile 
 arrangement scales as one piece and the floors give way (a 568x320 phone; 667x375 at 125 % text), disclosed.
 Phone (`p` with a shell box): the 393 x 852 column in CSS px (`css` from `dims`), capped 600 wide: PLAY 62, LEVEL SELECT 50, the card's slot
 (the height left), DAILY | RECORDS and SETTINGS | GUIDE tiles (58; 84 at 125 %, a teaser may break once), SOURCE 50 with the build tag (a note
-or the signpost rides it instead). Teasers (one quiet `#bcad9a` voice; words.js `MENU_WORDS`): DAILY `NEW · TODAY'S BOARD` or `YOUR TRIES
+or the signpost rides it instead). Next-run card (Task 3.2, `src/render/pages/card.js`, the one module LEVEL SELECT reuses; fed names and
+values: the level and the run PLAY starts, heat and pact, plus an optional kicker and BEST word): the world, the lane (kit `room.js` `lane`: the
+representative start corner, MAKO on his spawn FLOOR cell (1,1), at most 14 x 3 cells, never the dealt board), every roster foe on a floor cell
+(kit `foeCell`) with its count, `×1` included (`rosterOf`, heatRoster deduped: the one roster, menudraw re-exports it), the floor tile (kit
+`tileCell`, `TILE_NAME`, `TILE_HELP` at the run's heat), LIVES hearts / FUSE `2.5s` / SCORE `×n` (`applyPact(heatProfile)`), words.js
+`CARD_WORDS`. Desk: the mock's stack (NEXT RUN · LEVEL n with YOUR FIRST LEVEL / FINALE / THE LAST FINALE, the world in display type, the lane
+14 across at 2.5 rows, YOU'LL MEET and the names, the foe cells, the floor tile and its help, three stat cells on the bottom); phone: the lane 9
+across, LEVEL n · WORLD, the foes, the tile, one LIVES / FUSE / SCORE line; compact: none. It fits by giving way in order: the lane (to 1.85
+rows), the foe cells (40 to 26 desk, 28 to 22 phone), the gaps; a quiet line (the mark, the names, the help, SCORE on the phone line) steps down
+or drops, never clipped. It paints into the plate layer (the plate's key holds the card's key) and nothing live. Teasers (one quiet `#bcad9a` voice; words.js `MENU_WORDS`): DAILY `NEW · TODAY'S BOARD` or `YOUR TRIES
 TODAY · n`, RECORDS `BEST n` (played runs only) or `NO RUNS YET`, SETTINGS the art style, GUIDE `4 PAGES`, SOURCE `GITHUB`; each steps down
 or drops, never clipped. PLAY's tag: a default run `LEVEL n · WORLD`, else `tagFor(run)`, its modifier count, EXPERT bare, the level line
 last, on one or two lines. Tap mode (`tapMode`) focuses PLAY. Entry (the show's end and a skip alike): the plate, logo and foot fade in over
@@ -269,7 +278,9 @@ last, on one or two lines. Tap mode (`tapMode`) focuses PLAY. Entry (the show's 
 started from PLAY or DAILY never leaves a stale teaser. The plate layer is keyed by what it shows (the arrangement, the world, the teasers; the
 notes only on phone and compact, where SOURCE's teaser carries them), never by the hint words, tap mode or the run: PLAY's tag and keycap paint
 live, so on the desk a key / controller flip, a note or a controller's arrival re-rasters only the feet (each keyed by its own words), and the
-room's dpr gives way to a FIXED reserve of three feet as wide as the box, so the room never moves with them. A zero or non-finite box draws
+room's dpr gives way to a FIXED foot reserve (`FEET_W` 1600 design px of feet x the text scale, Task 3.2; was three feet as wide as the box), so the
+room never moves with them; feet wider in all (a controller's three verbs under the sound note) paint live. 1366 x 768 @2: room dpr 1.531 (was
+1.323), the cache 23.2 MB of 24 MiB with the logo. A zero or non-finite box draws
 nothing (`menuHit` -1). `glyph` (chev, ext, up, dn) is a kit part (`kit/paint.js`), `canMake` the kit cache's one copy (the logo painter's too). Page plumbing, for every page task: a page module exports one `*Geom` (rects by name, box units; `G.d` design px)
 for draw and hit, a painter fed names and values by shellview (never indices), and its hit; menudraw keeps the entry names and delegates.
 Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box; its dpr gives way so the page's layers and

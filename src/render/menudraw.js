@@ -6,7 +6,7 @@
    must not import from src/app. */
 import { CFG, roomCap, BIOMES, isFinale } from "../core/config.js";
 import { POWER, FOES, helpOf } from "../core/entities.js";
-import { HEAT_COL, HEAT_MARK, clampHeat, heatRoster, heatProfile } from "../core/heat.js";
+import { HEAT_COL, HEAT_MARK, clampHeat, heatProfile } from "../core/heat.js";
 import { pactLabel } from "../core/pact.js";
 import { PACT_COL, applyPact } from "../core/pact.js";
 import { DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, LABEL, RECORD_TABS, diffTag, speedTag, runParts, levelsOf } from "./words.js";
@@ -20,6 +20,7 @@ import { foeM, blinkAt } from "./motion.js";
 import { hints, tapMode } from "./hintcopy.js";
 import { drawLogo2d, deviceScale, TITLE_RUNUP } from "./logo/draw2d.js";
 import * as menuPage from "./pages/menu.js";
+import { rosterOf } from "./pages/card.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
   MUTED = "#7385ad";
@@ -370,16 +371,8 @@ function itemAt(c, A, p, cx, cy, s, time, ps) {
   drawItemBody(c, GW, ITEM, 1, null);
   c.restore();
 }
-/* heatRoster deduped to [{t, n}] in first-seen order. */
-export function rosterOf(room, heat) {
-  const out = [];
-  for (const t of heatRoster(room, heat)) {
-    const e = out.find((o) => o.t === t);
-    if (e) e.n++;
-    else out.push({ t, n: 1 });
-  }
-  return out;
-}
+/* heatRoster deduped to [{t, n}] in first-seen order: the next-run card's (pages/card.js), the one roster. */
+export { rosterOf };
 /* The heat line, from heatProfile through applyPact (IRON reads LIVES 1). */
 export function heatLine(heat, pact) {
   const h = clampHeat(heat),

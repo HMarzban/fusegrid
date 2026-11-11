@@ -11,15 +11,16 @@
    landscape phone, which has no shell box, and a short landscape window): the phone's grammar across the box in CSS px, the logo and PLAY across the
    top, the six doors as tiles two wide and three deep, no card slot (PLAY's tag carries the run) and no foot (SOURCE's tile carries the build tag and
    the notes); its sizes step from COMPACT max down to min with the height, and under min it scales as one piece (there the floors give way).
-   G.card is Task 3.2's slot, bare bed here. A row owns its key and half of each gap round it, out to the plate's bed edge; menuHit returns its ITEMS
-   index, -1 off the rows or on a zero box. The logo (drawLogo2d, place menu) sits in the header at scale lk = max(u x cap / 36, 20 / 36): under a
+   G.card is the next-run card's slot (pages/card.js, Task 3.2: the run PLAY starts, painted into the plate layer); compact has none. A row owns its
+   key and half of each gap round it, out to the plate's bed edge; menuHit returns its ITEMS index, -1 off the rows or on a zero box. The logo (drawLogo2d, place menu) sits in the header at scale lk = max(u x cap / 36, 20 / 36): under a
    20-unit cap the plan has no MENU build. drawMenuPage(c, F, ui, t): ui = {rows, focus (a label; tap mode hands PLAY), level, run, daily (null or
    today's tries), best (the top played NORMAL score or null), look, pages, rev, note, pad, reduced, enterT}; a zero or non-finite box draws nothing.
-   Cached (kit cache.js, recency touched on a steady frame): the room (roomLayer, its dpr giving way so the plate, a fixed reserve for three foot verbs
-   and a 3 MiB logo reserve fit the 24 MiB budget), the plate (rampart, bed, every row at rest but PLAY's tag and keycap; keyed by what it shows, so a
-   device flip or a note on the desk never re-rasters it), one foot per verb (START on PLAY, OPEN on a door, a controller's SOURCE line, keyed by its
-   words), all made at once so a cursor move never misses. Live: the logo, PLAY's tag and keycap, the focused row (key, band on a door, the bare bomb,
-   its words, the cream ring), the 0.25 s fade of plate, logo and foot over the opaque room. A context that cannot measure plans on a 0.6 em estimate and
+   Cached (kit cache.js, recency touched on a steady frame): the room (roomLayer, its dpr giving way so the plate, a fixed foot reserve of FEET_W design
+   px x the text scale and a 3 MiB logo reserve fit the 24 MiB budget), the plate (rampart, bed, the next-run card, every row at rest but PLAY's tag and
+   keycap; keyed by what it shows, the card's key included, so a device flip or a note on the desk never re-rasters it), one foot per verb (START on
+   PLAY, OPEN on a door, a controller's SOURCE line, keyed by its words), all made at once so a cursor move never misses; feet wider in all than the
+   reserve (a controller's three verbs under the sound note) paint live instead. Live: the logo, PLAY's tag and keycap, the focused row (key, band on a
+   door, the bare bomb, its words, the cream ring), the 0.25 s fade of plate, logo and foot over the opaque room. A context that cannot measure plans on a 0.6 em estimate and
    gets no keycap; with no canvas source (Node) the plate and foot paint straight onto the target over one flat fill; a context with no clip or rect (the
    headless renderer's) gets the plan only. Under the probe it records its rects, texts and squint pairs outside any layer paint. */
 import {biomeOf} from "../../core/config.js";
@@ -34,6 +35,7 @@ import {drawLogo2d, deviceScale} from "../logo/draw2d.js";
 import {PLATE as LOGO} from "../logo/worlds.js";
 import {layout as logoLay} from "../logo/glyphs.js";
 import {hints, tapMode} from "../hintcopy.js";
+import {TZ, cardPlan, paintCard, recordCard} from "./card.js";
 
 const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
 export const DESK = deep({
@@ -44,7 +46,11 @@ export const PHONE = deep({
   p: {top: 40, bot: 20, side: 12, pad: [12, 12, 14, 12], hero: 62, door: 50, tile: 58, card: 120, max: 600},
   p125: {top: 26, bot: 20, side: 12, pad: [12, 12, 14, 12], hero: 62, door: 50, tile: 84, card: 120, max: 600},
 });
-export const PITCH = 8, BRK = 24, GAP = 10, FOOT_H = 54, TOP_MIN = 26, GUT = 8, CARD_MIN = 360, TZ = "#bcad9a", CAP_K = 0.705;
+export const PITCH = 8, BRK = 24, GAP = 10, FOOT_H = 54, TOP_MIN = 26, GUT = 8, CARD_MIN = 360, CAP_K = 0.705;
+/* the cached feet's fixed reserve: their summed width in design px (x the text scale), so the room's dpr never moves with the words; feet wider in all
+   (a controller's three verbs under a note) paint live instead */
+export const FEET_W = 1600;
+export {TZ};
 /* the touch floors in CSS px (a target's least side, the least gap between two), and the least desk scale a touch box keeps the desk at */
 export const TOUCH = Object.freeze({h: 44, g: 8}), TOUCH_U = 0.8;
 /* compact: each vertical size steps between min and max with the height (one t for all); in CSS px. top / bot clear the plate's ring (T + 2, T + 3),
@@ -218,7 +224,7 @@ function rowPlan(c, G, ui, l, words, showCap) {
     return o;
   }
   const lf = lblF(dv.pri), lw = W(c, lf, l), gs = ph ? 18 : 16, tile = k === "tile", sh = dv.bombs + 6;
-  const tzCol = l === SOURCE && (ui.note || padSign(ui.pad)) ? CONST.ink : TZ;
+  const tzCol = l === SOURCE && ph && (ui.note || padSign(ui.pad)) ? CONST.ink : TZ;
   o.label = {s: l, f: lf, px: dv.pri, w: lw, col: l === SOURCE ? CONST.t2 : CONST.ink, lines: [l], ws: [lw]};
   o.glyph = {n: l === SOURCE ? "ext" : "chev", s: gs};
   const tf = lblF(dv.sec);
@@ -275,7 +281,8 @@ export function plan(c0, G, ui) {
   const verbs = G.mode === "desk" ? (tapMode(!!G.touch) || sign ? [""] : words.dev === "pad" ? [M.START, M.OPEN, M.SOURCE_PAD] : [M.START, M.OPEN]) : [];
   const foot = {};
   for (const v of verbs) foot[v] = footPlan(c, G, ui, words, v, sign);
-  return {rows, foot, verbs};
+  const run = ui.run || {}, card = G.d.card ? cardPlan(c, G.d.card, {level: ui.level, heat: run.heat, pact: run.pact}, G.d.dev) : null;
+  return {rows, foot, verbs, card};
 }
 
 const canCap = (c) => mOf(c) === c;
@@ -336,6 +343,7 @@ function record(G, P, ui, foc, dpr, el, verb, touchy) {
       probe.pair("info", b(R(g.x, g.y, g.s, g.s)), b(bx), {col: CONST.t2, name: l + " " + g.n});
     }
   }
+  if (P.card) recordCard(P.card, (n, x, y, w, h) => probe.rect(n, ...b(R(x, y, w, h))), (s, x, y, w, px, col, role) => txt(s, x, y, w, px, col, role));
   const k = d.rows[foc], x0 = d.kind[foc] === "tile" && k.x > d.rows[G.order[0]].x ? k.x - d.gap + 1 : d.plate.x + 1, bed = R(x0, k.y, Math.max(1, k.x - 7 - x0), k.h);
   probe.pair("band", b(k), b(bed), {name: "focus " + foc});
   probe.pair("ring", b(R(k.x - 6, k.y - 6, k.w + 12, k.h + 12)), b(bed), {name: "ring " + foc});
@@ -358,13 +366,13 @@ function same(S, G, ui, w, touchy, dpr, ts, c, tap) {
   const a = S.ui.run || {}, b = ui.run || {};
   return a.heat === b.heat && a.pace === b.pace && a.pact === b.pact && a.time === b.time;
 }
-/* The plate's key names what it shows: the box's arrangement, the world and the teasers; the notes only where SOURCE's teaser carries them (phone and
-   compact). The hint words, tap mode and the run are not in it (PLAY's tag and keycap paint live), so on the desk a device flip, a note or a
-   controller's arrival re-rasters only the feet. A foot's key is its own words. The room's dpr gives way to a FIXED foot reserve (three verbs as wide
-   as the box), never to the feet of the moment, so the room's key never moves with the words either. */
+/* The plate's key names what it shows: the box's arrangement, the world, the teasers and the card (its own key: the level, heat and lives it shows);
+   the notes only where SOURCE's teaser carries them (phone and compact). The hint words, tap mode and PLAY's run tag are not in it (PLAY's tag and
+   keycap paint live), so on the desk a device flip, a note or a controller's arrival re-rasters only the feet. A foot's key is its own words. The
+   room's dpr gives way to a FIXED foot reserve (FEET_W), never to the feet of the moment, so the room's key never moves with the words either. */
 function sizes(S, G, F, level, tok) {
   const d = G.d, u = G.u, dpr = S.dpr, P = S.P, ob = outer(d), pb = sc(ob, u), ui = S.ui;
-  const id = [level, G.mode, +u.toFixed(6), J(d.plate), ui.look, ui.pages, ui.daily, ui.best, ui.rev, ...(d.dev === "p" ? [ui.note, ui.pad] : [])].join("|");
+  const id = [level, G.mode, +u.toFixed(6), J(d.plate), ui.look, ui.pages, ui.daily, ui.best, ui.rev, ...(d.dev === "p" ? [ui.note, ui.pad] : []), P.card ? P.card.key : ""].join("|");
   const K = {biome: tok.name, level, W: F.W, H: F.H, look: "2d", textScale: S.ts, dpr};
   S.ob = ob; S.pb = pb; S.pw = Math.round(pb.w * dpr); S.ph = Math.round(pb.h * dpr); S.plateKey = {...K, layer: "menu.plate|" + id}; S.plateK = keyOf(S.plateKey);
   S.feet = P.verbs.map((v) => {
@@ -372,7 +380,8 @@ function sizes(S, G, F, level, tok) {
     const key = {...K, layer: "menu.foot|" + J([+u.toFixed(6), fp.x, fp.y, fp.w, fp.parts.map((p) => [p.t || p.sep || "", p.cap || "", p.col || ""])])};
     return {v, fp, fr, b, w, h, key, k: keyOf(key)};
   });
-  const feet = G.mode === "desk" ? 3 * Math.round((F.W + 2 * u) * dpr) * Math.round((FOOT_H + 8) * u * dpr) * 4 : 0;
+  const feet = G.mode === "desk" ? Math.round(FEET_W * S.ts * u * dpr) * Math.round((FOOT_H + 8) * u * dpr) * 4 : 0;
+  S.live = S.feet.reduce((n, q) => n + q.w * q.h * 4, 0) > feet;
   S.rd = +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - RESERVE - S.pw * S.ph * 4 - feet) / (4 * F.W * F.H)))).toFixed(3);
   S.box = {w: F.W, h: F.H};
   S.roomK = keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: S.rd, look: "2d", textScale: 1});
@@ -380,9 +389,10 @@ function sizes(S, G, F, level, tok) {
 const J = JSON.stringify;
 export const _dbg = {plans: 0, last: null};
 let S = null;
-function paintPlate(g, G, P, tok) {
+function paintPlate(g, G, P, tok, dpr) {
   const d = G.d, ph = d.dev === "p";
   plate(g, d.plate.x, d.plate.y, d.plate.w, d.plate.h, tok, {phone: ph});
+  if (P.card) paintCard(g, P.card, tok, {dpr});
   for (const l of G.order) paintRow(g, P.rows[l], tok, ph, false, "bare");
 }
 /** Paints MENU on c (#sh's context, or #c's when there is no shell box) for the frame F; see the header for ui. */
@@ -403,15 +413,15 @@ export function drawMenuPage(c, F, ui, t = 0) {
   if (canMake()) {
     if (!S.room || !S.room.width) S.room = roomLayer(S.box, level, tok, {dpr: S.rd, look: "2d", textScale: 1});
     else touch(S.roomK);
-    if (!S.plate || !S.plate.width) S.plate = layer(S.plateKey, S.pw, S.ph, (g) => { g.scale(dpr * u, dpr * u); g.translate(-S.ob.x, -S.ob.y); paintPlate(g, G, P, tok); });
+    if (!S.plate || !S.plate.width) S.plate = layer(S.plateKey, S.pw, S.ph, (g) => { g.scale(dpr * u, dpr * u); g.translate(-S.ob.x, -S.ob.y); paintPlate(g, G, P, tok, dpr * u); });
     else touch(S.plateK);
-    for (const q of S.feet) {
+    if (!S.live) for (const q of S.feet) {
       if (!S.foot[q.v] || !S.foot[q.v].width) S.foot[q.v] = layer(q.key, q.w, q.h, (g) => { g.scale(dpr * u, dpr * u); g.translate(-q.fr.x, -q.fr.y); paintFoot(g, q.fp, tok); });
       else touch(q.k);
     }
     c.save(); c.imageSmoothingEnabled = true; c.drawImage(S.room, 0, 0, F.W, F.H); c.restore();
     c.save(); c.globalAlpha = a0 * a; c.imageSmoothingEnabled = true; c.drawImage(S.plate, S.pb.x, S.pb.y, S.pb.w, S.pb.h);
-    const q = verb != null && S.feet.find((f) => f.v === verb);
+    const q = !S.live && verb != null && S.feet.find((f) => f.v === verb);
     if (q) c.drawImage(S.foot[verb], q.b.x, q.b.y, q.b.w, q.b.h);
     c.restore();
   } else {
@@ -425,6 +435,7 @@ export function drawMenuPage(c, F, ui, t = 0) {
   drawLogo2d(c, {level, place: "menu", box: G.lbox, k: G.lk, dpr: dev, css: F.css > 0 ? F.css : 1, touch: touchy, t, reduced: !!ui.reduced});
   c.restore();
   c.scale(u, u);
+  if (S.live && canMake() && verb != null && P.foot[verb]) paintFoot(c, P.foot[verb], tok);
   if (foc !== G.order[0]) paintRow(c, P.rows[G.order[0]], tok, ph, false, "dev");
   paintRow(c, P.rows[foc], tok, ph, true);
   c.restore();

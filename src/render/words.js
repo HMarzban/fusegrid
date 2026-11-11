@@ -67,3 +67,9 @@ export const MENU_WORDS = Object.freeze({
   GITHUB: "GITHUB", MOVE: "MOVE", START: "START", OPEN: "OPEN", TAP: "TAP A ROW",
   SOURCE_PAD: "NEEDS A CLICK OR ENTER", // a controller press opens no browser tab: SOURCE's foot says so while a controller drives MENU
 });
+/* The next-run card (v202 Task 3.2, MENU; LEVEL SELECT reuses it): its kicker, the level's mark (level 1, a finale, the last one), its
+   section labels and its stat cells. ENEMIES counts the kinds when their names do not fit (the GUIDE page's word). */
+export const CARD_WORDS = Object.freeze({
+  NEXT: "NEXT RUN", FIRST: "YOUR FIRST LEVEL", FINALE: "FINALE", LAST: "THE LAST FINALE", MEET: "YOU'LL MEET", ENEMIES: "ENEMIES",
+  TILE: "FLOOR TILE", LIVES: "LIVES", FUSE: "FUSE", SCORE: "SCORE",
+});

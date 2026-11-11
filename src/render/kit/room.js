@@ -12,7 +12,9 @@
               inside the first 8 columns so a 9-column crop still shows them. Its only true facts: the pocket, the roster, the tile. A fresh grid per call.
    lane       (c, x, y, w, rows, level, tok, o) the first LANE_COLS (o.cols) columns of that grid at s = w / cols, rows x s tall, cut 0.3 cell into the
               top border: the bed, the cells, the tile (featdraw drawSpec, CORE, a lone cell), MAKO and the foe at rest at the appendix 6 scales, a 2 px
-              #0b0609 frame on the box edge. Returns the height. No clock: the page animates its focused cell itself. */
+              #0b0609 frame on the box edge. Returns the height. No clock: the page animates its focused cell itself.
+   foeCell    (c, x, y, s, type, level) a foe at rest on a floor cell of level's world, s px square: a 2 px #0b0609 outline, radius 3, a hard 3 px drop.
+   tileCell   (c, x, y, s, level) level's floor tile (core/feat.js HOME, CORE, a lone cell) in the same frame; a world with no tile paints its floor. */
 import {CFG, T, key, biomeOf} from "../../core/config.js";
 import {stampStart} from "../../core/fair.js";
 import {heatRoster} from "../../core/heat.js";
@@ -96,4 +98,28 @@ export function lane(c, x, y, w, rows, level, tok, o = {}) {
   c.strokeStyle = CONST.ol; c.lineWidth = 2; c.strokeRect(x + 1, y + 1, w - 2, h - 2);
   c.restore();
   return h;
+}
+
+const rr = (c, x, y, w, h, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
+function framed(c, x, y, s, inner) {
+  c.save();
+  c.fillStyle = CONST.ol; rr(c, x, y + 3, s, s, 3); c.fill(); rr(c, x, y, s, s, 3); c.fill();
+  rr(c, x + 2, y + 2, s - 4, s - 4, 1); c.clip();
+  inner(x + 2, y + 2, s - 4);
+  c.restore();
+}
+export function foeCell(c, x, y, s, type, level) {
+  const art = artOf(level), ft = FOES.find((q) => q.t === type) || FOES[0];
+  framed(c, x, y, s, (ix, iy, is) => {
+    floorCell(c, ix, iy, is, art, {par: 0, v: floorVar(1, 1, level)});
+    c.translate(ix + is / 2, iy + is / 2 + is * 0.04); c.scale(is / 34, is / 34);
+    drawEnemyBody(c, REST, {type: ft.t, color: ft.col, r: 14, home: {x: 3, y: 7}, invuln: false, dir: {x: 0, y: 1}});
+  });
+}
+export function tileCell(c, x, y, s, level) {
+  const art = artOf(level), code = tileCode(HOME[art.biome.name]);
+  framed(c, x, y, s, (ix, iy, is) => {
+    floorCell(c, ix, iy, is, art, {par: 1, v: floorVar(3, 4, level)});
+    if (code) drawSpec(c, art.biome, specOf({code, x: 3, y: 4}), ix, iy, is);
+  });
 }

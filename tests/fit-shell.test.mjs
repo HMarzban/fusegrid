@@ -12,6 +12,7 @@ import { DEF_CONTROLS } from "../src/app/controls.js";
 import { overlayBox, pauseHit, touchLay } from "../src/render/scenes.js";
 import { controlsGeo, controlsHit, dims, drawShell, isShellScreen, loadControlsArt, shellMode } from "../src/render/shellview.js";
 import * as md from "../src/render/menudraw.js";
+import * as menuPage from "../src/render/pages/menu.js";
 import { geoFor, geomOf, hitPage } from "../src/render/controlsgeo.js";
 import { createGame } from "../src/main.js";
 import "../src/core/board3.js"; // an ordinary run deals gen 3; with the seam empty the start holds
@@ -238,7 +239,17 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
 // ---- every page in a desktop window box (and a landscape tablet's, touch pitches) draws inside it, unclipped, and taps where it draws ----
 {
   const base = {};
-  const shot = (nm, box, cur) => { const a = mkApp(SCREEN[nm]); if (cur != null) a.cursor = cur; const R = rec(); drawShell(R.c, a, { state: "PLAY", time: 1 }, box, "2d", () => [], () => 0, () => ({})); return R.texts; };
+  /* Task 3.2: MENU's next-run card sits in the one column a narrower window narrows (pages/menu.js), so its quiet lines step down with the width (a
+     level mark dropped, a help line broken): its strings leave the 600x520 comparison and are held below on their own (whole, the facts always) */
+  const cardOut = { s: [] };
+  const shot = (nm, box, cur) => {
+    const a = mkApp(SCREEN[nm]); if (cur != null) a.cursor = cur; const R = rec(); drawShell(R.c, a, { state: "PLAY", time: 1 }, box, "2d", () => [], () => 0, () => ({}));
+    if (nm !== "MENU" || !menuPage._dbg.last.P.card) return R.texts;
+    const C = menuPage._dbg.last.P.card.texts.map((t) => t.s), left = R.texts.slice();
+    cardOut.s.push({ box: box.width + "x" + box.height, cur, card: C, drawn: R.texts.map((q) => q.s) });
+    for (const s of C) { const i = left.findIndex((q) => q.s === s); if (i >= 0) left.splice(i, 1); }
+    return left;
+  };
   const boxOf = (g, lay) => ({ width: g.w, height: g.h, logo: g.logo, ownerDocument: { body: { getAttribute: () => lay } }, getBoundingClientRect: () => ({ left: 0, top: 0, width: g.w * g.s, height: g.h * g.s }) });
   const each = (f) => { for (const nm of SHELL_SCREENS) for (let cur = 0; cur < (nm === "MENU" ? ITEMS.length : 1); cur++) f(nm, nm === "MENU" ? cur : null); };
   /* exact strings in order, except the landscape tablets' MENU. A 600x520 touch box is MENU's compact arrangement (pages/menu.js, fix round 1: its
@@ -259,6 +270,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
   for (const [lay, W, H] of [["d", 600, 520], ["d", 1366, 768], ["d", 1920, 1080], ["d", 3840, 2160], ["l", 600, 520], ["l", 1024, 768], ["l", 1180, 820], ["l", 1194, 834], ["l", 1366, 1024]]) {
     const g = shellGeo(W, H, 600, 520, lay), box = boxOf(g, lay), touch = lay !== "d", L = md.layout(g.w, g.h, g.logo), tg = `${lay} ${W}x${H} box ${g.w}x${g.h}`;
     const out = [], same = [], tab = lay === "l" && W > 600;
+    cardOut.s.length = 0;
     each((nm, cur) => {
       const T = shot(nm, box, cur), cmp = tab && nm === "MENU" ? words : exact;
       if (T.some((q) => q.x < -0.5 || q.x + q.w > g.w + 0.5 || q.y < 0 || q.y > g.h)) out.push(nm + cur);
@@ -266,6 +278,10 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     });
     check(`every page's text sits inside the box (${tg})`, out.length === 0, out.join());
     check(`every page prints exactly its 600x520 strings, in order${tab ? " (MENU: the 1024x768 tablet's words by token)" : ""}: nothing elided (${tg})`, same.length === 0, same.join());
+    const cbad = cardOut.s.filter((q) => q.card.some((t) => /…/.test(t)) || !q.card.every((t) => q.drawn.includes(t)) || !["JUNGLE", "×2", "×1", "BOOSTER", "LIVES", "FUSE", "2.5s", "SCORE"].every((w) => q.card.includes(w)));
+    const compact = lay === "l" && W === 600; // MENU's compact arrangement: no card slot, PLAY's tag carries the run
+    check(`MENU's card (${tg}): ${compact ? "none (compact)" : "drawn in every MENU frame, every card string whole, the world, every foe count, the floor tile and LIVES / FUSE / SCORE"}`, compact ? cardOut.s.length === 0 : cardOut.s.length === ITEMS.length && cbad.length === 0, JSON.stringify([cardOut.s.length, cbad.slice(0, 1)]));
+    cardOut.s.length = 0;
     const inBox = (S) => S.x >= 0 && S.y >= 0 && S.x + S.w <= g.w && S.y + S.h <= g.h && S.f === 1;
     const inPlate = (r, S) => r.x >= S.x - 1 && r.y >= S.y && r.x + r.w <= S.x + S.w + 1.01 && r.y + r.h <= S.y + S.h + 0.01;
     const ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];
