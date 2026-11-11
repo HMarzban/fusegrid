@@ -59,11 +59,12 @@ cream `eye` build; drawn NEAREST at ceil(u x dpr) device px an art px, then scal
 smoothed, R20; at true scale, u = cap / A: its envelope is taller and wider than
 CLASSIC's, so the look's `grow` widens the layer round it, the title inside its plate's
 bed, MENU by the box's width, its taller envelope standing into the plate header above
-and below `G.lbox`), imported by `pixel/renderer.js`: 8,858 B, over the plan's 8 KB
-budget, pinned in `tests/logo-looks.test.mjs` pending the lead's ruling, and written
-dense (no spaces round operators, `three/wrapper.js`'s style) to get near it. REAL 3D
+and below `G.lbox`), imported by `pixel/renderer.js`: 8,858 B inside its 9 KB
+sub-budget of the px tree (lead ruling; `tests/logo-looks.test.mjs` holds it at 9,216 B),
+written dense (no spaces round operators, `three/wrapper.js`'s style). REAL 3D
 is `src/render/logo/draw3d.js` (Canvas 2D only: no `vendor/` or `render/three`
-import), loaded beside `wrapper.js` by `three/load.js` (precached with the 3D look);
+import), loaded beside `wrapper.js` by `three/load.js` (precached with the 3D look,
+in its loading bar's files and fetch-first list: `loadbar.test` walks both);
 `three/wrapper.js` never imports `logo/`. Its side is the built 70 / 30 lip / world mix
 (`SIDE.variant` "mix"; "lip" is the spec's, the owner's veto option, its own layer key);
 its blurred shadows are stacked offset fills (no filter). Under the probe the logo

@@ -1,4 +1,6 @@
-/* LOGO B, PIXEL (appendix 8.7, R21): palette slots, art/logo.js grids, the 24 cap sampled from the vector glyphs; draw2d.js places it (R20 scaling). */
+/* LOGO B, PIXEL (appendix 8.7, R21): palette slots, art/logo.js grids, the 24 cap sampled from the vector glyphs; draw2d.js places it (R20 scaling).
+   Legend: lay = mock layoutPx (A art px a cap, 24 title / 12 MENU; st stacked; et es top / side envelope; cs cq the cord start and cubic); _bake =
+   paintPx + pxMotif (8.7 bevel, 8.8 motifs; ti tier); G.pb (B) = u caller units an art px, ox oy the art's offset, M Ms device px an art px. */
 import {GL, layout as vl, inGlyph, bez} from "../logo/glyphs.js";
 import {WORLDS} from "../logo/worlds.js";
 import {registerLogo, paintPlate, mk, fresh} from "../logo/draw2d.js";

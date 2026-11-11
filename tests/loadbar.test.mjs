@@ -35,7 +35,8 @@ const htmlPath = join(ROOT, "index.html"), barPath = join(ROOT, "src/app/loadbar
 const html = readFileSync(htmlPath, "utf8");
 const mod = /<script type="module"[^>]*>([\s\S]*?)<\/script>/.exec(html)[1];
 const entries = [...strip(mod).matchAll(EDGE)].map((m) => m[1].replace(/^\.\//, ""));
-const boot = graph(entries), tree3 = graph(["src/render/three/wrapper.js"]).filter((f) => !boot.includes(f)), treePx = graph(["src/render/pixel/renderer.js"]).filter((f) => !boot.includes(f));
+/* the REAL 3D look waits on its logo too: three/load.js imports logo/draw3d.js beside wrapper.js */
+const boot = graph(entries), tree3 = graph(["src/render/three/wrapper.js", "src/render/logo/draw3d.js"]).filter((f) => !boot.includes(f)), treePx = graph(["src/render/pixel/renderer.js"]).filter((f) => !boot.includes(f));
 /* v202 delivery 3a: what the title never runs, each behind its seam (src/app/lazyload.js) */
 const treeG3 = graph(["src/core/board3.js"]).filter((f) => !boot.includes(f));
 const LAZY = { gen3: treeG3, net: graph(["src/net/localpair.js"]).filter((f) => !boot.includes(f)), iso: ["src/render/r3d/scene3d.js"], bot: ["src/app/demobot.js"] };

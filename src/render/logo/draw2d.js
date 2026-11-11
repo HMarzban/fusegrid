@@ -22,7 +22,8 @@
    so the swap is the next frame and never a blank one. f(G, o) changes only what its look draws: the world layer fill (fw), the spark sprite
    (fs, cell, sw, half), the spark's tip, the face colours and grow (the extent its art needs round the logo canvas, centred, when that is more
    than CLASSIC's: the layer grows, G.room is what the caller's box allows); placement, plate, memo, cache, snapping and the spark clock stay here. The look and
-   a registry epoch are in the memo, and the look in every layer key. */
+   a registry epoch are in the memo, and the look (with that epoch for a lazy look) in every layer key, so a kind that registers again never
+   blits the layer its last painter made. */
 import {P, BD, BOMB, SPARK, glyph, layout, cord, bomb, spark, sparkAt, fit, flat} from "./glyphs.js";
 import {PLATE, plan, motif, worldOf} from "./worlds.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
@@ -134,7 +135,7 @@ function geo(o, lk) {
   G.cell = 2 * Math.ceil(Math.max(...G.sparks.flatMap((sp) => sp.parts.map(reach))) * s + 1);
   G.tip = sparkAt(G.build, tier);
   const name = "." + G.build + "." + G.ver + "." + capB.toFixed(2) + "." + css;
-  const K = {...K0, look: lk};
+  const K = {...K0, look: lk === "2d" ? lk : lk + "#" + ST.ep};
   G.lk = lk; G.fw = fillWorld; G.fs = fillSpark; G.sw = 3 * G.cell; G.face = (Pl.layers.find((l) => l.id === "face") || {col: [P.yel, P.cor]}).col;
   G.mk = {layer: "logo.mask" + name, biome: "", level: 0, W: G.Wd, H: G.Hd * N, dpr: dprB, ...K0};
   G.wk = {layer: "logo." + o.place + "." + dev + name, biome: w.name, level: w.level, W: G.Wc, H: G.Hc, dpr: dprL, ...K};
@@ -303,12 +304,13 @@ export function drawLogo2d(c, o) {
 /* Under the kit probe (shots.mjs only) the logo says what it drew, for the Chrome face gate: which look painted, the title's plate, each word's
    face (a rect with its fill, so the yellow gate counts FUSE) and that face against a strip of bare bed (the title plate's left pad; above U..S in
    the MENU header), lock floor 3:1 (appendix 8.8 L1). It is held until logoProbe(), which shellview calls after the page (MENU's page record
-   begins after the logo paints). Box px. */
+   begins after the logo paints); a caller that never flushes holds at most 8. Box px. */
 function note(c, o, G, R) {
   const m = c.getTransform(), d = o.dpr > 0 ? o.dpr : 1, E = G.env, k = G.capL, L = G.L, bx = (x, y, w, h) => [(m.a * x + m.e) / d, (m.d * y + m.f) / d, (m.a * w) / d, (m.d * h) / d];
   const C = (x0, y0, x1, y1) => bx(R.lx + (x0 - E.l) * k, R.ly + (y0 - E.t) * k, (x1 - x0) * k, (y1 - y0) * k), at = (ch) => L.letters.find((l) => l.ch === ch);
   const F = at("F"), I = at("I"), pl = G.P.layers.find((l) => l.id === "plate"), b = pl ? [pl.box.x / G.k, pl.box.y / G.k, pl.box.w / G.k, pl.box.h / G.k] : null;
   const bed = pl ? bx(R.lx + b[0] * .8, R.ly + (F.y + .2 - E.t) * k, -b[0] * .6, .6 * k) : C(.7, -.38, 2, -.17);
+  if (PEND.length > 7) PEND.length = 0;
   PEND.push({look: G.lk, logo: bx(R.lx, R.ly, E.w * k, E.h * k), plate: pl && bx(R.lx + b[0], R.ly + b[1], b[2], b[3]), T: pl && (pl.T / G.k) * (m.a / d), bed,
     faces: [[C(F.x + .04, F.y + .3, F.x + .22, F.y + .9), G.face[0], "FUSE"], [C(I.x + .04, I.y + .12, I.x + .24, I.y + .88), G.face[1], "GRID"]]});
 }

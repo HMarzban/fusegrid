@@ -104,7 +104,7 @@ Locked floor sample now mapped to the box (endkit `rpair` transforms `o.floor`; 
 ## 2026-11-11 — UI upgrade Task 6.1: a real controller on CONTROLS (held lane lane-6-controls, R3)
 - `padart.js` draws the round 7 twin-grip controller in the world's brick (cached layer), `controlsgeo.js` plans crossing-free callouts (`padPlan` / `padCross` / `padFit`; compact with no leaders where they do not fit); desk boxes widen the CONTROLS plate; RESET PAD is RESET CONTROLLER. NORTH / shoulders / triggers stay bindable (lead ruling a); CONTROLS records no probe data and its captures exempt every probe gate (ruling b).
 ## 2026-11-11 — UI upgrade Task 7.3: logo B in PIXEL and REAL 3D (held lane, R3)
-- Look seam in `logo/draw2d.js` (`setLogoLook` from shellview, `registerLogo` from `pixel/logo.js` and `logo/draw3d.js`); title and MENU gated in Chrome (logo faces as locked info pairs). Open: the PIXEL logo is 8,858 B against the 8 KB budget (pinned, lead's ruling); O3 owner checkpoint
+- Look seam in `logo/draw2d.js` (`setLogoLook` from shellview, `registerLogo` from `pixel/logo.js` and `logo/draw3d.js`); title and MENU gated in Chrome (logo faces as locked info pairs). PIXEL logo 8,858 B inside its 9 KB sub-budget (lead ruling); the REAL 3D loading bar counts and warms draw3d.js (fix round 1). Open: O3 owner checkpoint
 
 ## 2026-11-11 — UI upgrade Task 3.6: DOM cards on the world kit
 - `#upd`, `#ana`, `#load` now use `--k-*` world-1 kit properties (pinned to `tokens.js` in hidden-css.test); keycaps last; failure copy names ART STYLE. Left: the REAL 3D/PIXEL row copy `SOUTH RETRY` in menudraw (renderrow.test:87) still keycap-first, for the SETTINGS lane.

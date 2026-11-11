@@ -50,7 +50,6 @@ const styles = (cvs) => cvs.flatMap((cv) => cv.r.paints.map((p) => String(p.styl
 /* the seam and the imports */
 {
   check("draw2d.js exports the look seam (setLogoLook, registerLogo, logoLook) and the shared plate painter", ["setLogoLook", "registerLogo", "logoLook", "paintPlate", "logoProbe"].every((k) => typeof D[k] === "function"));
-  check("shellview sets the look on screen once a frame and flushes the logo's probe record after the page", /setLogoLook\(kind\);\s*\n\s*shellBody\([^)]*\);\s*\n\s*logoProbe\(\);/.test(src("src/render/shellview.js")));
   const d3 = edges("src/render/logo/draw3d.js");
   check("draw3d.js imports nothing from vendor/ or render/three (only ./glyphs, ./worlds, ./draw2d)", d3.length > 0 && d3.every((p) => /^\.\/(glyphs|worlds|draw2d)\.js$/.test(p)), J(d3));
   check("three/wrapper.js imports no logo/", !edges("src/render/three/wrapper.js").some((p) => /logo\//.test(p)) && !/logo\//.test(strip(src("src/render/three/wrapper.js")).match(/import[^;]*/g)?.join("") || ""));
@@ -80,10 +79,9 @@ const { resolveSlot } = await import("../src/render/pixel/palette.js");
   check("the bomb letters map to bomb.js slots", J(art.BPAL) === J({ o: "stroke", k: "bomb", r: "pow.line.outline", q: "pow.shield.outline", h: "pow.line.shadow", w: "spec" }));
   const bytes = ["src/render/pixel/logo.js", "src/render/pixel/art/logo.js"].reduce((a, p) => a + Buffer.byteLength(src(p)), 0);
   console.log("    PIXEL logo bytes in the px tree: " + bytes);
-  /* the plan's budget is 8 KB (8192 B); the built logo is over it by about 0.5 KB, so this is a growth tripwire pinned at the measured size until the
-     lead rules (raise the budget, or cut PIXEL logo parts the owner judges at O3). Never raise PIN without that ruling. */
-  const PIN = 8900;
-  check("the PIXEL logo stays <= " + PIN + " B in the px tree (" + bytes + " B; the 8192 B plan budget is NOT met, pending the lead's ruling)", bytes <= PIN, bytes);
+  /* the PIXEL logo's sub-budget of the px tree is 9 KB (lead ruling, fix round 1 of Task 7.3; the plan said 8 KB) */
+  const PIN = 9216;
+  check("the PIXEL logo stays inside its 9 KB sub-budget of the px tree (" + bytes + " B <= " + PIN + " B)", bytes <= PIN, bytes);
 }
 
 /* the swap: PIXEL picked, px tree not loaded -> CLASSIC; the tree lands -> PIXEL on the next frame, never a blank one */
@@ -143,26 +141,61 @@ const D3 = await import("../src/render/logo/draw3d.js");
   D3.SIDE.variant = "mix"; D.registerLogo("3d", D3.look3d);
 }
 
+/* the painted extent of the PIXEL MENU build: the inked rows and columns of all 8 worlds' bakes (art px, line build, 12 cap, 24 rows) */
+let INK = null;
+function inkPx() {
+  if (INK) return INK;
+  const H = 24, cols = NAMES.map((wn) => PX._bake(12, false, wn, "menu")), W = cols[0].length / H, r = { W, H, x0: W, x1: -1, y0: H, y1: -1 };
+  for (const col of cols) col.forEach((c, k) => { if (!c) return; const x = k % W, y = (k / W) | 0; r.x0 = Math.min(r.x0, x); r.x1 = Math.max(r.x1, x); r.y0 = Math.min(r.y0, y); r.y1 = Math.max(r.y1, y); });
+  return (INK = r);
+}
 /* both looks: inside every call-site box, reduced motion still, spark on the cord tip */
 {
   const inBox = (r, B) => r.x >= B.x - 1e-6 && r.y >= B.y - 1e-6 && r.x + r.w <= B.x + B.w + 1e-6 && r.y + r.h <= B.y + B.h + 1e-6;
   const cases = [];
   for (const [Wd, Hd] of [[600, 520], [608, 352]]) for (const lay of ["d", "l", "p"]) for (const dpr of [1, 2]) { const T = md.titleLogoBox(Wd, Hd, lay); cases.push(["title " + Wd + "x" + Hd + " " + lay + " dpr " + dpr, { level: 2, place: "title", box: T.box, cy: T.cy, dev: T.dev, dpr, t: 0 }]); }
   const { shellGeo } = await import("../src/app/fit.js");
-  for (const [nm, bw, bh, dpr, touch, lg] of [["#c 600x520", 600, 520, 1, false], ["#sh 1366x768", 1366, 768, 2, false], ...[[393, 852], [360, 640]].map(([w, h]) => { const g = shellGeo(w, h, 600, 520, "p"); return ["#sh phone " + w + "x" + h, g.w, g.h, 3, true, g.logo]; })]) {
-    const L = md.layout(bw, bh, lg, touch ? 0.9 : undefined), m = md.menuGeom(L, 7, touch);
-    cases.push(["MENU " + nm, { level: 8, place: "menu", box: m.lbox, k: m.lk, dpr, touch, t: 0 }, { x: m.lbox.x, y: (m.plate.y + m.T) / m.lk, w: m.lbox.w, h: (m.rows.PLAY.y - m.plate.y - m.T) / m.lk }]);
+  /* PLAY's focus ring stands RING design px above its key (kit/paint.js: the ring's outer edge 4.5 + 3 / 2 outside it, a lit key lifted 2) */
+  const RING = 8, compact = [];
+  for (const [nm, bw, bh, dpr, touch, lg, css] of [["#c 600x520", 600, 520, 1, false], ["#sh 1366x768", 1366, 768, 2, false], ...[[393, 852], [360, 640]].map(([w, h]) => { const g = shellGeo(w, h, 600, 520, "p"); return ["#sh phone " + w + "x" + h, g.w, g.h, 3, true, g.logo]; }),
+    ["#c compact 600x520 css 0.62 (a 568x320 phone)", 600, 520, 1, true, undefined, 0.62], ["#c compact 608x352 css 0.9 (the below: 8 end)", 608, 352, 1, true, undefined, 0.9]]) {
+    const L = md.layout(bw, bh, lg, css || (touch ? 0.9 : undefined)), m = md.menuGeom(L, 7, touch);
+    if (css) compact.push(m.mode);
+    cases.push(["MENU " + nm, { level: 8, place: "menu", box: m.lbox, k: m.lk, dpr, touch, t: 0 }, { x: m.lbox.x, y: (m.plate.y + m.T) / m.lk, w: m.lbox.w, h: (m.rows.PLAY.y - RING * m.u - m.plate.y - m.T) / m.lk }]);
   }
+  check("the two compact touch boxes really are MENU's compact arrangement", compact.length === 2 && compact.every((x) => x === "compact"), J(compact));
   for (const lk of ["px", "3d"]) {
     D.setLogoLook(lk);
     const out = [];
-    for (const [nm, o, head] of cases) { const B = lk === "px" && head ? head : o.box; cache.release(); const f = draw(o), b = blits(f.t); if (f.r.look !== lk || b.length !== 2 || !inBox(destOf(b[0]), B) || !inBox(destOf(b[1]), B) || destOf(b[0]).x < o.box.x || destOf(b[0]).x + destOf(b[0]).w > o.box.x + o.box.w + 1e-6) out.push([nm, f.r.look, J(b.map(destOf))]); }
-    check(lk + ": " + cases.length + " call-site boxes (title 600x520 / 608x352 x d l p x dpr 1 2, MENU #c, #sh, phones): logo layer and spark inside the box" + (lk === "px" ? " (MENU: its width; its taller envelope, 2.0C against 1.76C, stays inside the plate's header, under the ring and above PLAY)" : ""), out.length === 0, J(out.slice(0, 2)));
+    for (const [nm, o, head] of cases) {
+      cache.release();
+      const f = draw(o), b = blits(f.t), L0 = destOf(b[0]), S0 = destOf(b[1]);
+      if (f.r.look !== lk || b.length !== 2) { out.push([nm, f.r.look, b.length]); continue; }
+      if (!(lk === "px" && head)) { if (!inBox(L0, o.box) || !inBox(S0, o.box)) out.push([nm, J([L0, S0])]); continue; }
+      /* PIXEL MENU: the layer keeps the box's width; what it PAINTS (the 8 worlds' inked rows and columns, and the spark) stays in the header */
+      const wv = D._dbg.last.world, a = destOf(wv.seq.filter((q) => q.op === "drawImage").at(-1)), sx = L0.w / wv.width, sy = L0.h / wv.height, ink = inkPx();
+      const P = { x: L0.x + (a.x + ink.x0 * a.w / ink.W) * sx, y: L0.y + (a.y + ink.y0 * a.h / ink.H) * sy, w: (ink.x1 - ink.x0 + 1) * (a.w / ink.W) * sx, h: (ink.y1 - ink.y0 + 1) * (a.h / ink.H) * sy };
+      if (L0.x < o.box.x - 1e-6 || L0.x + L0.w > o.box.x + o.box.w + 1e-6 || !inBox(P, head) || !inBox(S0, head)) out.push([nm, J({ P, S0, head })]);
+    }
+    check(lk + ": " + cases.length + " call-site boxes (title 600x520 / 608x352 x d l p x dpr 1 2, MENU #c, #sh, phones, two compact): logo layer and spark inside the box" + (lk === "px" ? " (MENU: the layer keeps the box's width; its taller envelope is mostly blank, and what it paints stays inside the plate's header, under its ring and above PLAY's focus ring)" : ""), out.length === 0, J(out.slice(0, 2)));
     cache.release();
     const s0 = blits(draw(TITLE(1, { reduced: true, t: 0 })).t)[1].a.slice(1, 3), s1 = blits(draw(TITLE(1, { reduced: true, t: 1 / 28 })).t)[1].a.slice(1, 3);
     const l0 = blits(draw(TITLE(1, { t: 0 })).t)[1].a.slice(1, 3), l1 = blits(draw(TITLE(1, { t: 1 / 14 })).t)[1].a.slice(1, 3);
     check(lk + ": REDUCE FLASH holds the reduced spark still; live, frames A and B alternate at 14 Hz", J(s0) === J(s1) && s0[0] > 0 && J(l0) !== J(l1), J([s0, s1, l0, l1]));
   }
+}
+
+/* shellview, by behaviour: drawShell sets the logo's look from the kind it is handed (the look on screen) and flushes the logo's probe record
+   after the page, so the title's record names the look that painted */
+{
+  const sv = await import("../src/render/shellview.js"), { SCREEN } = await import("../src/app/menuapp.js");
+  const app = { screen: SCREEN.INTRO, introStage: 0, subT: 1.2, level: 1, boardReady: true, readyT: 1, settings: {} }, cv = { width: 600, height: 520 };
+  const looks = [];
+  kp.setOn(true);
+  for (const kind of ["px", "3d", "2d", "iso"]) { cache.release(); sv.drawShell(target().ctx, app, {}, cv, kind, () => [], () => [], () => ({})); const s = kp.snapshot(); looks.push(s.page + ":" + (s.rects.find((r) => /^logo (2d|px|3d)$/.test(r.name)) || {}).name); }
+  kp.setOn(false);
+  check("shellview: drawShell hands the logo the kind on screen and flushes its probe record after the page (title px, 3d, 2d; iso paints CLASSIC)", J(looks) === J(["title:logo px", "title:logo 3d", "title:logo 2d", "title:logo 2d"]), J(looks));
+  D.setLogoLook("2d");
 }
 
 /* the Chrome face gate's record: under the probe, after a page begins, the logo names its look and each face against bare bed (lock 3:1) */
@@ -181,6 +214,13 @@ const D3 = await import("../src/render/logo/draw3d.js");
   draw(TITLE(1));
   D.logoProbe();
   check("probe off: nothing is held or recorded (one boolean test a frame)", kp.snapshot().pairs.length === 0);
+  kp.setOn(true);
+  for (let i = 0; i < 20; i++) draw(TITLE(1));
+  kp.begin("title", { w: 600, h: 520, dpr: 1, el: "c" });
+  D.logoProbe();
+  const held = kp.snapshot().rects.filter((r) => /^logo (2d|px|3d)$/.test(r.name)).length;
+  kp.setOn(false);
+  check("probe: a caller that never flushes holds at most 8 logo records (20 draws, then one flush)", held > 0 && held <= 8, held);
   D.setLogoLook("2d");
 }
 
