@@ -32,6 +32,7 @@ import {deep, R, sc, okBox, inR} from "../kit/geom.js";
 import {layer, capDpr, touch as hold, keyOf, canMake, BUDGET} from "../kit/cache.js";
 import {roomLayer, roomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
+import {PAGE_KEY, PAGE_GAP, pagerKeys, pageLabel, pageOfFocus as pageOfName} from "../kit/pager.js";
 import {menuGeom, FOOT_H, TZ, TOUCH_U, TOP_MIN, GUT} from "./menu.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {drawEnemyBody} from "../sprites.js";
@@ -71,7 +72,8 @@ const CP = 9;
 const TIP_PAD = deep({d: 16, c: 10});
 /* the pager: two page keys under the body (a touch target on every layout), PAGER its height with the gap above it */
 /* touch keys (BACK, the page keys) take 46: 2 over the 44 CSS px floor, so a stage's whole-px snap never lands them under it */
-export const PAGE_KEY = 46, BACK_H = 46, PAGER = PAGE_KEY + 10, PAGE = "PAGE";
+export const BACK_H = 46, PAGER = PAGE_KEY + PAGE_GAP, PAGE = "PAGE";
+export {PAGE_KEY};
 export const TOP = 70, FOOT_GAP = 18, EST = 0.66, TIP_T = deep({d: 8, p: 6}), SLAB_T = 8, PHONE_MAX = 600, COMPACT_MAX = 960, BACK_W = 112, CUE_H = 34;
 /* the text floors (appendix 11): the least desk scale that keeps primary 14, secondary 11 and body 17.9 px at this text scale */
 export const uFloor = (ts) => Math.max(17.9 / (DEV.d.bod * ts), 11 / (DEV.d.sec * ts * CAP_K), 14 / (DEV.d.pri * ts * CAP_K));
@@ -285,8 +287,7 @@ export function guideGeom(F, page = GUIDE) {
   if (B.note) D.note = {r: off(B.note.r, x0, y0 + dy[B.note.band]), page: pOf[B.note.band]};
   if (B.head) D.fhead = off(B.head, x0, y0);
   if (pages.length > 1) {
-    const py = y0 + d.pg.h - PAGE_KEY, kx = x0 + d.iw - 2 * PAGE_KEY - 10;
-    D.pager = {up: R(kx, py, PAGE_KEY, PAGE_KEY), dn: R(kx + PAGE_KEY + 10, py, PAGE_KEY, PAGE_KEY), label: R(x0, py, kx - 12 - x0, PAGE_KEY)};
+    D.pager = pagerKeys(x0, y0 + d.pg.h - PAGE_KEY, d.iw, PAGE_KEY);
   }
   const bottomOf = (p) => y0 + B.top + pages[p].h;
   /* hits: a door owns half of each gap round it out to half the plate's pad; ENEMIES on a touch layout taps a foe's whole slot, else its points key */
@@ -350,7 +351,7 @@ function tipGeom(D, B, i, d, body) {
 const onPlate = (G, x, y) => { const p = G.plate; return x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h; };
 const clampPg = (G, pg) => Math.max(0, Math.min(G.pages - 1, pg | 0));
 /** The page a focused door or foe shows on (0 when nothing is focused). */
-export const pageOfFocus = (G, name) => (name != null && G.pageOf[name] != null ? G.pageOf[name] : 0);
+export const pageOfFocus = (G, name) => pageOfName(G.pageOf, name);
 /** A tap on the GUIDE door page: the door's index, -2 on the plate (inert), -1 off it or on the BACK key. focus: the focused door's index. */
 export function guideHit(x, y, F, focus = 0) {
   if (!okBox(F)) return -1;
@@ -432,12 +433,12 @@ function plan(c0, G, ui) {
   if (H.hint && !H.back) rest.push(txt(D.hintS, H.hint.x + H.hint.w, H.hint.y + H.hint.h / 2, sec, {col: CONST.t2, role: "secondary", align: "right"}));
   else if (H.hint) wrap(c, fS(sec), D.hintS, H.hint.w).forEach((l, j) => rest.push(txt(l, H.hint.x, H.hint.y + sec * ts * 1.3 * (j + 0.5), sec, {col: CONST.t2, role: "secondary"})));
   if (H.cue) rest.push(...cueOps(c, G, H.cue));
-  /* the pager: PAGE n / m, then the two page keys (label first, keycap last) */
+  /* the kit pager (kit pager.js): PAGE n OF m, then the two page keys (label first, keycap last) */
   if (D.pager) for (let p = 0; p < D.pages; p++) {
-    const s = PAGE + " " + (p + 1) + " / " + D.pages;
-    on(p, txt(s, D.pager.label.x + D.pager.label.w, D.pager.label.y + D.pager.label.h / 2, sec, {col: CONST.t2, role: "secondary", align: "right"}),
-      {op: "key", r: D.pager.up, kind: p > 0 ? "key" : "well", name: "page up"}, {op: "glyph", n: "up", x: D.pager.up.x + 12, y: D.pager.up.y + 12, s: 20, col: p > 0 ? CONST.ink : CONST.off},
-      {op: "key", r: D.pager.dn, kind: p < D.pages - 1 ? "key" : "well", name: "page down"}, {op: "glyph", n: "dn", x: D.pager.dn.x + 12, y: D.pager.dn.y + 12, s: 20, col: p < D.pages - 1 ? CONST.ink : CONST.off});
+    const Q = D.pager, k = (r) => [r.x + r.w / 2 - 10, r.y + r.h / 2 - 10];
+    on(p, txt(pageLabel(p, D.pages), Q.label.x, Q.label.y + Q.label.h / 2, sec, {col: CONST.t2, role: "secondary"}),
+      {op: "key", r: Q.up, kind: p > 0 ? "key" : "well", name: "page up"}, {op: "glyph", n: "up", x: k(Q.up)[0], y: k(Q.up)[1], s: 20, col: p > 0 ? CONST.ink : CONST.off},
+      {op: "key", r: Q.dn, kind: p < D.pages - 1 ? "key" : "well", name: "page down"}, {op: "glyph", n: "dn", x: k(Q.dn)[0], y: k(Q.dn)[1], s: 20, col: p < D.pages - 1 ? CONST.ink : CONST.off});
   }
   const items = D.items;
   if (G.page === GUIDE) {

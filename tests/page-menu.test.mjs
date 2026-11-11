@@ -469,15 +469,40 @@ logo._dbg.on = true;
   check("fix round 1: glyph is a kit part (kit/paint.js) and canMake the kit cache's one copy; neither page nor logo keeps its own", typeof kp.glyph === "function" && typeof cache.canMake === "function" && !/function\s+(glyph|canMake)\b/.test(src) && !/function\s+canMake\b/.test(logoSrc) && /canMake/.test(logoSrc));
 }
 
+const { readFileSync } = await import("node:fs");
 /* ---- R1 kit harmonisation: the shared room rule lives in kit/room.js; MENU installs it, every page asks the kit ---- */
 {
-  const room = await import("../src/render/kit/room.js"), { readFileSync } = await import("node:fs");
+  const room = await import("../src/render/kit/room.js");
   const t = rec({ widthK: K8 }), box = { W: 1366, H: 768, touch: false, shell: true, css: 1 }, ui = { rev: "v201" };
   const m = P.roomDpr(t.ctx, box, ui, 2), k = room.roomDpr(t.ctx, box, ui, 2);
   check("kit roomDpr is MENU's rule (installed by pages/menu.js), 1366 x 768 @2", k === m && m > 0.5 && m < 2, J([k, m]));
   check("pageRoomDpr: MENU's dpr where the page's own fit holds it, the page's fit where that is lower", room.pageRoomDpr(t.ctx, box, ui, 2, 0) === m && room.pageRoomDpr(t.ctx, box, ui, 2, cache.BUDGET) === 0.5 && room.roomFit(box, 2, cache.BUDGET) === 0.5);
   const src = ["level", "settings", "guide", "records"].map((n) => readFileSync(new URL("../src/render/pages/" + n + ".js", import.meta.url), "utf8")).join("\n");
   check("no page imports the room rule from pages/menu.js (kit room.js is the one source)", !/import\s*\{[^}]*\broomDpr\b[^}]*\}\s*from\s*"\.\/menu\.js"/.test(src) && !/\bmenuRoomDpr\b/.test(src));
+}
+
+/* ---- R1 kit harmonisation: ONE pager (kit pager.js). Every page that pages (SETTINGS, GRAPHICS, GUIDE, RECORDS STATS, LEVEL SELECT's compact)
+   takes its page keys from it: one size, PAGE_KEY (46) CSS px square, the two keys >= 8 CSS px apart, and one label, PAGE n OF m ---- */
+{
+  const kp = await import("../src/render/kit/pager.js"), SP = await import("../src/render/pages/settings.js"), GP = await import("../src/render/pages/guide.js");
+  const RP = await import("../src/render/pages/records.js"), LP = await import("../src/render/pages/level.js");
+  const css = fitBox(852, 393, true, 600, 520).s, c852 = { W: 600, H: 520, touch: true, shell: false, css }, out = [];
+  const size = (nm, up, dn, k) => { const a = [up.w * k, up.h * k, dn.w * k, dn.h * k]; if (a.some((v) => Math.abs(v - kp.PAGE_KEY) > 0.01) || (dn.x - up.x - up.w) * k < 7.99) out.push(nm + " " + J(a.map((v) => +v.toFixed(2)))); };
+  const sg = SP.settingsGeom(c852, ["MUSIC", "SFX", "SOUND", "ART STYLE", "SCREEN SHAKE", "REDUCE FLASH", "ANALYTICS", "GRAPHICS", "CONTROLS", "RESET DEFAULTS"]);
+  if (sg.keys) size("settings", sg.keys.up, sg.keys.dn, css); else out.push("settings: no pager");
+  const gg = SP.graphicsGeom(c852);
+  if (gg.keys) size("graphics", gg.keys.up, gg.keys.dn, css); else out.push("graphics: no pager");
+  const eg = GP.guideGeom(c852, "ENEMIES");
+  if (eg.pager) size("guide", eg.pager.up, eg.pager.dn, css); else out.push("guide: no pager");
+  const lg = LP.levelGeom({ ...c852, W: 600, H: 340 }, { unlocked: true, open: false, row: W.LABEL.LEVEL });
+  if (lg.pageKeys) size("level", lg.pageKeys[0], lg.pageKeys[1], css); else out.push("level: no page keys");
+  check("one pager: every page's ▲ / ▼ keys are PAGE_KEY (46) CSS px square and >= 8 CSS px apart (SETTINGS, GRAPHICS, GUIDE ENEMIES, LEVEL SELECT compact on a landscape phone's #c)", out.length === 0 && kp.PAGE_KEY === 46, out.join(" | "));
+  check("one label: PAGE n OF m", kp.pageLabel(0, 3) === "PAGE 1 OF 3" && kp.pageLabel(2, 3) === "PAGE 3 OF 3");
+  check("one break rule: whole items, at most cap tall, a page's first item drops its gap", J(kp.paginate([10, 10, 10, 10], [0, 4, 4, 4], 24)) === J([[0, 1], [2, 3]]) && J(kp.paginate([30, 10], [0, 4], 20)) === J([[0], [1]]) && J(kp.paginate([10, 10], [0, 4], Infinity)) === J([[0, 1]]));
+  const Q = kp.pagerKeys(0, 0, 300, 46);
+  check("pagerHit: -1 on ▲, 1 on ▼, 0 elsewhere", kp.pagerHit(Q, Q.up.x + 1, 1) === -1 && kp.pagerHit(Q, Q.dn.x + 1, 1) === 1 && kp.pagerHit(Q, 1, 1) === 0 && kp.pagerHit(null, 1, 1) === 0);
+  const src = ["settings", "guide", "records", "level"].map((n) => readFileSync(new URL("../src/render/pages/" + n + ".js", import.meta.url), "utf8")).join("\n");
+  check("no page builds its own PAGE label or page keys (\" / \" counters, its own key widths)", !/PAGE\s*\+\s*" "\s*\+\s*\(p\s*\+\s*1\)\s*\+\s*" \/ "/.test(src) && !/kw:\s*64/.test(src) && !/function pageKeys\b/.test(src));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

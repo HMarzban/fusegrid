@@ -91,6 +91,7 @@ const SRC = Object.freeze([
   "src/render/kit/copy.js",
   "src/render/kit/geom.js",
   "src/render/kit/paint.js",
+  "src/render/kit/pager.js",
   "src/render/kit/probe.js",
   "src/render/kit/room.js",
   "src/render/kit/tokens.js",

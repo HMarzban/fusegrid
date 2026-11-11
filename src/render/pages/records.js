@@ -38,6 +38,7 @@ import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
 import {roomLayer, pageRoomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
+import {PAGE_KEY, pagerKeys, pageLabel, pagerHit, paintPager as kitPager} from "../kit/pager.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
 
@@ -157,7 +158,7 @@ function confirmGeom(pane, dv, ts, touch, T0, t125, plateR, tall, floorY) {
    holds PAGE n OF m and the ▲ / ▼ page keys (44 CSS px, 8 apart). Keys and a controller carry the page (↓ / ↑ in the body, menuapp _recFocus), a
    tap turns it (statsHit PageUp / PageDown), tap mode keeps the keys; the armed confirm plate stays one page. A section taller than a page (the
    landscape phones' #c) still scales, floors giving way only there. */
-export const PAGER = Object.freeze({h: 44, g: 8, kw: 64});
+export const PAGER = Object.freeze({h: PAGE_KEY, g: 8}); // the kit pager's strip and the gap above it
 const SECS = Object.freeze({hero: ["kick", "qual", "digits", "course", "reached"], tiles: ["tiles"], life: ["lifeK", "life"], bests: ["bestK", "best"]});
 const span = (b, sec) => { const rs = SECS[sec].flatMap((n) => [].concat(b[n] || [])).filter(Boolean); return [Math.min(...rs.map((r) => r.y)), Math.max(...rs.map((r) => r.y + r.h))]; };
 function pageStats(dv, ts, iw, D, cap) {
@@ -183,7 +184,7 @@ function place(b, x, y, k) {
   return out;
 }
 function bodiesAt(dv, ts, iw, D, row, bx, by, avail, c = 0, st0 = 0) {
-  const out = {}, s = scoresBody(dv, ts, iw, D, row, avail, c), pagerAt = (y) => ({strip: R(bx, y, iw, PAGER.h), up: R(bx + iw - 2 * PAGER.kw - PAGER.g, y, PAGER.kw, PAGER.h), dn: R(bx + iw - PAGER.kw, y, PAGER.kw, PAGER.h)});
+  const out = {}, s = scoresBody(dv, ts, iw, D, row, avail, c), pagerAt = (y) => pagerKeys(bx, y, iw, PAGER.h);
   out.scores = place(s, bx, by, 1);
   Object.assign(out.scores, {k: s.tk, y: by + s.top});
   if (s.pagerY != null) out.scores.pager = pagerAt(by + s.pagerY);
@@ -484,7 +485,7 @@ export function plan(c0, G, ui) {
   /* a paged body (fix round 1b): the page shown (ui.spage, clamped), PAGE n OF m and which of ▲ / ▼ has a page to open */
   const bp = d.bodies[ui.page];
   const n0 = bp && bp.pager ? (ui.page === "scores" ? scoresPages(bp, out.scores.n) : bp.pages) : 1; // SCORES: the rows drawn, never a header-only page
-  if (n0 > 1) { const n = n0, p = Math.max(0, Math.min(n - 1, ui.spage | 0)); out.pg = {page: p, n, s: RW.PAGE + " " + (p + 1) + " " + RW.OF + " " + n, upOn: p > 0, dnOn: p < n - 1}; }
+  if (n0 > 1) { const n = n0, p = Math.max(0, Math.min(n - 1, ui.spage | 0)); out.pg = {page: p, n, s: pageLabel(p, n), upOn: p > 0, dnOn: p < n - 1}; }
   return out;
 }
 
@@ -567,10 +568,7 @@ function focusKey(c, r, label, L, focused, tok, dv, ph) {
   text(c, label, legX(r, L.lw, dv, true, L.fit), r.y - 2 + r.h / 2, T.label(L.lp), tok.dk, "center");
 }
 /* the page keys' strip (any paged tab): PAGE n OF m, then ▲ and ▼ (a key with no page to open is a well); live, so a page step repaints no layer */
-function paintPager(c, Q, Qp, tok, dv) {
-  text(c, Qp.s, Q.strip.x, Q.strip.y + Q.strip.h / 2, T.label(dv.sec), CONST.t2);
-  for (const [r, on, n] of [[Q.up, Qp.upOn, "up"], [Q.dn, Qp.dnOn, "dn"]]) { key(c, r.x, r.y, r.w, r.h, on ? "key" : "well", {tok, phone: true}); ic(c, n, r.x + r.w / 2 - 10, r.y + r.h / 2 - 10, 20, on ? CONST.ink : CONST.off); }
-}
+const paintPager = (c, Q, Qp, tok, dv) => kitPager(c, Q, Qp.page, Qp.n, tok, {f: T.label(dv.sec), phone: true});
 function scoresLive(c, G, P, ui, tok, foc) {
   const b = G.d.bodies.scores, S = P.scores, dv = DEV[G.dev], k = b.k, ph = G.dev === "p", r = b.keys[S.h];
   focusKey(c, r, S.bank[S.h], S.bleg[S.h], foc, tok, dv, ph);
@@ -945,7 +943,7 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
   }
   if (P.pg && !(page === "stats" && ui.arm)) { // the page keys (any paged tab): PAGE n OF m and ▲ / ▼, touch targets of one set
     const Q = d.bodies[page].pager, Qp = P.pg;
-    txt(Qp.s, Q.strip.x, Q.strip.y + Q.strip.h / 2, measureOr(Qp.s, dv.sec), dv.sec, CONST.t2, "secondary");
+    txt(Qp.s, Q.label.x, Q.label.y + Q.label.h / 2, measureOr(Qp.s, dv.sec), dv.sec, CONST.t2, "secondary");
     for (const [nm, r, on] of [["PAGE UP", Q.up, Qp.upOn], ["PAGE DOWN", Q.dn, Qp.dnOn]]) {
       probe.rect(nm, ...b(r), {touch: touchy, set: page + " pages", kind: "step", fill: on ? tok.key : tok.well});
       probe.pair("info", b(R(r.x + r.w / 2 - 10, r.y + r.h / 2 - 10, 20, 20)), b(R(r.x + 6, r.y + 6, r.w - 12, r.h - 12)), {col: on ? CONST.ink : CONST.off, name: "page key " + nm, ...(on ? {} : {lock: true})});

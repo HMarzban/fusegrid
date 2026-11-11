@@ -32,6 +32,7 @@ import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch as touchK, keyOf, canMake} from "../kit/cache.js";
 import {roomLayer, pageRoomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
+import {paginate as pagesOf, pagerKeys, pageLabel, pagerHit, paintPager as kitPager, keySide, pageOfFocus} from "../kit/pager.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
 import {lookVal, FOOT_TAP} from "../kit/copy.js";
@@ -61,17 +62,8 @@ function run(rows, row, grp, fl, u) {
   const hs = rows.map(() => (fl ? Math.max(row, fl.h / u) : row)), gs = rows.map((l, i) => (!i ? 0 : GROUP.includes(l) ? Math.max(grp, fl ? fl.g / u : 0) : fl ? fl.g / u : 0));
   return {hs, gs, h: hs.reduce((a, h, i) => a + h + gs[i], 0)};
 }
-/* pages of row indices, each at most cap tall (a course at a page's top is dropped); one page holds everything when cap is Infinity */
-function paginate(S, cap) {
-  const pages = [];
-  let cur = [], used = 0;
-  S.hs.forEach((h, i) => {
-    const add = (cur.length ? S.gs[i] : 0) + h;
-    if (cur.length && used + add > cap + 1e-6) { pages.push(cur); cur = [i]; used = h; } else { cur.push(i); used += add; }
-  });
-  if (cur.length) pages.push(cur);
-  return pages;
-}
+/* pages of row indices, each at most cap tall (a course at a page's top is dropped; kit pager.js); one page holds everything when cap is Infinity */
+const paginate = (S, cap) => pagesOf(S.hs, S.gs, cap);
 /* every row's rect on its own page (each page laid from y0), its tap rect (half of each gap round it on that page, out to x0..x1; a page's first
    row from top0 above, its last to bot1 below) and the courses, each with its page */
 function lay(rows, pages, S, x, y0, w, x0, x1, top0, bot1) {
@@ -104,13 +96,9 @@ function solve(u0, fits) {
 /* PAGING (lead ruling, fix round 1): on a touch box the rows keep >= 44 CSS px and the courses >= 8 (fl, in box units). Where every row does not
    fit at a scale >= PAGE_U the list pages: as many whole rows as fit, and a strip of two page keys (>= 44 CSS px each, >= 8 apart) under them;
    at least MIN_ROWS rows a page (the page shrinks toward FLOOR_U for them). Keys and a controller turn the page with the focus (the page shown is
-   the focused row's); a tap on a page key focuses the first row of the page it opens. */
+   the focused row's); a tap on a page key focuses the first row of the page it opens. The keys are the kit pager's (PAGE_KEY CSS px). */
 export const PAGE_U = 0.7, FLOOR_U = 0.5, MIN_ROWS = 3;
-const keyH = (dv, fl, u) => Math.max(DEV[dv].keyh, fl ? fl.h / u : 0);
-function pageKeys(x, y, w, kh, kg) {
-  const kw = Math.max(kh, 64);
-  return {strip: R(x, y, w, kh), up: R(x + w - 2 * kw - kg, y, kw, kh), dn: R(x + w - kw, y, kw, kh)};
-}
+const keyH = (dv, fl, u) => Math.max(DEV[dv].keyh, fl ? keySide(TOUCH.h / fl.h, u) : 0);
 function desk(F, rows, ts, fl) {
   const D = DESK[big(ts) ? "d125" : "d"], T0 = DEV.d.T, head = headH(ts, D.kick, DEV.d.ttl), mx = T0 + 2 + GUT, my = T0 + 3 + GUT;
   const at = (u, q) => { const S = run(rows, D.row, D.grp, q, u), colH = Math.max(S.h, D.paneMin); return {S, colH, ph: D.pad[0] + head + D.below + colH + D.pad[2]}; };
@@ -147,7 +135,7 @@ function col(F, rows, ts, fl, help) {
   const Wd = F.W / u, px = (Wd - pw) / 2, py = Math.max(b0 / u + my, (b0 + Hb / 2) / u - ph / 2);
   const hy = py + C.pad[0], top = hy + head + C.below, lx = px + C.pad[3], paged = pages.length > 1;
   const L = lay(rows, pages, S, lx, top, C.list, px, px + pw, C.below / 2, 4), lb = paged ? top + cap : L.bot;
-  if (paged) keys = pageKeys(lx, lb + hh + 8, C.list, kh, Math.max(8, fl.g / u));
+  if (paged) keys = pagerKeys(lx, lb + hh + 8, C.list, kh);
   return {mode: "col", dev: dv, u, ts, T: T0, plate: R(px, py, pw, ph), head: R(lx, hy, C.list, head), kick: true, ttl: C.ttl,
     rows: L.out, hit: L.hit, divs: L.divs, pageOf: L.pageOf, pages: pages.map((pg) => pg.map((i) => rows[i])), keys, pane: null,
     help: hh ? R(lx, lb + 4, C.list, hh - 4) : null, foot: paged ? null : R(px + 8, lb + hh + 8, pw - 16, FOOT1), back: null, list: R(lx, top, C.list, lb - top)}; // the foot may use the plate's sides
@@ -158,12 +146,12 @@ function phone(F, rows, ts, help) {
   const S = run(rows, TOUCH.h, P.grp, TOUCH, 1); // 44 CSS px rows 8 apart: the mock's 52 pitch
   let pages, cap = Infinity, keys = null;
   if (fixed + S.h <= Hd) pages = paginate(S, Infinity);
-  else { cap = Hd - fixed - 8 - TOUCH.h; pages = paginate(S, Math.max(cap, S.hs[0])); }
-  const paged = pages.length > 1, lh = paged ? cap : S.h, ph = P.pad[0] + DEV.p.btnh + P.below + lh + hh + (paged ? 8 + TOUCH.h : 0) + P.pad[2];
+  else { cap = Hd - fixed - 8 - keySide(css, u); pages = paginate(S, Math.max(cap, S.hs[0])); }
+  const paged = pages.length > 1, lh = paged ? cap : S.h, ph = P.pad[0] + DEV.p.btnh + P.below + lh + hh + (paged ? 8 + keySide(css, u) : 0) + P.pad[2];
   const side = P.side, padX = Wd < 380 ? 8 : P.pad[3]; // a phone under 380 CSS px keeps the 125 % rows whole: a thinner bed inside the ring
   const pw = Math.min(Wd - 2 * side, P.max), px = (Wd - pw) / 2, py = Math.max(P.top, (Hd - P.bot - FOOT1 - 4 - P.fgap - ph) / 2), ix = px + padX, iw = pw - 2 * padX, hy = py + P.pad[0];
   const top = hy + DEV.p.btnh + P.below, L = lay(rows, pages, S, ix, top, iw, px, px + pw, P.below / 2, hh || paged ? 4 : P.pad[2] / 2), lb = top + lh;
-  if (paged) keys = pageKeys(ix, lb + hh + 8, iw, TOUCH.h, TOUCH.g);
+  if (paged) keys = pagerKeys(ix, lb + hh + 8, iw, keySide(css, u));
   return {mode: "phone", dev: "p", u, ts, T: DEV.p.T, plate: R(px, py, pw, ph), head: R(ix, hy, iw, DEV.p.btnh), kick: false, ttl: DEV.p.ttl,
     rows: L.out, hit: L.hit, divs: L.divs, pageOf: L.pageOf, pages: pages.map((pg) => pg.map((i) => rows[i])), keys, pane: null,
     help: hh ? R(ix, lb + 4, iw, hh - 4) : null, foot: R(px, py + ph + P.fgap, pw, FOOT1), back: R(ix, hy, P.back, DEV.p.btnh), list: R(ix, top, iw, lh)};
@@ -179,7 +167,7 @@ function geom(F, rows, page) {
   if (!d || (!isPhone && !(d.u >= DESK_U))) d = col({...F, touch: touchy, paused}, rows, ts, fl, page === "graphics"); // the desk's part sizes: a col row is the desk's height or the touch floor, never under a part
   const u = d.u, ks = d.keys;
   G = {page, mode: d.mode, dev: d.dev, u, ts, t125: big(ts), W: F.W, H: F.H, d, T: d.T * u, order: rows.slice(), plate: sc(d.plate, u), pane: sc(d.pane, u), back: sc(d.back, u),
-    pages: d.pages.length ? d.pages : [[]], pageOf: d.pageOf, keys: ks ? {up: sc(ks.up, u), dn: sc(ks.dn, u), strip: sc(ks.strip, u)} : null, rows: {}, hit: {}};
+    pages: d.pages.length ? d.pages : [[]], pageOf: d.pageOf, keys: ks ? {up: sc(ks.up, u), dn: sc(ks.dn, u), strip: sc(ks.strip, u), label: sc(ks.label, u)} : null, rows: {}, hit: {}};
   for (const l of rows) { G.rows[l] = sc(d.rows[l], u); G.hit[l] = sc(d.hit[l], u); }
   if (memo.size > 64) memo.clear();
   memo.set(id, (G = deep(G)));
@@ -189,14 +177,12 @@ const rowsOr = (rows, dflt) => (Array.isArray(rows) && rows.length ? rows : dflt
 export const settingsGeom = (F, rows) => geom(F, rowsOr(rows, []), "settings");
 export const graphicsGeom = (F, rows) => geom(F, rowsOr(rows, GFX_LABELS), "graphics");
 /** The page on screen: the focused row's (focus a label or an index into the rows); 0 without one. */
-export const pageAt = (G, focus) => { const l = typeof focus === "number" ? G.order[focus] : focus; return (l != null && G.pageOf[l]) | 0; };
+export const pageAt = (G, focus) => pageOfFocus(G.pageOf, typeof focus === "number" ? G.order[focus] : focus);
 function hitOf(G, x, y, focus) {
   if (G.back && inR(G.back, x, y)) return -1;
   const p = pageAt(G, focus), n = G.pages.length;
-  if (G.keys) {
-    if (inR(G.keys.up, x, y)) return p > 0 ? {k: "page", row: G.order.indexOf(G.pages[p - 1][0])} : -2;
-    if (inR(G.keys.dn, x, y)) return p < n - 1 ? {k: "page", row: G.order.indexOf(G.pages[p + 1][0])} : -2;
-  }
+  const k = pagerHit(G.keys, x, y);
+  if (k) return p + k >= 0 && p + k < n ? {k: "page", row: G.order.indexOf(G.pages[p + k][0])} : -2;
   for (const l of G.pages[p] || []) if (inR(G.hit[l], x, y)) return G.order.indexOf(l);
   return inR(G.plate, x, y) ? -2 : -1;
 }
@@ -570,18 +556,14 @@ function paintFoot(c, F, tok, ph) {
     } else text(c, p.t, p.x, p.y, F.f, CONST.t2);
   }
 }
-/* the page keys' strip: PAGE n OF m, then ▲ and ▼ (a key with no page to open is a well) */
+/* the page keys' strip (kit pager.js): PAGE n OF m, then ▲ and ▼ (a key with no page to open is a well) */
 function pagerOf(c, G, p) {
   const k = G.d.keys, dv = DEV[G.d.dev];
   if (!k) return null;
-  const f = T.label(dv.sec), s = COPY.page + " " + (p + 1) + " " + COPY.of + " " + G.pages.length;
-  return {s, f, px: dv.sec, x: k.strip.x, y: k.strip.y + k.strip.h / 2, w: measure(c, f, s), up: k.up, dn: k.dn, upOn: p > 0, dnOn: p < G.pages.length - 1};
+  const f = T.label(dv.sec), s = pageLabel(p, G.pages.length);
+  return {s, f, px: dv.sec, x: k.label.x, y: k.label.y + k.label.h / 2, w: measure(c, f, s), up: k.up, dn: k.dn, upOn: p > 0, dnOn: p < G.pages.length - 1, p, n: G.pages.length, K: k};
 }
-function paintPager(g, Q, tok, ph) {
-  if (!Q) return;
-  text(g, Q.s, Q.x, Q.y, Q.f, CONST.t2);
-  for (const [r, on, n] of [[Q.up, Q.upOn, "up"], [Q.dn, Q.dnOn, "dn"]]) { key(g, r.x, r.y, r.w, r.h, on ? "key" : "well", {tok, phone: ph}); mark(g, n, r.x + r.w / 2 - 10, r.y + r.h / 2 - 10, 20, on ? CONST.ink : CONST.off); }
-}
+const paintPager = (g, Q, tok, ph) => Q && kitPager(g, Q.K, Q.p, Q.n, tok, {f: Q.f, phone: ph});
 function paintStatic(g, G, Pl, tok, u, p) {
   const d = G.d, ph = d.dev === "p", dv = DEV[d.dev], H = Pl.head;
   plate(g, d.plate.x, d.plate.y, d.plate.w, d.plate.h, tok, {phone: ph});

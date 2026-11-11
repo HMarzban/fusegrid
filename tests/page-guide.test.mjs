@@ -133,11 +133,11 @@ setTextScale(1);
     check(`compact / phone floors (${b}, x${ts}): every page at its own scale (1 box unit per CSS px, never under), its page keys >= 44 x 44 CSS px`, rows.every((r) => r.k >= 1 - 1e-6 && (!r.keys || r.keys.every(([w, h]) => w >= 43.95 && h >= 43.95))), J(rows));
   }
   setTextScale(1);
-  { // a landscape phone pages; each page draws only its own slots, and the pager reads PAGE n / m with its two keys
+  { // a landscape phone pages; each page draws only its own slots, and the pager reads PAGE n OF m (the kit pager's label) with its two keys
     const G = P.guideGeom(BOX.c852, "ENEMIES");
     fresh(); frame(BOX.c852, UI("ENEMIES", { focus: 4, tip: false }));
     const L = P._dbg.last, pg = L.pg, on = L.P.rest.filter((o) => o.pg === pg && o.op === "text" && FOES.some((e) => e.name === o.s)).map((o) => o.s);
-    check("c852 ENEMIES pages: the focused foe's page on screen, its foes alone, PAGE n / m", G.pages > 1 && pg === G.pageOf.PHANTOM && J(on) === J(G.order.filter((n) => G.pageOf[n] === pg)) && L.P.rest.some((o) => o.pg === pg && o.s === "PAGE " + (pg + 1) + " / " + G.pages), J({ pages: G.pages, pg, on }));
+    check("c852 ENEMIES pages: the focused foe's page on screen, its foes alone, PAGE n OF m", G.pages > 1 && pg === G.pageOf.PHANTOM && J(on) === J(G.order.filter((n) => G.pageOf[n] === pg)) && L.P.rest.some((o) => o.pg === pg && o.s === "PAGE " + (pg + 1) + " OF " + G.pages), J({ pages: G.pages, pg, on }));
   }
 }
 { // page keys tap: GUIDE on a landscape phone pages its doors; ▼ is -10 - the next page's first door, ▲ on the first page stays on it

@@ -36,6 +36,7 @@ import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
 import {roomLayer, roomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
+import {PAGE_KEY, PAGE_GAP, paintPager} from "../kit/pager.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
 import {cardPlan, paintCard, recordCard} from "./card.js";
@@ -169,7 +170,7 @@ function compact(F, U, t125, row, open) {
   }
   y = regionY + regionH + C.dgap;
   let start, pk = null;
-  if (multi) { pk = [R(ix, y, C.kh, C.door), R(ix + C.kh + 8, y, C.kh, C.door)]; start = R(ix + 2 * C.kh + 16, y, iw - 2 * C.kh - 16, C.door); }
+  if (multi) { pk = [R(ix, y, PAGE_KEY, PAGE_KEY), R(ix + PAGE_KEY + PAGE_GAP, y, PAGE_KEY, PAGE_KEY)]; start = R(ix + 2 * PAGE_KEY + PAGE_GAP + 8, y, iw - 2 * PAGE_KEY - PAGE_GAP - 8, C.door); } // the kit pager's keys (no label: the cue line under START names the page)
   else { const half = (iw - 10) / 2; if (U) { mods = R(ix, y, half, C.door); rows[LV.MODS] = mods; } start = U ? R(ix + half + 10, y, half, C.door) : R(ix, y, iw, C.door); }
   rows[LV.START] = start;
   /* the open list covers the head and the groups (over a bed fill), so its five keys hold 44 px in the least box; BACK and the page keys go under it */
@@ -654,7 +655,7 @@ export function drawLevelPage(c, F, ui0, t = 0) {
   if (P.help) P.help.lines.forEach((q, i) => text(c, q, P.help.x, P.help.ys[i], P.help.f, CONST.t2));
   paintStart(c, G, P, tok, false, "dev");
   if (P.cue) text(c, P.cue.s, P.cue.x, P.cue.y, P.cue.f, CONST.t2, "center");
-  if (d.pageKeys) d.pageKeys.forEach((r, i) => { const on = i ? d.page < d.pages.length - 1 : d.page > 0; arrowCap(c, r.x, r.y, r.w, r.h, i ? "dn" : "up", tok, on ? "key" : "well"); });
+  if (d.pageKeys) paintPager(c, {up: d.pageKeys[0], dn: d.pageKeys[1]}, d.page, d.pages.length, tok, {phone: true});
   if (tipR) paintTip(c, tipR, P, tok);
   c.restore();
   c.globalAlpha = a0;
