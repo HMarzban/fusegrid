@@ -264,11 +264,12 @@ Phone (`p` with a shell box): the 393 x 852 column in CSS px (`css` from `dims`)
 or the signpost rides it instead). Next-run card (Task 3.2, `src/render/pages/card.js`, the one module LEVEL SELECT reuses; fed names and
 values: the level and the run PLAY starts, heat and pact, plus an optional kicker and BEST word): the world, the lane (kit `room.js` `lane`: the
 representative start corner, MAKO on his spawn FLOOR cell (1,1), at most 14 x 3 cells, never the dealt board), every roster foe on a floor cell
-(kit `foeCell`) with its count, `×1` included (`rosterOf`, heatRoster deduped: the one roster, menudraw re-exports it), the floor tile (kit
-`tileCell`, `TILE_NAME`, `TILE_HELP` at the run's heat), LIVES hearts / FUSE `2.5s` / SCORE `×n` (`applyPact(heatProfile)`), words.js
-`CARD_WORDS`. Desk: the mock's stack (NEXT RUN · LEVEL n with YOUR FIRST LEVEL / FINALE / THE LAST FINALE, the world in display type, the lane
+(kit `foeCell`), `×n` beside a foe met more than once and none beside a lone one, as the approved mock (lead ruling, fix round 1; `rosterOf`,
+heatRoster deduped: the one roster, menudraw re-exports it), the floor tile (kit `tileCell` labelled FLOOR TILE, `TILE_NAME`, `TILE_HELP` at the
+run's heat), on a finale level (`isFinale`) the kit `glyph` flag with FINALE (appendix 7.2 `mark`), LIVES hearts / FUSE `2.5s` / SCORE `×n` (`applyPact(heatProfile)`), words.js
+`CARD_WORDS`. Desk: the mock's stack (NEXT RUN · LEVEL n with YOUR FIRST LEVEL / THE LAST FINALE, the world in display type and its flag, the lane
 14 across at 2.5 rows, YOU'LL MEET and the names, the foe cells, the floor tile and its help, three stat cells on the bottom); phone: the lane 9
-across, LEVEL n · WORLD, the foes, the tile, one LIVES / FUSE / SCORE line; compact: none. It fits by giving way in order: the lane (to 1.85
+across, LEVEL n · WORLD with YOUR FIRST LEVEL or the flag, the foes, the tile, one LIVES / FUSE / SCORE line; compact: none. It fits by giving way in order: the lane (to 1.85
 rows), the foe cells (40 to 26 desk, 28 to 22 phone), the gaps; a quiet line (the mark, the names, the help, SCORE on the phone line) steps down
 or drops, never clipped. It paints into the plate layer (the plate's key holds the card's key) and nothing live. Teasers (one quiet `#bcad9a` voice; words.js `MENU_WORDS`): DAILY `NEW · TODAY'S BOARD` or `YOUR TRIES
 TODAY · n`, RECORDS `BEST n` (played runs only) or `NO RUNS YET`, SETTINGS the art style, GUIDE `4 PAGES`, SOURCE `GITHUB`; each steps down
@@ -278,10 +279,12 @@ last, on one or two lines. Tap mode (`tapMode`) focuses PLAY. Entry (the show's 
 started from PLAY or DAILY never leaves a stale teaser. The plate layer is keyed by what it shows (the arrangement, the world, the teasers; the
 notes only on phone and compact, where SOURCE's teaser carries them), never by the hint words, tap mode or the run: PLAY's tag and keycap paint
 live, so on the desk a key / controller flip, a note or a controller's arrival re-rasters only the feet (each keyed by its own words), and the
-room's dpr gives way to a FIXED foot reserve (`FEET_W` 1600 design px of feet x the text scale, Task 3.2; was three feet as wide as the box), so the
-room never moves with them; feet wider in all (a controller's three verbs under the sound note) paint live. 1366 x 768 @2: room dpr 1.531 (was
-1.323), the cache 23.2 MB of 24 MiB with the logo. A zero or non-finite box draws
-nothing (`menuHit` -1). `glyph` (chev, ext, up, dn) is a kit part (`kit/paint.js`), `canMake` the kit cache's one copy (the logo painter's too). Page plumbing, for every page task: a page module exports one `*Geom` (rects by name, box units; `G.d` design px)
+room's dpr gives way to a foot reserve sized from the real feet: the three verbs (START, OPEN, the controller's SOURCE line) planned with no note
+or sign at the text scale in force, their layer widths summed and rounded up to `FEET_STEP` 256 device px, so key and controller words land on the
+same room key (Task 3.2; was three feet as wide as the box); feet wider in all (a note, the signpost, long rebound caps) paint live. 1366 x 768
+@2 with the logo (recorder widths): room dpr 1.549 at text scale 1, 1.421 at 1.25 (was 1.323 / below that; the 125 % plate is 1180 wide, and
+1.5 there leaves room for under one foot), the cache <= 23.99 MB of 24 MiB. A zero or non-finite box draws
+nothing (`menuHit` -1). `glyph` (chev, ext, up, dn, flag) is a kit part (`kit/paint.js`), `canMake` the kit cache's one copy (the logo painter's too). Page plumbing, for every page task: a page module exports one `*Geom` (rects by name, box units; `G.d` design px)
 for draw and hit, a painter fed names and values by shellview (never indices), and its hit; menudraw keeps the entry names and delegates.
 Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box; its dpr gives way so the page's layers and
 a 3 MiB logo reserve fit `BUDGET`), made at once so a cursor move never misses, `touch()`ed on a steady frame (`cache.touch(key)`: a held layer

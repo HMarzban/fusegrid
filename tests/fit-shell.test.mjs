@@ -240,13 +240,18 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
 {
   const base = {};
   /* Task 3.2: MENU's next-run card sits in the one column a narrower window narrows (pages/menu.js), so its quiet lines step down with the width (a
-     level mark dropped, a help line broken): its strings leave the 600x520 comparison and are held below on their own (whole, the facts always) */
+     level mark dropped, a help line broken): its strings leave the 600x520 comparison and are held below on their own. Fix round 1 (review item 3):
+     the strings drawn inside the card's rect are exactly the plan's (a dropped quiet line is a plan decision the check sees), each inside the card
+     and the box, whole, and the facts always there */
   const cardOut = { s: [] };
   const shot = (nm, box, cur) => {
     const a = mkApp(SCREEN[nm]); if (cur != null) a.cursor = cur; const R = rec(); drawShell(R.c, a, { state: "PLAY", time: 1 }, box, "2d", () => [], () => 0, () => ({}));
     if (nm !== "MENU" || !menuPage._dbg.last.P.card) return R.texts;
-    const C = menuPage._dbg.last.P.card.texts.map((t) => t.s), left = R.texts.slice();
-    cardOut.s.push({ box: box.width + "x" + box.height, cur, card: C, drawn: R.texts.map((q) => q.s) });
+    const C = menuPage._dbg.last.P.card.texts.map((t) => t.s), left = R.texts.slice(), K = menuPage._dbg.last.G.card, Wb = box.width, Hb = box.height;
+    const inR = (q, r) => q.x >= r.x - 0.5 && q.x + q.w <= r.x + r.w + 0.5 && q.y >= r.y - 0.5 && q.y <= r.y + r.h + 0.5;
+    const inCard = R.texts.filter((q) => inR(q, K)), mine = R.texts.filter((q) => C.includes(q.s));
+    cardOut.s.push({ box: Wb + "x" + Hb, cur, card: C, drawn: R.texts.map((q) => q.s), inCard: [...new Set(inCard.map((q) => q.s))].sort(), plan: [...new Set(C)].sort(),
+      out: mine.filter((q) => !inR(q, K) || !inR(q, { x: 0, y: 0, w: Wb, h: Hb })).map((q) => q.s) });
     for (const s of C) { const i = left.findIndex((q) => q.s === s); if (i >= 0) left.splice(i, 1); }
     return left;
   };
@@ -278,9 +283,9 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     });
     check(`every page's text sits inside the box (${tg})`, out.length === 0, out.join());
     check(`every page prints exactly its 600x520 strings, in order${tab ? " (MENU: the 1024x768 tablet's words by token)" : ""}: nothing elided (${tg})`, same.length === 0, same.join());
-    const cbad = cardOut.s.filter((q) => q.card.some((t) => /…/.test(t)) || !q.card.every((t) => q.drawn.includes(t)) || !["JUNGLE", "×2", "×1", "BOOSTER", "LIVES", "FUSE", "2.5s", "SCORE"].every((w) => q.card.includes(w)));
+    const cbad = cardOut.s.filter((q) => q.card.some((t) => /…/.test(t)) || !q.card.every((t) => q.drawn.includes(t)) || J(q.inCard) !== J(q.plan) || q.out.length || !["JUNGLE", "×2", "BOOSTER", "LIVES", "FUSE", "2.5s", "SCORE"].every((w) => q.card.includes(w)));
     const compact = lay === "l" && W === 600; // MENU's compact arrangement: no card slot, PLAY's tag carries the run
-    check(`MENU's card (${tg}): ${compact ? "none (compact)" : "drawn in every MENU frame, every card string whole, the world, every foe count, the floor tile and LIVES / FUSE / SCORE"}`, compact ? cardOut.s.length === 0 : cardOut.s.length === ITEMS.length && cbad.length === 0, JSON.stringify([cardOut.s.length, cbad.slice(0, 1)]));
+    check(`MENU's card (${tg}): ${compact ? "none (compact)" : "drawn in every MENU frame; the strings inside its rect are exactly its plan's, each inside the card and the box, whole; the world, WALKER's ×2, the floor tile and LIVES / FUSE / SCORE"}`, compact ? cardOut.s.length === 0 : cardOut.s.length === ITEMS.length && cbad.length === 0, JSON.stringify([cardOut.s.length, cbad.slice(0, 1)]));
     cardOut.s.length = 0;
     const inBox = (S) => S.x >= 0 && S.y >= 0 && S.x + S.w <= g.w && S.y + S.h <= g.h && S.f === 1;
     const inPlate = (r, S) => r.x >= S.x - 1 && r.y >= S.y && r.x + r.w <= S.x + S.w + 1.01 && r.y + r.h <= S.y + S.h + 0.01;

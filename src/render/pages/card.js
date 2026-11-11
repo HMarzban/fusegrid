@@ -2,15 +2,17 @@
    One module for MENU's card slot and LEVEL SELECT's card (Task 3.3), fed names and values only: d = {level, heat, pact} (the run PLAY starts), plus
    d.kick (a kicker in place of NEXT RUN · LEVEL n) and d.best (a word in place of the level's mark, LEVEL SELECT's BEST) where a page wants them.
    What it shows is true of every run it starts: the world, the lane (kit room.js: the representative start corner, MAKO on his spawn FLOOR cell, the
-   room's first foe and its floor tile; never the dealt board, which every ordinary run deals anew), every roster foe with its count (heatRoster, ×1
-   included), the floor tile (core feat HOME / TILE_NAME / TILE_HELP at the run's heat), LIVES / FUSE / SCORE (heatProfile through applyPact).
+   room's first foe and its floor tile; never the dealt board, which every ordinary run deals anew), every roster foe (heatRoster), ×n beside a foe
+   met more than once (the mock: a lone foe has no count), the floor tile (core feat HOME / TILE_NAME / TILE_HELP at the run's heat), LIVES / FUSE /
+   SCORE (heatProfile through applyPact), and on a finale level the kit flag glyph with FINALE (appendix 7.2 mark()).
    cardPlan(c, box, d, dev) lays it out in box (design px; dev "d" desk, "p" phone) and measures through c: desk is the mock's stack (kicker, the world in
-   display type, the lane 14 cells across, YOU'LL MEET with the names, the foe cells, the floor tile with its help, three stat cells anchored to the
-   bottom); phone is the lane 9 across, LEVEL n · WORLD, the foes, the floor tile, one LIVES / FUSE / SCORE line. The lane gives way first (down to
+   display type and its finale flag, the lane 14 cells across, YOU'LL MEET with the names, the foe cells, the floor tile with its help, three stat cells
+   anchored to the bottom); phone is the lane 9 across, LEVEL n · WORLD with its mark or flag, the foes, the floor tile labelled FLOOR TILE, one LIVES /
+   FUSE / SCORE line. The lane gives way first (down to
    LANE rows, MAKO always whole), then the foe cells step down, then the gaps; a quiet line that does not fit is dropped, never cut. The plan holds
-   every text (its font, colour and role), every part's rect (parts never overlap) and key, the string a cache keys the card by.
+   every text (its font, colour and role), every glyph, every part's rect (parts never overlap) and key, the string a cache keys the card by.
    paintCard(c, P, tok, o) paints it (static: the page bakes it into a layer; o.dpr, the layer's device px per design px, sizes its wall cell);
-   recordCard(P, rect, text) hands its rect and texts to the page's probe. */
+   recordCard(P, rect, text, pair) hands its rect, texts and glyph info pairs to the page's probe. */
 import {biomeOf, isFinale} from "../../core/config.js";
 import {heatRoster, heatProfile, clampHeat} from "../../core/heat.js";
 import {applyPact} from "../../core/pact.js";
@@ -18,13 +20,13 @@ import {HOME, TILE_NAME, TILE_HELP} from "../../core/feat.js";
 import {FOES} from "../../core/entities.js";
 import {LABEL, CARD_WORDS as CW} from "../words.js";
 import {CONST} from "../kit/tokens.js";
-import {wallCell} from "../kit/paint.js";
+import {wallCell, glyph} from "../kit/paint.js";
 import {T, DEV, measure, textScale} from "../kit/type.js";
 import {lane, laneGrid, foeCell, tileCell} from "../kit/room.js";
 import {layer, canMake} from "../kit/cache.js";
-import {drawIcon} from "../icons.js";
+import {drawIcon, rr} from "../icons.js";
 
-const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
+export const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
 /* pad [y, x] inside the slot (the wall-cell frame T sits in it); lane [least, most] rows; foe the cell sizes tried, largest first (grow: the phone's
    most, from slack); gap the section gaps tried; cg / rg a foe item's column / row gap; tile the floor tile cell; heart the LIVES heart (the appendix's item size) */
 export const CARD = deep({
@@ -42,7 +44,7 @@ export function rosterOf(level, heat) {
 }
 export function cardFacts(d) {
   const level = d.level | 0 || 1, h = clampHeat(d.heat), b = biomeOf(level), p = applyPact(heatProfile(h), d.pact | 0), k = HOME[b.name], fin = isFinale(level), roster = rosterOf(level, h);
-  return {level, heat: h, world: b.name, fin, mark: level === 1 ? CW.FIRST : level >= 8 ? CW.LAST : fin ? CW.FINALE : "", roster,
+  return {level, heat: h, world: b.name, fin, mark: level === 1 ? CW.FIRST : level >= 8 ? CW.LAST : "", roster,
     names: roster.map((e) => (FOES.find((f) => f.t === e.t) || {name: e.t}).name), tile: {kind: k, name: TILE_NAME[k] || "", help: (TILE_HELP[k] || [])[h] || ""},
     lives: p.lives, fuse: p.fuse + "s", score: "×" + (h + 1)};
 }
@@ -59,10 +61,10 @@ function fit(c, f, cands, room, two) {
   }
   return [];
 }
-/* foe items (cell, 6 px, ×n) in rows across iw: the row of each and its x */
+/* foe items in rows across iw: a cell, then 6 px and ×n only for a foe met more than once (cw 0: a bare cell); the row of each and its x */
 function flow(cw, fs, K, iw) {
   let x = 0, row = 0;
-  const at = cw.map((w0) => { const w = fs + 6 + w0; if (x > 0 && x + w > iw + 1e-9) { row++; x = 0; } const q = {x, row, w}; x += w + K.cg; return q; });
+  const at = cw.map((w0) => { const w = fs + (w0 ? 6 + w0 : 0); if (x > 0 && x + w > iw + 1e-9) { row++; x = 0; } const q = {x, row, w}; x += w + K.cg; return q; });
   const n = row + 1;
   return {at, rows: n, h: n * fs + (n - 1) * K.rg + 3};
 }
@@ -72,8 +74,8 @@ export function cardPlan(c, box, d, dev = "d") {
   const x0 = box.x + K.pad[1], iw = box.w - 2 * K.pad[1], y0 = box.y + K.pad[0], ih = box.h - 2 * K.pad[0], s = iw / K.cols, [lmin, lmax] = big ? K.lane125 : K.lane;
   const lS = dv.sec * ts * 1.2, lP = dv.pri * ts * 1.15, fS = T.label(dv.sec), fP = T.label(dv.pri), fN = T.num(dv.pri), titleH = dv.ttl * ts;
   /* a count reads at the label size beside a full cell, one step down (the secondary size) beside a stepped-down one, so it never outweighs its foe */
-  const cnt = F.roster.map((e) => "×" + e.n), cpx = (fs) => (fs >= K.foe[1] ? dv.pri : dv.sec), cw = (fs) => cnt.map((q) => W(c, T.num(cpx(fs)), q));
-  const floorH = desk ? Math.max(K.tile + 3, lS + 2 + lP) : Math.max(K.tile + 3, lP), hud = dv.hud * ts;
+  const cnt = F.roster.map((e) => (e.n > 1 ? "×" + e.n : "")), cpx = (fs) => (fs >= K.foe[1] ? dv.pri : dv.sec), cw = (fs) => cnt.map((q) => (q ? W(c, T.num(cpx(fs)), q) : 0));
+  const floorH = Math.max(K.tile + 3, lS + 2 + lP), hud = dv.hud * ts;
   const statsH = desk ? 4 + 7 + lS + 6 + hud + 8 + 4 : Math.max(lS, lP, K.heart);
   const fixedOf = (g, fl) => (desk ? lS + 2 + titleH + g + g + lS + 8 + fl.h + g + floorH + g + statsH : g + lP + g + fl.h + g + floorH + g + statsH);
   let S = null;
@@ -84,7 +86,7 @@ export function cardPlan(c, box, d, dev = "d") {
   }
   /* the phone's slot is the height left: once the lane is at its most, the foe cells grow into the slack (up to grow, in as many rows), then the gaps */
   if (!desk && !S.over) for (let fs = S.fs + 2; fs <= K.grow; fs += 2) { const fl = flow(cw(fs), fs, K, iw); if (fl.rows !== S.fl.rows || ih - fixedOf(S.g, fl) < lmax * s) break; S = {...S, fs, fl, rows: lmax}; }
-  const P = {box, dev: desk ? "d" : "p", level: F.level, T: K.T, inner: {x: x0, y: y0, w: iw, h: ih}, facts: F, over: S.over, texts: [], parts: [], foes: [], hearts: [], lane: null, tile: null, stats: null,
+  const P = {box, dev: desk ? "d" : "p", level: F.level, T: K.T, inner: {x: x0, y: y0, w: iw, h: ih}, facts: F, over: S.over, texts: [], glyphs: [], parts: [], foes: [], hearts: [], lane: null, tile: null, stats: null,
     key: JSON.stringify([F.level, F.heat, F.lives, d.kick || "", d.best || "", dev])};
   const tx = (s0, x, y, f, px, col, o = {}) => { const t = {s: s0, x, y, f, px, col, role: o.role || "secondary", align: o.align || "left", kind: o.kind || "lbl", w: W(c, f, s0)}; P.texts.push(t); return t; };
   const part = (name, x, y, w, h) => P.parts.push({name, x, y, w, h});
@@ -97,10 +99,20 @@ export function cardPlan(c, box, d, dev = "d") {
   };
   const foesAt = (y) => {
     F.roster.forEach((e, i) => {
-      const q = S.fl.at[i], x = x0 + q.x, yy = y + q.row * (S.fs + K.rg), px = cpx(S.fs), t = tx(cnt[i], x + S.fs + 6, yy + S.fs / 2, T.num(px), px, CONST.ink, {role: px === dv.pri ? "primary" : "secondary", kind: "num"});
+      const q = S.fl.at[i], x = x0 + q.x, yy = y + q.row * (S.fs + K.rg), px = cpx(S.fs), t = cnt[i] ? tx(cnt[i], x + S.fs + 6, yy + S.fs / 2, T.num(px), px, CONST.ink, {role: px === dv.pri ? "primary" : "secondary", kind: "num"}) : null;
       P.foes.push({t: e.t, n: e.n, x, y: yy, s: S.fs, cnt: t});
-      part("foe " + e.t, x, yy, S.fs, S.fs + 3); tpart(t);
+      part("foe " + e.t, x, yy, S.fs, S.fs + 3);
+      if (t) tpart(t);
     });
+  };
+  /* the finale mark (appendix 7.2 mark(glyph, word)): the kit flag glyph, then FINALE in t2, its left at x, centred on cy; none where it does not fit */
+  const flagAt = (x, cy, room) => {
+    const gs = Math.round(dv.sec * ts), w = gs + 6 + W(c, fS, CW.FINALE);
+    if (!F.fin || w > room) return 0;
+    P.glyphs.push({n: "flag", x, y: cy - gs / 2, s: gs, col: CONST.t2});
+    const t = tx(CW.FINALE, x + gs + 6, cy, fS, dv.sec, CONST.t2);
+    part("finale", x, cy - Math.max(gs, t.px * ts) / 2, w, Math.max(gs, t.px * ts));
+    return w;
   };
   let y = y0;
   if (desk) {
@@ -109,7 +121,9 @@ export function cardPlan(c, box, d, dev = "d") {
     const mk = fit(c, fS, [right], iw - kl.w - 12)[0];
     if (mk) tpart(tx(mk, x0 + iw, y + lS / 2, fS, dv.sec, TZ, {align: "right"}));
     y += lS + 2;
-    tpart(tx(F.world, x0, y + titleH / 2, T.display(dv.ttl), dv.ttl, CONST.ink, {role: "primary", kind: "dsp"}));
+    const wt = tx(F.world, x0, y + titleH / 2, T.display(dv.ttl), dv.ttl, CONST.ink, {role: "primary", kind: "dsp"});
+    tpart(wt);
+    flagAt(x0 + wt.w + 14, y + titleH / 2, iw - wt.w - 14);
     y += titleH + S.g;
     y += laneAt(y, S.rows) + S.g;
     const ml = tx(CW.MEET, x0, y + lS / 2, fS, dv.sec, CONST.t2);
@@ -144,17 +158,19 @@ export function cardPlan(c, box, d, dev = "d") {
   y += laneAt(y, S.rows) + g;
   const nl = tx(LABEL.LEVEL + " " + F.level + " · " + F.world, x0, y + lP / 2, fP, dv.pri, CONST.ink, {role: "primary"});
   tpart(nl);
-  const mk = fit(c, fS, [d.best || F.mark], iw - nl.w - 12)[0];
-  if (mk) tpart(tx(mk, x0 + iw, y + lP / 2, fS, dv.sec, TZ, {align: "right"}));
+  const room = iw - nl.w - 12, fw = d.best ? 0 : F.fin ? Math.round(dv.sec * ts) + 6 + W(c, fS, CW.FINALE) : 0;
+  if (fw && fw <= room) flagAt(x0 + iw - fw, y + lP / 2, room);
+  else { const mk = fit(c, fS, [d.best || (F.fin ? "" : F.mark)], room)[0]; if (mk) tpart(tx(mk, x0 + iw, y + lP / 2, fS, dv.sec, TZ, {align: "right"})); }
   y += lP + g;
   foesAt(y);
   y += S.fl.h + g;
   P.tile = {x: x0, y: y + (floorH - K.tile - 3) / 2, s: K.tile};
   part("tile", P.tile.x, P.tile.y, K.tile, K.tile + 3);
-  const tn = tx(F.tile.name, x0 + K.tile + 10, y + floorH / 2, fP, dv.pri, CONST.ink, {role: "primary"});
-  tpart(tn);
-  const hl = fit(c, fS, [F.tile.help], x0 + iw - (tn.x + tn.w) - 12)[0];
-  if (hl) tpart(tx(hl, x0 + iw, y + floorH / 2, fS, dv.sec, TZ, {align: "right"}));
+  const pcx = x0 + K.tile + 10, ptop = y + (floorH - (lS + 2 + lP)) / 2;
+  const pa = tx(CW.TILE, pcx, ptop + lS / 2, fS, dv.sec, CONST.t2), tn = tx(F.tile.name, pcx, ptop + lS + 2 + lP / 2, fP, dv.pri, CONST.ink, {role: "primary"});
+  tpart(pa); tpart(tn);
+  const hl = fit(c, fS, [F.tile.help], x0 + iw - (pcx + Math.max(pa.w, tn.w)) - 12, true);
+  hl.forEach((q, i) => tpart(tx(q, x0 + iw, y + floorH / 2 + (i - (hl.length - 1) / 2) * lS, fS, dv.sec, TZ, {align: "right"})));
   y += floorH + g;
   /* one stats line: LIVES and its hearts, FUSE, SCORE; SCORE drops where the line would not fit */
   const hs = K.heart, cy = y + statsH / 2, groups = [[CW.LIVES, null], [CW.FUSE, F.fuse], [CW.SCORE, F.score]];
@@ -190,7 +206,6 @@ function slab(c, r, tok, T0, dpr) {
   c.restore();
   c.strokeStyle = CONST.ol; c.lineWidth = 2; c.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2); c.strokeRect(r.x + T0 - 1, r.y + T0 - 1, r.w - 2 * T0 + 2, r.h - 2 * T0 + 2);
 }
-const rr = (c, x, y, w, h, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
 export function paintCard(c, P, tok, o = {}) {
   slab(c, P.box, tok, P.T, o.dpr);
   const L = P.lane;
@@ -206,6 +221,7 @@ export function paintCard(c, P, tok, o = {}) {
       c.restore();
     }
   }
+  for (const g of P.glyphs) glyph(c, g.n, g.x, g.y, g.s, g.col);
   for (const h of P.hearts) { c.save(); c.translate(h.x + h.s / 2 - 0.4 * h.s / 25, h.y + h.s / 2 - 1.7 * h.s / 25); c.scale(h.s / 25, h.s / 25); drawIcon(c, "heart", HEART, 0); c.restore(); }
   for (const t of P.texts) {
     c.font = t.f; c.textAlign = t.align; c.textBaseline = "middle";
@@ -215,7 +231,8 @@ export function paintCard(c, P, tok, o = {}) {
   }
 }
 /* the probe's view: the card's rect (no tap target, no fill) and every text with its colour and role, in the page's design px */
-export function recordCard(P, rect, text) {
+export function recordCard(P, rect, text, pair) {
   rect("card", P.box.x, P.box.y, P.box.w, P.box.h);
   for (const t of P.texts) text(t.s, t.align === "right" ? t.x - t.w : t.x, t.y, t.w, t.px, t.col, t.role);
+  if (pair) for (const g of P.glyphs) pair({x: g.x, y: g.y, w: g.s, h: g.s}, {x: g.x - 6, y: g.y - 6, w: g.s + 12, h: g.s + 12}, g.col, "card " + g.n);
 }

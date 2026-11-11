@@ -1,6 +1,6 @@
 /* UI upgrade v202 Task 3.2: the next-run card (src/render/pages/card.js), on MENU's card slot (desk and phone; the compact arrangement has none).
    One module LEVEL SELECT (Task 3.3) reuses, fed names and values only. What it shows: the world, the lane (the representative start corner, MAKO on his
-   spawn FLOOR cell), every roster foe with its count, the floor tile, LIVES / FUSE / SCORE; never the dealt board. Painted once into MENU's plate layer
+   spawn FLOOR cell), every roster foe (×n beside one met more than once, as the mock), the floor tile, LIVES / FUSE / SCORE; never the dealt board. Painted once into MENU's plate layer
    (keyed by what it shows), so the room layer's dpr stays >= 1.5 at 1366 x 768 @2 and a steady frame costs no call. Plus the shared Phase 3 list:
    every word whole at 1 and 1.25, inside the card and the plate at desk / l / p / iso, one yellow, the ring, 44 px, two idle frames equal. */
 import { rec } from "./lib/textrec.mjs";
@@ -85,18 +85,19 @@ const RUNS = [{ heat: 0, pace: 0, pact: 0 }, { heat: 1, pace: -1, pact: 0 }, { h
   check("cardFacts: the world, LIVES (ONE LIFE reads 1), FUSE n.ns unspaced, SCORE ×(heat + 1), the floor tile's name and its heat's help line, FINALE", bad.length === 0, J(bad.slice(0, 2)));
 }
 
-/* ---- every roster foe shows a count, at every level and heat, on every box with a card, at text scale 1 and 1.25 ---- */
+/* ---- every roster foe appears; ×n beside a foe met n > 1 times, no count beside a lone one (fix round 1, lead ruling: the approved mock) ---- */
 {
   const bad = [];
   for (const ts of [1, 1.25]) for (const b of CARDB) for (let lv = 1; lv <= 8; lv++) for (const run of RUNS) {
     setTextScale(ts); fresh();
     const f = frame(BOX[b], UI({ level: lv, run })), card = P._dbg.last.P.card, texts = drawnTexts(f), ros = C.rosterOf(lv, run.heat);
     if (!card) { bad.push(b + " no card"); continue; }
-    const cnt = ros.filter((e) => { const it = card.foes.find((q) => q.t === e.t); return it && it.cnt && it.cnt.s === "×" + e.n && texts.includes("×" + e.n); });
-    if (cnt.length !== ros.length || card.foes.length !== ros.length) bad.push(`${b} x${ts} L${lv} ${J(run)}: ${card.foes.map((q) => q.t + (q.cnt ? q.cnt.s : "?")).join(",")}`);
+    const ok = ros.filter((e) => { const it = card.foes.find((q) => q.t === e.t); return it && (e.n > 1 ? it.cnt && it.cnt.s === "×" + e.n && texts.includes("×" + e.n) : it.cnt === null); });
+    const counts = card.texts.filter((t) => /^×\d+$/.test(t.s) && card.foes.some((q) => q.cnt === t)).length;
+    if (ok.length !== ros.length || card.foes.length !== ros.length || counts !== ros.filter((e) => e.n > 1).length) bad.push(`${b} x${ts} L${lv} ${J(run)}: ${card.foes.map((q) => q.t + (q.cnt ? q.cnt.s : "")).join(",")}`);
   }
   setTextScale(1);
-  check("every roster foe has its cell and its count (×n, ×1 included) drawn, levels 1-8, three runs, desk / l / p / iso, x1 and x1.25", bad.length === 0, bad.slice(0, 4).join(" | "));
+  check("every roster foe has its cell; a foe met n > 1 times shows ×n equal to its roster count, a lone foe shows none (levels 1-8, three runs, desk / l / p / iso, x1 and x1.25)", bad.length === 0, bad.slice(0, 4).join(" | "));
 }
 
 /* ---- the lane: MAKO on his spawn FLOOR cell, the foe and the tile on floor too; a strip, never the whole board ---- */
@@ -171,13 +172,43 @@ const RUNS = [{ heat: 0, pace: 0, pact: 0 }, { heat: 1, pace: -1, pact: 0 }, { h
 {
   fresh(); frame(BOX.d1366, UI({ level: 1 }));
   const card = P._dbg.last.P.card, s = card.texts.map((t) => t.s);
-  check("desk card (JUNGLE): NEXT RUN · LEVEL 1, YOUR FIRST LEVEL, JUNGLE, YOU'LL MEET, FLOOR TILE, BOOSTER, LIVES, FUSE 2.5s, SCORE ×1; lane 14 cells, 2.5 rows", ["NEXT RUN · LEVEL 1", "YOUR FIRST LEVEL", "JUNGLE", "YOU'LL MEET", "FLOOR TILE", "BOOSTER", "LIVES", "FUSE", "2.5s", "SCORE", "×1"].every((w) => s.includes(w)) && card.lane.cols === 14 && Math.abs(card.lane.rows - 2.5) < 1e-9 && card.hearts.length === 3, J(s));
+  const sentry = card.foes.find((q) => q.t === "stationary"), walker = card.foes.find((q) => q.t === "walker");
+  check("desk card (JUNGLE): NEXT RUN · LEVEL 1, YOUR FIRST LEVEL, JUNGLE, YOU'LL MEET, FLOOR TILE, BOOSTER, LIVES, FUSE 2.5s, SCORE ×1; WALKER ×2, SENTRY bare; lane 14 cells, 2.5 rows; no finale flag", ["NEXT RUN · LEVEL 1", "YOUR FIRST LEVEL", "JUNGLE", "YOU'LL MEET", "FLOOR TILE", "BOOSTER", "LIVES", "FUSE", "2.5s", "SCORE", "×1"].every((w) => s.includes(w)) && walker.cnt && walker.cnt.s === "×2" && sentry.cnt === null && card.lane.cols === 14 && Math.abs(card.lane.rows - 2.5) < 1e-9 && card.hearts.length === 3 && card.glyphs.length === 0 && !s.includes("FINALE"), J(s));
+  fresh(); frame(BOX.d1366, UI({ level: 8 }));
+  const cw = P._dbg.last.P.card;
+  check("desk card (CROWN, the mock's frame, review item 6): nine bare foe cells in ONE row at 40 px, the lane back at 2.5 rows", cw.foes.length === 9 && cw.foes.every((q) => q.s === 40 && q.y === cw.foes[0].y && q.cnt === null) && Math.abs(cw.lane.rows - 2.5) < 1e-9, J([cw.foes.map((q) => [q.s, q.y]), cw.lane.rows]));
   fresh(); frame(BOX.d1366, UI({ level: 8, run: { heat: 2, pace: 0, pact: PACT.LAST } }));
   const c8 = P._dbg.last.P.card, s8 = c8.texts.map((t) => t.s);
   check("desk card (CROWN, EXPERT, ONE LIFE): THE LAST FINALE, one heart, FUSE 2.1s, SCORE ×3, nine foes", s8.includes("THE LAST FINALE") && c8.hearts.length === 1 && s8.includes("2.1s") && s8.includes("×3") && c8.foes.length === 9, J(s8));
   fresh(); frame(BOX.p393, UI({ level: 1 }));
   const cp = P._dbg.last.P.card, sp = cp.texts.map((t) => t.s);
   check("phone card: the lane on top (9 cells across), LEVEL 1 · JUNGLE, the foes, the floor tile, LIVES and FUSE", cp.lane.cols === 9 && cp.lane.y < Math.min(...cp.foes.map((q) => q.y)) && sp.includes("LEVEL 1 · JUNGLE") && sp.includes("BOOSTER") && sp.includes("LIVES") && sp.includes("2.5s"), J(sp));
+}
+
+/* ---- fix round 1, review item 4 (appendix 7.2 mark(glyph, word), tileCell labelled FLOOR TILE): the finale flag is the kit glyph beside FINALE on a
+   finale level (desk beside the world, phone right of the level line), never a font character; the phone's tile row carries FLOOR TILE ---- */
+{
+  const bad = [];
+  for (const ts of [1, 1.25]) for (const b of ["d1366", "d1024", "p393", "iso"]) for (let lv = 1; lv <= 8; lv++) {
+    setTextScale(ts); fresh();
+    const f = frame(BOX[b], UI({ level: lv })), card = P._dbg.last.P.card, s = card.texts.map((t) => t.s), fin = isFinale(lv), S = P._dbg.last.S;
+    const flags = card.glyphs.filter((g) => g.n === "flag"), tag = `${b} x${ts} L${lv}`;
+    if (fin && (flags.length !== 1 || !s.includes("FINALE"))) bad.push(tag + " no flag + FINALE");
+    if (!fin && (flags.length || s.includes("FINALE"))) bad.push(tag + " a flag off a finale");
+    if (s.filter((q) => q === "FINALE").length > 1) bad.push(tag + " FINALE twice");
+    if (lv === 5 && card.dev === "d" && s.some((q) => /FINALE/.test(q) && q !== "FINALE")) bad.push(tag + " a second finale word in the kicker");
+    if (drawnTexts(f).some((q) => /[⚑⚐]/.test(q))) bad.push(tag + " a flag font character");
+    for (const g of flags) if (String(g.col).toLowerCase() === CONST.yel || String(g.col).toLowerCase() === CONST.cor) bad.push(tag + " flag in yellow or coral");
+    if (card.dev === "p" && !s.includes("FLOOR TILE")) bad.push(tag + " phone tile row without FLOOR TILE");
+    if (card.over || card.lane.rows < 1.85 - 1e-9) bad.push(tag + " over, or the lane under 1.85 rows");
+  }
+  setTextScale(1);
+  check("finale levels (5, 8) show the kit flag glyph and FINALE once (no font flag, never yellow or coral; level 5's kicker carries no second FINALE); other levels none; the phone tile row reads FLOOR TILE; nothing over, the lane >= 1.85 rows (x1, x1.25)", bad.length === 0, bad.slice(0, 6).join(" | "));
+  fresh(); probe.setOn(true); frame(BOX.d1366, UI({ level: 8 }));
+  const snap = probe.snapshot(); probe.setOn(false);
+  check("the flag glyph is recorded as an info pair with its colour (the gates measure it)", snap.pairs.some((q) => q.kind === "info" && /flag/.test(q.name || "") && !!q.col) && !snap.fault, J(snap.pairs.filter((q) => q.kind === "info").map((q) => q.name)));
+  const fr = rec(); (await import("../src/render/kit/paint.js")).glyph(fr.ctx, "flag", 0, 0, 16, CONST.t2);
+  check("kit glyph flag: a pole and a pennant drawn as paths (a stroke and a fill), no text", fr.paints.some((q) => q.op === "stroke") && fr.paints.some((q) => q.op === "fill") && fr.texts.length === 0);
 }
 
 /* ---- one yellow, the ring, 44 px: the card adds no yellow fill, no ring, no tap target; a tap on it does nothing ---- */
@@ -223,8 +254,18 @@ const RUNS = [{ heat: 0, pace: 0, pact: 0 }, { heat: 1, pace: -1, pact: 0 }, { h
   check("desk: a key -> controller flip keeps the plate (card inside) and the room; only the feet miss", k1.plate === k0.plate && k1.room === k0.room && k1.miss === 3, J(k1.miss));
 }
 
-/* ---- memory (lead ruling 2): the room layer's dpr >= 1.5 at 1366 x 768 @2 with the card and the logo present, the cache <= 24 MiB ---- */
+/* ---- memory (lead ruling 2; fix round 1, review Important 1): the foot reserve is the bare three-verb feet measured at the text scale in force, so
+   at 1366 x 768 @2 with the card and the logo present the room's dpr is >= 1.5 at text scale 1 and >= DPR125 at 1.25 (the 125 % plate is 1180 wide:
+   1.5 there leaves room for under one foot), the cache <= 24 MiB, for keys and a controller alike ---- */
 {
+  const DPR125 = 1.41;
+  {
+    const one = (ts, dev) => { setTextScale(ts); setHints(dev === "pad" ? wordsOf("pad", DEF_CONTROLS) : null); fresh(); logo._dbg.on = true; const t = rec({ widthK: K8 }); t.ctx.setTransform(2, 0, 0, 2, 0, 0); P.drawMenuPage(t.ctx, BOX.d1366, UI({ level: 8, run: RUNS[2] }), 0); P.drawMenuPage(t.ctx, BOX.d1366, UI({ level: 8, run: RUNS[2] }), 0); const S = P._dbg.last.S, L = logo._dbg.last || {}; return { rd: S.rd, total: cache._dbg.bytes, logo: !!(L.world && L.world.width), live: S.live, feet: S.feet.filter((q) => S.foot[q.v] && S.foot[q.v].width).length }; };
+    const M = { "x1 keys": one(1, "key"), "x1 controller": one(1, "pad"), "x1.25 keys": one(1.25, "key"), "x1.25 controller": one(1.25, "pad") };
+    setTextScale(1); setHints(null);
+    console.log("  NOTE 1366x768@2 room dpr by text scale and device " + J(M));
+    check(`1366x768 @2: room dpr >= 1.5 at text scale 1 and >= ${DPR125} at 1.25, keys and controller alike (the flip keeps the room key); the cache <= 24 MiB with the logo; the feet cached`, M["x1 keys"].rd >= 1.5 && M["x1 controller"].rd >= 1.5 && M["x1.25 keys"].rd >= DPR125 && M["x1.25 controller"].rd >= DPR125 && M["x1 keys"].rd === M["x1 controller"].rd && M["x1.25 keys"].rd === M["x1.25 controller"].rd && Object.values(M).every((m) => m.total <= cache.BUDGET && m.logo && !m.live && m.feet >= 2), J(M));
+  }
   const run = (F, dpr, ui) => { fresh(); logo._dbg.on = true; const t = rec({ widthK: K8 }); t.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); P.drawMenuPage(t.ctx, F, ui, 0); P.drawMenuPage(t.ctx, F, ui, 0); const S = P._dbg.last.S, L = logo._dbg.last || {}; return { rd: S.rd, total: cache._dbg.bytes, logo: !!(L.world && L.world.width), room: S.room && S.room.width, plate: S.plate && S.plate.width }; };
   const R = {};
   for (const [nm, F, dpr] of [["1366x768@2", BOX.d1366, 2], ["1024x768@2", BOX.d1024, 2], ["2560x1440@2", { W: 2560, H: 1440, touch: false, shell: true, css: 1 }, 2], ["phone@2.7", BOX.p393, 2.7]]) for (const lv of [1, 8]) R[nm + " L" + lv] = run(F, dpr, UI({ level: lv, run: RUNS[2] }));

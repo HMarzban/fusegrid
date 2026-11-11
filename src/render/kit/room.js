@@ -22,6 +22,7 @@ import {F, HOME, featKindOf, isBelt, isStream} from "../../core/feat.js";
 import {FOES} from "../../core/entities.js";
 import {drawPlayerBody, drawEnemyBody} from "../sprites.js";
 import {drawSpec} from "../featdraw.js";
+import {rr} from "../icons.js";
 import {floorVar} from "../floorart.js";
 import {borderCode} from "../wallvar.js";
 import {wallCell, floorCell, brickCell} from "./paint.js";
@@ -100,7 +101,6 @@ export function lane(c, x, y, w, rows, level, tok, o = {}) {
   return h;
 }
 
-const rr = (c, x, y, w, h, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
 function framed(c, x, y, s, inner) {
   c.save();
   c.fillStyle = CONST.ol; rr(c, x, y + 3, s, s, 3); c.fill(); rr(c, x, y, s, s, 3); c.fill();

@@ -345,10 +345,10 @@ logo._dbg.on = true;
     return { a, b, c, d, e };
   };
   const { a, b, c, d, e } = flipRun(BOX.d1366), same = (x) => x.room === a.room && x.plate === a.plate && x.rd === a.rd;
-  /* Task 3.2: the fixed foot reserve holds one set of feet beside a room at dpr >= 1.5, so back at the first words (e) the cache has freed the stalest
-     feet (the first frame's two, least recently used) and re-makes them: feet only, never the room or the plate */
+  /* Task 3.2 fix round 1: the foot reserve is the bare three-verb feet (pages/menu.js FEET_STEP), so a note's wider feet (c) exceed it and paint live
+     (0 misses, nothing made); back at the first words (e) their two feet are still cached: feet only, never the room or the plate */
   check("desk: a key -> controller flip, a note and a controller's arrival keep the room and the plate (the same canvases, 0 misses each) and the room's dpr; only feet miss",
-    [b, c, d, e].every(same) && b.miss === 3 && c.miss === 2 && d.miss === 1 && e.miss === 2 && [b, c, d, e].every((x) => x.made.every((cv) => cv.width < a.room.width && cv.height <= 2 * 80)), J([b, c, d, e].map((x) => [same(x), x.miss, x.feet, x.made.map((cv) => cv.width + "x" + cv.height)])));
+    [b, c, d, e].every(same) && b.miss === 3 && c.miss === 0 && d.miss === 1 && e.miss === 0 && [b, c, d, e].every((x) => x.made.every((cv) => cv.width < a.room.width && cv.height <= 2 * 80)), J([b, c, d, e].map((x) => [same(x), x.miss, x.feet, x.made.map((cv) => cv.width + "x" + cv.height)])));
   const q = flipRun(BOX.p393);
   check("phone: the note re-rasters the plate (SOURCE's teaser), never the room; a device flip re-rasters nothing", q.b.room === q.a.room && q.b.plate === q.a.plate && q.b.miss === 0 && q.c.room === q.a.room && q.c.plate !== q.a.plate && q.c.rd === q.a.rd, J([q.b.miss, q.c.miss]));
   setHints(null);

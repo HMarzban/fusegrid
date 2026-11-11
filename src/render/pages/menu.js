@@ -15,8 +15,8 @@
    key and half of each gap round it, out to the plate's bed edge; menuHit returns its ITEMS index, -1 off the rows or on a zero box. The logo (drawLogo2d, place menu) sits in the header at scale lk = max(u x cap / 36, 20 / 36): under a
    20-unit cap the plan has no MENU build. drawMenuPage(c, F, ui, t): ui = {rows, focus (a label; tap mode hands PLAY), level, run, daily (null or
    today's tries), best (the top played NORMAL score or null), look, pages, rev, note, pad, reduced, enterT}; a zero or non-finite box draws nothing.
-   Cached (kit cache.js, recency touched on a steady frame): the room (roomLayer, its dpr giving way so the plate, a fixed foot reserve of FEET_W design
-   px x the text scale and a 3 MiB logo reserve fit the 24 MiB budget), the plate (rampart, bed, the next-run card, every row at rest but PLAY's tag and
+   Cached (kit cache.js, recency touched on a steady frame): the room (roomLayer, its dpr giving way so the plate, a foot reserve (the bare three-verb
+   feet, FEET_STEP) and a 3 MiB logo reserve fit the 24 MiB budget), the plate (rampart, bed, the next-run card, every row at rest but PLAY's tag and
    keycap; keyed by what it shows, the card's key included, so a device flip or a note on the desk never re-rasters it), one foot per verb (START on
    PLAY, OPEN on a door, a controller's SOURCE line, keyed by its words), all made at once so a cursor move never misses; feet wider in all than the
    reserve (a controller's three verbs under the sound note) paint live instead. Live: the logo, PLAY's tag and keycap, the focused row (key, band on a
@@ -35,9 +35,8 @@ import {drawLogo2d, deviceScale} from "../logo/draw2d.js";
 import {PLATE as LOGO} from "../logo/worlds.js";
 import {layout as logoLay} from "../logo/glyphs.js";
 import {hints, tapMode} from "../hintcopy.js";
-import {TZ, cardPlan, paintCard, recordCard} from "./card.js";
+import {TZ, deep, cardPlan, paintCard, recordCard} from "./card.js";
 
-const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
 export const DESK = deep({
   d: {top: 70, w: 1060, pad: [30, 26, 26, 26], list: 480, col: 26, hero: 64, door: 46, card: 420, foot: 18},
   d125: {top: 56, w: 1180, pad: [22, 24, 20, 24], list: 520, col: 26, hero: 72, door: 49, card: 456, foot: 14},
@@ -47,9 +46,10 @@ export const PHONE = deep({
   p125: {top: 26, bot: 20, side: 12, pad: [12, 12, 14, 12], hero: 62, door: 50, tile: 84, card: 120, max: 600},
 });
 export const PITCH = 8, BRK = 24, GAP = 10, FOOT_H = 54, TOP_MIN = 26, GUT = 8, CARD_MIN = 360, CAP_K = 0.705;
-/* the cached feet's fixed reserve: their summed width in design px (x the text scale), so the room's dpr never moves with the words; feet wider in all
-   (a controller's three verbs under a note) paint live instead */
-export const FEET_W = 1600;
+/* the cached feet's reserve: the three verbs' feet (START, OPEN, the controller's SOURCE line) planned with no note or sign at the text scale in force,
+   their layer widths summed and rounded up to FEET_STEP device px, so a key / controller flip (within a few px of each other) lands on the same room
+   key and the room's dpr never moves with the words; feet wider in all (a note, the signpost, long rebound caps) paint live instead */
+export const FEET_STEP = 256;
 export {TZ};
 /* the touch floors in CSS px (a target's least side, the least gap between two), and the least desk scale a touch box keeps the desk at */
 export const TOUCH = Object.freeze({h: 44, g: 8}), TOUCH_U = 0.8;
@@ -282,7 +282,8 @@ export function plan(c0, G, ui) {
   const foot = {};
   for (const v of verbs) foot[v] = footPlan(c, G, ui, words, v, sign);
   const run = ui.run || {}, card = G.d.card ? cardPlan(c, G.d.card, {level: ui.level, heat: run.heat, pact: run.pact}, G.d.dev) : null;
-  return {rows, foot, verbs, card};
+  const bare = {...ui, note: "", pad: ""}, reserve = G.mode === "desk" ? [M.START, M.OPEN, M.SOURCE_PAD].map((v) => footPlan(c, G, bare, words, v, "").w + 2) : [];
+  return {rows, foot, verbs, card, reserve};
 }
 
 const canCap = (c) => mOf(c) === c;
@@ -343,7 +344,8 @@ function record(G, P, ui, foc, dpr, el, verb, touchy) {
       probe.pair("info", b(R(g.x, g.y, g.s, g.s)), b(bx), {col: CONST.t2, name: l + " " + g.n});
     }
   }
-  if (P.card) recordCard(P.card, (n, x, y, w, h) => probe.rect(n, ...b(R(x, y, w, h))), (s, x, y, w, px, col, role) => txt(s, x, y, w, px, col, role));
+  if (P.card) recordCard(P.card, (n, x, y, w, h) => probe.rect(n, ...b(R(x, y, w, h))), (s, x, y, w, px, col, role) => txt(s, x, y, w, px, col, role),
+    (a, bg, col, name) => probe.pair("info", b(a), b(bg), {col, name}));
   const k = d.rows[foc], x0 = d.kind[foc] === "tile" && k.x > d.rows[G.order[0]].x ? k.x - d.gap + 1 : d.plate.x + 1, bed = R(x0, k.y, Math.max(1, k.x - 7 - x0), k.h);
   probe.pair("band", b(k), b(bed), {name: "focus " + foc});
   probe.pair("ring", b(R(k.x - 6, k.y - 6, k.w + 12, k.h + 12)), b(bed), {name: "ring " + foc});
@@ -369,7 +371,8 @@ function same(S, G, ui, w, touchy, dpr, ts, c, tap) {
 /* The plate's key names what it shows: the box's arrangement, the world, the teasers and the card (its own key: the level, heat and lives it shows);
    the notes only where SOURCE's teaser carries them (phone and compact). The hint words, tap mode and PLAY's run tag are not in it (PLAY's tag and
    keycap paint live), so on the desk a device flip, a note or a controller's arrival re-rasters only the feet. A foot's key is its own words. The
-   room's dpr gives way to a FIXED foot reserve (FEET_W), never to the feet of the moment, so the room's key never moves with the words either. */
+   room's dpr gives way to a foot reserve sized once from the bare three-verb feet (FEET_STEP), never to the feet of the moment, so the room's key
+   never moves with the words either. */
 function sizes(S, G, F, level, tok) {
   const d = G.d, u = G.u, dpr = S.dpr, P = S.P, ob = outer(d), pb = sc(ob, u), ui = S.ui;
   const id = [level, G.mode, +u.toFixed(6), J(d.plate), ui.look, ui.pages, ui.daily, ui.best, ui.rev, ...(d.dev === "p" ? [ui.note, ui.pad] : []), P.card ? P.card.key : ""].join("|");
@@ -380,7 +383,7 @@ function sizes(S, G, F, level, tok) {
     const key = {...K, layer: "menu.foot|" + J([+u.toFixed(6), fp.x, fp.y, fp.w, fp.parts.map((p) => [p.t || p.sep || "", p.cap || "", p.col || ""])])};
     return {v, fp, fr, b, w, h, key, k: keyOf(key)};
   });
-  const feet = G.mode === "desk" ? Math.round(FEET_W * S.ts * u * dpr) * Math.round((FOOT_H + 8) * u * dpr) * 4 : 0;
+  const feet = Math.ceil(P.reserve.reduce((n, w) => n + Math.round(w * u * dpr), 0) / FEET_STEP) * FEET_STEP * Math.round((FOOT_H + 6) * u * dpr) * 4;
   S.live = S.feet.reduce((n, q) => n + q.w * q.h * 4, 0) > feet;
   S.rd = +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - RESERVE - S.pw * S.ph * 4 - feet) / (4 * F.W * F.H)))).toFixed(3);
   S.box = {w: F.W, h: F.H};
