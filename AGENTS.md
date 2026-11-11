@@ -118,7 +118,8 @@ cohesion 3: any other touch shell box, a landscape tablet, while its scale holds
 the tabs and the DIFFICULTY bank floored to 44 CSS px, STATS' COPY STATS / RESET keys under its body, the touch confirm plate, and in tap mode the
 foot `REC_WORDS.TAP`, armed `TAP ANYWHERE ELSE TO CANCEL`; `tests/landscape.test.mjs` sweeps the five pages' arrangement on a tablet) and compact
 (any other touch box, the landscape phones' #c and a short tablet window: BACK, the title where it fits, the tabs in one header row; the plate at
-most 980 wide). SCORES: the DIFFICULTY bank (the R7 filter;
+most 980 wide). On phone and compact a controller (`hints().dev === "pad"`) adds a cue line at the plate's foot under the pane (R1 cohesion 2, lane
+lesson 6; `cueItems`): `TAB [D-PAD] · BACK [EAST]`, STATS first `COPY [WEST] · MEDALS [NORTH]`, label first, parts dropped whole from the front. SCORES: the DIFFICULTY bank (the R7 filter;
 its keys stay 44 CSS px on touch), BADGES (the four plaques, bits CLEAR / PLUS / MAX / CROWN as words.js `BADGE_NAMES`: earned = an ink word
 in the medal-colour outline (a stroke: the medal colour is never a fill), not yet a lock tag; two lines on a narrow table, dropped first where a short touch box would shrink the table under `BADGE_K` 0.8),
 the ten-row table RANK · SCORE · LEVEL · MODIFIERS (a count by `modsCount`, R10; no modifier glyph exists) · DATE, stepped down to a bare

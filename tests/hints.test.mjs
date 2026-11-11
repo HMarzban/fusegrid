@@ -414,6 +414,14 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
         J({ n: [na.length, nb.length], d, F: [[qa.F.x, qa.F.w, qa.sum], qb.F && [qb.F.x, qb.F.w, qb.sum]], words: [qa.words, qb.words], want: [want("key"), want("pad")] }));
       continue;
     }
+    if (rec && T && RP._dbg.last.G.mode !== "desk") {
+      /* RECORDS on a phone / compact touch box (R1 cohesion 2, lane lesson 6, as GUIDE's above): a controller adds its cue line at the plate's foot;
+         the plate, the tabs and BACK hold, the pane only gives the cue band its height, and the keyboard's frame has no cue */
+      setHints(null); paint(p(T)); const Ga = RP._dbg.last.G; setHints(PAD); paint(p(T)); const Gb = RP._dbg.last.G; setHints(null);
+      check(`a flip changes words only: ${nm} touch keeps its plate, tabs and BACK; the controller's cue band only takes the pane's foot`, J([Ga.plate, Ga.tabs, Ga.back]) === J([Gb.plate, Gb.tabs, Gb.back]) && !Ga.d.cue && !!Gb.d.cue &&
+        Math.abs(Gb.d.pane.y - Ga.d.pane.y) < 1e-9 && Gb.d.pane.h < Ga.d.pane.h && Gb.d.cue.y >= Gb.d.pane.y + Gb.d.pane.h && Gb.d.cue.y + Gb.d.cue.h <= Gb.d.plate.y + Gb.d.plate.h, J([Ga.d.pane, Gb.d.pane, Gb.d.cue]));
+      continue;
+    }
     check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps every rect`, J(flat(a)) === J(flat(b)), J(flat(a)).length + " vs " + J(flat(b)).length);
   }
 }

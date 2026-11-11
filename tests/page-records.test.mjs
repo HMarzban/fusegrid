@@ -631,6 +631,26 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
   }
   console.log("  (report pages) " + rep.join(" | "));
 }
+/* R1 cohesion 2 (lane lesson 6): a controller on a touch layout gets RECORDS' cue line, label first, keycap last: TAB [D-PAD] · BACK [EAST], and on
+   STATS COPY [WEST] · MEDALS [NORTH] first (dropped whole where the line is short); the keyboard's touch layout has none; the line sits inside the plate */
+{
+  const { setHints } = await import("../src/render/hintcopy.js"), { wordsOf } = await import("../src/app/hints.js"), { DEF_CONTROLS } = await import("../src/app/controls.js");
+  const bad = [];
+  for (const b of ["p393", "c852x393", "c600t"]) for (const page of ["scores", "stats", "medals"]) {
+    if (!BOX[b]) continue;
+    setHints(wordsOf("pad", DEF_CONTROLS));
+    const t = rec({ widthK: K8 }); RP.drawRecordsPage(t.ctx, BOX[b], UI({ page }), 0);
+    const G = RP.recordsGeom(BOX[b]), s = t.texts.map((x) => x.s), want = page === "stats" ? ["COPY", "WEST", "MEDALS", "NORTH", "TAB", "D-PAD", "BACK", "EAST"] : ["TAB", "D-PAD", "BACK", "EAST"];
+    const cue = RP._dbg.last && RP._dbg.last.S && RP._dbg.last.S.P.cue, seq = cue ? cue.parts.filter((p) => !p.sep).map((p) => p.t || p.cap) : [];
+    const tail = want.slice(-seq.length);
+    if (!G.d.cue || !cue || J(seq) !== J(tail) || seq.length < 4 || !(G.d.cue.y + G.d.cue.h <= G.d.plate.y + G.d.plate.h) || cue.parts.some((p) => p.x + p.w > G.d.cue.x + G.d.cue.w + 0.5)) bad.push(b + " " + page + " " + J(seq));
+    if (!s.includes("TAB") || !s.includes("EAST")) bad.push(b + " " + page + " not painted");
+    setHints(wordsOf("key", DEF_CONTROLS));
+    if (RP.recordsGeom(BOX[b]).d.cue) bad.push(b + " " + page + " keyboard has a cue");
+  }
+  setHints(null);
+  check("RECORDS with a controller on a phone / landscape phone: the cue line (label first, keycap last; STATS adds COPY WEST, MEDALS NORTH first), inside the plate; none on keys", bad.length === 0, bad.join(" | "));
+}
 /* the pointer: a tap on a page key (any RECORDS tab) is app.pageKey (which steps recPageStep), never a back-out */
 {
   const { mountPointer } = await import("../src/app/pointer.js"), sc = await import("../src/render/scenes.js"), log = [];

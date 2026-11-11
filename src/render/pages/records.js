@@ -320,7 +320,7 @@ function deskTouch(F, t125, css) {
 /* every touch box, in CSS px (u = 1 / css, or less where the frame itself does not fit). phone (a touch-portrait shell box): BACK and the title, the tabs
    across under them. compact (any other touch box the touch-desk form does not hold, the landscape phones' #c included): one header row, BACK, the title where it fits (else it drops: the
    open tab names the page), the tabs; the plate at most the desk's 980 wide, centred */
-const TITLE_W = 150, TAB_MIN = 96;
+const TITLE_W = 150, TAB_MIN = 96, CUE_H = 34;
 const LAND = Object.freeze({top: 12, bot: 13, pad: Object.freeze([9, 10, 6, 10]), pane: Object.freeze([4, 6, 4, 6]), gap: 4});
 function touchFrame(F, t125) {
   const land = !F.shell, P = land ? {...PHONE[t125 ? "p125" : "p"], ...LAND} : PHONE[t125 ? "p125" : "p"], dv = DEV.p, ts = F.ts, css = F.css > 0 ? F.css : 1, T0 = dv.T, tall = !!F.shell && F.H > F.W * 1.3;
@@ -343,10 +343,12 @@ function touchFrame(F, t125) {
     if (withT >= TAB_MIN) title = R(ix + back.w + 14, hy, x0 - 12 - (ix + back.w + 14), dv.keyh);
   }
   const tb = tabs[0].y + dv.bkh, tx = tall ? ix : tabs[0].x, trough = R(tx, tb, ix + iwP - tx, TROUGH);
-  const pane = R(ix, tb + TROUGH + PG, iwP, py + ph - P.pad[2] - (tb + TROUGH + PG));
+  /* a controller on a touch layout (no foot here): a cue line at the plate's foot, under the pane (R1 cohesion 2, lane lesson 6) */
+  const cueH = F.cue ? CUE_H : 0, cueG = cueH ? 6 : 0;
+  const pane = R(ix, tb + TROUGH + PG, iwP, py + ph - P.pad[2] - cueH - cueG - (tb + TROUGH + PG)), cue = cueH ? R(ix, pane.y + pane.h + cueG, iwP, cueH) : null;
   const iw = pane.w - 4 - P.pane[1] - P.pane[3], bh = pane.h - 4 - P.pane[0] - P.pane[2], bx = pane.x + 2 + P.pane[3], by = pane.y + 2 + P.pane[0];
   const bodies = bodiesAt(dv, ts, iw, {...P, kick: DESK.d.kick, bank: DESK.d.bank, statL: DESK.d.statL}, iw >= 520, bx, by, bh, 0, 0, land);
-  return {mode: tall ? "phone" : "compact", dev: "p", u, t125, T: T0, plate: R(px, py, pw, ph), kick: null, title, back, tabs, trough, pane, body: R(bx, by, iw, bh),
+  return {mode: tall ? "phone" : "compact", dev: "p", u, t125, T: T0, plate: R(px, py, pw, ph), kick: null, title, back, tabs, trough, pane, cue, body: R(bx, by, iw, bh),
     bodies, foot: null, confirm: confirmGeom(pane, dv, ts, true, 6, t125, R(px, py, pw, ph), tall, (bodies.stats.acts ? bodies.stats.acts.copy.y : by + bh - DEV.p.btnh) - 12)};
 }
 let gm = null;
@@ -354,12 +356,13 @@ let gm = null;
 export function recordsGeom(F) {
   const ts = F.ts > 0 ? F.ts : textScale(), t125 = big(ts), touchy = !!F.touch, css = F.css > 0 ? F.css : 1;
   const shell = !!F.shell;
-  if (gm && gm.W === F.W && gm.H === F.H && gm.touch === touchy && gm.ts === ts && gm.css === css && gm.shell === shell) return gm.G;
+  const cue = touchy && hints().dev === "pad"; // the cue line: a controller driving a touch layout (the words' device, so a flip re-lays the plate)
+  if (gm && gm.W === F.W && gm.H === F.H && gm.touch === touchy && gm.ts === ts && gm.css === css && gm.shell === shell && gm.cue === cue) return gm.G;
   /* the arrangement rule every page keeps (R1 cohesion 3): desk on a keyboard box; phone on a touch-portrait shell box; the touch-desk form on any
      other touch shell box (a landscape tablet) while its scale holds TOUCH_U; else compact */
-  const tall = shell && touchy && F.H > F.W * 1.3, d = !touchy ? desk({...F, ts}, t125) : (!tall && shell && deskTouch({...F, ts}, t125, css)) || touchFrame({...F, ts}, t125), u = d.u;
+  const tall = shell && touchy && F.H > F.W * 1.3, d = !touchy ? desk({...F, ts}, t125) : (!tall && shell && deskTouch({...F, ts}, t125, css)) || touchFrame({...F, ts, cue}, t125), u = d.u;
   const G = {mode: d.mode, dev: d.dev, u, t125, ts, W: F.W, H: F.H, d, touch: touchy, T: d.T * u, plate: sc(d.plate, u), tabs: d.tabs.map((r) => sc(r, u)), back: sc(d.back, u), foot: sc(d.foot, u), keys: d.bodies.scores.keys.map((r) => sc(r, u)), pane: sc(d.pane, u)};
-  gm = {W: F.W, H: F.H, touch: touchy, ts, css, shell, G: deep(G)};
+  gm = {W: F.W, H: F.H, touch: touchy, ts, css, shell, cue, G: deep(G)};
   return gm.G;
 }
 /* box -> design px */
@@ -830,6 +833,30 @@ function dspCol(c, s, x, y, px, col) {
   c.fillStyle = col; c.fillText(s, x, y);
 }
 
+/* ---------- the controller's cue line (phone and compact, no foot): label first, keycap last; a part that does not fit drops whole, STATS' COPY and
+   MEDALS first ---------- */
+export const cueItems = (page, words) => [...(page === "stats" ? [{t: ST.COPY_ARMED, cap: RW.WEST}, {t: ST.MEDALS_T, cap: RW.NORTH}] : []), {t: RW.TAB, cap: words.move}, {t: RW.BACK, cap: words.back}];
+function cuePlan(c, G, page, words) {
+  const r = G.d.cue, dv = DEV.p, f = T.label(dv.sec), sep = W(c, f, "·"), widthOf = (l) => l.reduce((n, it, i) => n + (i ? 24 + sep : 0) + W(c, f, it.t) + 8 + capW(c, it.cap, {phone: true}), 0);
+  let list = cueItems(page, words);
+  while (list.length > 1 && widthOf(list) > r.w) list = list.slice(1);
+  const out = [], cy = r.y + r.h / 2;
+  let x = r.x;
+  list.forEach((it, i) => {
+    if (i) { x += 12; out.push({sep: "·", x, w: sep}); x += sep + 12; }
+    const tw = W(c, f, it.t), cw = capW(c, it.cap, {phone: true});
+    out.push({t: it.t, x, w: tw}); x += tw + 8;
+    out.push({cap: it.cap, x, w: cw}); x += cw;
+  });
+  return {f, px: dv.sec, cy, parts: out};
+}
+function cueLive(c, Q, tok) {
+  for (const p of Q.parts) {
+    if (p.cap) cap(c, p.x, Q.cy - DEV.p.caph / 2, p.cap, {tok, phone: true});
+    else text(c, p.sep || p.t, p.x, Q.cy, Q.f, p.sep ? CONST.off : CONST.t2);
+  }
+}
+
 /* ---------- the foot (desk): label first, keycap last ---------- */
 export function footItems(page, foc, words, tap = false) {
   const pad = words.dev === "pad", A = (n) => [n];
@@ -882,6 +909,7 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
   const txt = (s, x, y, w, px, col, role, o = {}) => { if (s && w > 0) probe.text(s, x * u, (y - px * ts * CAP_K / 2) * u, w * u, px * ts * CAP_K * u, {role, col, px: px * ts * u, ...o}); };
   if (d.back) { probe.rect(RW.BACK, ...b(d.back), {touch: touchy, set: "head", fill: tok.key}); const gx = d.back.x + (d.back.w > 60 ? 14 : (d.back.w - 16) / 2); if (d.back.w > 60) txt(RW.BACK, d.back.x + 40, d.back.y + d.back.h / 2, measureOr(RW.BACK, dv.pri), dv.pri, CONST.ink, "primary"); probe.pair("info", b(R(gx, d.back.y + d.back.h / 2 - 8, 16, 16)), b(R(gx - 6, d.back.y + 8, 28, d.back.h - 16)), {col: CONST.ink, name: "back chevron"}); }
   if (d.kick) txt(RW.MENU, d.kick.x, d.kick.y + d.kick.h / 2, measureOr(RW.MENU, dv.sec), dv.sec, CONST.t2, "secondary");
+  if (P.cue) for (const p of P.cue.parts) { if (p.cap) probe.rect("cue cap", ...b(R(p.x, P.cue.cy - DEV.p.caph / 2, p.w, DEV.p.caph))); else txt(p.sep || p.t, p.x, P.cue.cy, p.w, P.cue.px, p.sep ? CONST.off : CONST.t2, "secondary", p.sep ? {lock: true} : {}); }
   if (d.title) txt(P.title.s, d.title.x, d.title.y + d.title.h / 2, measureOr(P.title.s, P.title.px, true), P.title.px, CONST.ink, "primary");
   P.tabs.forEach((t, i) => {
     const on = i === pi, r = on ? R(t.r.x, t.r.y - 2, t.r.w, t.r.h) : t.r;
@@ -1071,6 +1099,7 @@ export function drawRecordsPage(c, F, ui, t = 0) {
   if (!same(S, G, ui, words, dpr, c, tap)) {
     const P = plan(c, G, ui);
     P.feet = {};
+    P.cue = G.d.cue ? cuePlan(MC, G, ui.page, words) : null;
     if (G.mode === "desk") for (const f of ui.page === "medals" ? ["tabs"] : ui.page === "stats" && ui.arm ? ["arm"] : ["tabs", "body"]) P.feet[f] = footPlan(MC, G, footItems(ui.page, f, ui.page === "stats" && ui.arm ? hints() : words, tap && G.touch));
     S = {G, w: words, dpr, c, tap, ui: {...ui}, P, room: null, page: null, foot: {}};
     sizes(S, G, F, level, tok, ui);
@@ -1107,6 +1136,7 @@ export function drawRecordsPage(c, F, ui, t = 0) {
   if (P.pg && !(ui.page === "stats" && ui.arm)) paintPager(c, G.d.bodies[ui.page].pager, P.pg, tok, DEV[G.dev]); // armed, the confirm plate is the one page
   if (ui.page === "stats" && ui.arm) confirmLive(c, G, tok);
   if (ui.toast && ui.toast.s) toastTag(c, G, ui.toast, tok);
+  if (P.cue) cueLive(c, P.cue, tok);
   c.restore();
   if (probe.probe.on) record(G, P, ui, foc, dpr, F.shell ? "sh" : "c", q && q.fp, tok, touchy, tap);
 }
