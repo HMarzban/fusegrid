@@ -37,7 +37,7 @@ kitCache.setFactory((w, h) => new LayerCv(w, h));
 const withLayers = (R, n0) => { const T = R.texts.slice(); for (const cv of made.slice(n0)) T.push(...cv.r.texts); made.length = n0; return T; };
 import { drawShell, loadControlsArt } from "../src/render/shellview.js";
 import { want as wantPage } from "../src/render/pages/lazy.js";
-await wantPage("records"); // RECORDS is a lazy page (R20): the sweep paints it, not its LOADING plate
+const RP = await wantPage("records"); // RECORDS is a lazy page (R20): the sweep paints it, not its LOADING plate
 import { drawOverlay, overlayBox, drawHudChips, drawAbilityBar, PAUSE_ROWS, runStamp, copyPayload, pauseKicker } from "../src/render/scenes.js";
 import { pickupLabel, labelText } from "../src/render/fx.js";
 import { setHints } from "../src/render/hintcopy.js";
@@ -86,7 +86,13 @@ check("runWords: every setting, defaults included", W.runWords({}) === "NORMAL D
 /* ---- labels the app dispatches by (confirm() reads the label): the strings changed, the rows and their order did not ---- */
 check("MENU row OPTIONS is SETTINGS; seven rows in the design record's order, RECORDS for HIGH SCORES and STATS (Task 2.2)", J(ITEMS) === J(["PLAY", W.LABEL.LEVEL_SELECT, "DAILY", W.LABEL.RECORDS, W.LABEL.SETTINGS, "GUIDE", "SOURCE"]));
 check("RECORDS' tabs: SCORES · STATS · MEDALS, frozen, in tab order; the hint words TAB / TABS", J(W.RECORD_TABS) === J(["SCORES", "STATS", "MEDALS"]) && Object.isFrozen(W.RECORD_TABS) && W.LABEL.TAB === "TAB" && W.LABEL.TABS === "TABS");
-check("menudraw builds the RECORDS leads from words.js (keycap glyphs stay with the painter)", md.TAB_LEAD === "←→ " + W.LABEL.TAB + " · " && md.TABS_LEAD === "↑ " + W.LABEL.TABS + " · ");
+{
+  const { CLEAR_KEYS, KEEP_KEYS } = await import("../src/app/reset.js");
+  check("words.js RESET_GROUP is keyed by exactly reset.js's CLEAR and KEEP stores; RESET_DEFAULT is the sentence over those lists (STATS' armed plate)",
+    J(Object.keys(W.RESET_GROUP).sort()) === J([...CLEAR_KEYS, ...KEEP_KEYS].sort()) && W.RESET_DEFAULT === W.resetSentence(CLEAR_KEYS, KEEP_KEYS) &&
+      W.RESET_DEFAULT === "Erases every score, best, time, daily try, ghost, medal, badge and stat, shows the first-time tips again and locks levels 6–8, modifiers and time trial again. Keeps your settings, game speed, analytics choice and controls.");
+}
+check("the RECORDS feet build their TAB and DIFFICULTY words from words.js (keycap glyphs stay with the painter)", RP.footItems("scores", "tabs", wordsOf("key", DEF_CONTROLS))[0].t === W.LABEL.TAB && RP.footItems("scores", "body", wordsOf("key", DEF_CONTROLS))[0].t === W.LABEL.DIFFICULTY && RP.footItems("stats", "tabs", wordsOf("key", DEF_CONTROLS))[2].t === W.LABEL.TAB);
 check("PAUSE rows: RESUME, SETTINGS, RESTART, QUIT TO MENU (design record §4, Task 2.4); scenes' copy mirrors it", J(PAUSE_ITEMS) === J(["RESUME", W.LABEL.SETTINGS, "RESTART", "QUIT TO MENU"]) && J(PAUSE_ROWS) === J(PAUSE_ITEMS));
 check("SETTINGS row RENDER is ART STYLE: twelve rows in order, ten on screen outside REAL 3D (no CAMERA / BRIGHTNESS), no render-side copy", OPT_ROWS.length === 12 && OPT_ROWS[3] === W.LABEL.ART_STYLE && optRows(false).length === 10 && optRows(false)[3] === W.LABEL.ART_STYLE && !optRows(false).includes("CAMERA") && !optRows(false).includes("BRIGHTNESS") && optRows(true) === OPT_ROWS && md.OPT_N === undefined);
 check("GUIDE door ITEMS is POWER-UPS", J(GUIDE_ROWS) === J(["HOW TO PLAY", W.LABEL.POWER_UPS, "ENEMIES", "FLOOR"]));
@@ -294,9 +300,9 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
   /* one marker per branch the sweep must reach, so a narrowed sweep cannot pass by seeing less */
   const SEEN = ["SETTINGS", "ART STYLE", "POWER-UPS", "NORMAL", "EXPERT", "GAME SPEED", "DIFFICULTY", "MODIFIERS", "ONE LIFE", "NO FLOOR ITEMS", "TIME TRIAL", "POWER BOMB", "IRON CROWN",
     "FURTHEST LEVEL YET", "MATCHED YOUR", "FROM YOUR", "DAILY 2026-11-10 · NORMAL SPEED", "PAUSED · LEVEL 3", "LEVEL ENDS", "THROW POWER-UP", "CLEAR LEVEL 5 TO OPEN", "REBIND IN SETTINGS",
-    "KEEPS SETTINGS", "replaces POWER BOMB", "NO NORMAL DIFFICULTY RUNS YET", "BEST 4,210", "LEVELS 1-5 IN ONE RUN", "BESTS · NO MODIFIERS", "YOUR TRIES TODAY", "4 PAGES", "GITHUB", "CHANGE ART STYLE",
+    "ANY OTHER KEY CANCELS", "replaces POWER BOMB", "NO NORMAL DIFFICULTY RUNS YET", "BEST 4,210", "LEVELS 1-5 IN ONE RUN", "BESTS · NO MODIFIERS", "YOUR TRIES TODAY", "4 PAGES", "GITHUB", "CHANGE ART STYLE",
     "LEVEL 8 · CROWN", "the level you reach", "DID NOT LOAD · SETTINGS", "· next level", "Levels 5 and 8 end in a finale.", "Clear level 5 to open 6 to 8.", "NO VIBRATION AT ALL", "NO TIME YET", "Walls close in from 25s.", "ONE LIFE · FEWER ITEMS",
-    "DEFAULT RULES", "DAILY 2026-11-10 · LEVEL 3 · 1840", "RECORDS", "BADGES", "EARNED", "←→ TAB · T MEDALS", "↑ TABS · T MEDALS", "SPD MAX", "FRAME RATE MAX", "SENSITIVITY MAX", "LEVEL 8", "ROW", "CHANGE", "OPEN", "PICK", "TOGGLE", "SOUTH", "TAP OUTSIDE TO CLOSE", "TAP OUTSIDE TO GO BACK",
+    "DEFAULT RULES", "DAILY 2026-11-10 · LEVEL 3 · 1840", "RECORDS", "BADGES", "EARNED", "COPY MY STATS", "BEST BY DIFFICULTY", "SPD MAX", "FRAME RATE MAX", "SENSITIVITY MAX", "LEVEL 8", "ROW", "CHANGE", "OPEN", "PICK", "TOGGLE", "SOUTH", "TAP OUTSIDE TO CLOSE", "TAP OUTSIDE TO GO BACK",
     "STANDARD", "CONTROLLER READY · VIBRATION MEDIUM · SETTINGS › CONTROLS", "NEEDS A CLICK OR ENTER", "TAP A ROW", "LEVEL 1 · JUNGLE"]; // Task 2.4: only the REAL 3D rows draw STANDARD (CAMERA's value); Task 3.1: the MENU page's teasers, foot and signpost (its old preview panes are gone)
   const all = [...found.keys()], miss = SEEN.filter((w) => !all.some((s) => s.indexOf(w) >= 0));
   check("the sweep reached every branch it claims (one marker each)", miss.length === 0, miss.join(" | "));

@@ -95,6 +95,7 @@ export function createPadRouter({ input, app, SCREEN, binds, world, onPause, onU
         if (id === fireBy) { fireBy = null; input.gpFire(false); }
         if (id === remBy) { remBy = null; input.gpRemote(false); }
       }
+      if (app.resetArm && (snap.press.length || TAPS.some(([a]) => snap.menuDir[a] && !prev[a]))) app.resetArm = false; // STATS: any controller input is not the second R (a swallowed press, a card's answer included)
       const swallow = deaf || ((snap.found || woke) && !front);
       const press = swallow ? [] : snap.press;
       let edge = !deaf && snap.press.length > 0;

@@ -4,7 +4,8 @@
 
    node tools/ui/shots.mjs [flags]
      --screens a,b    screens to capture (default all): title, menu, level, options (alias settings), graphics, controls, guide, howto, items,
-                      enemies, floor, scores, stats, medals, pause, win, lose, play; captured in that canonical order whatever the order given
+                      enemies, floor, scores, stats, statsreset (STATS armed), medals, pause, win, lose, play; captured in that canonical order
+                      whatever the order given
      --look 2d,px,3d  art styles (default 2d); one page load per look and world
      --world 1,2,8    worlds, levels 1..8 (default 1): app.level before the title (6..8 also open rooms 6-8, app.pactUnlocked, as after a first CLEAR);
                       a run screen plays that level

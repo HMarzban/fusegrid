@@ -1095,6 +1095,20 @@ function d1(gen, room, heat, n) {
   check("U works again after", posts === 1, posts);
   delete globalThis.document;
 }
+// ---- v202 Task 4.2: the card's LATER and its backdrop stop the tap at the card, so they cancel an armed STATS reset themselves ----
+for (const via of ["LATER", "the backdrop"]) {
+  const kids = {}, made = [], el = () => { const e = { L: {}, hidden: true, dataset: {}, style: {}, setAttribute: noop, appendChild: noop, addEventListener(t, f) { (e.L[t] = e.L[t] || []).push(f); }, querySelector: (s) => (kids[s] = kids[s] || el()) }; made.push(e); return e; };
+  globalThis.document = { body: el(), createElement: el, addEventListener: noop };
+  const app = { screen: SCREEN.STATS, capturing: false, resetArm: true };
+  const u = mountUpdate(() => ({ app, world: { state: "PLAY" }, isRunEnd: () => false, SCREEN }), {
+    idle: (f) => f(), top: null, self: null, href: "http://127.0.0.1/index.html", location: { reload: noop },
+    navigator: { serviceWorker: { controller: {}, addEventListener: noop, register: () => Promise.resolve({ waiting: { postMessage: noop } }) } } });
+  await new Promise((r) => setImmediate(r));
+  const shown = u.shown, target = via === "LATER" ? kids[".later"] : made[1]; // made: body, the backdrop, the card
+  (target.L.pointerup || []).forEach((f) => f({ stopPropagation: noop }));
+  check("STATS armed, the update card answered by " + via + ": the card goes, the reset is cancelled", shown && !u.shown && app.resetArm === false, shown + "/" + u.shown + "/" + app.resetArm);
+  delete globalThis.document;
+}
 
 // ---- T14: the NEW VERSION card on a pad ----
 {

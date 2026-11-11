@@ -148,6 +148,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     if (!e.metaKey) keys.add(code);
     if (keyPress(e)) { app.lastDev = "key"; hintDev.key(e, app.ctlT); }
     const cap = app.capturing;
+    if (code === "KeyR" && app.screen === SCREEN.STATS && (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey)) { app.resetArm = false; return true; } // only a plain R arms or erases
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return cap;
     if (cap && !browserKey(code)) e.preventDefault();
     return app.ctlKey(code, e.key);

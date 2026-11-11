@@ -144,8 +144,9 @@ export function mountAnalytics(env) {
       el.addEventListener("pointerdown", (ev) => ev.stopPropagation());
       el.addEventListener("pointerup", (ev) => { ev.stopPropagation(); fn(); });
     };
-    tap(".yes", () => set(1));
-    tap(".no", () => set(0));
+    const disarm = () => { const g = e.get && e.get(); if (g && g.app) g.app.resetArm = false; }; // an answer is input that is not the second R: it cancels an armed STATS reset
+    tap(".yes", () => { disarm(); set(1); });
+    tap(".no", () => { disarm(); set(0); });
     card.addEventListener("pointerdown", (ev) => ev.stopPropagation());
     card.addEventListener("pointerup", (ev) => ev.stopPropagation());
     doc.body.appendChild(card);
@@ -154,6 +155,7 @@ export function mountAnalytics(env) {
       const g = e.get && e.get();
       if (!shown() || ev.repeat || (ev.code !== "KeyY" && ev.code !== "KeyN") || (g && g.app && g.app.capturing)) return;
       ev.stopImmediatePropagation();
+      if (g && g.app) g.app.resetArm = false;
       set(ev.code === "KeyY" ? 1 : 0);
     }, true);
   };

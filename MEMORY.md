@@ -24,6 +24,9 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-07 — v201 pushed: controller play, rebinding, CONTROLS page
 - Owner: "make it ready and push it up", a day before the planned Sunday. Released as one squashed commit on `origin/main`'s v200 tip (`feature/controls` and `feature/delivery` are never pushed); CHANGELOG and sitemap dated 2026-11-07; the brand of the test controller left the tracked docs (A5). 578 tests; the stubbed-pad browser pass re-run on the release tree, its leftover fails all stale against `e1384f5` or timing (record's go/no-go). M1-M7 ship open by the owner's call. The new share card (`og.png` + alt text) ships beside it as its own commit; the owner re-uploads Social preview by hand.
+## 2026-11-11 — UI upgrade Task 4.2: RECORDS' STATS on the kit and a two-step reset (lane-4-records)
+- STATS on pages/records.js (`stats.js statsView`; hero, tiles, LIFETIME, BEST BY DIFFICULTY, notes on desk); armed = a modal confirm plate whose sentence is words.js `resetSentence` over reset.js's CLEAR / KEEP lists; wipe guards closed: touch C, consent Y / N and taps, update card taps, controller presses (cards, swallowed first press, directions), chorded R. Left open: the inline load-failure card's Enter / Escape.
+
 ## 2026-11-11 — UI upgrade Task 4.1: RECORDS' SCORES and MEDALS on the kit (lane-4-records)
 - `src/render/pages/records.js` (lazy, `pages/lazy.js` `records`): kit tabs in a wall trough, SCORES difficulty bank + badges + table with a modifiers count (R10; placeholders dropped in main's getter), MEDALS tiles; one `recordsGeom` for draw and tap (desk / phone / compact); STATS stays on the old painter until Task 4.2.
 

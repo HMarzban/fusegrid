@@ -1612,10 +1612,11 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
 
 // T1 (camera spec §4): MEDALS and Reset by TAP on STATS, through the REAL
 // pointer path on a scaled canvas (CSS 300x260 over a 600x520 buffer, k=2).
-// Buffer zone centres at 600x520: T MEDALS (183,478), R RESET (354,478),
-// armed R AGAIN (132,478), armed C COPY (492,478); (300,300) is off every label.
+// v202 Task 4.2: the targets come from the RECORDS page's own geometry and its painted foot (pages/records.js): the MEDALS tab, the foot's
+// COPY MY STATS (C) and RESET (R) labels, and, armed, the confirm plate's AGAIN ERASES (R) and COPY (C) keys; the pane is inert, off the plate backs out.
 {
   const {CLEAR_KEYS,KEEP_KEYS}=await import("../src/app/reset.js");
+  const RP=(await import("../src/render/pages/lazy.js")).get("records");
   const noop=()=>{};
   const mem={};
   let reloads=0;
@@ -1629,48 +1630,55 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     cv.el.getBoundingClientRect=()=>({left:0,top:0,width:300,height:260});
     const g=createGame(cv.el,{seed:76});
     globalThis.location={search:"",reload:()=>{reloads++;}};
-    const tap=(x,y)=>cv.fire("pointerdown",{clientX:x/2,clientY:y/2});
-    const stats=()=>{ g.app.cabinetSeen=true; g.app.screen=SCREEN.MENU; g.app.cursor=ITEMS.indexOf("RECORDS"); g.app.confirm(); g.app.recTab(1); g.app.move(1,1); }; // RECORDS, STATS tab, its body: the zone centres above are the body's foot
+    let now=1000;
+    const frame=()=>{ g.loop(now+=16); g.loop(now+=16); };
+    const G0=RP.recordsGeom({W:600,H:520,touch:false,shell:false,css:1}),u=G0.u,ctr=(r)=>[(r.x+r.w/2)*u,(r.y+r.h/2)*u];
+    const zone=(key)=>{ const S=RP._dbg.last.S,fp=S.feet.find((q)=>q.v===S.fv).fp,z=fp.zones.find((q)=>q.key===key); return [((z.x0+z.x1)/2)*u,fp.mid*u]; };
+    const tap=(xy)=>{ frame(); cv.fire("pointerdown",{clientX:xy[0]/2,clientY:xy[1]/2}); frame(); };
+    const stats=()=>{ g.app.cabinetSeen=true; g.app.screen=SCREEN.MENU; g.app.cursor=ITEMS.indexOf("RECORDS"); g.app.confirm(); g.app.recTab(1); g.app.move(1,1); frame(); }; // RECORDS, STATS tab, its body
     fill(); stats();
-    tap(183,478);
-    check("T1 tap: the T MEDALS label on STATS opens the MEDALS page",
+    tap(ctr(G0.d.tabs[2]));
+    check("T1 tap: the MEDALS tab on STATS opens the MEDALS page",
       g.app.screen===SCREEN.TROPHIES,String(g.app.screen));
-    tap(300,300);
+    tap(ctr(G0.d.pane));
     check("T1 tap: a tap on MEDALS backs out to MENU on RECORDS (R7)",g.app.screen===SCREEN.MENU&&g.app.cursor===ITEMS.indexOf("RECORDS"),String(g.app.screen));
     stats();
+    const C=zone("KeyC"),R=zone("KeyR");
     const wrote=[]; navigator.clipboard={writeText:(s)=>(wrote.push(s),Promise.resolve())};
-    tap(270,478); await new Promise((r)=>setImmediate(r));
-    check("T1 tap: the C COPY MY STATS label copies through the KeyC path and raises COPIED, still STATS",
+    tap(C); await new Promise((r)=>setImmediate(r));
+    check("T1 tap: the COPY MY STATS label copies through the KeyC path and raises COPIED, still STATS",
       g.app.screen===SCREEN.STATS&&wrote.length===1&&/FUSEGRID STATS/.test(wrote[0])&&g.app.toast.s==="COPIED"&&g.app.toast.t>0&&g.app.resetArm===false,
       g.app.screen+"/"+wrote.length+"/"+JSON.stringify(g.app.toast));
     delete navigator.clipboard;
-    tap(354,478);
-    check("T1 tap: the R RESET label arms and clears nothing",
+    tap(R);
+    check("T1 tap: the RESET label arms and clears nothing",
       g.app.screen===SCREEN.STATS&&g.app.resetArm===true&&kept()&&reloads===0,
       g.app.screen+"/"+g.app.resetArm+"/"+reloads);
-    tap(354,478);
-    check("T1 tap: a second tap where RESET was lands off R AGAIN — disarmed, still STATS, nothing cleared",
+    tap(R);
+    check("T1 tap: a second tap where RESET was is no AGAIN ERASES — disarmed, still STATS, nothing cleared",
       g.app.screen===SCREEN.STATS&&g.app.resetArm===false&&kept()&&reloads===0,
       g.app.screen+"/"+g.app.resetArm+"/"+reloads);
-    tap(354,478); tap(300,300);
-    check("T1 tap: RESET then an off-label tap disarms and stays on STATS",
+    tap(R); tap(ctr(G0.d.pane));
+    check("T1 tap: RESET then a tap on the dimmed page disarms and stays on STATS",
       g.app.screen===SCREEN.STATS&&g.app.resetArm===false&&kept()&&reloads===0,
       g.app.screen+"/"+g.app.resetArm);
     navigator.clipboard={writeText:(s)=>(wrote.push(s),Promise.resolve())};
-    tap(354,478); tap(492,478); await new Promise((r)=>setImmediate(r));
-    check("T1 tap: RESET then the armed C COPY label disarms, copies, raises COPIED, clears nothing",
+    tap(R); tap(ctr(G0.d.confirm.copy)); await new Promise((r)=>setImmediate(r));
+    check("T1 tap: RESET then the confirm plate's COPY disarms, copies, raises COPIED, clears nothing",
       g.app.screen===SCREEN.STATS&&g.app.resetArm===false&&wrote.length===2&&/FUSEGRID STATS/.test(wrote[1])&&g.app.toast.s==="COPIED"&&kept()&&reloads===0,
       g.app.resetArm+"/"+wrote.length+"/"+JSON.stringify(g.app.toast)+"/"+reloads);
     delete navigator.clipboard;
-    tap(354,478); tap(132,478);
-    check("T1 tap: RESET then R AGAIN clears every CLEAR key",
+    tap(R); tap(ctr(G0.d.confirm.again));
+    check("T1 tap: RESET then AGAIN ERASES clears every CLEAR key",
       CLEAR_KEYS.every((k)=>!(k in mem)),Object.keys(mem).join(","));
-    check("T1 tap: RESET then R AGAIN keeps both KEEP keys and reloads once",
+    check("T1 tap: RESET then AGAIN ERASES keeps every KEEP key and reloads once",
       KEEP_KEYS.every((k)=>k in mem)&&reloads===1&&g.app.resetArm===false,
       Object.keys(mem).join(",")+"/"+reloads);
     fill(); stats();
-    tap(300,300);
-    check("T1 tap: an idle off-label tap on STATS backs out to MENU",
+    tap(ctr(G0.d.pane));
+    check("T1 tap: an idle tap on STATS' pane is inert",g.app.screen===SCREEN.STATS&&kept(),String(g.app.screen));
+    tap([2,2]);
+    check("T1 tap: an idle tap off the plate backs out to MENU",
       g.app.screen===SCREEN.MENU&&kept()&&reloads===1,String(g.app.screen));
   }finally{ delete globalThis.window; delete globalThis.location; }
 }

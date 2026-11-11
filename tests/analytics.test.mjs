@@ -240,5 +240,15 @@ check("cookiePath keeps the cookies on the game's own directory",
   check("the app boots with the stored consent", createMenuApp({ analytics: true }).analytics === true && createMenuApp().analytics === false);
 }
 
+// ---- v202 Task 4.2: answering the card is input that is not the second R: it cancels an armed STATS reset (Y / N in the capture phase never reach
+// main's onUiKey, and the card's taps stop at the card) ----
+for (const how of ["KeyY", "KeyN", ".yes", ".no"]) {
+  const D = mkDom(), app = { screen: SCREEN.STATS, resetArm: true };
+  const ga = mountAnalytics({ id: ID, store: mkStore(), win: D.win, doc: D.doc, loc: LOC, get: () => ({ app, SCREEN }) });
+  ga.tick();
+  if (how[0] === ".") D.card().querySelector(how).fire("pointerup", ptr()); else D.key(how);
+  check("gap 2: armed STATS, the consent card answered by " + how + ": the answer lands and the reset is cancelled", app.resetArm === false && ga.consent === (/Y|yes/.test(how) ? 1 : 0), app.resetArm + "/" + ga.consent);
+}
+
 console.log("\n  ANALYTICS RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

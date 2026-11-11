@@ -32,7 +32,8 @@ const ROWS = {
   enemies: { menu: ["GUIDE"], guide: ["ENEMIES"], key: ["ArrowLeft", "Enter"], state: "ENEMIES", exempt: { chosen: "GUIDE pages show no chosen / unchosen values: doors, foes and read-only rows", locked: "GUIDE pages show no locked value" } }, // ← from WALKER wraps to KNIGHT and Enter opens its points tooltip (the round 6 frame; a key move alone opens it on a keyboard)
   floor: { menu: ["GUIDE"], guide: ["FLOOR"], state: "FLOOR", exempt: { chosen: "GUIDE pages show no chosen / unchosen values: doors, foes and read-only rows", locked: "GUIDE pages show no locked value", band: "a read-only page has no focus: any tap or key backs out", ring: "a read-only page has no focus, so no ring", gap: "one tap target at most (the phone BACK key)", info: "no non-text mark carries information: the tile cells are pictures, each row's words name them" } },
   scores: { menu: ["RECORDS"], wait: "records", state: "SCORES", exempt: { locked: "SCORES shows no locked value: the badges not yet earned are lock tags on a dark chip, not wall cells, and every key is open" } }, // v202 Task 4.1
-  stats: { menu: ["RECORDS"], key: "KeyE", wait: "records", state: "STATS" },
+  stats: { menu: ["RECORDS"], key: "KeyE", wait: "records", state: "STATS", exempt: { locked: "STATS from a fresh profile draws no level course (no run is saved), the one place a locked level shows as a wall cell" } }, // v202 Task 4.2
+  statsreset: { menu: ["RECORDS"], key: ["KeyE", "KeyR"], wait: "records", state: "STATS", exempt: { locked: "the armed STATS page from a fresh profile draws no level course (no run is saved)" } }, // STATS armed: the confirm plate
   medals: { menu: ["RECORDS"], key: ["KeyE", "KeyE"], wait: "records", state: "TROPHIES", exempt: { locked: "MEDALS shows no locked value: a medal not yet earned is a goal tile, read-only, never a wall cell" } },
   play: { run: "play", state: "PLAY", settle: 900 },
   pause: { run: "pause", state: "PAUSE", settle: 300 },

@@ -5,20 +5,32 @@
    G.d in design px (the mock's CSS px), u box units per design px. F = {W, H, touch, shell, css, ts}, as MENU's. Arrangements:
    desk   every keyboard box: the 1366 x 768 frame at u 1 (plate 980 wide, 1080 at 125 %): kicker MENU over the RECORDS title, the tabs in their wall
           trough, the pane (one height, the tallest tab's body), the foot under the plate; a smaller box scales the page as one piece (#c, the iso guard).
-   phone  every touch box: the 393 x 852 column in CSS px (u = 1 / css, capped 600 CSS px and centred): a BACK key and the title, the tabs as three
-          equal keys over the trough, the pane filling the plate; no foot. A body taller than its pane is scaled into it (k), floors giving way only there.
+   phone  a touch-portrait shell box: the 393 x 852 column in CSS px (u = 1 / css, capped 600 CSS px and centred): a BACK key and the title, the tabs
+          as three equal keys over the trough, the pane filling the plate; no foot.
+   compact any other touch box (landscape tablets, the landscape phones' #c): one header row (BACK, the title where it fits, the tabs; BACK steps down
+          to its chevron where three tabs would not hold their word), the plate at most 980 wide. On a touch box a body taller than its pane is
+          scaled into it (k; SCORES' bank and STATS' keys keep their size), floors giving way only there (the landscape phones' #c); the armed
+          confirm plate shrinks its words the same way (fk).
    Tabs are bricks in a wall trough: the open tab the world's brick standing 2 px up, the others floor wells. SCORES: the DIFFICULTY bank (the filter,
    R7: ←/→ and the shoulders in the body, a tap anywhere), the four badges (src/app/plaques.js bits CLEAR, PLUS, MAX, CROWN; earned = the medal outline
    tag, not yet = the lock tag) and the ten-slot table (RANK, SCORE, LEVEL, MODIFIERS as a count by words.js modsCount (R10; no modifier glyph exists in
    the kit, so the count stands alone), DATE); rows arrive with placeholders already dropped (main), so the table never reads a seeded row as a played
-   run. MEDALS: eight sunk tiles, earned in the medal outline, the rest quiet goals. STATS: Task 4.2.
-   Hits: tabHit -> 0..2 or -1; scoresHit -> a difficulty 0..2, -2 on the plate (inert), -1 off it or on the BACK key (main backs out).
+   run. MEDALS: eight sunk tiles, earned in the medal outline, the rest quiet goals (a small lock in the outline). STATS (Task 4.2): app/stats.js
+   statsView's numbers worded here: the hero, three stat tiles, LIFETIME, BEST BY DIFFICULTY, the cabinet notes; RESET quiet at rest (the foot on a
+   keyboard, a quiet key on touch); armed, the page dims under a confirm plate whose one sentence is words.js resetSentence over src/app/reset.js's
+   CLEAR / KEEP lists (handed in as ui.wipe), its AGAIN ERASES key focused (band face, cream label, the R keycap last) beside COPY.
+   Hits: tabHit -> 0..2 or -1; scoresHit -> a difficulty 0..2, -2 on the plate (inert), -1 off it or on the BACK key (main backs out); statsHit -> a key
+   code (KeyC / KeyR / KeyT, a foot label or a touch key), "back", "plate" (inert) or, armed, "cancel" (anything but AGAIN ERASES and COPY).
    Cached (kit cache.js, recency touched on a steady frame): the room, one page layer per tab and its data (plate, header, the trough with every tab at
    rest, the pane, the body at rest), the feet (one per focus, made at once). Live: the open tab, the focus (bare bomb + the 3 px cream ring on the open
    tab or the chosen difficulty), SCORES' chosen difficulty and its rows. A tab step paints its own layer once; a focus move or a filter step paints none.
    With no canvas source (Node) everything paints straight onto the target over one flat fill; a context with no clip or rect gets the plan only.
    Under the probe the page records its rects, texts and squint pairs outside any layer paint. */
-import {LABEL, DIFF, RECORD_TABS, REC_WORDS as RW, BADGE_NAMES, modsCount, noRunsYet, pickToSet} from "../words.js";
+import {LABEL, DIFF, RECORD_TABS, REC_WORDS as RW, BADGE_NAMES, STATS_WORDS as ST, RESET_DEFAULT, modsCount, noRunsYet, pickToSet, diffTag, speedTag, resetSentence} from "../words.js";
+import {biomeOf} from "../../core/config.js";
+import {FOES, POWER} from "../../core/entities.js";
+import {drawEnemyBody} from "../sprites.js";
+import {drawIcon} from "../icons.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, cap, capW, plate, focusBomb, wallCell} from "../kit/paint.js";
 import {T, DEV, measure, textScale, nums} from "../kit/type.js";
@@ -32,8 +44,8 @@ import {hints, tapMode} from "../hintcopy.js";
 const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
 export const PAGES = Object.freeze(["scores", "stats", "medals"]);
 export const DESK = deep({
-  d: {w: 980, pad: [16, 24, 22, 24], tabW: 150, pane: [22, 30, 24, 30], foot: 24, bank: 130, kick: 150, row: 26},
-  d125: {w: 1080, pad: [16, 24, 22, 24], tabW: 170, pane: [22, 30, 24, 30], foot: 24, bank: 150, kick: 180, row: 30},
+  d: {w: 980, pad: [16, 24, 22, 24], tabW: 150, pane: [22, 30, 24, 30], foot: 24, bank: 130, kick: 150, row: 26, statL: 400},
+  d125: {w: 1080, pad: [16, 24, 22, 24], tabW: 170, pane: [22, 30, 24, 30], foot: 24, bank: 150, kick: 180, row: 30, statL: 450},
 });
 export const PHONE = deep({
   p: {side: 12, top: 16, bot: 16, pad: [12, 10, 12, 10], back: 120, pane: [18, 8, 12, 8], max: 600, row: 28},
@@ -66,6 +78,53 @@ function medalsBody(dv, ts, iw, cols = iw >= 640 ? 2 : 1, lines = 2) {
   const tiles = Array.from({length: 8}, (_, i) => R((i % cols) * (tw + gap), y0 + Math.floor(i / cols) * (th + gap), tw, th));
   return {count: R(0, 0, iw, cnt), tiles, cols, pad, lines, h: y0 + n * th + (n - 1) * gap};
 }
+/* STATS (Task 4.2): the hero (BEST RUN, the qualifier on up to two lines, the score in brick digits, the level course, REACHED LEVEL n · WORLD), three
+   stat tiles (RUNS, PLAY TIME, MEDALS), LIFETIME (five ledger lines), BEST BY DIFFICULTY (no modifiers, NORMAL SPEED: three two-line ledger lines, the
+   level under the difficulty) and the cabinet's notes. Two columns from 700 wide (the hero and the bests left of a wall course; the tiles, LIFETIME and
+   the notes right), one column below it (there the notes drop: their facts ride the copy payload and MENU's DAILY teaser). */
+export const LEDGER = Object.freeze({d: 35, p: 30});
+function statsBody(dv, ts, iw, D, narrow) {
+  const sec = dv.sec * ts * 1.2, pri = dv.pri * ts * 1.2, lh = Math.max(narrow ? LEDGER.p : LEDGER.d, Math.round(dv.pri * ts * 1.5)), lh2 = Math.round(dv.pri * ts * 1.15 + sec + 4), g = narrow ? 14 : 18;
+  const L = narrow ? iw : D.statL, rx = narrow ? 0 : L + 40, rw = narrow ? iw : iw - rx;
+  let y = 0;
+  const kick = R(0, y, L, sec); y += sec + 4;
+  const qual = R(0, y, L, 2 * pri); y += 2 * pri + 8;
+  const digits = R(0, y, L, dv.sdh + 4); y += dv.sdh + 4 + 8;
+  const course = R(0, y, L, dv.lch + 4); y += dv.lch + 4 + 6;
+  const reached = R(0, y, L, sec); y += sec;
+  const tileH = Math.round(12 + 28 + 6 + dv.hud * ts + 6 + sec), tw = (rw - 20) / 3;
+  let ry = narrow ? y + g : 0;
+  const tiles = [0, 1, 2].map((i) => R(rx + i * (tw + 10), ry, tw, tileH));
+  ry += tileH + g;
+  const lifeK = R(rx, ry, rw, sec); ry += sec + 6;
+  const life = [0, 1, 2, 3, 4].map((i) => R(rx, ry + i * lh, rw, lh)); ry += 5 * lh;
+  let by = narrow ? ry + g : y + g;
+  const bk = narrow ? 2 : 1, bestK = R(0, by, L, bk * sec); by += bk * sec + 6; // narrow: the kicker breaks once (BEST BY DIFFICULTY / NO MODIFIERS · NORMAL SPEED)
+  const best = [0, 1, 2].map((i) => R(0, by + i * lh2, L, lh2)); by += 3 * lh2;
+  const notes = narrow ? null : R(rx, ry + 12, rw, 3 * sec), h = narrow ? by : Math.max(by, ry + 12 + 3 * sec);
+  return {kick, qual, digits, course, reached, tiles, lifeK, life, bestK, best, notes, lh, lh2, div: narrow ? null : R(L + 18, 0, 3, h), narrow, h};
+}
+/* the armed reset's confirm plate (appendix 7.3) inside the pane: desk centred, 700 wide (680 at 125 %), its keys side by side (stacked at 125 %); touch at
+   the pane's foot, its keys stacked full width over TAP ANYWHERE ELSE TO CANCEL. Lines are counted at a generous 0.66 em, so the measured wrap fits. */
+const estLines = (s, px, w) => { let n = 1, cur = 0; for (const wd of String(s).split(" ")) { const ww = (wd.length + 1) * 0.7 * px; if (cur && cur + ww > w) { n++; cur = ww; } else cur += ww; } return n; };
+/* floorY (a touch box): the box ends above it, clear of the COPY STATS / RESET keys, so no point of RESET (or COPY) is ever AGAIN ERASES: a double
+   tap on RESET never erases */
+function confirmGeom(pane, dv, ts, touch, T0, t125, plateR, tall, floorY) {
+  const pad = touch ? [16, 14] : [22, 26], cw = touch ? pane.w - 2 * (T0 + 8) : Math.min(pane.w - 2 * (T0 + 8), t125 ? 680 : 700), iw = cw - 2 * pad[1];
+  const top = plateR ? plateR.y + T0 + 4 : -Infinity, bot = floorY != null ? floorY : plateR ? plateR.y + plateR.h - T0 - 4 : Infinity, room = bot - top, stack = (touch && tall) || t125, kh = touch ? DEV.p.btnh : dv.btnh, keysH = stack ? 2 * kh + 12 : kh;
+  /* a short box (a landscape phone's #c) shrinks the plate's words (fk) until it fits: the floors give way only there */
+  let fk = 1, tl, th, bl, bh, can, h;
+  for (;;) {
+    const tpx = dv.ttl * 0.72 * ts * fk, bod = dv.bod * ts * fk;
+    tl = estLines(ST.TITLE, tpx * 0.95, iw - 34); th = tl * tpx * 1.1; bl = estLines(RESET_DEFAULT, bod, iw); bh = bl * bod * 1.5; can = touch ? dv.sec * ts * fk * 1.2 + 12 : 0;
+    h = pad[0] + th + 14 + bh + 18 + keysH + can + pad[0];
+    if (h <= room || fk < 0.4) break;
+    fk *= 0.92;
+  }
+  const x = pane.x + (pane.w - cw) / 2, y = touch ? Math.max(top, bot - h) : Math.max(top, pane.y + (pane.h - h) / 2), ky = y + pad[0] + th + 14 + bh + 18, kw = stack ? iw : (iw - 14) / 2;
+  const again = R(x + pad[1], ky, kw, kh), copy = stack ? R(x + pad[1], ky + kh + 12, iw, kh) : R(x + pad[1] + kw + 14, ky, kw, kh);
+  return {box: R(x, y, cw, h), title: R(x + pad[1], y + pad[0], iw, th), tl, body: R(x + pad[1], y + pad[0] + th + 14, iw, bh), bl, fk, again, copy, cancel: touch ? R(x + pad[1], (stack ? copy.y : again.y) + kh + 12, iw, dv.sec * ts * fk * 1.2) : null};
+}
 /* a body placed at (x, y) scaled by k: every rect in it made absolute; k, x, y the scaled region's scale and origin (SCORES: tk at the table's top) */
 function place(b, x, y, k) {
   const out = {k, x, y};
@@ -83,7 +142,12 @@ function bodiesAt(dv, ts, iw, D, row, bx, by, avail) {
   });
   const best = opts.reduce((a, o) => (o.k > a.k + 1e-9 ? o : a));
   out.medals = place(best.m, bx, by, best.k);
-  out.stats = {k: 1, x: bx, y: by, h: 0};
+  /* STATS: on a touch box COPY STATS and RESET sit under the body at their size; the body above them scales into what is left */
+  const actH = avail > 0 ? DEV.p.btnh : 0, room = avail > 0 ? avail - actH - 14 : 0, narrow = iw < 700;
+  let st = statsBody(dv, ts, iw, D, narrow), sk = 1;
+  if (room > 0 && st.h > room) { sk = room / st.h; st = statsBody(dv, ts, iw / sk, D, (iw / sk) < 700); }
+  out.stats = place(st, bx, by, sk);
+  if (actH) { const cw = Math.round((iw - 12) * 0.58); out.stats.acts = {copy: R(bx, by + avail - actH, cw, actH), reset: R(bx + cw + 12, by + avail - actH, iw - cw - 12, actH)}; }
   return out;
 }
 
@@ -91,7 +155,7 @@ function desk(F, t125) {
   const D = DESK[t125 ? "d125" : "d"], dv = DEV.d, ts = F.ts, T0 = dv.T, pw = D.w;
   const kick = dv.sec * ts * 1.2, ttl = dv.ttl * ts * 1.05, head = kick + 2 + ttl, tabsH = 2 + dv.bkh + TROUGH;
   const iw = pw - D.pad[1] - D.pad[3] - 4 - D.pane[1] - D.pane[3];
-  const bh = Math.max(scoresBody(dv, ts, iw, D, true, 0).h, medalsBody(dv, ts, iw).h), paneH = 4 + D.pane[0] + bh + D.pane[2];
+  const bh = Math.max(scoresBody(dv, ts, iw, D, true, 0).h, medalsBody(dv, ts, iw).h, statsBody(dv, ts, iw, D, iw < 700).h), paneH = 4 + D.pane[0] + bh + D.pane[2];
   const ph = D.pad[0] + head + 10 + tabsH + PANE_GAP + paneH + D.pad[2], block = ph + D.foot + FOOT_H;
   const side = T0 + 2 + GUT, u = Math.min(1, F.W / (pw + 2 * side), F.H / (block + 2 * side + 4));
   const Wd = F.W / u, Hd = F.H / u, px = (Wd - pw) / 2, py = Math.max(side, (Hd - block) / 2);
@@ -99,7 +163,8 @@ function desk(F, t125) {
   const tabs = [0, 1, 2].map((i) => R(ix + i * (D.tabW + TAB_GAP), ty, D.tabW, dv.bkh));
   const pane = R(ix, ty + dv.bkh + TROUGH + PANE_GAP, iwP, paneH), bx = pane.x + 2 + D.pane[3], by = pane.y + 2 + D.pane[0];
   return {mode: "desk", dev: "d", u, t125, T: T0, plate: R(px, py, pw, ph), kick: R(ix, hy, iwP, kick), title: R(ix, hy + kick + 2, iwP, ttl), back: null,
-    tabs, trough: R(ix, ty + dv.bkh, iwP, TROUGH), pane, body: R(bx, by, iw, bh), bodies: bodiesAt(dv, ts, iw, D, true, bx, by, 0), foot: R(px, py + ph + D.foot, pw, FOOT_H)};
+    tabs, trough: R(ix, ty + dv.bkh, iwP, TROUGH), pane, body: R(bx, by, iw, bh), bodies: bodiesAt(dv, ts, iw, D, true, bx, by, 0), foot: R(px, py + ph + D.foot, pw, FOOT_H),
+    confirm: confirmGeom(pane, dv, ts, false, 8, t125, R(px, py, pw, ph))};
 }
 /* every touch box, in CSS px (u = 1 / css, or less where the frame itself does not fit). phone (a touch-portrait shell box): BACK and the title, the tabs
    across under them. compact (any other touch box, the landscape phones' #c included): one header row, BACK, the title where it fits (else it drops: the
@@ -129,7 +194,7 @@ function touchFrame(F, t125) {
   const pane = R(ix, tb + TROUGH + PANE_GAP, iwP, py + ph - P.pad[2] - (tb + TROUGH + PANE_GAP));
   const iw = pane.w - 4 - P.pane[1] - P.pane[3], bh = pane.h - 4 - P.pane[0] - P.pane[2], bx = pane.x + 2 + P.pane[3], by = pane.y + 2 + P.pane[0];
   return {mode: tall ? "phone" : "compact", dev: "p", u, t125, T: T0, plate: R(px, py, pw, ph), kick: null, title, back, tabs, trough, pane, body: R(bx, by, iw, bh),
-    bodies: bodiesAt(dv, ts, iw, {...P, kick: DESK.d.kick, bank: DESK.d.bank}, iw >= 520, bx, by, bh), foot: null};
+    bodies: bodiesAt(dv, ts, iw, {...P, kick: DESK.d.kick, bank: DESK.d.bank, statL: DESK.d.statL}, iw >= 520, bx, by, bh), foot: null, confirm: confirmGeom(pane, dv, ts, true, 6, t125, R(px, py, pw, ph), tall, by + bh - DEV.p.btnh - 12)};
 }
 let gm = null;
 /** The one geometry for draw and tap; see the header. */
@@ -158,6 +223,27 @@ export function scoresHit(x, y, F) {
   if (inR(G.d.back, dx, dy)) return -1;
   for (let i = 0; i < 3; i++) { const r = b.keys[i]; if (inR(R(r.x - BANK_GAP / 2, b.bank.y, r.w + BANK_GAP, b.bank.h), dx, dy)) return i; }
   return onPlate(G, dx, dy) ? -2 : -1;
+}
+/* the desk foot's tap zones: each item from its label to its last keycap, on the foot painted for this geometry (the last plan) */
+function footHit(G, dx, dy) {
+  const S0 = S, q = S0 && S0.G === G && S0.ui.page === "stats" ? S0.feet.find((f) => f.v === S0.fv) : null;
+  if (!q || dy < q.fp.y || dy > q.fp.y + q.fp.h) return null;
+  for (const z of q.fp.zones) if (dx >= z.x0 - 6 && dx <= z.x1 + 6) return z.key || null;
+  return null;
+}
+/** STATS: a key code (KeyC / KeyR / KeyT: a foot label, a touch key, or armed AGAIN ERASES / COPY), "back" (BACK, off the plate), "plate" (on it, inert),
+    or, armed, "cancel" for anything else (the confirm plate is modal). */
+export function statsHit(x, y, F, arm) {
+  if (!okBox(F)) return arm ? "cancel" : "back";
+  const G = recordsGeom(F), [dx, dy] = toD(G, x, y), d = G.d;
+  if (arm) return inR(d.confirm.again, dx, dy) ? "KeyR" : inR(d.confirm.copy, dx, dy) ? "KeyC" : footHit(G, dx, dy) || "cancel";
+  if (inR(d.back, dx, dy)) return "back";
+  const a = d.bodies.stats.acts;
+  if (a && inR(a.copy, dx, dy)) return "KeyC";
+  if (a && inR(a.reset, dx, dy)) return "KeyR";
+  const f = footHit(G, dx, dy);
+  if (f) return f;
+  return onPlate(G, dx, dy) ? "plate" : "back";
 }
 /** MEDALS and any page with no body hit: -2 on the plate, -1 off it or on the BACK key. */
 export function plateHit(x, y, F) {
@@ -258,6 +344,7 @@ export function plan(c0, G, ui) {
     out.scores = {h, bank: DIFF.slice(), bomb: d.bodies.scores.keys.map((r, i) => fitsBomb(r, W(c, tf, DIFF[i]))), badges, bf, label: badges.length && badges[0].x > 0, table: list.length ? tablePlan(c, G, b, list, ts) : null, n: Math.min(10, list.length),
       empty: list.length ? null : [fit(c, T.label(dv.pri), [noRunsYet(h), "NO RUNS YET"], b.rows.w / b.k), fit(c, T.body(dv.bod), [pickToSet(h), ""], b.rows.w / b.k)]};
   }
+  if (ui.page === "stats") out.stats = statsPlan(c, G, ui);
   if (ui.page === "medals") {
     const b = d.bodies.medals, rows = Array.isArray(ui.rows) ? ui.rows : [], nf = T.label(dv.pri), df = T.label(dv.sec), gl = Math.round(dv.pri * 1.4);
     const tiles = Array.from({length: 8}, (_, i) => {
@@ -281,6 +368,12 @@ function ic(c, n, x, y, s, col) {
   else if (n === "dot") { c.arc(8, 8, 3, 0, Math.PI * 2); c.fill(); }
   else if (n === "lock") { c.lineWidth = 2; c.moveTo(4.5, 7); c.lineTo(4.5, 5); c.arc(8, 5, 3.5, Math.PI, 0); c.lineTo(11.5, 7); c.stroke(); c.beginPath(); c.rect(3, 7, 10, 7.5); c.fill(); }
   else if (n === "back") { c.lineWidth = 2.6; c.moveTo(10, 3); c.lineTo(5, 8); c.lineTo(10, 13); c.stroke(); }
+  else if (n === "flag") { c.lineWidth = 1.8; c.moveTo(4, 15); c.lineTo(4, 2); c.moveTo(4, 2.5); c.lineTo(12, 2.5); c.lineTo(10, 5.5); c.lineTo(12, 8.5); c.lineTo(4, 8.5); c.stroke(); }
+  else if (n === "clock") { c.lineWidth = 2; c.arc(8, 8, 6, 0, Math.PI * 2); c.moveTo(8, 4.5); c.lineTo(8, 8); c.lineTo(10.5, 9.5); c.stroke(); }
+  else if (n === "cal") { c.lineWidth = 2; c.rect(2, 3, 12, 11); c.moveTo(2, 7); c.lineTo(14, 7); c.moveTo(5, 1.5); c.lineTo(5, 4.5); c.moveTo(11, 1.5); c.lineTo(11, 4.5); c.stroke(); }
+  else if (n === "warn") { c.lineWidth = 2; c.moveTo(8, 1.5); c.lineTo(15, 14); c.lineTo(1, 14); c.closePath(); c.moveTo(8, 6); c.lineTo(8, 9.5); c.moveTo(8, 11.5); c.lineTo(8, 12); c.stroke(); }
+  else if (n === "reset") { c.lineWidth = 2.2; c.arc(8, 8, 4.5, Math.PI, Math.PI * 2.85, false); c.moveTo(6.5, 1); c.lineTo(4, 3.5); c.lineTo(6.5, 6); c.stroke(); }
+  else if (n === "check") { c.lineWidth = 2.6; c.moveTo(2.5, 8.5); c.lineTo(6, 12); c.lineTo(13.5, 4); c.stroke(); }
   else { const P = {up: [3, 11, 8, 5, 13, 11], dn: [3, 5, 8, 11, 13, 5], lf: [11, 3, 5, 8, 11, 13], rt: [5, 3, 11, 8, 5, 13]}[n]; if (P) { c.moveTo(P[0], P[1]); c.lineTo(P[2], P[3]); c.lineTo(P[4], P[5]); c.closePath(); c.fill(); } }
   c.restore();
 }
@@ -317,13 +410,9 @@ function paintPage(c, G, P, ui, tok) {
   pane(c, d.pane, tok);
   if (ui.page === "scores") scoresStatic(c, G, P, tok);
   if (ui.page === "medals") medalsStatic(c, G, P, tok);
+  if (ui.page === "stats") { statsStatic(c, G, P, ui, tok); if (ui.arm) confirmStatic(c, G, P, tok); }
 }
-function dspText(c, s, x, y, px) {
-  const font = T.display(px), em = px * textScale();
-  c.font = font; c.textAlign = "left"; c.textBaseline = "middle"; c.lineJoin = "round"; c.lineWidth = em * 0.12; c.strokeStyle = CONST.ol; c.fillStyle = CONST.ol;
-  c.strokeText(s, x, y + em * 0.08); c.fillText(s, x, y + em * 0.08); c.strokeText(s, x, y);
-  c.fillStyle = CONST.ink; c.fillText(s, x, y);
-}
+const dspText = (c, s, x, y, px) => dspCol(c, s, x, y, px, CONST.ink);
 function scoresStatic(c, G, P, tok) {
   const b = G.d.bodies.scores, S = P.scores, dv = DEV[G.dev], k = b.k, ph = G.dev === "p", kr = b.kick, br = b.bank;
   text(c, LABEL.DIFFICULTY, kr.x, kr.y + kr.h / 2, T.label(dv.sec), CONST.t2);
@@ -378,9 +467,163 @@ function medalsStatic(c, G, P, tok) {
   c.restore();
 }
 
+/* ---------- STATS (Task 4.2) ---------- */
+const hm = (secs) => { const s = Math.max(0, Math.floor(+secs || 0)); return Math.floor(s / 3600) + "h" + String(Math.floor(s / 60) % 60).padStart(2, "0") + "m"; }; // units unspaced
+const qualCands = (h) => { const mods = modsCount(h.pact) || RW.NO_MODS, d = diffTag(h.heat), sp = speedTag(h.pace); return [[d + " · " + mods + " · " + sp], [d + " · " + sp, mods], [d, mods + " · " + sp], [d, mods]]; };
+function statsPlan(c, G, ui) {
+  const d = G.d, b = d.bodies.stats, dv = DEV[G.dev], ts = G.ts, v = ui.view || {}, h = v.hero || null, k = b.k, room = b.qual.w / k;
+  const pf = T.label(dv.pri), sf = T.label(dv.sec);
+  const qual = h ? qualCands(h).find((ls) => ls.every((l) => W(c, pf, l) <= room)) || [diffTag(h.heat)] : null;
+  const life = [[ST.CLEARED, v.rooms, "flag"], [ST.KILLS, v.kills, "foe"], [ST.PICKS, v.picks, "fire"], [ST.DEATHS, v.deaths, "heart"], [ST.DAYS, v.days, "cal"]].map(([l, n, g]) => ({l, n: sep3(n | 0), g}));
+  const bests = [0, 1, 2].map((i) => { const e = (v.bests || [])[i] || null; return {l: diffTag(i), sub: e ? LABEL.LEVEL + " " + e.r : "", n: e ? sep3(e.s) : RW.NONE, s: e ? e.s : -1}; });
+  const top = Math.max(...bests.map((q) => q.s)), notes = [];
+  if (b.notes) for (const n of ui.notes || []) { const ls = wrap(c, sf, String(n), b.notes.w / k, 3) || []; for (const l of ls) if (notes.length < 3) notes.push(l); }
+  const conf = d.confirm, fk = conf.fk, cf = T.body(dv.bod * fk), sentence = resetSentence(ui.wipe ? ui.wipe[0] : null, ui.wipe ? ui.wipe[1] : null) || RESET_DEFAULT;
+  const titleF = T.display(dv.ttl * 0.72 * fk), tl = wrap(c, titleF, ST.TITLE, conf.title.w - 34, conf.tl) || [ST.TITLE];
+  const bk = ST.BY_DIFF + " · " + RW.NO_MODS + " · " + speedTag(0), bestK = !b.narrow || W(c, sf, bk) <= b.bestK.w / k ? [bk] : [ST.BY_DIFF, RW.NO_MODS + " · " + speedTag(0)];
+  return {bestK, hero: h, qual, digits: h ? [...sep3(h.s)] : [], reached: h ? ST.REACHED + " " + h.r + " · " + biomeOf(h.r).name : "", life, bests, top, notes,
+    tiles: [[ST.RUNS, sep3(v.runs | 0), "bomb"], [ST.PLAY_TIME, hm(v.secs), "clock"], [ST.MEDALS, (v.medals | 0) + "/8", "medal"]],
+    confirm: {title: tl, body: wrap(c, cf, sentence, conf.body.w, conf.bl) || [sentence], sentence, tf: titleF}};
+}
+const FOE0 = {type: "walker", color: "#9ce35b", r: 14, home: {x: 3, y: 7}, invuln: false, dir: {x: 0, y: 1}}, REST0 = {time: 0};
+function glyphAt(c, g, x, y, s, on) {
+  if (g === "foe") { const f = FOES[0]; c.save(); c.translate(x + s / 2, y + s / 2 + s * 0.04); c.scale(s / 34, s / 34); drawEnemyBody(c, REST0, {...FOE0, type: f.t, color: f.col}); c.restore(); return; }
+  if (g === "fire" || g === "heart") { const p = POWER.find((q) => q.t === g) || POWER[0]; c.save(); c.translate(x + s / 2, y + s / 2); c.scale(s / 26, s / 26); drawIcon(c, p.t, p.col, 0); c.restore(); return; }
+  if (g === "bomb") return focusBomb(c, x, y + s / 2, s);
+  if (g === "medal") return medalGlyph(c, x, y, s, on);
+  ic(c, g, x, y, s, CONST.t2);
+}
+function statsStatic(c, G, P, ui, tok) {
+  const b = G.d.bodies.stats, S = P.stats, dv = DEV[G.dev], k = b.k, ts = G.ts, ph = G.dev === "p";
+  c.save(); c.translate(b.x, b.y); c.scale(k, k); c.translate(-b.x, -b.y);
+  const L = (r) => R(b.x + (r.x - b.x) / k, b.y + (r.y - b.y) / k, r.w / k, r.h / k), sf = T.label(dv.sec), pf = T.label(dv.pri);
+  const kr = L(b.kick);
+  text(c, ST.BEST_RUN, kr.x, kr.y + kr.h / 2, sf, CONST.t2);
+  const qr = L(b.qual);
+  if (!S.hero) text(c, ST.NO_BEST, qr.x, qr.y + dv.pri * ts * 0.6, pf, CONST.t2);
+  else {
+    S.qual.forEach((l, i) => text(c, l, qr.x, qr.y + dv.pri * ts * (0.6 + 1.2 * i), pf, CONST.ink));
+    const dr = L(b.digits);
+    let x = dr.x;
+    for (const ch of S.digits) {
+      const w = ch === "," ? Math.round(dv.sdw * 0.6) : dv.sdw;
+      key(c, x, dr.y + 2, w, dv.sdh, ch === "," ? "well" : "lit", {tok, label: ch, px: dv.sdf, phone: ph});
+      x += w + 4;
+    }
+    const cr = L(b.course);
+    for (let r = 1; r <= 8; r++) {
+      const x0 = cr.x + (r - 1) * (dv.lcw + 5), kind = r < S.hero.r ? "lit" : r === S.hero.r ? "key" : r > 5 && !ui.unlocked ? "wall" : "well";
+      key(c, x0, cr.y + 2, dv.lcw, dv.lch, kind, {tok, label: kind === "wall" ? null : String(r), px: dv.pri, phone: ph});
+      if (kind === "wall") ic(c, "lock", x0 + dv.lcw / 2 - 7, cr.y + 2 + dv.lch / 2 - 7, 14, CONST.off);
+      if (r === 5 || r === 8) ic(c, "flag", x0 + dv.lcw - 13, cr.y + 4, 10, kind === "lit" ? CONST.dk : CONST.t2);
+    }
+    const rr = L(b.reached);
+    text(c, S.reached, rr.x, rr.y + rr.h / 2, sf, CONST.t2);
+  }
+  S.tiles.forEach(([name, val, g], i) => {
+    const r = L(b.tiles[i]);
+    key(c, r.x, r.y, r.w, r.h, "well", {tok});
+    glyphAt(c, g, r.x + 10, r.y + 8, 28, (ui.view && ui.view.medals) > 0);
+    nums(c, val, r.x + 12, r.y + 8 + 28 + 6 + dv.hud * ts / 2, dv.hud, {col: CONST.ink});
+    text(c, name, r.x + 12, r.y + r.h - 8 - dv.sec * ts * 0.6, sf, CONST.t2);
+  });
+  const lk = L(b.lifeK);
+  text(c, ST.LIFETIME, lk.x, lk.y + lk.h / 2, sf, CONST.t2);
+  S.life.forEach((q, i) => ledger(c, L(b.life[i]), q.g, q.l, "", q.n, dv, ts, false));
+  const bk = L(b.bestK);
+  S.bestK.forEach((l, i) => text(c, l, bk.x, bk.y + dv.sec * ts * (0.6 + 1.2 * i), sf, CONST.t2));
+  S.bests.forEach((q, i) => ledger(c, L(b.best[i]), {pip: i + 1, lit: q.s >= 0 && q.s === S.top}, q.l, q.sub, q.n, dv, ts, true, tok));
+  if (b.div) wallCourse(c, L(b.div), tok);
+  if (b.notes) S.notes.forEach((l, i) => text(c, l, L(b.notes).x, L(b.notes).y + dv.sec * ts * (0.6 + 1.2 * i), sf, CONST.t2));
+  c.restore();
+  const a = b.acts;
+  if (a) {
+    key(c, a.copy.x, a.copy.y, a.copy.w, a.copy.h, "key", {tok, label: ST.COPY_SHORT, phone: true});
+    key(c, a.reset.x, a.reset.y, a.reset.w, a.reset.h, "key", {tok});
+    const lw = W(mOf(c), pf, ST.RESET), x0 = a.reset.x + a.reset.w / 2 - (lw + 26) / 2;
+    ic(c, "reset", x0, a.reset.y + a.reset.h / 2 - 9, 18, CONST.cor);
+    text(c, ST.RESET, x0 + 26, a.reset.y + a.reset.h / 2, pf, CONST.t2);
+  }
+}
+/* a ledger line: glyph cell (28; a difficulty pip: a 24 px well holding its rank, the best one the world's brick), the label (and its sub: beside it, or
+   under it on a two-line line), a leader of floor-tile dots, the number right-aligned */
+function ledger(c, r, g, label, sub, num, dv, ts, two, tok) {
+  const gw = 28, cy = two ? r.y + 4 + dv.pri * ts * 0.575 : r.y + r.h / 2, pf = T.label(dv.pri), sf = T.label(dv.sec), mc = mOf(c);
+  if (typeof g === "object") {
+    const s = 24, x = r.x + 2, y = cy - s / 2;
+    rf(c, x, y, s, s, 4, CONST.ol);
+    if (g.lit) { c.fillStyle = tok.lit2; c.fillRect(x + 2, y + 2, s - 4, s - 4); c.fillStyle = tok.lit; c.fillRect(x + 2, y + 2, s - 4, (s - 4) * 0.54); }
+    else { c.fillStyle = tok.well; c.fillRect(x + 2, y + 2, s - 4, s - 4); }
+    text(c, String(g.pip), x + s / 2, y + s / 2, sf, g.lit ? CONST.dk : CONST.t2, "center");
+  } else glyphAt(c, g, r.x + 2, cy - 11, 22, false);
+  const lx = r.x + gw + 12;
+  text(c, label, lx, cy, pf, CONST.ink);
+  const lw = W(mc, pf, label), nw = nW(mc, T.num(dv.pri), num);
+  if (sub) two ? text(c, sub, lx, cy + dv.pri * ts * 0.575 + 4 + dv.sec * ts * 0.6, sf, CONST.t2) : text(c, sub, lx + lw + 10, cy, sf, CONST.t2);
+  const d0 = lx + lw + (sub && !two ? W(mc, sf, sub) + 10 : 0) + 12, d1 = r.x + r.w - nw - 12;
+  c.fillStyle = "#5a5047";
+  for (let x = d0; x + 3 <= d1; x += 8) c.fillRect(x, cy + 2, 3, 3);
+  nums(c, num, r.x + r.w, cy, dv.pri, {col: CONST.ink, align: "right"});
+}
+/* a wall course (appendix 7.1 divider), stood up: a dark groove, a band-light lip, square studs every 32 px */
+function wallCourse(c, r, tok) {
+  c.fillStyle = CONST.ol; c.fillRect(r.x, r.y, 2, r.h);
+  c.fillStyle = tok.band; c.fillRect(r.x + 2, r.y, 1, r.h);
+  c.fillStyle = CONST.ol;
+  for (let y = r.y + 14; y + 3 <= r.y + r.h; y += 32) c.fillRect(r.x - 1, y, 5, 3);
+}
+/* the armed reset: the page dimmed under the confirm plate (static, in the armed page's layer), the AGAIN ERASES key live */
+function confirmStatic(c, G, P, tok) {
+  const d = G.d, f = d.confirm, S = P.stats.confirm, dv = DEV[G.dev], ph = G.dev === "p", ts = G.ts;
+  c.fillStyle = "rgba(4,3,6,0.8)"; c.fillRect(d.pane.x + 2, d.pane.y + 2, d.pane.w - 4, d.pane.h - 4);
+  plate(c, f.box.x, f.box.y, f.box.w, f.box.h, tok, {phone: ph, T: ph ? 6 : 8});
+  const fk = f.fk, tp = dv.ttl * 0.72 * fk;
+  ic(c, "warn", f.title.x, f.title.y + tp * ts * 0.55 - 11, 22, CONST.cor);
+  S.title.forEach((l, i) => dspCol(c, l, f.title.x + 34, f.title.y + tp * ts * (0.55 + 1.1 * i), tp, CONST.cor));
+  S.body.forEach((l, i) => text(c, l, f.body.x, f.body.y + dv.bod * fk * ts * (0.75 + 1.5 * i), T.body(dv.bod * fk), CONST.ink));
+  const cp = f.copy;
+  key(c, cp.x, cp.y, cp.w, cp.h, "key", {tok, label: ph ? ST.COPY_SHORT : ST.COPY, phone: ph});
+  if (!ph && canCap(c)) { const w = capW(c, "C"); cap(c, cp.x + cp.w - w - 12, cp.y + cp.h / 2 - DEV.d.caph / 2, "C", {tok}); }
+  if (f.cancel) text(c, ST.TAP_CANCEL, f.cancel.x, f.cancel.y + f.cancel.h / 2, T.label(dv.sec * fk), CONST.t2);
+}
+function confirmLive(c, G, tok) {
+  const f = G.d.confirm, r = f.again, dv = DEV[G.dev], ph = G.dev === "p";
+  /* round 7: the focused danger key takes the focus band as its face, its label cream; the coral edge, the warn title and R carry the danger */
+  rf(c, r.x, r.y + 4, r.w, r.h, 6, CONST.ol); rf(c, r.x, r.y, r.w, r.h, 6, CONST.ol); rf(c, r.x + 2, r.y + 2, r.w - 4, r.h - 4, 4, CONST.cor); rf(c, r.x + 4, r.y + 4, r.w - 8, r.h - 8, 3, tok.band);
+  focusBomb(c, r.x + 8, r.y + r.h / 2, dv.bombs);
+  const capOn = !ph && canCap(c), cw = capOn ? capW(c, "R") : 0;
+  text(c, ST.AGAIN, r.x + (r.w + dv.bombs + 6 - cw - (capOn ? 12 : 0)) / 2, r.y + r.h / 2, T.label(dv.pri), CONST.ink, "center");
+  if (capOn) cap(c, r.x + r.w - cw - 12, r.y + r.h / 2 - DEV.d.caph / 2, "R", {tok});
+  c.strokeStyle = CONST.ink; c.lineWidth = 3; c.beginPath(); sp(c, r.x - 4.5, r.y - 4.5, r.w + 9, r.h + 9, 10.5); c.stroke();
+}
+/* COPIED / COPY FAILED (main's one endkeys toast): a tag at the header's right end, a lit brick with a check, or coral with the warn glyph */
+export function toastRect(G, c, s) {
+  const d = G.d, dv = DEV[G.dev], w = 8 + 16 + 8 + W(mOf(c), T.label(dv.sec), s) + 12, h = dv.tg + 6, row = d.title || d.back;
+  return R(d.plate.x + d.plate.w - 24 - w, row.y + row.h / 2 - h / 2, w, h);
+}
+function toastTag(c, G, toast, tok) {
+  const r = toastRect(G, c, toast.s), dv = DEV[G.dev], ok = !!toast.ok;
+  c.save(); c.scale(G.u, G.u);
+  key(c, r.x, r.y, r.w, r.h, ok ? "lit" : "key", {tok});
+  ic(c, ok ? "check" : "warn", r.x + 8, r.y + r.h / 2 - 8 - (ok ? 2 : 0), 16, ok ? CONST.dk : CONST.cor);
+  text(c, toast.s, r.x + 32, r.y + r.h / 2 - (ok ? 2 : 0), T.label(dv.sec), ok ? CONST.dk : CONST.cor);
+  c.restore();
+}
+function dspCol(c, s, x, y, px, col) {
+  const font = T.display(px), em = px * textScale();
+  c.font = font; c.textAlign = "left"; c.textBaseline = "middle"; c.lineJoin = "round"; c.lineWidth = em * 0.12; c.strokeStyle = CONST.ol; c.fillStyle = CONST.ol;
+  c.strokeText(s, x, y + em * 0.08); c.fillText(s, x, y + em * 0.08); c.strokeText(s, x, y);
+  c.fillStyle = col; c.fillText(s, x, y);
+}
+
 /* ---------- the foot (desk): label first, keycap last ---------- */
 export function footItems(page, foc, words) {
   const pad = words.dev === "pad", A = (n) => [n];
+  if (page === "stats") {
+    if (foc === "arm") return [{t: ST.ERASE, caps: ["R"]}, {t: ST.COPY_ARMED, caps: ["C"], key: "KeyC"}, {t: ST.CANCEL, caps: []}];
+    if (pad) return [{t: ST.COPY, caps: ["WEST"], key: "KeyC"}, {t: ST.MEDALS_T, caps: ["NORTH"], key: "KeyT"}, {t: RW.TAB, caps: [words.move]}, {t: RW.BACK, caps: [words.back], key: "back"}];
+    return [{t: ST.COPY, caps: ["C"], key: "KeyC"}, {t: ST.RESET, caps: ["R"], key: "KeyR"}, {t: RW.TAB, caps: foc === "body" ? ["Q", "E"] : [A("lf"), A("rt")]}, {t: RW.BACK, caps: [words.back], key: "back"}];
+  }
   if (pad) return page === "scores" && foc === "body" ? [{t: LABEL.DIFFICULTY, caps: [words.move]}, {t: RW.BACK, caps: [words.back]}] : [{t: RW.TAB, caps: [words.move]}, {t: RW.BACK, caps: [words.back]}];
   if (page === "scores") return foc === "body" ? [{t: LABEL.DIFFICULTY, caps: [A("lf"), A("rt")]}, {t: RW.TAB, caps: ["Q", "E"]}, {t: RW.BACK, caps: [words.back]}]
     : [{t: RW.TAB, caps: [A("lf"), A("rt")]}, {t: LABEL.DIFFICULTY, caps: [A("dn")]}, {t: RW.BACK, caps: [words.back]}];
@@ -398,7 +641,11 @@ function footPlan(c, G, items) {
   const fw = w + 36, x = d.plate.x + d.plate.w / 2 - fw / 2;
   let cx = x + 18;
   parts.forEach((p, i) => { cx += i ? (p.cap ? p.gap : 12) : 0; p.x = cx; cx += p.w; });
-  return {x, y: d.foot.y, w: fw, h: FOOT_H, f, px: dv.sec, parts, mid: d.foot.y + FOOT_H / 2};
+  /* each item's tap zone: from its label to its last keycap (STATS' foot labels are keys) */
+  const zones = [];
+  let it = -1;
+  for (const p of parts) { if (p.sep) continue; if (p.t != null) { it++; zones.push({x0: p.x, x1: p.x + p.w, key: items[it].key || null}); } else zones[zones.length - 1].x1 = p.x + p.w; }
+  return {x, y: d.foot.y, w: fw, h: FOOT_H, f, px: dv.sec, parts, zones, mid: d.foot.y + FOOT_H / 2};
 }
 const canCap = (c) => mOf(c) === c;
 function paintFoot(c, P, tok) {
@@ -463,6 +710,61 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy) {
       }
     }
   }
+  if (page === "stats") {
+    const B = d.bodies.stats, S = P.stats, k = B.k, sw = (s, px) => measureOr(s, px) * k;
+    if (!ui.arm) { // armed, the page under the confirm plate is dimmed and inert: not read (the mock's data-ng)
+    txt(ST.BEST_RUN, B.kick.x, B.kick.y + B.kick.h / 2, sw(ST.BEST_RUN, dv.sec), dv.sec * k, CONST.t2, "secondary");
+    if (!S.hero) txt(ST.NO_BEST, B.qual.x, B.qual.y + dv.pri * ts * 0.6 * k, sw(ST.NO_BEST, dv.pri), dv.pri * k, CONST.t2, "primary");
+    else {
+      S.qual.forEach((l, i) => txt(l, B.qual.x, B.qual.y + dv.pri * ts * (0.6 + 1.2 * i) * k, sw(l, dv.pri), dv.pri * k, CONST.ink, "primary"));
+      let x = B.digits.x;
+      const cells = [];
+      for (const ch of S.digits) { const w = (ch === "," ? Math.round(dv.sdw * 0.6) : dv.sdw) * k; cells.push(R(x, B.digits.y + 2 * k - (ch === "," ? 0 : 2 * k), w, dv.sdh * k)); x += w + 4 * k; }
+      cells.forEach((r, i) => { probe.rect("digit " + i, ...b(r), {fill: S.digits[i] === "," ? tok.well : tok.lit}); const w = measureOr(S.digits[i], dv.sdf) * k; txt(S.digits[i], r.x + r.w / 2 - w / 2, r.y + r.h / 2, w, dv.sdf * k, S.digits[i] === "," ? CONST.t2 : CONST.dk, "hud"); });
+      const cell = (r) => R(B.course.x + (r - 1) * (dv.lcw + 5) * k, B.course.y + 2 * k, dv.lcw * k, dv.lch * k);
+      for (let r = 1; r <= 8; r++) probe.rect("level " + r, ...b(cell(r)), {fill: r < S.hero.r ? tok.lit : r === S.hero.r ? tok.key : tok.well});
+      if (S.hero.r > 1 && S.hero.r < 8) probe.pair("chosen", b(R(cell(1).x + 3 * k, cell(1).y + 2 * k, cell(1).w - 6 * k, 6 * k)), b(R(cell(8).x + 3 * k, cell(8).y + 6 * k, cell(8).w - 6 * k, 6 * k)), {name: "cleared vs ahead level"});
+      txt(S.reached, B.reached.x, B.reached.y + B.reached.h / 2, sw(S.reached, dv.sec), dv.sec * k, CONST.t2, "secondary");
+    }
+    S.tiles.forEach(([name, val, g], i) => {
+      const r = B.tiles[i];
+      probe.rect("tile " + name, ...b(r), {fill: tok.well});
+      txt(val, r.x + 12 * k, r.y + (8 + 28 + 6 + dv.hud * ts / 2) * k, nWOr(val, dv.hud) * k, dv.hud * k, CONST.ink, "hud");
+      txt(name, r.x + 12 * k, r.y + r.h - (8 + dv.sec * ts * 0.6) * k, sw(name, dv.sec), dv.sec * k, CONST.t2, "secondary");
+      probe.pair("info", b(R(r.x + 8 * k, r.y + 6 * k, 32 * k, 32 * k)), b(R(r.x + 3 * k, r.y + 1 * k, 42 * k, 42 * k)), {col: g === "medal" ? (S.tiles && (ui.view && ui.view.medals) > 0 ? CONST.medal : CONST.t2) : g === "clock" ? CONST.t2 : CONST.ink, name: "tile glyph " + name});
+    });
+    txt(ST.LIFETIME, B.lifeK.x, B.lifeK.y + B.lifeK.h / 2, sw(ST.LIFETIME, dv.sec), dv.sec * k, CONST.t2, "secondary");
+    const line = (r, label, sub, num, two) => {
+      const cy = two ? r.y + (4 + dv.pri * ts * 0.575) * k : r.y + r.h / 2, lx = r.x + 40 * k;
+      txt(label, lx, cy, sw(label, dv.pri), dv.pri * k, CONST.ink, "primary");
+      if (sub) txt(sub, two ? lx : lx + sw(label, dv.pri) + 10 * k, two ? cy + (dv.pri * ts * 0.575 + 4 + dv.sec * ts * 0.6) * k : cy, sw(sub, dv.sec), dv.sec * k, CONST.t2, "secondary");
+      const w = nWOr(num, dv.pri) * k;
+      txt(num, r.x + r.w - w, cy, w, dv.pri * k, num === RW.NONE ? CONST.t2 : CONST.ink, "primary");
+    };
+    S.life.forEach((q, i) => line(B.life[i], q.l, "", q.n, false));
+    S.bestK.forEach((l, i) => txt(l, B.bestK.x, B.bestK.y + dv.sec * ts * (0.6 + 1.2 * i) * k, sw(l, dv.sec), dv.sec * k, CONST.t2, "secondary"));
+    S.bests.forEach((q, i) => line(B.best[i], q.l, q.sub, q.n, true));
+    if (B.notes) S.notes.forEach((l, i) => txt(l, B.notes.x, B.notes.y + dv.sec * ts * (0.6 + 1.2 * i) * k, sw(l, dv.sec), dv.sec * k, CONST.t2, "secondary"));
+    const a = B.acts;
+    if (a) { probe.rect(ST.COPY_SHORT, ...b(a.copy), {touch: touchy, set: "acts", fill: tok.key}); probe.rect(ST.RESET, ...b(a.reset), {touch: touchy, set: "acts", fill: tok.key}); txt(ST.COPY_SHORT, a.copy.x + a.copy.w / 2 - measureOr(ST.COPY_SHORT, dv.pri) / 2, a.copy.y + a.copy.h / 2, measureOr(ST.COPY_SHORT, dv.pri), dv.pri, CONST.ink, "primary"); }
+    }
+    if (ui.arm) {
+      const f = d.confirm, C = S.confirm, fk = f.fk, tpx = dv.ttl * 0.72 * fk;
+      probe.rect("confirm", ...b(f.box), {plate: (G.dev === "p" ? 6 : 8) * u});
+      const wy = f.title.y + tpx * ts * 0.55 - 11;
+      probe.pair("info", b(R(f.title.x - 2, wy - 2, 26, 26)), b(R(f.title.x - 7, wy - 7, 32, 36)), {col: CONST.cor, name: "warn glyph"});
+      C.title.forEach((l, i) => txt(l, f.title.x + 34, f.title.y + tpx * ts * (0.55 + 1.1 * i), W(MC, T.display(tpx), l), tpx, CONST.cor, "primary"));
+      C.body.forEach((l, i) => { const w = W(MC, T.body(dv.bod * fk), l); txt(l, f.body.x, f.body.y + dv.bod * fk * ts * (0.75 + 1.5 * i), w, dv.bod * fk, CONST.ink, "body"); });
+      probe.rect(ST.AGAIN, ...b(f.again), {touch: touchy, set: "confirm", focus: true, fill: tok.band});
+      probe.rect(ST.COPY, ...b(f.copy), {touch: touchy, set: "confirm", fill: tok.key});
+      fr = f.again;
+      const capOn = G.dev !== "p", aw = measureOr(ST.AGAIN, dv.pri), cwR = capOn ? capW(MC, "R") : 0, ax = f.again.x + (f.again.w + dv.bombs + 6 - cwR - (capOn ? 12 : 0)) / 2 - aw / 2;
+      txt(ST.AGAIN, ax, f.again.y + f.again.h / 2, aw, dv.pri, CONST.ink, "primary");
+      const cl = G.dev === "p" ? ST.COPY_SHORT : ST.COPY, cwl = measureOr(cl, dv.pri);
+      txt(cl, f.copy.x + f.copy.w / 2 - cwl / 2, f.copy.y + f.copy.h / 2, cwl, dv.pri, CONST.ink, "primary");
+      if (f.cancel) txt(ST.TAP_CANCEL, f.cancel.x, f.cancel.y + f.cancel.h / 2, measureOr(ST.TAP_CANCEL, dv.sec * fk), dv.sec * fk, CONST.t2, "secondary");
+    }
+  }
   if (page === "medals") {
     const B = d.bodies.medals, M = P.medals, k = B.k;
     txt(M.n + "/8", B.count.x, B.count.y + B.count.h / 2, nWOr(M.n + "/8", dv.sec) * k, dv.sec * k, CONST.ink, "secondary");
@@ -476,9 +778,10 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy) {
     });
   }
   if (fr) {
-    const rest = foc === "tabs" ? P.tabs[pi === 0 ? 1 : 0].r : d.bodies.scores.keys[(P.scores.h + 1) % 3];
-    probe.pair("band", b(fr), b(R(rest.x, rest.y, rest.w, rest.h)), {name: "focus " + foc});
-    const bed = R(d.pane.x + 4, fr.y, Math.max(1, fr.x - 7 - (d.pane.x + 4)), fr.h), bedT = foc === "tabs" ? R(d.plate.x + 1, fr.y, Math.max(1, fr.x - 7 - d.plate.x - 1), fr.h) : bed;
+    const rest = foc === "arm" ? d.confirm.copy : foc === "tabs" ? P.tabs[pi === 0 ? 1 : 0].r : d.bodies.scores.keys[(P.scores.h + 1) % 3];
+    const z = foc === "arm" ? 6 : 0; // armed: the focused key's zone (the key and its ring) against COPY's same zone, as the round 7 probe measured it
+    probe.pair("band", b(R(fr.x - z, fr.y - z, fr.w + 2 * z, fr.h + 2 * z)), b(R(rest.x - z, rest.y - z, rest.w + 2 * z, rest.h + 2 * z)), {name: "focus " + foc});
+    const bed = R(d.pane.x + 4, fr.y, Math.max(1, fr.x - 7 - (d.pane.x + 4)), fr.h), bedT = foc === "tabs" ? R(d.plate.x + 1, fr.y, Math.max(1, fr.x - 7 - d.plate.x - 1), fr.h) : foc === "arm" ? R(d.confirm.box.x + 2, fr.y, Math.max(1, fr.x - 7 - d.confirm.box.x - 2), fr.h) : bed;
     probe.pair("ring", b(R(fr.x - 6, fr.y - 6, fr.w + 12, fr.h + 12)), b(bedT.w > 2 ? bedT : R(d.plate.x + 1, d.plate.y + 1, 20, 20)), {name: "ring " + foc});
   }
   if (F0) {
@@ -496,7 +799,7 @@ const measureOr = (s, px, disp) => W(MC, disp ? T.display(px) : T.label(px), s);
 const nWOr = (s, px) => nW(MC, T.num(px), s);
 
 /* ---------- the page ---------- */
-const FIELDS = ["page", "level", "heat", "plaques", "scores", "rows"];
+const FIELDS = ["page", "level", "heat", "plaques", "scores", "rows", "view", "notes", "wipe", "arm", "unlocked"];
 let S = null;
 export const _dbg = {plans: 0, last: null};
 function same(S0, G, ui, w, dpr, c, tap) {
@@ -514,7 +817,7 @@ function roomDpr(F, level, dpr, bytes) {
 }
 function sizes(S0, G, F, level, tok, ui) {
   const d = G.d, u = G.u, dpr = S0.dpr, T0 = d.T, ob = R(d.plate.x - T0 - 2, d.plate.y - T0 - 2, d.plate.w + 2 * T0 + 4, d.plate.h + 2 * T0 + 6), pb = sc(ob, u);
-  const id = [ui.page, G.mode, +u.toFixed(6), J(d.plate), ui.page === "scores" ? ui.plaques | 0 : "", J(ui.rows || null)].join("|");
+  const id = [ui.page, G.mode, +u.toFixed(6), J(d.plate), ui.page === "scores" ? ui.plaques | 0 : "", J(ui.rows || null), ui.page === "stats" ? J([ui.view || null, ui.notes || null, ui.arm ? S0.P.stats.confirm.sentence : "", !!ui.unlocked]) : ""].join("|");
   const K = {biome: tok.name, level, W: F.W, H: F.H, look: "2d", textScale: G.ts, dpr};
   S0.ob = ob; S0.pb = pb; S0.pw = Math.round(pb.w * dpr); S0.ph = Math.round(pb.h * dpr); S0.pageKey = {...K, layer: "records.page|" + id}; S0.pageK = keyOf(S0.pageKey);
   S0.feet = Object.entries(S0.P.feet).map(([v, fp]) => {
@@ -532,12 +835,12 @@ function sizes(S0, G, F, level, tok, ui) {
 export function drawRecordsPage(c, F, ui, t = 0) {
   if (!okBox(F) || PAGES.indexOf(ui.page) < 0) return;
   const level = ui.level | 0 || 1, tok = worldTokens(level), G = recordsGeom(F), u = G.u, words = hints(), touchy = !!F.touch;
-  const dpr = capDpr(deviceScale(c), touchy), tap = tapMode(touchy), foc = ui.page === "scores" && ui.focus === "body" ? "body" : "tabs";
+  const dpr = capDpr(deviceScale(c), touchy), tap = tapMode(touchy), foc = ui.page === "stats" && ui.arm ? "arm" : ui.page !== "medals" && ui.focus === "body" ? "body" : "tabs";
   MC = mOf(c);
   if (!same(S, G, ui, words, dpr, c, tap)) {
     const P = plan(c, G, ui);
     P.feet = {};
-    if (G.mode === "desk") for (const f of ui.page === "scores" ? ["tabs", "body"] : ["tabs"]) P.feet[f] = footPlan(MC, G, footItems(ui.page, f, words));
+    if (G.mode === "desk") for (const f of ui.page === "medals" ? ["tabs"] : ui.page === "stats" && ui.arm ? ["arm"] : ["tabs", "body"]) P.feet[f] = footPlan(MC, G, footItems(ui.page, f, ui.page === "stats" && ui.arm ? hints() : words));
     S = {G, w: words, dpr, c, tap, ui: {...ui}, P, room: null, page: null, foot: {}};
     sizes(S, G, F, level, tok, ui);
     _dbg.plans++;
@@ -546,6 +849,7 @@ export function drawRecordsPage(c, F, ui, t = 0) {
   _dbg.last = {G, P, foc, S};
   if (typeof c.clip !== "function" || typeof c.rect !== "function") return;
   const q = S.feet.find((f) => f.v === foc) || S.feet[0] || null;
+  S.fv = q ? q.v : null;
   if (canMake()) {
     if (!S.room || !S.room.width) S.room = roomLayer(S.box, level, tok, {dpr: S.rd, look: "2d", textScale: 1});
     else touch(S.roomK);
@@ -568,6 +872,8 @@ export function drawRecordsPage(c, F, ui, t = 0) {
   const pi = PAGES.indexOf(ui.page), tr = G.d.tabs[pi];
   key(c, tr.x, tr.y, tr.w, tr.h, "lit", {tok, label: P.tabs[pi].s, phone: G.dev === "p", ring: foc === "tabs", bomb: foc === "tabs" && P.tabs[pi].bomb});
   if (ui.page === "scores") scoresLive(c, G, P, ui, tok, foc === "body");
+  if (ui.page === "stats" && ui.arm) confirmLive(c, G, tok);
+  if (ui.toast && ui.toast.s) toastTag(c, G, ui.toast, tok);
   c.restore();
   if (probe.probe.on) record(G, P, ui, foc, dpr, F.shell ? "sh" : "c", q && q.fp, tok, touchy);
 }

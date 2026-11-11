@@ -39,13 +39,13 @@ import { loadPace, savePace } from "./app/pacestore.js";
 import { loadSettings, saveSettings } from "./app/settings.js";
 import { timeKey, loadTimes, saveTimes, bestOf, recordTime } from "./app/times.js";
 import { bestKey, loadBests, saveBests, bestOfRun, recordBest, newTally, feedTally } from "./app/bests.js";
-import { loadStats, setStatsOn, stat, statPlaques, statsRows, statsNotes, statsPayload } from "./app/stats.js";
+import { loadStats, setStatsOn, stat, statPlaques, statsRows, statsNotes, statsPayload, statsView } from "./app/stats.js";
 import { DAILY_GEN, dailySeed, loadDaily, dailyTag, dailyStamp, finishDaily } from "./app/daily.js";
 import { decodeChallenge } from "./app/code.js";
 import { createToast, copyText, endKey, toastTick, toastOf } from "./app/endkeys.js";
 import { settleMedals, medalLine, medalRows, loadMedals } from "./app/medals.js";
 import { createGhost, ghostTick, ghostAt } from "./app/ghost.js";
-import { clearCabinet } from "./app/reset.js";
+import { clearCabinet, CLEAR_KEYS, KEEP_KEYS } from "./app/reset.js";
 import {
   loadCoachSeen,
   saveCoachSeen,
@@ -284,7 +284,7 @@ export function createGame(canvas, opts = {}) {
     onSource, onWarm: (k) => rc.warm(k), // v202 warm on intent: the rest on the RENDER row
     pageCount: guidePageCount, // a read-only GUIDE page's pages on this box (shellview, last drawn)
     onStats: () => { setStatsOn(); const sv = loadStats();
-      app.stats = { rows: statsRows(sv, loadBests()), notes: statsNotes(sv, dailyRec, todayStr()), trophies: medalRows(loadMedals()) }; },
+      app.stats = { rows: statsRows(sv, loadBests()), notes: statsNotes(sv, dailyRec, todayStr()), trophies: medalRows(loadMedals()), view: statsView(sv, loadBests(), loadMedals()), wipe: [CLEAR_KEYS, KEEP_KEYS] }; }, // view: the STATS page's numbers; wipe: what the armed sentence names
     onMedals: () => { app.stats = { rows: [], notes: [], ...app.stats, trophies: medalRows(loadMedals()) }; }, // a RECORDS tab tap may reach MEDALS without STATS: its rows only, never the opt-in
     onReset: () => { clearCabinet(); if (typeof location !== "undefined") location.reload(); },
     dailySeed: () => { const d = todayStr(); return { seed: dailySeed(d), date: d, gen: DAILY_GEN }; },

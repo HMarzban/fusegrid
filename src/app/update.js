@@ -39,7 +39,7 @@ export function mountUpdate(get, env) {
     bg.id = "updbg";
     bg.hidden = true;
     bg.addEventListener("pointerdown", (e) => e.stopPropagation());
-    bg.addEventListener("pointerup", (e) => { e.stopPropagation(); later(); });
+    bg.addEventListener("pointerup", (e) => { e.stopPropagation(); const g = get(); if (g && g.app) g.app.resetArm = false; later(); });
     doc.body.appendChild(bg);
     card = doc.createElement("div");
     card.id = "upd";
@@ -54,8 +54,9 @@ export function mountUpdate(get, env) {
       el.addEventListener("pointerdown", (e) => e.stopPropagation());
       el.addEventListener("pointerup", (e) => { e.stopPropagation(); fn(); });
     };
+    const disarm = () => { const g = get(); if (g && g.app) g.app.resetArm = false; }; // a tap that stops at the card is input that is not the second R
     tap(".go", go);
-    tap(".later", later);
+    tap(".later", () => { disarm(); later(); });
     doc.body.appendChild(card);
     doc.addEventListener("keydown", (e) => { const g = get(); if (e.code === "KeyU" && !e.repeat && card && !card.hidden && !(g && g.app && g.app.capturing)) go(); });
   };

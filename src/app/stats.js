@@ -179,6 +179,21 @@ export function statsRows(v, bests) {
     ["EXPERT DIFFICULTY", best(2)],
   ];
 }
+/* The STATS page's facts (v202 Task 4.2, pages/records.js), pure over three persisted values: the lifetime counters, the best run (the bucket with the
+   highest saved score, its difficulty / modifiers / speed from its key, the level it reached; null until a run scored), the three plain-bucket bests
+   (no modifier, NORMAL SPEED, as rows 8-10 and the copy payload read them) and the medals earned. Numbers only: the page words them. */
+export function statsView(v, bests, medals) {
+  const a = clampStats(v).a, b = (bests && bests.b) || {};
+  let hero = null;
+  for (const k of Object.keys(b)) {
+    const e = bestOfRun(bests, k), [h, p, s] = k.split(":").map(Number);
+    if (e && e.s > 0 && (!hero || e.s > hero.s)) hero = { s: e.s, r: e.r, heat: h, pact: p, pace: s - 1 };
+  }
+  let n = 0;
+  for (let m = medals & 255; m; m &= m - 1) n++;
+  return { runs: a.runs, secs: a.secs, medals: n, rooms: a.rooms, kills: a.kills, picks: a.picks, deaths: a.deaths, days: a.days, hero,
+    bests: [0, 1, 2].map((h) => bestOfRun(bests, h + ":0:1")) };
+}
 /* `today` is used for one thing only: deciding whether the stored daily record
    is today's. It is therefore the DAILY's day (main.js's local todayStr once R3
    lands), never the UTC dateStr that stamps the aggregates. Before R3, `daily`

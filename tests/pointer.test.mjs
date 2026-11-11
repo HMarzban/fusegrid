@@ -8,11 +8,12 @@ import { ITEMS, SCREEN, PAUSE_ITEMS, optRows } from "../src/app/menuapp.js";
 import { shellGeo } from "../src/app/fit.js";
 import { overlayBox, pauseGeom, pauseHit, touchLay } from "../src/render/scenes.js";
 import { controlsHit, dims } from "../src/render/shellview.js";
-import { graphicsHit, guideHit, enemiesHit, guideReadHit, guideGeom, layout, levelGeom, levelHit, menuHit, scoresHit, settingsHit, statsHit, recTabHit, recTabsGeom, recPlate } from "../src/render/menudraw.js";
+import { graphicsHit, guideHit, enemiesHit, guideReadHit, guideGeom, layout, levelGeom, levelHit, menuHit, scoresHit, settingsHit, statsHit, recTabHit } from "../src/render/menudraw.js";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as settingsPage from "../src/render/pages/settings.js";
 lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page, in as if its import had landed (R20)
 lazyPages._set("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages, as if their import had landed
+import { rec as textrec } from "./lib/textrec.mjs";
 import { want } from "../src/render/pages/lazy.js";
 const RP = await want("records"); // RECORDS is a lazy page (R20): its hits are inert until it lands
 
@@ -223,10 +224,15 @@ for (const [scr, fn, field, row, offAct, R] of [[SCREEN.MENU, "menuHit", "cursor
   check("SCORES: -1 (off the plate) confirms", J(r.log) === J([["confirm"]]), J(r.log));
 }
 
-// ---- STATS: a foot label IS its key; C on a touch / pen pointer copies on pointerup ----
+// ---- STATS (pages/records.js, Task 4.2): a foot label or a key IS its key; C on a touch / pen pointer copies on pointerup (disarming at once);
+// armed, only AGAIN ERASES (R) and COPY (C) act, any other tap cancels; idle, the plate is inert and off it backs out ----
 {
-  const at = (k, arm) => spot((x, y) => statsHit(x, y, L0, arm) === k);
-  const C = at("KeyC", false), T = at("KeyT", false), R = at("KeyR", false), CA = at("KeyC", true), none = spot((x, y) => y > 300 && statsHit(x, y, L0, false) === null);
+  const F0 = { W: 600, H: 520, touch: false, shell: false, css: 1 }, G0 = RP.recordsGeom(F0), u = G0.u;
+  const paint = (arm) => RP.drawRecordsPage(textrec().ctx, F0, { page: "stats", level: 1, focus: "tabs", view: null, notes: [], arm }); // the foot's zones are the painted foot's
+  const zc = (key) => { paint(false); const fp = RP._dbg.last.S.feet.find((q) => q.v === "tabs").fp, z = fp.zones.find((q) => q.key === key); return { x: ((z.x0 + z.x1) / 2) * u, y: fp.mid * u }; };
+  const kc = (r) => ({ x: (r.x + r.w / 2) * u, y: (r.y + r.h / 2) * u });
+  const C = zc("KeyC"), R = zc("KeyR"), plate = kc(G0.d.pane), off = { x: 2, y: 2 }, CA = kc(G0.d.confirm.copy), AG = kc(G0.d.confirm.again);
+  paint(false);
   for (const pt of ["mouse", undefined]) {
     const r = rig({ app: { screen: SCREEN.STATS } });
     r.down(C.x, C.y, { pointerType: pt });
@@ -243,13 +249,15 @@ for (const [scr, fn, field, row, offAct, R] of [[SCREEN.MENU, "menuHit", "cursor
     check("STATS C with a " + pt + " pointer: nothing on pointerdown, one KeyC on pointerup", k0 === 0 && J(r.input.keys) === J(["KeyC"]) && r.log.length === 0, k0 + " " + J(r.input.keys));
   }
   {
+    paint(true);
     const r = rig({ app: { screen: SCREEN.STATS, resetArm: true } });
     r.down(CA.x, CA.y, { pointerType: "touch" });
-    const k0 = r.input.keys.length;
+    const k0 = r.input.keys.length, a0 = r.app.resetArm;
     r.canvas.fire("pointerup", {});
-    check("STATS armed, C COPY on touch: deferred to pointerup too; statsHit gets app.resetArm", k0 === 0 && J(r.input.keys) === J(["KeyC"]) && r.H.last("statsHit").a[3] === true && r.H.last("layout").a.length === 4, J(r.input.keys));
+    check("STATS armed, COPY on touch: deferred to pointerup, the reset disarmed at pointerdown; statsHit gets app.resetArm", k0 === 0 && a0 === false && J(r.input.keys) === J(["KeyC"]) && r.H.last("statsHit").a[3] === true && r.H.last("layout").a.length === 4, J(r.input.keys));
   }
   for (const end of ["pointercancel", "pointerleave"]) {
+    paint(false);
     const r = rig({ app: { screen: SCREEN.STATS } });
     r.down(C.x, C.y, { pointerType: "touch" });
     r.canvas.fire(end, {});
@@ -277,14 +285,18 @@ for (const [scr, fn, field, row, offAct, R] of [[SCREEN.MENU, "menuHit", "cursor
   }
   {
     const r = rig({ app: { screen: SCREEN.STATS } });
-    r.down(T.x, T.y, { pointerType: "touch" });
     r.down(R.x, R.y, { pointerType: "mouse" });
-    check("STATS T MEDALS / R RESET taps are KeyT / KeyR through input.onUiKey at once, on any pointer", J(r.input.keys) === J(["KeyT", "KeyR"]) && r.log.length === 0, J(r.input.keys));
-    r.down(none.x, none.y);
-    check("STATS idle off-label tap confirms (backs out)", J(r.log) === J([["confirm"]]), J(r.log));
-    r.log.length = 0; r.app.resetArm = true;
-    r.down(none.x, none.y);
-    check("STATS armed off-label tap disarms and stays", r.app.resetArm === false && r.log.length === 0, J(r.log));
+    check("STATS RESET tap is KeyR through input.onUiKey at once, on any pointer", J(r.input.keys) === J(["KeyR"]) && r.log.length === 0, J(r.input.keys));
+    r.down(plate.x, plate.y);
+    check("STATS idle tap on the plate off every label is inert", r.log.length === 0 && r.input.keys.length === 1, J(r.log));
+    r.down(off.x, off.y);
+    check("STATS idle tap off the plate confirms (backs out)", J(r.log) === J([["confirm"]]), J(r.log));
+    r.log.length = 0; r.app.resetArm = true; paint(true);
+    r.down(plate.x, plate.y);
+    check("STATS armed tap anywhere but its keys disarms and stays", r.app.resetArm === false && r.log.length === 0, J(r.log));
+    r.app.resetArm = true;
+    r.down(AG.x, AG.y);
+    check("STATS armed tap on AGAIN ERASES is KeyR (the second R)", r.input.keys.at(-1) === "KeyR", J(r.input.keys));
   }
 }
 
@@ -337,7 +349,7 @@ for (const [s, label] of [["HOWTO", "HOW TO PLAY"], ["ITEMS", "POWER-UPS"], ["FL
 // ---- RECORDS' tab strip: recTabHit(x, y, layout(cw, ch, lg, css), page, touchLay(cv)); a tab is app.recTab(tab - page), never a key ----
 for (const [scr, page] of [[SCREEN.SCORES, 0], [SCREEN.STATS, 1], [SCREEN.TROPHIES, 2]]) {
   for (let tab = 0; tab < 3; tab++) {
-    const r = rig({ app: { screen: scr, recFocus: 1, resetArm: false } }), T = page === 1 ? recTabsGeom(recPlate(L0), false)[tab] : RP.recordsGeom({ W: 600, H: 520, touch: false, shell: false, css: 1 }).tabs[tab]; // SCORES / MEDALS: pages/records.js (Task 4.1); STATS: its strip until Task 4.2
+    const r = rig({ app: { screen: scr, recFocus: 1, resetArm: false } }), T = RP.recordsGeom({ W: 600, H: 520, touch: false, shell: false, css: 1 }).tabs[tab]; // pages/records.js (Tasks 4.1 / 4.2)
     r.down(T.x + T.w / 2, T.y + T.h / 2);
     const h = r.H.last("recTabHit");
     check("RECORDS tab " + tab + " on page " + page + ": app.recTab(" + (tab - page) + "), no key, no confirm, fire swallowed", J(r.log) === J([["recTab", tab - page]]) && r.input.keys.length === 0 && r.input._intent.fire === false &&
@@ -381,10 +393,11 @@ for (const [scr, page] of [[SCREEN.SCORES, 0], [SCREEN.STATS, 1], [SCREEN.TROPHI
   r.setKind("3d");
   r.down(on.x, on.y);
   check("live: a confirm wrapped after mount (main's audio cue wrapper) is the one called; dims gets the look set after mount", J(seen) === J(["wrapped confirm"]) && r.log.length === 0 && r.H.last("dims").a[1] === "3d", J(seen));
-  const s = rig({ app: { screen: SCREEN.STATS } }), T = spot((x, y) => statsHit(x, y, L0, false) === "KeyT"), got = [];
+  RP.drawRecordsPage(textrec().ctx, { W: 600, H: 520, touch: false, shell: false, css: 1 }, { page: "stats", level: 1, focus: "tabs", arm: false }); // STATS' foot zones are its painted foot's
+  const s = rig({ app: { screen: SCREEN.STATS } }), T = spot((x, y) => statsHit(x, y, L0, false) === "KeyR"), got = [];
   s.input.onUiKey = (k) => got.push(k);
   s.down(T.x, T.y);
-  check("live: input.onUiKey set after mount is the one a label tap reaches", J(got) === J(["KeyT"]), J(got));
+  check("live: input.onUiKey set after mount is the one a label tap reaches", J(got) === J(["KeyR"]), J(got));
 }
 
 // ---- main.js keeps one call ----

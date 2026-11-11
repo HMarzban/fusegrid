@@ -431,143 +431,13 @@ function check(name, cond, detail) {
       const AS = (r3d, px) => SP.settingsRows(optRows(r3d), {}, r3d, px)[optRows(r3d).indexOf("ART STYLE")];
       check("settingsRows three-way label, r3d wins", AS(false, false) === "CLASSIC 2D" && AS(false, true) === "PIXEL" && AS(true, true) === "REAL 3D");
     }
-    {
-      const { c, texts, rects, lines } = rec();
-      md.drawStats(c, L, 0.4, {
-        rows: [
-          ["RUNS", "118"], ["LEVELS CLEARED", "214"], ["DEATHS", "301"],
-          ["KILLS", "4820"], ["POWER-UPS", "913"], ["PLAY TIME", "14h 07m"], ["DAYS PLAYED", "12"],
-          ["NORMAL DIFFICULTY", "1840 · LEVEL 5"], ["HARD DIFFICULTY", "—"], ["EXPERT DIFFICULTY", "—"],
-        ],
-        notes: [
-          "DAILY 2026-09-07 · NOT PLAYED YET",
-          "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS",
-        ],
-      });
-      const all = texts.map((t) => t.s);
-      const p = plateOf(rects);
-      /* ATLAS: the BESTS caption replaced the old rule as the line that
-         separates the seven lifetime tiles (+ MEDALS n/8) from the three
-         per-heat best tiles (R12). It must sit strictly below every lifetime
-         label and above every best value, and in the same place for an empty
-         row list (geometry, never data, places it; never up in the head). */
-      const CAP = "BESTS · NO MODIFIERS · NORMAL SPEED";
-      const capOf = (tx) => tx.find((t) => t.s === CAP);
-      check(
-        `the BESTS caption sits strictly between the lifetime tiles and the NORMAL DIFFICULTY best at ${W}x${H}`,
-        (() => {
-          const cap = capOf(texts), core = texts.find((t) => t.s === "1840 · LEVEL 5");
-          const life = ["RUNS", "LEVELS CLEARED", "DEATHS", "KILLS", "POWER-UPS", "PLAY TIME", "DAYS PLAYED", "MEDALS"].map((n) => texts.find((t) => t.s === n));
-          return !!cap && !!core && life.every((t) => t && t.y < cap.y) && cap.y < core.y &&
-            cap.y < (texts.find((t) => t.s === "NORMAL DIFFICULTY") || {}).y;
-        })(),
-        JSON.stringify({
-          cap: capOf(texts),
-          daysY: (texts.find((t) => t.s === "DAYS PLAYED") || {}).y,
-          coreY: (texts.find((t) => t.s === "NORMAL DIFFICULTY") || {}).y,
-        }),
-      );
-      {
-        const e = rec();
-        md.drawStats(e.c, L, 0.4, { rows: [], notes: [] });
-        const S = md.statsGeom(L).S;
-        check(
-          `R12: an empty row list draws the BESTS caption where ten rows would, never up in the head at ${W}x${H}`,
-          !!capOf(e.texts) && !!capOf(texts) && capOf(e.texts).y === capOf(texts).y && capOf(texts).y > S.by &&
-            e.texts.some((t) => t.s === "0/8"),
-          JSON.stringify({ empty: capOf(e.texts), ten: capOf(texts), by: S.by }),
-        );
-      }
-      check(
-        `stats plate paints all ten labels and the head at ${W}x${H}`,
-        ["RUNS", "LEVELS CLEARED", "DEATHS", "KILLS", "POWER-UPS", "PLAY TIME", "DAYS PLAYED",
-          "NORMAL DIFFICULTY", "HARD DIFFICULTY", "EXPERT DIFFICULTY", "STATS", "YOUR CABINET"]
-          .every((s) => all.includes(s)),
-        all.join("|"),
-      );
-      check(
-        `stats plate paints both notes and the copy foot at ${W}x${H}`,
-        all.some((s) => s.indexOf("NOT PLAYED YET") >= 0) &&
-          all.some((s) => s.indexOf("42 SESSIONS") >= 0) && all.includes(CAP) &&
-          all.includes("↑ TABS · T MEDALS · C COPY MY STATS · R RESET · ESC BACK"), // the body's foot (no tab-row flag): ↑ TABS leads it
-        all.join("|"),
-      );
-      check(
-        `stats plate shows NO json at ${W}x${H} — it is a screen, not a debug dump`,
-        !all.some((s) => /[{}\[\]]/.test(s)),
-        all.join("|"),
-      );
-      const last = texts[texts.length - 1];
-      check(
-        `every stats line stays inside the plate at ${W}x${H}`,
-        !!p && texts.every((t) => t.y > p.y && t.y < p.y + p.h),
-        JSON.stringify({ py: p && p.y, ph: p && p.h, last }),
-      );
-    }
+    /* STATS' facts, its BEST BY DIFFICULTY caption, notes and foot: tests/page-records.test.mjs (pages/records.js, v202 Task 4.2) */
   }
 }
 
 // 13f) R6 MEDALS page: moved to tests/page-records.test.mjs with the page (pages/records.js, v202 Task 4.1)
 
-// 13g) Reset (wave-3 §7.4): STATS idle foot names R RESET; armed, two red
-// notes replace the daily/since notes and the foot turns red, all inside S
-{
-  const md = await import("../src/render/menudraw.js");
-  const IDLE = "↑ TABS · T MEDALS · C COPY MY STATS · R RESET · ESC BACK"; // the body's foot: RECORDS' ↑ TABS lead (fix round 1)
-  const ARMED = [
-    "ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · PLAQUES · GHOSTS",
-    "ERASES STATS + DAYS PLAYED · RELOCKS LEVELS 6-8 · MODIFIERS · TIME TRIAL",
-    "R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS SETTINGS + GAME SPEED · C COPY",
-  ];
-  const rec = () => {
-    const texts = [], rects = [];
-    const c = {
-      fillStyle: "", strokeStyle: "", lineWidth: 1, globalAlpha: 1, font: "",
-      textAlign: "left", textBaseline: "middle",
-      fillRect(x, y, w, h) { rects.push({ x, y, w, h, fill: c.fillStyle }); },
-      strokeRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {},
-      fillText(s, x, y) { texts.push({ s: String(s), x, y, fill: c.fillStyle }); },
-    };
-    pathRects(c, rects);
-    return { c, texts, rects };
-  };
-  const plateOf = (rects) => rects.find((r) => r.fill === PLATE_FILL);
-  const ui = { rows: [["RUNS", "1"]], notes: ["DAILY 2026-10-08 · NOT PLAYED YET", "SINCE 2026-10-01 · 3 SESSIONS"] };
-  for (const [W, H] of [
-    [600, 520],
-    [608, 352],
-  ]) {
-    const L = md.layout(W, H);
-    {
-      const { c, texts, rects } = rec();
-      md.drawStats(c, L, 0.4, ui);
-      const p = plateOf(rects), ft = texts.find((t) => t.s === IDLE);
-      check(`Reset: the idle STATS foot names R RESET, muted, inside the plate at ${W}x${H}`,
-        !!p && !!ft && ft.fill === "#7385ad" && ft.y > p.y && ft.y < p.y + p.h &&
-          texts.some((t) => t.s === ui.notes[0]) && !texts.some((t) => ARMED.includes(t.s)),
-        texts.map((t) => t.s).join("|"));
-      check(`Reset: an explicit arm=false draws exactly the idle plate at ${W}x${H}`,
-        (() => { const e = rec(); md.drawStats(e.c, L, 0.4, ui, false);
-          return JSON.stringify(e.texts) === JSON.stringify(texts); })());
-    }
-    {
-      const { c, texts, rects } = rec();
-      md.drawStats(c, L, 0.4, ui, true);
-      const p = plateOf(rects), iw = p ? p.w - 32 : 0;
-      const got = ARMED.map((s) => texts.find((t) => t.s === s));
-      check(`Reset: armed, both notes and the foot paint in #ff5d73 at ${W}x${H}`,
-        got.every((t) => t && t.fill === "#ff5d73"), JSON.stringify(got));
-      check(`Reset: armed lines replace the daily/since notes and the idle foot at ${W}x${H}`,
-        !texts.some((t) => ui.notes.includes(t.s) || t.s === IDLE), texts.map((t) => t.s).join("|"));
-      check(`Reset: armed lines stay inside the plate, notes above the foot at ${W}x${H}`,
-        !!p && got.every((t) => t && t.y > p.y && t.y < p.y + p.h) && got[0].y < got[1].y && got[1].y < got[2].y,
-        JSON.stringify({ p, got }));
-      check(`Reset: every idle and armed string fits S.iw at the 0.6 em advance at ${W}x${H}`,
-        iw > 0 && [IDLE, ...ARMED].every((s) => [...s].length <= 74 && [...s].length * 10 * 0.6 <= iw),
-        String(iw));
-    }
-  }
-}
+// 13g) Reset (the armed STATS page): tests/page-records.test.mjs (the confirm plate, v202 Task 4.2)
 
 // 13e) settingsHit: the tap map derived from the same geometry the page draws (v202 Task 3.4: pages/settings.js, rows by name).
 // ATLAS rule: a row = its index; on the plate but off the rows (head, foot, courses' outer margins) = -2, inert; off the plate = -1, main backs out.
@@ -805,65 +675,7 @@ function check(name, cond, detail) {
   }
 }
 
-// 13h) statsHit (T1): the STATS foot tap map rides the foot drawStats paints —
-//      zones are derived from the painted string and its x/y at the 0.6 em
-//      advance, half a separator wide on each side of a token.
-{
-  const md = await import("../src/render/menudraw.js");
-  const paint = (L, arm) => {
-    const texts = [];
-    const c = new Proxy({}, {
-      get: (t, p) => (p === "fillText" ? (s, x, y) => texts.push({ s: String(s), x, y }) : () => {}),
-      set: () => true,
-    });
-    md.drawStats(c, L, 0.4, { rows: [], notes: [] }, arm);
-    return texts[texts.length - 1];
-  };
-  const zones = (f) => {
-    const x0 = f.x - f.s.length * 3, out = [];
-    let a = 0;
-    for (const tok of f.s.split(" · ")) {
-      const b = a + tok.length;
-      out.push([x0 + 6 * (a - 1.5), x0 + 6 * (b + 1.5)]);
-      a = b + 3;
-    }
-    return out;
-  };
-  for (const [W, H] of [
-    [600, 520],
-    [608, 352],
-  ]) {
-    const L = md.layout(W, H);
-    for (const [arm, want] of [
-      [false, [null, "KeyT", "KeyC", "KeyR", null]], // the body's ↑ TABS lead is no tap
-      [true, ["KeyR", null, null, "KeyC"]],
-    ]) {
-      const f = paint(L, arm), z = zones(f), tag = `${arm ? "armed" : "idle"} at ${W}x${H}`;
-      const mid = (i) => (z[i][0] + z[i][1]) / 2, live = want.findIndex((k) => k); // the first token that taps
-      check(`statsHit: the ${tag} foot is the last line painted and splits into ${want.length} tokens`,
-        !!f && z.length === want.length && f.s.startsWith(arm ? "R AGAIN" : "↑ TABS · T MEDALS"), f && f.s);
-      check(`statsHit: every ${tag} token centre maps to its key`,
-        want.every((k, i) => md.statsHit(mid(i), f.y, L, arm) === k),
-        JSON.stringify(want.map((k, i) => md.statsHit(mid(i), f.y, L, arm))));
-      check(`statsHit: 1 px outside each live ${tag} zone edge is not that key`,
-        want.every((k, i) => !k || (md.statsHit(z[i][0] - 1, f.y, L, arm) !== k &&
-          md.statsHit(z[i][1] + 1, f.y, L, arm) !== k && md.statsHit(z[i][0] + 1, f.y, L, arm) === k &&
-          md.statsHit(z[i][1] - 1, f.y, L, arm) === k)));
-      check(`statsHit: 1 px above the band (foot y - 12) is null ${tag}`,
-        md.statsHit(mid(live), f.y - 13, L, arm) === null && md.statsHit(mid(live), f.y - 12, L, arm) !== null);
-      check(`statsHit: the band reaches the plate bottom and no further ${tag}`,
-        md.statsHit(mid(live), f.y + 16, L, arm) !== null && md.statsHit(mid(live), f.y + 17, L, arm) === null);
-    }
-  }
-  const L = md.layout(600, 520), f = paint(L, false), z = zones(f);
-  check("statsHit: the 600x520 idle zones are T 177-243 and R 351-411 on the band 464-492 (spec §4.1, moved by the ↑ TABS lead)",
-    z[1][0] === 177 && z[1][1] === 243 && z[3][0] === 351 && z[3][1] === 411 && f.y === 476, JSON.stringify(z));
-  const fa = paint(L, true), za = zones(fa);
-  check("statsHit: the 600x520 armed zones are R AGAIN 72-174 and C COPY 474-528, both inside the 60-540 plate",
-    za[0][0] === 72 && za[0][1] === 174 && za[3][0] === 474 && za[3][1] === 528 && fa.y === 476, JSON.stringify(za));
-  check("statsHit: armed, no tap on the idle C COPY MY STATS zone (243-351) can land on R AGAIN",
-    za[0][1] < z[2][0] && md.statsHit(z[2][0], f.y, L, true) === null, JSON.stringify([za[0], z[2]]));
-}
+// 13h) statsHit: tests/page-records.test.mjs (foot zones from the painted foot's parts, v202 Task 4.2)
 
 // 13d) the plaques (the SCORES page's BADGES row): moved to tests/page-records.test.mjs with the page (v202 Task 4.1)
 
@@ -1033,25 +845,7 @@ function check(name, cond, detail) {
     });
     return { c, texts, cells, strokes };
   };
-  const body = (recd, L, p) => recd.cells.filter((r) => r.y >= md.recPlate(L, p, false).by - 0.5); // the tiles; RECORDS' tab strip (v202 Task 2.2) paints its unselected tabs in the same fill, in the head
-  /* every cell the page paints is a tile or one of the strip's two unselected tabs (the shown tab is banded, not in this fill): nothing else in the head */
-  const strip = (recd, L, p) => { const T = md.recTabsGeom(md.recPlate(L, p, false), false); return recd.cells.length === body(recd, L, p).length + 2 && recd.cells.filter((r) => !body(recd, L, p).includes(r)).every((r) => T.some((q, i) => i !== p && q.x === r.x && q.y === r.y && q.w === r.w && q.h === r.h)); };
-  const inside = (r, recd) => recd.texts.filter((t) => t.x > r.x && t.x < r.x + r.w && t.y > r.y && t.y < r.y + r.h).every((t) => t.y - t.px / 2 >= r.y - 0.5 && t.y + t.px / 2 <= r.y + r.h + 0.5);
-  const rows = Array.from({ length: 8 }, (_, i) => ["MEDAL " + i, "ROOMS 1-5 IN ONE RUN · NO LIFE LOST · ALL FOUR MODES", i < 2]);
-  const stats = { rows: Array.from({ length: 10 }, (_, i) => ["DAYS PLAYED", "1234"]), notes: ["N1", "N2"], trophies: rows };
-  const pos = {};
-  for (const [W, H] of [[600, 520], [608, 352]]) {
-    const L = md.layout(W, H), tg = `${W}x${H}`;
-    /* MEDALS' tiles at both sizes: tests/page-records.test.mjs (pages/records.js, v202 Task 4.1) */
-    const st = rec();
-    md.drawStats(st.c, L, 1, stats, false, null);
-    check(`STATS: value + label inside each of the 11 tiles at ${tg}`, body(st, L, 1).length === 11 && body(st, L, 1).every((r) => inside(r, st)) && strip(st, L, 1));
-    /* SCORES' badges above its table at both sizes: tests/page-records.test.mjs (v202 Task 4.1) */
-    pos[tg] = [st].map((r) => r.texts.map((t) => t.s + "@" + t.y + "/" + t.px).join("|"));
-  }
-  check("STATS text at 600x520 is the pre-guard layout (value 18px at -6, label 10px at +12; MEDALS is the kit page since v202 Task 4.1)",
-    pos["600x520"][0].length > 0
-      && (() => { const r = rec(); md.drawStats(r.c, md.layout(600, 520), 1, stats, false, null); const c0 = body(r, md.layout(600, 520), 1)[0], v = r.texts.find((t) => t.s === "1234"), l = r.texts.find((t) => t.s === "DAYS PLAYED"); return v.px === 18 && v.y === c0.y + c0.h / 2 - 6 && l.px === 10 && l.y === c0.y + c0.h / 2 + 12; })());
+  /* MEDALS' and STATS' tiles and SCORES' badges at 600x520 and 608x352: tests/page-records.test.mjs (pages/records.js, v202 Tasks 4.1 / 4.2) */
   const L = md.layout(600, 520), lv = (U, best) => { const r = rec(); md.drawLevelSelect(r.c, 2, L, 1, 0, 0, U, 0, false, false, { best: best ? [null, "0:38.9"] : [] }); return r.texts.map((t) => t.s); };
   check("LEVEL SELECT: no NO TIME YET before MODES / TIME open; it shows once open; a saved best shows either way",
     !lv(false).includes("NO TIME YET") && lv(true).includes("NO TIME YET") && lv(false, true).includes("✓ BEST 0:38.9") && lv(true, true).includes("✓ BEST 0:38.9"));
@@ -1111,9 +905,8 @@ function check(name, cond, detail) {
         hitPage({}, 1, 1, cg).off === 1);
     const gd = md.guideGeom(L, true), gt = gd.order.map((n) => gd.items[n]), gp = gd.plate; // v202 Task 3.5: pages/guide.js, the doors by name
     check(`GUIDE: doors inside the box, each taps to itself (${tg})`, gp.x >= 0 && gp.y >= 0 && gp.x + gp.w <= g.w && gp.y + gp.h <= g.h && gt.every((r, i) => inPlate(r, gp) && md.guideHit(...ctr(r), L, 0, true) === i));
-    const st = md.statsGeom(L).S;
-    check(`STATS: centred in the tall box (not pinned to its floor), foot T taps KeyT (${tg})`,
-      inBox(st) && st.y + st.h < g.h - 20 && md.statsHit(st.mid - 47 * 3 + 24, st.footY, L, false) === "KeyT");
+    const sa = sc.d.bodies.stats.acts, cS = (r) => [(r.x + r.w / 2) * sc.u, (r.y + r.h / 2) * sc.u];
+    check(`STATS: the phone's COPY STATS and RESET keys inside the plate tap C and R (${tg})`, inPlate({ x: sa.copy.x * sc.u, y: sa.copy.y * sc.u, w: sa.copy.w * sc.u, h: sa.copy.h * sc.u }, sc.plate) && md.statsHit(...cS(sa.copy), Lr, false, false, true) === "KeyC" && md.statsHit(...cS(sa.reset), Lr, false, false, true) === "KeyR");
   }
 }
 

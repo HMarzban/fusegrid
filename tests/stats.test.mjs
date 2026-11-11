@@ -736,8 +736,8 @@ const TODAY = "2026-09-07";
       () => 0,
     );
     check(
-      "shellview routes SCREEN.STATS to drawStats — YOUR CABINET is painted (Minor-7)",
-      texts.includes("YOUR CABINET"),
+      "shellview routes SCREEN.STATS to drawStats — the RECORDS page's STATS is painted (BEST RUN, LIFETIME; Minor-7, v202 Task 4.2)",
+      texts.includes("BEST RUN") && texts.includes("LIFETIME"),
       texts.join("|"),
     );
   }
@@ -753,9 +753,8 @@ const TODAY = "2026-09-07";
       () => 0,
     );
     check(
-      "shellview hands app.resetArm to drawStats — the armed foot is painted, the idle foot is not",
-      texts.includes("R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS SETTINGS + GAME SPEED · C COPY") &&
-        !texts.includes("T MEDALS · C COPY MY STATS · R RESET · ESC BACK"),
+      "shellview hands app.resetArm to drawStats — the confirm plate and the armed foot are painted, the idle foot is not",
+      texts.includes("AGAIN ERASES") && texts.includes("ANY OTHER KEY CANCELS") && !texts.includes("RESET"),
       texts.join("|"),
     );
   }
@@ -790,8 +789,9 @@ const TODAY = "2026-09-07";
       fillStyle: "", strokeStyle: "", lineWidth: 1, globalAlpha: 1, font: "",
       textAlign: "left", textBaseline: "middle",
       fillRect: noop, strokeRect: noop, clearRect: noop,
-      fillText(s, x, y) { out.push({ s: String(s), y, fill: this.fillStyle, font: this.font, al: this.textAlign }); },
-      strokeText: noop, beginPath: noop, moveTo: noop, lineTo: noop,
+      fillText(s, x, y) { out.push({ s: String(s), x, y, fill: this.fillStyle, font: this.font, al: this.textAlign }); },
+      strokeText: noop, beginPath: noop, moveTo: noop, lineTo: noop, rect: noop, clip: noop, ellipse: noop, quadraticCurveTo: noop, bezierCurveTo: noop,
+      createRadialGradient: () => ({ addColorStop: noop }), setLineDash: noop,
       closePath: noop, fill: noop, stroke: noop, arc: noop, arcTo: noop,
       save: noop, restore: noop, translate: noop, scale: noop, rotate: noop,
       setTransform: noop, transform: noop, drawImage: noop,
@@ -800,38 +800,35 @@ const TODAY = "2026-09-07";
     };
     return { c, out };
   };
-  const FOOT = "↑ TABS · T MEDALS · C COPY MY STATS · R RESET · ESC BACK"; // the page body's foot (no recFocus on this app): RECORDS' ↑ TABS lead
+  /* v202 Task 4.2: the note is a tag at the right end of the header's title row (a lit brick for COPIED, coral for COPY FAILED), above the body */
   const paint = (kind, toast, arm) => {
     const { c, out } = rec();
-    drawShell(c, { screen: SCREEN.STATS, subT: 0, stats: { rows: [["RUNS", 3]], notes: ["NOTE A"] }, resetArm: !!arm, toast },
+    drawShell(c, { screen: SCREEN.STATS, subT: 0, stats: { view: null, notes: ["NOTE A"] }, resetArm: !!arm, toast },
       {}, null, kind, () => [], () => 0);
     return out;
   };
   for (const kind of ["2d", "3d", "iso"]) {
     const out = paint(kind, { s: "COPIED", ok: true, t: 1 });
-    const n = out.find((o) => o.s === "COPIED"), h = out.find((o) => o.s === "STATS"),
-      f = out.find((o) => o.s === FOOT), r = out.find((o) => o.s === "RUNS"), nt = out.find((o) => o.s === "NOTE A");
-    check("STATS C note (" + kind + "): COPIED painted in the accent, centred, bold, above the headline",
-      !!n && !!h && n.fill === "#37f0d0" && n.al === "center" && /900/.test(n.font) && /11px/.test(n.font) && n.y < h.y && n.y > 0,
-      JSON.stringify([n, h]));
-    check("STATS C note (" + kind + "): clear of the first row, the notes and the tap foot",
-      !!n && n.y < r.y - 20 && n.y < nt.y && n.y < f.y - 100 && !out.some((o) => o.s === "YOUR CABINET"),
-      JSON.stringify([n, r, nt, f]));
+    const n = out.find((o) => o.s === "COPIED"), h = out.filter((o) => o.s === "RECORDS").pop(), r = out.find((o) => o.s === "RUNS"), nt = out.find((o) => o.s === "NOTE A"), f = out.find((o) => o.s === "BACK");
+    check("STATS C note (" + kind + "): COPIED painted on its brick tag in the brick's dark ink, level with the RECORDS title, right of it",
+      !!n && !!h && n.fill === "#1e1216" && Math.abs(n.y - h.y) < 30 && n.x > h.x, JSON.stringify([n, h]));
+    check("STATS C note (" + kind + "): clear of the first tile, the notes and the foot (above all three)",
+      !!n && n.y < r.y - 20 && n.y < nt.y && n.y < f.y - 100, JSON.stringify([n, r, nt, f]));
   }
   {
     const out = paint("3d", { s: "COPY FAILED", ok: false, t: 0.5 });
     const n = out.find((o) => o.s === "COPY FAILED");
-    check("STATS C note: COPY FAILED is painted in the reset red", !!n && n.fill === "#ff5d73", JSON.stringify(n));
+    check("STATS C note: COPY FAILED is painted in coral (the danger colour)", !!n && n.fill === "#ff5d73", JSON.stringify(n));
   }
   {
     const out = paint("2d", { s: "COPIED", ok: true, t: 0 });
-    check("STATS C note: an expired toast (t 0) paints nothing and the kicker returns",
-      !out.some((o) => o.s === "COPIED") && out.some((o) => o.s === "YOUR CABINET"), out.map((o) => o.s).join("|"));
+    check("STATS C note: an expired toast (t 0) paints nothing",
+      !out.some((o) => o.s === "COPIED") && out.some((o) => o.s === "MENU"), out.map((o) => o.s).join("|"));
   }
   {
     const out = paint("2d", { s: "COPIED", ok: true, t: 1 }, true);
     check("STATS C note rides an armed STATS too, beside the armed foot",
-      out.some((o) => o.s === "COPIED") && out.some((o) => /^R AGAIN/.test(o.s)), out.map((o) => o.s).join("|"));
+      out.some((o) => o.s === "COPIED") && out.some((o) => o.s === "ERASE"), out.map((o) => o.s).join("|"));
   }
 }
 

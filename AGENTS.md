@@ -84,19 +84,22 @@ reorder.
 
 RECORDS (ruling R7) is no SCREEN: its row opens SCORES, and SCORES · STATS ·
 MEDALS (`SCREEN.SCORES` / `STATS` / `TROPHIES`, menuapp `RECORD_SCREENS` /
-`isRecords`) share one tab strip (SCORES and MEDALS: the kit tabs of
-`src/render/pages/records.js`, bricks in a wall trough under the RECORDS title, one `recordsGeom` for draw and tap, Task 4.1;
-STATS: menudraw `recTabsGeom` until Task 4.2; menudraw `recTabHit` delegates by page). `app.recFocus` 0 is the tab
+`isRecords`) share one tab strip (the kit tabs of `src/render/pages/records.js`, bricks in a wall trough under the RECORDS
+title, one `recordsGeom` for draw and tap, Tasks 4.1 / 4.2; menudraw `recTabHit` delegates). `app.recFocus` 0 is the tab
 row, the top of each page's ↑↓ walk, where every arrival lands; 1 is the body
 (SCORES' difficulty filter, STATS' foot actions; MEDALS has none). Tab steps
 go through `app.recTab(d)` (←/→ on the tab row, `Q` / `E` anywhere on the
 three pages, a tab tap, STATS' `T`): clamped, one `uiMove`; every arrival at
 STATS calls `onStats` (the event ring's opt-in), at MEDALS `onMedals` (its
 rows only). Any `recTab` call disarms an armed STATS reset, a tap on the tab
-already shown included; R arms and anything but a second R cancels it (any
-other key in main's `onUiKey`, any controller button in `padroute`, any tap
-off `R AGAIN`). On those pages `Q` / `E` never also confirm. Esc, Backspace,
-Enter, EAST and START from any of them: MENU on RECORDS.
+already shown included; R arms and any input that is not the second plain R cancels it: any other key in main's `onUiKey`,
+a chorded R (Ctrl / Cmd / Alt / Shift, `controlswire` guard: never arms or erases), Y / N answering the consent card and its
+taps (`analytics.js`), the update card's LATER and backdrop taps (`update.js`), any controller press or fresh direction in
+`padroute.route`, a swallowed first press after a connect and a card's answer included, and any tap but AGAIN ERASES (a
+touch C disarms at its pointerdown, so a cancelled C still cancels). Armed, the confirm plate is modal: a tab tap only
+cancels. Left open: the inline load-failure card's own Enter / Escape (`index.html`, capture-phase `stopImmediatePropagation`)
+never reaches the app. On those pages `Q` / `E` never also confirm. Esc, Backspace, Enter, EAST and START from any of them:
+MENU on RECORDS.
 RECORDS page (UI upgrade v202 Task 4.1; `src/render/pages/records.js`, LAZY: one `pages/lazy.js` entry `records`, loaded in the first idle
 after MENU's first frame; until it lands menudraw paints `loadingPage` (the room, a small plate, LOADING) and every RECORDS hit is -2, inert,
 so a tap never backs out of a page still loading; tests `want` / `_set` it). The room of `app.level` opaque under it (MENU's own room layer
@@ -115,7 +118,21 @@ eight sunk tiles (earned: the medal outline and dot; a goal: the off ink), each 
 than its pane on a touch box scales into it (`k`; text floors give way only there, the landscape phones' #c). Cached: one page layer per tab
 and data (plate, header, trough, tabs at rest, pane, body at rest), one foot layer per focus, the room; live: the open tab (lit brick), the
 focus (bare bomb + 3 px ring on the open tab, or on the chosen difficulty in the body), the chosen difficulty and SCORES' rows. A focus move or a
-filter step misses nothing; a tab step paints its page and foot once.
+filter step misses nothing; a tab step paints its page and foot once. STATS (Task 4.2): app/stats.js `statsView` (the numbers:
+runs, secs, medals, the lifetime counters, the hero = the saved best with the highest score and its difficulty / modifiers / speed
+from its key, the three plain-bucket bests), worded on the page: the hero (BEST RUN, the qualifier on up to two lines, the score
+in brick digits, the 8-level course: cleared lit, the level reached a raised key, 6–8 wall cells while locked, flags on 5 and
+8, REACHED LEVEL n · WORLD; NO RUNS YET with none), three sunk stat tiles (RUNS, PLAY TIME as `3h12m`, MEDALS n/8), the LIFETIME
+ledger, BEST BY DIFFICULTY · NO MODIFIERS · NORMAL SPEED (two-line rows, the level under the difficulty, the best one's pip a
+brick), the cabinet notes (desk only; on the phone they drop, their facts ride the copy payload and MENU's DAILY teaser). RESET
+is quiet at rest (the foot on a keyboard, `COPY STATS` / `RESET` keys under the pane on touch). Armed: the page dims under a
+confirm plate (ERASE ALL RECORDS?, one sentence = words.js `resetSentence(CLEAR_KEYS, KEEP_KEYS)`, the lists main hands in as
+`app.stats.wipe`; `RESET_GROUP` names each store key and words.test pins it equal to reset.js's lists), AGAIN ERASES focused (the
+band face, cream label, the R keycap last) beside COPY MY STATS; its foot `ERASE R · COPY C · ANY OTHER KEY CANCELS` (ERASE is no
+tap target: only AGAIN ERASES erases, so a double tap on RESET never does; on a touch box the plate ends above the COPY STATS /
+RESET keys for the same reason, shrinking its words on a short box). `statsHit` returns KeyC / KeyR / KeyT (a foot label
+from the painted foot's zones, or a touch key), "back", "plate" (inert) or, armed, "cancel". COPIED / COPY FAILED is a tag at the
+right end of the title row.
 
 Names (UI upgrade v202, Task 2.1; owner: "we must use the name that users know
 about"; design record §3). Players read SETTINGS (was OPTIONS: MENU row, page
@@ -224,7 +241,7 @@ before; only START starts; the MODIFIERS door opens the list (and closes it, ope
 (Task 3.3, ruling 4: a touch layout whose `app.lastDev` is `touch`; any key or controller press leaves it, a tap re-enters it) focuses START as the
 page's one action; otherwise the focused row shows (see the page below), the foot is `levelFoot` (label first, keycap last). Read-only pages (HOW TO / POWER-UPS / ENEMIES /
 FLOOR / MEDALS) back out on any tap (MEDALS: off its tabs; HOW TO / POWER-UPS / FLOOR: off their page keys where they page; ENEMIES: off its
-points values and page keys, a tap on one opens its tooltip, and with a tooltip open the next tap only closes it); STATS taps its foot labels. PLAY's and START's
+points values and page keys, a tap on one opens its tooltip, and with a tooltip open the next tap only closes it); STATS taps its foot labels (touch: its COPY STATS / RESET keys), its pane is inert. PLAY's and START's
 tags name what differs from a default run, each setting named (`tagFor`: `EXPERT DIFFICULTY · FAST SPEED`), then a modifier
 count, stepped down to the slot; PAUSE's kicker steps down through menudraw `setupVals`. `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
@@ -331,7 +348,7 @@ Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by e
 MENU's rule, `pages/menu.js` `roomDpr`, its dpr giving way so MENU's plate, its foot reserve and a 3 MiB logo reserve fit `BUDGET`; so a MENU /
 LEVEL SELECT switch never refills the room; a page keeps its plate out of the room layer), made at once so a cursor move never misses, `touch()`ed on a steady frame (`cache.touch(key)`: a held layer
 goes LRU-recent, so a stale one is freed first); live on top: focus, ring, the logo's spark. `shellview.shellCovers(screen)` (MENU, LEVEL SELECT,
-SETTINGS and GRAPHICS, GUIDE with its four pages since Task 3.5, SCORES and TROPHIES since Task 4.1; each page task adds its screen) makes main pass `{covered: true}` to the renderer: no look rasters a board a page covers. `frameloop` frees the kit's
+SETTINGS and GRAPHICS, GUIDE with its four pages since Task 3.5, SCORES, STATS and TROPHIES since Tasks 4.1 / 4.2; each page task adds its screen) makes main pass `{covered: true}` to the renderer: no look rasters a board a page covers. `frameloop` frees the kit's
 layers (`release`, handed in by main) after `KIT_FREE` 10 s of GAME PLAY on a PLAY-only clock and on `pagehide`; the next shell frame refills.
 Under the probe a page records `begin(page, {w, h, dpr, el})`, its rects (touch, set, focus, fill), texts (role, cap height, colour) and
 squint pairs outside any layer paint; its `tools/ui/lib/screens.mjs` row exempts what it has none of (MENU: chosen, locked; GUIDE and ENEMIES:
@@ -744,9 +761,9 @@ not shell screens. Do not add them as `SCREEN` values.
   and DOM-free: `bests.js` (`nb.bests.v1`, per-run score/room bests keyed
   `<heat>:<pact>:<pace+1>`, cap 48) · `stats.js` (`nb.stats.v1`, lifetime
   aggregates always, a 200-entry event ring only after the player opens STATS
-  once; STATS is ten rows — seven lifetime incl. `DAYS PLAYED` (`a.days`, one
+  once; STATS shows the lifetime counters incl. `DAYS PLAYED` (`a.days`, one
   per new LOCAL `ld` at `room_enter`, monotonic, self-heals a future `a.day`,
-  never a streak) + three bests) · `daily.js` (`nb.daily.v1`, one board a day from a **date string**,
+  never a streak), the best run and three bests through `statsView`; `statsRows` stays for the payload's tests) · `daily.js` (`nb.daily.v1`, one board a day from a **date string**,
   pure FNV-1a `dailySeed`; the record is stamped `g`, the board generation:
   `DAILY_GEN` 3 since v198, a record with no `g` is gen 1 and reads ABSENT for
   today's daily, so no PLAYED / YOUR TRIES TODAY / comparison across
@@ -775,16 +792,14 @@ not shell screens. Do not add them as `SCREEN` values.
   MAKO's own frames at `GHOST_A` 0.4; iso never.
   `reset.js` (no store, wave 3): STATS `R` arms, a second `R` runs
   `clearCabinet` + `location.reload()`, any other key disarms (`_push` too).
-  Touch (T1): `statsHit` maps a tap on a painted foot token — idle
-  `T MEDALS` / `C COPY MY STATS` / `R RESET`, armed `R AGAIN ERASES` /
-  `C COPY` — to `KeyT` / `KeyC` / `KeyR` through `input.onUiKey` (the
-  keyboard's own path), so the two-press confirm and the COPIED note are the
-  same. A non-mouse C hit copies on its `pointerup` (`statsC`, cleared on
-  `pointercancel` / `pointerleave`): a touch `pointerdown` grants no
-  clipboard activation. C while armed (key or tap) disarms and copies. An
-  off-label tap while armed disarms and stays on STATS; the idle C spot falls
-  between R AGAIN (72–174) and C COPY (474–528 at 600×520), so it copies
-  nothing.
+  Touch (T1): `statsHit` maps a tap on the painted foot's COPY MY STATS / RESET
+  (a controller's foot: COPY / MEDALS), a touch key, or armed AGAIN ERASES / COPY to
+  `KeyC` / `KeyR` / `KeyT` through `input.onUiKey` (the keyboard's own path), so the
+  two-press confirm and the COPIED note are the same. A non-mouse C hit copies on its
+  `pointerup` (`statsC`, cleared on `pointercancel` / `pointerleave`; the reset is
+  disarmed at the pointerdown): a touch `pointerdown` grants no clipboard activation.
+  C while armed (key or tap) disarms and copies. Any other tap while armed disarms and
+  stays on STATS; no point of the idle RESET or COPY targets is AGAIN ERASES.
   CLEAR = highscores, bests, stats, daily, times, medals, plaques, ghost,
   pact, coach v1/v2, cabinet (12); KEEP = `nb.settings.v1`, `nb.pace.v1`,
   `nb.analytics.v1` (the GA consent), `nb.controls.v1` (the binds).

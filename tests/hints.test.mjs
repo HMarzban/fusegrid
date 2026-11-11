@@ -60,7 +60,8 @@ const GCAP = { up: "▲", dn: "▼", lf: "◀", rt: "▶" };
 const gfoot = () => { const F = gpg._dbg.last && gpg._dbg.last.P.foot; return F ? F.parts.map((q) => q.t || q.sep || (Array.isArray(q.cap) ? GCAP[q.cap[0]] : "[" + q.cap + "]")).join(" ") : ""; };
 const GFOOT = (f) => { const r = paint(f); return { r, foot: gfoot() }; };
 const GPAGE = { HOWTO: "HOW TO PLAY", ITEMS: "POWER-UPS", ENEMIES: "ENEMIES", FLOOR: "FLOOR", GUIDE: "GUIDE" };
-const STATS_UI = { rows: [], notes: [], trophies: [] };
+const STATS_UI = { level: 1, focus: "body", view: null, notes: [] }; // RECORDS' STATS (pages/records.js, Task 4.2): ui by name
+const STATS_P = (T, o) => (c) => md.drawStats(c, { ...STATS_UI, ...o }, L, 9, T);
 const LT = md.layout(1024, 768, 207);
 /* RECORDS' SCORES / MEDALS foot (v202 Task 4.1, pages/records.js): label first, keycaps last, read back from the page's plan like MENU's */
 const RCAP = { lf: "←", rt: "→", up: "↑", dn: "↓" };
@@ -188,8 +189,8 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["SCORES foot", PAGES.SCORES(false), RF("DIFFICULTY ← → · TAB [Q] [E] · BACK [ESC]")], // the page body's foot: the filter, the tab keys, back
     ["OPTIONS foot", sfoot(PAGES.OPTIONS(false), "ROW ▲ ▼ · CHANGE ◀ ▶ · BACK [ESC]"), "ROW ▲ ▼ · CHANGE ◀ ▶ · BACK [ESC]"],
     ["GRAPHICS foot", sfoot(PAGES.GRAPHICS(false), "ROW ▲ ▼ · CHANGE ◀ ▶ · BACK [ESC]"), "ROW ▲ ▼ · CHANGE ◀ ▶ · BACK [ESC]"],
-    ["STATS foot", (c) => md.drawStats(c, L, 9, STATS_UI, false, null), "↑ TABS · T MEDALS · C COPY MY STATS · R RESET · ESC BACK"],
-    ["STATS armed foot", (c) => md.drawStats(c, L, 9, STATS_UI, true, null), "R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS SETTINGS + GAME SPEED · C COPY"],
+    ["STATS foot", STATS_P(false), RF("COPY MY STATS [C] · RESET [R] · TAB [Q] [E] · BACK [ESC]")],
+    ["STATS armed foot", STATS_P(false, { arm: true }), RF("ERASE [R] · COPY [C] · ANY OTHER KEY CANCELS")],
     ["MEDALS foot", MEDALS_P(false), RF("TAB ← → · BACK [ESC]")],
     ["MENU foot verb on PLAY", menu(0), "START"],
     ["MENU foot verb on a door", menu(4), "OPEN"],
@@ -261,7 +262,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["SCORES foot", PAGES.SCORES(false), RF("DIFFICULTY [D-PAD] · BACK [EAST]")],
     ["OPTIONS foot", sfoot(PAGES.OPTIONS(false), "ROW [D-PAD] · CHANGE [D-PAD] · BACK [EAST]"), "ROW [D-PAD] · CHANGE [D-PAD] · BACK [EAST]"],
     ["GRAPHICS foot", sfoot(PAGES.GRAPHICS(false), "ROW [D-PAD] · CHANGE [D-PAD] · BACK [EAST]"), "ROW [D-PAD] · CHANGE [D-PAD] · BACK [EAST]"],
-    ["STATS foot offers no reset", (c) => md.drawStats(c, L, 9, STATS_UI, false, null), "↑ TABS · NORTH MEDALS · WEST COPY MY STATS · EAST BACK"],
+    ["STATS foot offers no reset", STATS_P(false), RF("COPY MY STATS [WEST] · MEDALS [NORTH] · TAB [D-PAD] · BACK [EAST]")],
     ["MEDALS foot", MEDALS_P(false), RF("TAB [D-PAD] · BACK [EAST]")],
     ["MENU foot's D-PAD keycap", menu(0, false, "v99"), "D-PAD"],
     ["MENU PLAY keycap", menu(0), "SOUTH"],
@@ -322,8 +323,8 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
 
   setHints(null);
   const flat = (r) => r.rects.filter((x) => x[0] !== "rgba(4,7,14,0.9)");
-  const pages = { ...PAGES, MENU0: (T) => menu(0, T, "v99"), MENU3: (T) => menu(3, T, "v99"), MENU4: (T) => menu(4, T, "v99"), STATS: () => (c) => md.drawStats(c, L, 9, STATS_UI, false, null), MEDALS: () => MEDALS_P(false, false),
-    SCORES_TABS: (T) => (c) => md.drawScores(c, { level: 1, focus: "tabs", heat: 0, scores: [], plaques: 0 }, L, 9, T), STATS_TABS: (T) => (c) => md.drawStats(c, L, 9, STATS_UI, false, null, T, true), MEDALS_TABS: (T) => MEDALS_P(T) }; // MENU3 is RECORDS since v202 Task 2.2, MENU4 SETTINGS; *_TABS: RECORDS' tab row
+  const pages = { ...PAGES, MENU0: (T) => menu(0, T, "v99"), MENU3: (T) => menu(3, T, "v99"), MENU4: (T) => menu(4, T, "v99"), STATS: () => STATS_P(false), MEDALS: () => MEDALS_P(false, false),
+    SCORES_TABS: (T) => (c) => md.drawScores(c, { level: 1, focus: "tabs", heat: 0, scores: [], plaques: 0 }, L, 9, T), STATS_TABS: (T) => STATS_P(T, { focus: "tabs" }), MEDALS_TABS: (T) => MEDALS_P(T) }; // MENU3 is RECORDS since v202 Task 2.2, MENU4 SETTINGS; *_TABS: RECORDS' tab row
   /* MENU (v202 Task 3.1; fix round 1): the foot's keycaps and PLAY's keycap are keys, sized by their legend (▲ ▼ + ENTER vs D-PAD + SOUTH). Only
      those cap rects are exempt. The foot's plaque is centred, so it moves by exactly the caps' advance (each cap's gap + width) that changed: its x by
      minus half of it, its w by all of it; every rect of the plaque compares by its offsets from the plaque's two edges, every other rect as it is, and
@@ -386,7 +387,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
       check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps its geometry (plate, slots, hits${cueOn ? "; plus the controller cue band only: every x and width holds, every slot's height" : ""})`, ga === gb && !ca && !!cb === cueOn, ga.length + " vs " + gb.length);
       continue;
     }
-    if (/^(SCORES|MEDALS)/.test(nm) && RP._dbg.last.G.mode === "desk") { // v202 Task 4.1: the kit foot under the plate is words and keycaps; everything above it keeps every rect
+    if (/^(SCORES|MEDALS|STATS)/.test(nm) && RP._dbg.last.G.mode === "desk") { // v202 Task 4.1: the kit foot under the plate is words and keycaps; everything above it keeps every rect
       const fy = RP.recordsGeom({ W: L.W, H: L.H, touch: false, shell: false, css: 1 }).d.foot.y - 2, up = (r) => flat(r).filter((x) => x[2] + x[4] <= fy);
       check(`a flip changes words only: ${nm} keeps every rect above its foot`, J(up(a)) === J(up(b)) && up(a).length > 20, up(a).length + " vs " + up(b).length);
       continue;
@@ -395,21 +396,16 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   }
 }
 
-/* ---- the STATS tap map follows the painted foot ---- */
+/* ---- the STATS tap map follows the painted foot (pages/records.js: each item's label and keycaps are its key) ---- */
 {
-  const zones = (arm) => { const seen = []; for (let x = 60; x < 540; x++) { const k = md.statsHit(x, md.statsGeom(L).S.footY, L, arm); if (k && !seen.includes(k)) seen.push(k); } return seen; };
-  check("keys: STATS taps stay T / C / R", J(zones(false)) === J(["KeyT", "KeyC", "KeyR"]), J(zones(false)));
-  check("keys: armed taps stay R / C", J(zones(true)) === J(["KeyR", "KeyC"]), J(zones(true)));
+  const F = { W: L.W, H: L.H, touch: false, shell: false, css: 1 }, u = RP.recordsGeom(F).u;
+  const zones = (arm) => { paint(STATS_P(false, { arm })); const fp = RP._dbg.last.S.feet.find((f) => f.v === RP._dbg.last.S.fv).fp, seen = []; for (let x = 0; x < L.W; x++) { const k = md.statsHit(x, fp.mid * u, L, arm, false, false); if (/^Key/.test(k) && !seen.includes(k)) seen.push(k); } return seen; };
+  check("keys: STATS foot taps are C / R", J(zones(false)) === J(["KeyC", "KeyR"]), J(zones(false)));
+  check("keys: armed, the foot's only tap is C (only AGAIN ERASES on the plate erases)", J(zones(true)) === J(["KeyC"]), J(zones(true)));
   setHints(PAD);
-  const z = zones(false), s = "↑ TABS · NORTH MEDALS · WEST COPY MY STATS · EAST BACK", x0 = 300 - s.length * 3; // the body's foot, led by ↑ TABS
-  const y = md.statsGeom(L).S.footY;
-  check("pad words: the taps are MEDALS and COPY, no route to the wipe", J(z) === J(["KeyT", "KeyC"]), J(z));
-  check("pad words: a tap on MEDALS lands on the painted word", md.statsHit(x0 + 6 * (9 + 6), y, L, false) === "KeyT");
-  check("pad words: a tap on COPY lands on the painted word", md.statsHit(x0 + 6 * (9 + 20), y, L, false) === "KeyC");
-  check("pad words: a tap on EAST BACK does nothing", md.statsHit(x0 + 6 * (9 + 40), y, L, false) === null);
-  check("pad words: a tap on the ↑ TABS lead does nothing", md.statsHit(x0 + 6 * 3, y, L, false) === null);
-  const armed = paint((c) => md.drawStats(c, L, 9, STATS_UI, true, null));
-  check("pad words: an armed foot (a key armed it) keeps its own line", armed.has("R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS SETTINGS + GAME SPEED · C COPY"));
+  check("pad words: the taps are COPY and MEDALS, no route to the wipe", J(zones(false)) === J(["KeyC", "KeyT"]), J(zones(false)));
+  paint(STATS_P(false, { arm: true }));
+  check("pad words: an armed foot (a key armed it) keeps its own keyboard line", recFoot() === "ERASE [R] · COPY [C] · ANY OTHER KEY CANCELS", recFoot());
   setHints(null);
 }
 

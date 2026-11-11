@@ -91,11 +91,15 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       // every chip is ONE call through the cued key path: one uiMove per change, none on the chip already set
       const ti = p < 0 ? -1 : recTabHit(x, y, L, p, touchLay(cv));
       if (ti === -2) return; // the RECORDS page module is still loading: inert
+      if (ti >= 0 && app.screen === SCREEN.STATS && app.resetArm) return void (app.resetArm = false); // armed: the confirm plate is modal; a tab tap only cancels it
       if (ti >= 0) return void app.recTab(ti - p); // a RECORDS tab: that tab, the tab row focused; recTab disarms an armed STATS, the tab shown included
       if (app.screen === SCREEN.SCORES) { const i = scoresHit(x, y, L, touchLay(cv)); if (i >= 0) app.recFocus = 1; return i >= 0 ? void app.move(i - app.scoreHeat, 0) : i === -1 ? app.confirm() : null; } // a difficulty tab is in the body
       if (app.screen === SCREEN.STATS) {
-        const hit = statsHit(x, y, L, app.resetArm, app.recFocus === 0);
-        if (hit === "KeyC" && ev.pointerType && ev.pointerType !== "mouse") statsC = true; else if (hit) input.onUiKey(hit); else if (app.resetArm) app.resetArm = false; else app.confirm(); // a label tap IS its key (C copies + notes)
+        const hit = statsHit(x, y, L, app.resetArm, app.recFocus === 0, touchLay(cv)); // KeyC / KeyR / KeyT, "back", "plate" (inert) or, armed, "cancel"
+        if (hit === "KeyC" && ev.pointerType && ev.pointerType !== "mouse") { statsC = true; app.resetArm = false; } // copies on pointerup; disarmed now, so a cancelled C still cancels
+        else if (/^Key/.test(hit)) input.onUiKey(hit); // a label or key tap IS its key (C copies + notes, R arms or erases)
+        else if (app.resetArm) app.resetArm = false;
+        else if (hit === "back") app.confirm();
         return;
       }
       if (app.screen === SCREEN.TROPHIES) return void app.confirm(); // read-only: off a tab, any tap backs out

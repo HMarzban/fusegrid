@@ -550,7 +550,7 @@ test("screens: every recipe reaches its state through the real menu app", () => 
 });
 
 test("screens: every name has a recipe and a state; aliases; capture names round trip", () => {
-  assert.deepEqual(ORDER, ["title", "menu", "level", "options", "graphics", "controls", "guide", "howto", "items", "enemies", "floor", "scores", "stats", "medals", "play", "pause", "win", "lose"]);
+  assert.deepEqual(ORDER, ["title", "menu", "level", "options", "graphics", "controls", "guide", "howto", "items", "enemies", "floor", "scores", "stats", "statsreset", "medals", "play", "pause", "win", "lose"]);
   for (const n of ORDER) assert.ok(SCREENS[n] && SCREENS[n].state, n);
   assert.equal(canon("settings"), "options");
   assert.equal(canon("SETTINGS"), "options");
@@ -559,6 +559,7 @@ test("screens: every name has a recipe and a state; aliases; capture names round
   assert.equal(capName(o), "menu.2d.w2.t125.phone");
   assert.equal(capName({ ...o, t125: false, phone: false }), "menu.2d.w2");
   assert.deepEqual(parseCapName("menu.2d.w2.t125.phone.png"), o);
+  assert.deepEqual(parseCapName("statsreset.2d.w1.phone.png"), { screen: "statsreset", look: "2d", world: 1, t125: false, phone: true }); // v202 Task 4.2: STATS armed
   assert.deepEqual(parseCapName("lose.px.w8.png"), { screen: "lose", look: "px", world: 8, t125: false, phone: false });
   assert.equal(parseCapName("menu.2d.w2.notext.png"), null);
   assert.equal(parseCapName("gates.json"), null);

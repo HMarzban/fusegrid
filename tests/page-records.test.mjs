@@ -312,5 +312,236 @@ for (const b of ["d1366", "p393", "c600"]) {
 /* ---- the capture recipes and the gates' rows ---- */
 check("tools/ui: scores and medals wait for the lazy page; every exemption carries a reason", SCREENS.scores.wait === "records" && SCREENS.medals.wait === "records" && Object.values(SCREENS.scores.exempt).every((s) => s.length > 10));
 
+
+/* ==== Task 4.2: STATS and a two-step reset ==== */
+const { CLEAR_KEYS, KEEP_KEYS } = await import("../src/app/reset.js");
+const { statsView, statsNotes, clampStats } = await import("../src/app/stats.js");
+const { recordBest } = await import("../src/app/bests.js");
+const SV0 = statsView(clampStats({ a: { runs: 47, rooms: 132, deaths: 61, kills: 588, picks: 214, secs: 11520, sessions: 5, days: 9, first: "2026-11-01", last: "2026-11-10" } }),
+  recordBest(recordBest(recordBest({}, "0:0:1", 4820, 5), "1:0:1", 8120, 5), "2:0:1", 3100, 3), 0b10100100);
+const NOTES = statsNotes({ a: { sessions: 5, first: "2026-11-01", last: "2026-11-10" } }, { d: "2026-11-10", best: 900, played: 2, g: 3 }, "2026-11-10");
+const SUI = (o) => ({ page: "stats", level: 1, focus: "tabs", view: SV0, notes: NOTES, wipe: [CLEAR_KEYS, KEEP_KEYS], arm: false, unlocked: false, ...o });
+/* the sentence names every CLEAR and KEEP group, derived from reset.js's own lists */
+{
+  const keys = Object.keys(W.RESET_GROUP).sort(), lists = [...CLEAR_KEYS, ...KEEP_KEYS].sort(), s = W.resetSentence(CLEAR_KEYS, KEEP_KEYS);
+  check("words.js RESET_GROUP names exactly reset.js's CLEAR and KEEP stores (a new store must join both)", J(keys) === J(lists), J({ keys, lists }));
+  const word = { tips: "first-time tips", locks: "locks levels 6–8, modifiers and time trial" }, [er, kp] = s.split(" Keeps your ");
+  const missC = CLEAR_KEYS.filter((k) => er.indexOf(word[W.RESET_GROUP[k]] || W.RESET_GROUP[k]) < 0), missK = KEEP_KEYS.filter((k) => !kp || kp.indexOf(W.RESET_GROUP[k]) < 0);
+  check("the armed sentence erases every CLEAR group and keeps every KEEP group, by name", missC.length === 0 && missK.length === 0 && /^Erases every /.test(s) && /\.$/.test(s), J({ s, missC, missK }));
+  check("RESET_DEFAULT is that sentence (the confirm plate's height is sized for it)", W.RESET_DEFAULT === s);
+  check("a CLEAR group moved to KEEP moves in the sentence", W.resetSentence(CLEAR_KEYS.filter((k) => k !== "nb.ghost.v1"), [...KEEP_KEYS, "nb.ghost.v1"]).indexOf("ghost") > W.resetSentence(CLEAR_KEYS.filter((k) => k !== "nb.ghost.v1"), [...KEEP_KEYS, "nb.ghost.v1"]).indexOf("Keeps"));
+}
+/* STATS draws the facts it is handed, whole, at 1 and 1.25 in every box; armed, the confirm plate says the sentence, whole */
+for (const b of ALL) for (const ts of [1, 1.25]) {
+  setTextScale(ts);
+  const F = BOX[b], G = RP.recordsGeom(F), { s } = snap(F, SUI({})), T = s.texts.map((t) => t.s), joined = T.join("|");
+  const want = ["BEST RUN", "8", "1", "2", "0", "REACHED LEVEL 5 · ARENA", "RUNS", "47", "PLAY TIME", "3h12m", "MEDALS", "3/8", "LIFETIME", "LEVELS CLEARED", "132", "KILLS", "588", "POWER-UPS", "214", "DEATHS", "61", "DAYS PLAYED", "9", "4,820", "8,120", "3,100", "NORMAL DIFFICULTY", "HARD DIFFICULTY", "EXPERT DIFFICULTY", "LEVEL 3"];
+  const miss = want.filter((w) => !T.includes(w)), plateBox = { x: G.plate.x, y: G.plate.y, w: G.plate.w, h: G.plate.h + (G.foot ? G.foot.y + G.foot.h - G.plate.y - G.plate.h : 0) };
+  const out = s.texts.filter((t) => !inside(t, plateBox, 0.6));
+  check(`STATS (${b}${ts > 1 ? " t125" : ""}): every fact drawn (the hero's qualifier, digits, course, the tiles, LIFETIME, BEST BY DIFFICULTY), inside the plate, no ellipsis`, miss.length === 0 && out.length === 0 && !/…/.test(joined) && T.some((x) => /HARD DIFFICULTY/.test(x)), J({ miss, out: out.slice(0, 3) }));
+  const a = snap(F, SUI({ arm: true })).s, f = a.rects.find((r) => r.name === "confirm"), body = a.texts.filter((t) => t.role === "body");
+  check(`STATS armed (${b}${ts > 1 ? " t125" : ""}): ERASE ALL RECORDS? and the whole sentence inside the confirm plate, AGAIN ERASES focused, COPY beside it`,
+    !!f && body.map((t) => t.s).join(" ") === W.RESET_DEFAULT && body.every((t) => inside(t, f, 0.6)) && a.texts.some((t) => /ERASE ALL/.test(t.s)) && a.rects.some((r) => r.name === "AGAIN ERASES" && r.focus) && a.rects.some((r) => /^COPY/.test(r.name)), J({ f, body: body.map((t) => t.s) }));
+  setTextScale(1);
+}
+/* no best run yet: the hero says so and shows no score or course */
+{
+  const { s } = snap(BOX.d1366, SUI({ view: { ...SV0, hero: null } }));
+  check("STATS with no saved run: BEST RUN · NO RUNS YET, no digits, no course", s.texts.some((t) => t.s === "NO RUNS YET") && !s.rects.some((r) => /^(digit|level) /.test(r.name)));
+}
+/* the hits: the armed page answers R (AGAIN ERASES) and C (COPY) only; everything else is "cancel" */
+for (const b of ["d1366", "p393", "c600", "l1024"]) {
+  const F = BOX[b], G = RP.recordsGeom(F), f = G.d.confirm, u = G.u, c = (r) => [(r.x + r.w / 2) * u, (r.y + r.h / 2) * u];
+  frame(F, SUI({ arm: true }));
+  const hits = [RP.statsHit(...c(f.again), F, true), RP.statsHit(...c(f.copy), F, true), RP.statsHit(...c(G.d.pane), F, true), RP.statsHit(1, 1, F, true), RP.statsHit(...mid(G.tabs[0]), F, true)];
+  check(`STATS armed hits (${b}): AGAIN ERASES is R, COPY is C, the pane, off the plate and a tab are cancel`, J(hits) === J(["KeyR", "KeyC", "cancel", "cancel", "cancel"]), J(hits));
+  frame(F, SUI({}));
+  const a = G.d.bodies.stats.acts, idle = [RP.statsHit(...c(G.d.pane), F, false), RP.statsHit(1, 1, F, false), ...(a ? [RP.statsHit(...c(a.copy), F, false), RP.statsHit(...c(a.reset), F, false)] : [])];
+  check(`STATS idle hits (${b}): the pane is inert (plate), off the plate backs out${a ? ", COPY STATS is C, RESET is R" : ""}`, J(idle) === J(["plate", "back", ...(a ? ["KeyC", "KeyR"] : [])]), J(idle));
+}
+/* the desk foot: label first, keycap last, and a tap on a label (or its keycaps) is its key; a controller's foot offers no reset */
+{
+  const F = BOX.d1366;
+  setHints(null);
+  frame(F, SUI({}));
+  const fp = RP._dbg.last.S.feet.find((q) => q.v === "tabs").fp, words = fp.parts.map((p) => p.t || p.sep || (Array.isArray(p.cap) ? "[" + p.cap[0] + "]" : "[" + p.cap + "]")).join(" ");
+  check("STATS foot (keys, tab row): COPY MY STATS C · RESET R · TAB ← → · BACK ESC", words === "COPY MY STATS [C] · RESET [R] · TAB [lf] [rt] · BACK [ESC]", words);
+  const at = (t) => { const p = fp.parts.find((q) => q.t === t); return [(p.x + p.w / 2) * RP.recordsGeom(F).u, fp.mid * RP.recordsGeom(F).u]; };
+  check("a tap on the foot's COPY MY STATS is C, on RESET is R, on BACK backs out", RP.statsHit(...at("COPY MY STATS"), F, false) === "KeyC" && RP.statsHit(...at("RESET"), F, false) === "KeyR" && RP.statsHit(...at("BACK"), F, false) === "back");
+  frame(F, SUI({ arm: true }));
+  const fa = RP._dbg.last.S.feet.find((q) => q.v === "arm").fp, wa = fa.parts.map((p) => p.t || p.sep || "[" + p.cap + "]").join(" ");
+  check("STATS armed foot: ERASE R · COPY C · ANY OTHER KEY CANCELS", wa === "ERASE [R] · COPY [C] · ANY OTHER KEY CANCELS", wa);
+  setHints(wordsOf("pad", DEF_CONTROLS));
+  frame(F, SUI({}));
+  const wp = RP._dbg.last.S.feet.find((q) => q.v === "tabs").fp.parts.map((p) => p.t || p.sep || "[" + p.cap + "]").join(" ");
+  check("STATS controller foot: COPY MY STATS WEST · MEDALS NORTH · TAB D-PAD · BACK EAST; no reset anywhere", wp === "COPY MY STATS [WEST] · MEDALS [NORTH] · TAB [D-PAD] · BACK [EAST]" && !/RESET/.test(wp), wp);
+  setHints(null);
+}
+/* the app: R then a tab move disarms and never wipes; R, tab, R does not wipe; R R wipes once */
+{
+  const n = { reset: 0, stats: 0 }, a = createMenuApp({ onReset: () => n.reset++, onStats: () => n.stats++, onMedals() {} });
+  a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("RECORDS"); a.confirm(); a.recTab(1);
+  a.key("KeyR"); const armed = a.resetArm; a.key("KeyE");
+  check("R then a tab move (E): disarmed, on MEDALS, nothing wiped", armed && a.resetArm === false && a.screen === SCREEN.TROPHIES && n.reset === 0);
+  a.key("KeyQ"); a.key("KeyR");
+  check("R, tab, R: the second R only arms, nothing wiped", a.screen === SCREEN.STATS && a.resetArm === true && n.reset === 0);
+  a.key("KeyR");
+  check("R, R: wipes once", n.reset === 1 && a.resetArm === false);
+}
+/* no controller path reaches the wipe: armed by a key, every button cancels; unarmed, no button arms (padroute through the real shell) */
+{
+  const { Input } = await import("../src/input.js"), { createPad } = await import("../src/app/gamepad.js"), { createPadRouter } = await import("../src/app/padroute.js");
+  const bad = [];
+  const { PAD_IDX } = await import("../src/app/controls.js");
+  for (const i of Object.keys(PAD_IDX).map(Number)) for (const armedFirst of [true, false]) { // every button the poller reads (the stick clicks 10 / 11 are read by no route)
+    const n = { reset: 0 }, a = createMenuApp({ onReset: () => n.reset++, onStats() {}, onMedals() {} });
+    a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("RECORDS"); a.confirm(); a.recTab(1);
+    const raw = { list: [{ connected: true, mapping: "standard", axes: [0, 0, 0, 0], buttons: Array.from({ length: 16 }, () => ({ pressed: false, value: 0 })) }] }, pad = createPad({ getGamepads: () => raw.list });
+    const r = createPadRouter({ input: new Input(null), app: a, SCREEN, binds: () => DEF_CONTROLS, world: () => ({ state: "PLAY" }), onPause() {}, onUiKey: (c) => { if (c !== "KeyR") a.resetArm = false; a.key(c); }, page: null });
+    let t = 0; const run = () => r.route(pad.poll((t += 16)), t); run();
+    for (let k = 0; k < 3; k++) {
+      if (armedFirst && a.screen === SCREEN.STATS) a.key("KeyR");
+      raw.list[0].buttons[i] = { pressed: true, value: 1 }; run(); raw.list[0].buttons[i] = { pressed: false, value: 0 }; run();
+      if (n.reset || (a.screen === SCREEN.STATS && a.resetArm)) bad.push(i + (armedFirst ? " armed" : ""));
+    }
+  }
+  check("no controller button reaches the wipe: armed, any button cancels; unarmed, none arms", bad.length === 0, bad.join());
+}
+/* the wipe guards (four gaps found in review, each reached R, <input>, R in the live game): any input that is not the second plain R disarms */
+{
+  const { mountPointer } = await import("../src/app/pointer.js"), sc = await import("../src/render/scenes.js");
+  const HIT = { overlayBox: sc.overlayBox, pauseHit: sc.pauseHit, touchLay: sc.touchLay, controlsHit: SV.controlsHit, dims: SV.dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, levelHit: md.levelHit, scoresHit: md.scoresHit, statsHit: md.statsHit, recTabHit: md.recTabHit, layout: md.layout };
+  const rig = () => {
+    const n = { reset: 0 }, keys = [], a = createMenuApp({ onReset: () => n.reset++, onStats() {}, onMedals() {} });
+    a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("RECORDS"); a.confirm(); a.recTab(1);
+    a.stats = { view: SV0, notes: NOTES, wipe: [CLEAR_KEYS, KEEP_KEYS], trophies: [] };
+    const LL = {}, cv = { width: 600, height: 520, getBoundingClientRect: () => ({ left: 0, top: 0, width: 600, height: 520 }), addEventListener(ty, fn) { (LL[ty] = LL[ty] || []).push(fn); } };
+    const input = { _intent: { fire: false }, onUiKey: (c) => { keys.push(c); if (c !== "KeyR") a.resetArm = false; a.key(c); } };
+    mountPointer({ canvas: cv, fit: null, input, app: a, world: { state: "PLAY" }, kind: () => "2d", ctl: () => null, hit: HIT });
+    const fire = (ty, x, y, pt) => (LL[ty] || []).forEach((f) => f({ clientX: x, clientY: y, pointerType: pt }));
+    const draw = () => { const t = rec({ widthK: K8 }); SV.drawShell(t.ctx, a, { state: "PLAY", time: 1, level: 1 }, cv, "2d", () => [], () => 0, () => ({})); };
+    return { a, n, keys, fire, draw };
+  };
+  const F = { W: 600, H: 520, touch: false, shell: false, css: 1 }, G = RP.recordsGeom(F), u = G.u, c = (r) => [(r.x + r.w / 2) * u, (r.y + r.h / 2) * u];
+  /* (1) a touch C deferred to its pointerup disarms at once: a pointercancel or pointerleave in between leaves the reset disarmed, and copies nothing */
+  for (const end of ["pointercancel", "pointerleave"]) {
+    const t = rig();
+    t.a.key("KeyR"); t.draw();
+    const armed = t.a.resetArm;
+    t.fire("pointerdown", ...c(G.d.confirm.copy), "touch");
+    const after = t.a.resetArm;
+    t.fire(end, 0, 0); t.fire("pointerup", 0, 0); t.a.key("KeyR");
+    check(`gap 1: armed, a touch C then ${end}: disarmed at pointerdown, copies nothing; the next R only arms again (no wipe)`, armed && after === false && t.keys.length === 0 && t.n.reset === 0 && t.a.resetArm === true, J({ armed, after, keys: t.keys, reset: t.n.reset }));
+  }
+  {
+    const t = rig();
+    t.a.key("KeyR"); t.draw();
+    t.fire("pointerdown", ...c(G.d.confirm.copy), "touch"); t.fire("pointerup", 0, 0);
+    check("C while armed (touch): disarms and copies on pointerup (KeyC once)", t.a.resetArm === false && J(t.keys) === J(["KeyC"]) && t.n.reset === 0, J(t.keys));
+    t.a.key("KeyR"); t.draw();
+    t.fire("pointerdown", ...mid(G.tabs[2]), "mouse");
+    check("armed: a tab tap only cancels (the confirm plate is modal): disarmed, still on STATS, nothing wiped", t.a.resetArm === false && t.a.screen === SCREEN.STATS && t.n.reset === 0);
+    for (const [nm, pt] of [["the pane", c(G.d.pane)], ["off the plate", [1, 1]]]) {
+      t.a.key("KeyR"); t.draw(); t.fire("pointerdown", ...pt, "mouse");
+      check(`armed: a tap on ${nm} cancels, stays on STATS, wipes nothing`, t.a.resetArm === false && t.a.screen === SCREEN.STATS && t.n.reset === 0);
+    }
+    t.a.key("KeyR"); t.draw(); t.fire("pointerdown", ...c(G.d.confirm.again), "mouse");
+    check("armed: a tap on AGAIN ERASES is the second R: wipes once", t.n.reset === 1);
+  }
+  /* (3) a controller press that answers a card, or is swallowed after a connect, still cancels; so does a direction */
+  {
+    const { Input } = await import("../src/input.js"), { createPad } = await import("../src/app/gamepad.js"), { createPadRouter } = await import("../src/app/padroute.js");
+    const mkR = (o = {}) => {
+      const n = { reset: 0, card: [] }, a = createMenuApp({ onReset: () => n.reset++, onStats() {}, onMedals() {} });
+      a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("RECORDS"); a.confirm(); a.recTab(1);
+      if (o.card) a.padCards = [{ live: () => true, press: (id) => n.card.push(id) }];
+      const raw = { list: o.first ? [null] : [{ connected: true, mapping: "standard", axes: [0, 0, 0, 0], buttons: Array.from({ length: 16 }, () => ({ pressed: false, value: 0 })) }] }, pad = createPad({ getGamepads: () => raw.list });
+      const r = createPadRouter({ input: new Input(null), app: a, SCREEN, binds: () => DEF_CONTROLS, world: () => ({ state: "PLAY" }), onPause() {}, onUiKey: (k) => { if (k !== "KeyR") a.resetArm = false; a.key(k); }, page: null });
+      let t = 0; const run = () => r.route(pad.poll((t += 16)), t);
+      if (!o.first) run();
+      return { a, n, raw, run, tick: (k) => { for (let i = 0; i < k; i++) run(); } };
+    };
+    for (const id of [0, 1]) {
+      const R0 = mkR({ card: true });
+      R0.tick(40); R0.a.key("KeyR");
+      R0.raw.list[0].buttons[id] = { pressed: true, value: 1 }; R0.run();
+      check(`gap 3: armed, a controller ${id ? "EAST" : "SOUTH"} that answers a card (NEW VERSION READY / the load card) cancels the reset`, R0.a.resetArm === false && R0.n.card.length === 1 && R0.n.reset === 0, J({ arm: R0.a.resetArm, card: R0.n.card }));
+    }
+    const R1 = mkR({ first: true });
+    R1.a.key("KeyR");
+    R1.raw.list = [{ connected: true, mapping: "standard", axes: [0, 0, 0, 0], buttons: Array.from({ length: 16 }, (_, i) => ({ pressed: i === 0, value: i === 0 ? 1 : 0 })) }];
+    R1.run();
+    check("gap 3: armed, the first press after a controller connects (swallowed) still cancels", R1.a.resetArm === false && R1.n.reset === 0 && R1.a.screen === SCREEN.STATS, J({ arm: R1.a.resetArm, scr: R1.a.screen }));
+    const R2 = mkR();
+    R2.a.key("KeyR"); R2.raw.list[0].axes[1] = 1; R2.run();
+    check("armed: a controller direction cancels", R2.a.resetArm === false && R2.n.reset === 0);
+  }
+}
+
+/* STATS' layout facts (was menudraw.test 13c / 13g / 13h and the iso guard): the BEST BY DIFFICULTY caption sits between the hero and the three bests
+   wherever data is (or is not); the desk shows the cabinet notes; no JSON; tile words inside their tiles; armed, the coral title, the armed foot in
+   place of the idle one; a double tap on RESET or on COPY never lands on AGAIN ERASES */
+for (const b of ["c600", "iso", "d1366", "p393"]) {
+  const F = BOX[b], G = RP.recordsGeom(F), u = G.u, B = G.d.bodies.stats;
+  const s0 = snap(F, SUI({})).s, s1 = snap(F, SUI({ view: { ...SV0, hero: null, bests: [null, null, null] }, notes: [] })).s;
+  const cap = (s) => s.texts.find((t) => /^BEST BY DIFFICULTY/.test(t.s)), nd = s0.texts.find((t) => t.s === "NORMAL DIFFICULTY"), reached = s0.texts.find((t) => /^REACHED/.test(t.s));
+  check(`STATS (${b}): the BEST BY DIFFICULTY caption sits under the hero and over NORMAL DIFFICULTY, in the same place with no data`, !!cap(s0) && !!nd && cap(s0).y < nd.y && cap(s0).y > reached.y && cap(s1).y === cap(s0).y, J([cap(s0), cap(s1)]));
+  check(`STATS (${b}): no JSON on the page`, !s0.texts.some((t) => /[{}\[\]]/.test(t.s)));
+  const tiles = s0.rects.filter((r) => /^tile /.test(r.name)), tx = (r) => s0.texts.filter((t) => t.x >= r.x - 0.5 && t.x < r.x + r.w && t.y >= r.y - 0.5 && t.y < r.y + r.h);
+  check(`STATS (${b}): each tile's value and name inside it (RUNS 47, PLAY TIME 3h12m, MEDALS 3/8)`, tiles.length === 3 && tiles.every((r) => tx(r).length === 2 && tx(r).every((t) => inside(t, r, 0.6))) && J(tiles.map((r) => tx(r).map((t) => t.s))) === J([["47", "RUNS"], ["3h12m", "PLAY TIME"], ["3/8", "MEDALS"]]), J(tiles.map((r) => tx(r).map((t) => t.s))));
+  if (G.mode === "desk") check(`STATS (${b}): the desk shows the cabinet notes (the DAILY line, SINCE / LAST / SESSIONS), wrapped whole`, NOTES.every((n) => s0.texts.map((t) => t.s).join(" ").indexOf(n.split(" · ")[0]) >= 0) && s0.texts.some((t) => /SESSIONS/.test(t.s)));
+  const a = snap(F, SUI({ arm: true })).s, title = a.texts.find((t) => /ERASE ALL/.test(t.s));
+  check(`STATS armed (${b}): the title is coral, the AGAIN ERASES legend cream on the band`, !!title && title.col === CONST.cor && a.texts.some((t) => t.s === "AGAIN ERASES" && t.col === CONST.ink));
+  if (G.mode === "desk") {
+    const idleFoot = s0.texts.filter((t) => t.y > G.plate.y + G.plate.h).map((t) => t.s), armFoot = a.texts.filter((t) => t.y > G.plate.y + G.plate.h).map((t) => t.s);
+    check(`STATS armed (${b}): the armed foot (ERASE R · COPY C · ANY OTHER KEY CANCELS) replaces the idle one`, idleFoot.includes("RESET") && !armFoot.includes("RESET") && armFoot.includes("ERASE") && armFoot.includes("ANY OTHER KEY CANCELS"), J([idleFoot, armFoot]));
+  }
+}
+/* double tap: a point on the idle RESET or COPY target, tapped again once armed, is never AGAIN ERASES; armed, AGAIN ERASES and COPY sit inside
+   the plate. Every box at 1 and 1.25 (a short compact box clamps the confirm plate toward the plate's top and shrinks its words, fk) */
+for (const b of ALL) for (const ts of [1, 1.25]) {
+  setTextScale(ts);
+  const F = BOX[b], G = RP.recordsGeom(F), u = G.u, B = G.d.bodies.stats, f = G.d.confirm;
+  frame(F, SUI({}));
+  const zones = [];
+  const fp = G.mode === "desk" ? RP._dbg.last.S.feet.find((q) => q.v === "tabs").fp : null;
+  if (fp) for (const z of fp.zones) if (z.key === "KeyR" || z.key === "KeyC") zones.push(R4(z.x0, fp.y, z.x1 - z.x0, fp.h));
+  if (B.acts) zones.push(B.acts.copy, B.acts.reset);
+  let bad = 0;
+  frame(F, SUI({ arm: true }));
+  for (const z of zones) for (let y = z.y; y < z.y + z.h; y += 2) for (let x = z.x; x < z.x + z.w; x += 2) if (RP.statsHit(x * u, y * u, F, true) === "KeyR") bad++;
+  const P = G.d.plate, inP = (r) => inside(r, P, 0.01);
+  check(`STATS armed (${b}${ts > 1 ? " t125" : ""}): no point of the idle RESET or COPY targets is AGAIN ERASES (a double tap never erases); AGAIN ERASES and COPY inside the plate`, zones.length >= 2 && bad === 0 && inP(f.again) && inP(f.copy) && inP(f.box), J({ bad, box: f.box, P }));
+  setTextScale(1);
+}
+function R4(x, y, w, h) { return { x, y, w, h }; }
+/* the foot's tap zones end at their label and keycaps (+6 px): just past either edge of RESET is not R */
+{
+  const F = BOX.d1366, u = RP.recordsGeom(F).u;
+  frame(F, SUI({}));
+  const fp = RP._dbg.last.S.feet.find((q) => q.v === "tabs").fp, z = fp.zones.find((q) => q.key === "KeyR"), y = fp.mid * u;
+  check("STATS foot: RESET taps R from its label to its keycap (6 px slack), and not 7 px past either edge", RP.statsHit((z.x0 - 5) * u, y, F, false) === "KeyR" && RP.statsHit((z.x1 + 5) * u, y, F, false) === "KeyR" && RP.statsHit((z.x0 - 8) * u, y, F, false) !== "KeyR" && RP.statsHit((z.x1 + 8) * u, y, F, false) !== "KeyR");
+}
+/* STATS' cache: steady frames, arming paints the armed page once */
+{
+  const F = BOX.d1366, ctx = rec({ widthK: K8 }), one = (ui) => { const n0 = ctx.calls.length, m0 = cache._dbg.misses; RP.drawRecordsPage(ctx.ctx, F, ui, 0); const calls = ctx.calls.slice(n0); return { calls, miss: cache._dbg.misses - m0, measure: calls.filter((c) => c.op === "measureText").length, hash: J(calls) }; };
+  cache.release(); one(SUI({}));
+  const a = one(SUI({})), b = one(SUI({})), f = one(SUI({ focus: "body" }));
+  check("STATS: two steady frames equal, 0 misses, <= 400 calls, <= 20 measureText; a focus move misses nothing", a.hash === b.hash && a.miss === 0 && a.calls.length <= 400 && a.measure <= 20 && f.miss === 0, J({ calls: a.calls.length, measure: a.measure, f: f.miss }));
+  const arm = one(SUI({ arm: true })), arm2 = one(SUI({ arm: true }));
+  check("STATS: arming paints the armed page and its foot once, then holds (<= 400 calls)", arm.miss === 2 && arm2.miss === 0 && arm2.calls.length <= 400, J([arm.miss, arm2.miss, arm2.calls.length]));
+}
+/* main's KeyC on STATS still fires when STATS was reached by a tab step (onStats ran, the toast says so) */
+{
+  const { createGame } = await import("../src/main.js");
+  await import("../src/core/board3.js");
+  globalThis.window = globalThis.window || { addEventListener() {}, removeEventListener() {} };
+  const g = createGame(null, { seed: 7 });
+  g.app.screen = SCREEN.MENU; g.app.cursor = ITEMS.indexOf("RECORDS"); g.app.confirm(); g.app.recTab(1);
+  const st = g.app.stats;
+  g.input.onUiKey("KeyC");
+  check("main's KeyC on STATS reached by a tab step: copies (its toast speaks) and STATS has its view and its wipe lists", g.app.screen === SCREEN.STATS && !!g.app.toast && !!g.app.toast.s && !!(st && st.view && st.wipe && st.wipe[0] === CLEAR_KEYS), J(g.app.toast));
+}
+
 console.log("\n  PAGE RECORDS RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

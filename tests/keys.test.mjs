@@ -24,6 +24,7 @@ import { copyPayload, drawOverlay, overlayBox, overlayCue } from "../src/render/
 import { createToast, copyText, toastOf, toastTick, TOAST_T } from "../src/app/endkeys.js";
 import "../src/app/demobot.js";
 await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
+const RECP = await (await import("../src/render/pages/lazy.js")).want("records"); // RECORDS is a lazy page (R20): in before its taps
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -780,6 +781,15 @@ for (const [row, scr] of [["HOW TO PLAY", SCREEN.HOWTO], ["POWER-UPS", SCREEN.IT
   check("STATS R, R resets and reloads once", reloads === 1, reloads);
   press(g, "Escape");
   check("STATS Escape -> MENU", g.app.screen === SCREEN.MENU);
+  /* v202 Task 4.2, gap 4: only a plain R arms or erases; a chorded R (Ctrl / Cmd / Alt / Shift) never arms, and cancels an armed reset */
+  press(g, "Enter"); press(g, "ArrowRight");
+  const chord = (mod) => { (L.keydown || []).forEach((f) => f({ code: "KeyR", key: "r", repeat: false, preventDefault: noop, [mod]: true })); g.tick(2); (L.keyup || []).forEach((f) => f({ code: "KeyR", key: "r", preventDefault: noop })); g.tick(2); };
+  const r0 = reloads, bad = [];
+  for (const mod of ["ctrlKey", "metaKey", "altKey", "shiftKey"]) {
+    chord(mod); if (g.app.resetArm) bad.push(mod + " armed");
+    press(g, "KeyR"); chord(mod); if (g.app.resetArm || reloads !== r0) bad.push(mod + " confirmed or kept the arm");
+  }
+  check("STATS gap 4: a chorded R never arms; armed, a chorded R cancels and erases nothing", bad.length === 0 && reloads === r0 && g.app.screen === SCREEN.STATS, bad.join());
 }
 // STATS C reports back through the SAME endkeys toast WIN / LOSE use (app.toast, painted by shellview)
 {
@@ -814,11 +824,9 @@ for (const [row, scr] of [["HOW TO PLAY", SCREEN.HOWTO], ["POWER-UPS", SCREEN.IT
   while (g.app.cursor !== ITEMS.indexOf("PLAY")) press(g, "ArrowUp"); press(g, "Enter");
   check("a STATS note never leaks onto a run", g.app.screen === SCREEN.GAME && g.ro.toast === null, g.app.screen + "/" + JSON.stringify(g.ro.toast));
 }
-// STATS label taps (T1) ride the keyboard's own path: a tap on the painted
-// C COPY MY STATS label IS KeyC — copy plus the same note. 600x520 buffer under
-// a 300x260 CSS box (k=2); buffer label centres T (183,478), C (270,478),
-// R (354,478); (300,300) is off every label. These centres are the page body's
-// foot (RECORDS' tab row leads it with ←→ TAB), so toStats steps into the body.
+// STATS label taps (T1) ride the keyboard's own path: a tap on the painted COPY MY STATS label IS KeyC — copy plus the same note. 600x520
+// buffer under a 300x260 CSS box (k=2). v202 Task 4.2: the targets are the RECORDS page's own (pages/records.js): the painted foot's COPY MY
+// STATS (C) and RESET (R) zones, the MEDALS tab, and armed, the confirm plate's COPY (C) and AGAIN ERASES (R) keys; the pane is inert.
 {
   const PL = {};
   const ctx = new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : () => ctx), apply: () => ctx, set: () => true });
@@ -826,88 +834,93 @@ for (const [row, scr] of [["HOW TO PLAY", SCREEN.HOWTO], ["POWER-UPS", SCREEN.IT
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 300, height: 260 }),
     addEventListener: (ty, fn) => { (PL[ty] = PL[ty] || []).push(fn); }, removeEventListener: noop };
   const g = menu(el);
-  const tap = (x, y) => { (PL.pointerdown || []).forEach((f) => f({ clientX: x / 2, clientY: y / 2 })); g.tick();
+  const G0 = RECP.recordsGeom({ W: 600, H: 520, touch: false, shell: false, css: 1 }), u = G0.u, ctr = (r) => [(r.x + r.w / 2) * u, (r.y + r.h / 2) * u];
+  const zone = (key) => { g.tick(); const S = RECP._dbg.last.S, fp = S.feet.find((q) => q.v === S.fv).fp, z = fp.zones.find((q) => q.key === key); return [((z.x0 + z.x1) / 2) * u, fp.mid * u]; };
+  const tap = (x, y) => { g.tick(); (PL.pointerdown || []).forEach((f) => f({ clientX: x / 2, clientY: y / 2 })); g.tick();
     (PL.pointerup || []).forEach((f) => f({ clientX: x / 2, clientY: y / 2 })); g.tick(); };
   const toStats = () => { while (g.app.screen !== SCREEN.MENU) press(g, "Escape"); g.app.cursor = ITEMS.indexOf("RECORDS"); press(g, "Enter"); press(g, "ArrowRight"); press(g, "ArrowDown"); };
   toStats();
+  const C = zone("KeyC"), R = zone("KeyR"), CA = ctr(G0.d.confirm.copy), AG = ctr(G0.d.confirm.again), PANE = ctr(G0.d.pane);
   const c0 = clip.length, r0 = reloads;
-  tap(270, 478); await flush(); g.tick();
-  check("STATS tap on C COPY MY STATS copies the stats text", g.app.screen === SCREEN.STATS && clip.length === c0 + 1 && /FUSEGRID STATS/.test(clip[clip.length - 1]),
+  tap(...C); await flush(); g.tick();
+  check("STATS tap on COPY MY STATS copies the stats text", g.app.screen === SCREEN.STATS && clip.length === c0 + 1 && /FUSEGRID STATS/.test(clip[clip.length - 1]),
     g.app.screen + "/" + clip[clip.length - 1]);
-  check("STATS tap on C COPY MY STATS shows COPIED", toastOf(g.app.toast) && g.app.toast.s === "COPIED" && g.app.toast.ok === true, JSON.stringify(g.app.toast));
+  check("STATS tap on COPY MY STATS shows COPIED", toastOf(g.app.toast) && g.app.toast.s === "COPIED" && g.app.toast.ok === true, JSON.stringify(g.app.toast));
   clipMode = "no";
-  tap(270, 478); await flush(); g.tick();
-  check("STATS tap on C with a refusing clipboard says COPY FAILED", toastOf(g.app.toast) && g.app.toast.s === "COPY FAILED" && g.app.toast.ok === false,
+  tap(...C); await flush(); g.tick();
+  check("STATS tap on COPY with a refusing clipboard says COPY FAILED", toastOf(g.app.toast) && g.app.toast.s === "COPY FAILED" && g.app.toast.ok === false,
     JSON.stringify(g.app.toast));
   clipMode = "ok";
   g.tick(Math.ceil(TOAST_T * 60) + 2);
-  tap(354, 478); const arm = g.app.resetArm, c1 = clip.length;
-  tap(270, 478); await flush(); g.tick();
-  check("STATS armed, a tap where C was is off R AGAIN: disarms, copies nothing, no note, stays on STATS",
+  tap(...R); const arm = g.app.resetArm, c1 = clip.length;
+  tap(...C); await flush(); g.tick();
+  check("STATS armed, a tap where COPY MY STATS was is no key of the confirm plate: disarms, copies nothing, no note, stays on STATS",
     arm === true && g.app.resetArm === false && clip.length === c1 && toastOf(g.app.toast) === null && g.app.screen === SCREEN.STATS && reloads === r0,
     arm + "/" + g.app.resetArm + "/" + JSON.stringify(g.app.toast));
-  tap(354, 478); press(g, "KeyC"); await flush(); g.tick();
+  tap(...R); press(g, "KeyC"); await flush(); g.tick();
   check("STATS armed by a tap, then keyboard C: disarms and shows COPIED", g.app.resetArm === false && g.app.toast.s === "COPIED" && toastOf(g.app.toast) && reloads === r0,
     g.app.resetArm + "/" + JSON.stringify(g.app.toast));
-  tap(183, 478);
-  check("STATS tap on T MEDALS still opens MEDALS (unchanged)", g.app.screen === SCREEN.TROPHIES, g.app.screen);
-  toStats(); g.tick(Math.ceil(TOAST_T * 60) + 2); // MEDALS' Escape is MENU now: back onto STATS for the off-label tap
+  tap(...ctr(G0.d.tabs[2]));
+  check("STATS tap on the MEDALS tab opens MEDALS", g.app.screen === SCREEN.TROPHIES, g.app.screen);
+  toStats(); g.tick(Math.ceil(TOAST_T * 60) + 2);
   const c2 = clip.length;
-  tap(300, 300);
-  check("STATS idle off-label tap still backs out to MENU, copies nothing", g.app.screen === SCREEN.MENU && clip.length === c2 && toastOf(g.app.toast) === null,
+  tap(...PANE);
+  check("STATS idle tap on the pane is inert", g.app.screen === SCREEN.STATS && clip.length === c2, g.app.screen);
+  tap(2, 2);
+  check("STATS idle tap off the plate backs out to MENU, copies nothing", g.app.screen === SCREEN.MENU && clip.length === c2 && toastOf(g.app.toast) === null,
     g.app.screen + "/" + clip.length);
   toStats(); g.tick(Math.ceil(TOAST_T * 60) + 2);
-  const c3 = clip.length, ev = { clientX: 135, clientY: 239, pointerType: "touch" };
+  const c3 = clip.length, ev = { clientX: C[0] / 2, clientY: C[1] / 2, pointerType: "touch" };
   (PL.pointerdown || []).forEach((f) => f(ev)); g.tick(); await flush();
   const downCopied = clip.length - c3;
   (PL.pointerup || []).forEach((f) => f(ev)); await flush(); g.tick();
-  check("STATS touch tap on C copies on pointerup (a touch pointerdown carries no clipboard activation), not on pointerdown",
+  check("STATS touch tap on COPY copies on pointerup (a touch pointerdown carries no clipboard activation), not on pointerdown",
     downCopied === 0 && clip.length === c3 + 1 && g.app.toast.s === "COPIED" && toastOf(g.app.toast) && g.app.screen === SCREEN.STATS,
     downCopied + "/" + (clip.length - c3) + "/" + JSON.stringify(g.app.toast));
   const c4 = clip.length;
   (PL.pointerup || []).forEach((f) => f(ev)); await flush(); g.tick();
   check("STATS a stray touch pointerup with no C pointerdown copies nothing", clip.length === c4, clip.length - c4);
-  // armed foot ends in C COPY, buffer centre (492,478): a tap on it IS KeyC while armed too
-  const ca = { clientX: 246, clientY: 239 }, ct = { ...ca, pointerType: "touch" };
-  for (const [how, arm] of [["by key", () => press(g, "KeyR")], ["by tap", () => tap(354, 478)]]) {
-    g.tick(Math.ceil(TOAST_T * 60) + 2); arm();
+  // armed, the confirm plate's COPY IS KeyC too
+  const ca = { clientX: CA[0] / 2, clientY: CA[1] / 2 }, ct = { ...ca, pointerType: "touch" };
+  for (const [how, armIt] of [["by key", () => press(g, "KeyR")], ["by tap", () => tap(...R)]]) {
+    g.tick(Math.ceil(TOAST_T * 60) + 2); armIt(); g.tick();
     const a0 = g.app.resetArm, c5 = clip.length, r5 = reloads;
     (PL.pointerdown || []).forEach((f) => f(ct)); g.tick(); await flush();
     const dn = [clip.length - c5, g.app.resetArm, toastOf(g.app.toast)];
     (PL.pointerup || []).forEach((f) => f(ct)); await flush(); g.tick();
-    check(`STATS armed ${how}, touch tap on C COPY: nothing on pointerdown, then pointerup disarms + copies + COPIED, no reload`,
-      a0 === true && dn[0] === 0 && dn[1] === true && dn[2] === null && clip.length === c5 + 1 && /FUSEGRID STATS/.test(clip[clip.length - 1]) &&
+    check(`STATS armed ${how}, touch tap on COPY: nothing copied on pointerdown (but disarmed at once), then pointerup copies + COPIED, no reload`,
+      a0 === true && dn[0] === 0 && dn[1] === false && dn[2] === null && clip.length === c5 + 1 && /FUSEGRID STATS/.test(clip[clip.length - 1]) &&
         g.app.resetArm === false && toastOf(g.app.toast) && g.app.toast.s === "COPIED" && reloads === r5 && g.app.screen === SCREEN.STATS,
       JSON.stringify(dn) + "/" + g.app.resetArm + "/" + JSON.stringify(g.app.toast));
-    g.tick(Math.ceil(TOAST_T * 60) + 2); arm();
+    g.tick(Math.ceil(TOAST_T * 60) + 2); armIt(); g.tick();
     const a1 = g.app.resetArm, c6 = clip.length;
     (PL.pointerdown || []).forEach((f) => f(ca)); g.tick(); await flush();
     const dn1 = clip.length - c6;
     (PL.pointerup || []).forEach((f) => f(ca)); await flush(); g.tick();
-    check(`STATS armed ${how}, mouse tap on C COPY copies on pointerdown (once), disarms, COPIED`,
+    check(`STATS armed ${how}, mouse tap on COPY copies on pointerdown (once), disarms, COPIED`,
       a1 === true && dn1 === 1 && clip.length === c6 + 1 && g.app.resetArm === false && g.app.toast.s === "COPIED" && toastOf(g.app.toast) && reloads === r5,
       dn1 + "/" + (clip.length - c6) + "/" + g.app.resetArm);
   }
-  g.tick(Math.ceil(TOAST_T * 60) + 2); press(g, "KeyR"); clipMode = "no";
+  g.tick(Math.ceil(TOAST_T * 60) + 2); press(g, "KeyR"); clipMode = "no"; g.tick();
   (PL.pointerdown || []).forEach((f) => f(ct)); g.tick(); (PL.pointerup || []).forEach((f) => f(ct)); await flush(); g.tick();
-  check("STATS armed, touch C COPY with a refusing clipboard: disarms, says COPY FAILED, never COPIED",
+  check("STATS armed, touch COPY with a refusing clipboard: disarms, says COPY FAILED, never COPIED",
     g.app.resetArm === false && toastOf(g.app.toast) && g.app.toast.s === "COPY FAILED" && g.app.toast.ok === false, JSON.stringify(g.app.toast));
   clipMode = "ok"; g.tick(Math.ceil(TOAST_T * 60) + 2);
   for (const end of ["pointercancel", "pointerleave"]) {
     g.tick(Math.ceil(TOAST_T * 60) + 2);
-    const c8 = clip.length, rt = { clientX: 177, clientY: 239, pointerType: "touch" };
+    const c8 = clip.length, rt = { clientX: R[0] / 2, clientY: R[1] / 2, pointerType: "touch" };
     (PL.pointerdown || []).forEach((f) => f(ev)); (PL[end] || []).forEach((f) => f(ev)); g.tick(); await flush();
     (PL.pointerup || []).forEach((f) => f(ev)); await flush(); g.tick();
     const bare = clip.length - c8;
     (PL.pointerdown || []).forEach((f) => f(ev)); (PL[end] || []).forEach((f) => f(ev));
     (PL.pointerdown || []).forEach((f) => f(rt)); (PL.pointerup || []).forEach((f) => f(rt)); await flush(); g.tick();
-    check(`STATS touch C then ${end}: a later pointerup (bare, or a tap on R RESET) copies nothing; R still arms`,
+    check(`STATS touch C then ${end}: a later pointerup (bare, or a tap on RESET) copies nothing; R still arms`,
       bare === 0 && clip.length === c8 && toastOf(g.app.toast) === null && g.app.resetArm === true && g.app.screen === SCREEN.STATS,
       bare + "/" + (clip.length - c8) + "/" + g.app.resetArm + "/" + JSON.stringify(g.app.toast));
-    tap(300, 300);
+    tap(...PANE);
   }
-  const r7 = reloads; tap(354, 478); tap(132, 478);
-  check("STATS armed, a tap on R AGAIN (132,478) still erases + reloads once", reloads === r7 + 1 && g.app.resetArm === false, reloads - r7);
+  const r7 = reloads; tap(...R); tap(...AG);
+  check("STATS armed, a tap on AGAIN ERASES still erases + reloads once", reloads === r7 + 1 && g.app.resetArm === false, reloads - r7);
 }
 
 // ---- RECORDS matrix (v202 Task 2.2, plan ruling R7): SCORES, STATS and MEDALS, tab row and body, every key through the real
@@ -975,9 +988,9 @@ const OUT = want(MN, null, UB);
   check("BOMB bound to E: Enter still backs out of MEDALS to MENU on RECORDS", g.app.screen === MN && g.app.cursor === ITEMS.indexOf("RECORDS"), g.app.screen);
   delete mem["nb.controls.v1"];
 }
-// ---- STATS foot taps with RECORDS' tab row focused (fix round 1): every arrival lands on the tab row, whose foot leads with
-// ←→ TAB; the body's leads with ↑ TABS, the same length, so the T / C / R centres below hold in both. Mouse and touch, through
-// the real pointer: C copies (a touch on pointerup), R RESET arms, R AGAIN erases, the armed C COPY disarms and copies. ----
+// ---- STATS foot taps with RECORDS' tab row focused (fix round 1; v202 Task 4.2: the targets read from the RECORDS page's painted foot and
+// its confirm plate). Mouse and touch, through the real pointer: COPY MY STATS copies (a touch on pointerup), RESET arms, AGAIN ERASES erases,
+// the armed COPY disarms and copies. ----
 {
   const PL = {};
   const ctx = new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : () => ctx), apply: () => ctx, set: () => true });
@@ -988,22 +1001,25 @@ const OUT = want(MN, null, UB);
   const fire = (ty, x, y, pointerType) => (PL[ty] || []).forEach((f) => f({ clientX: x / 2, clientY: y / 2, pointerType }));
   const tap = (x, y, pt) => { fire("pointerdown", x, y, pt); g.tick(); fire("pointerup", x, y, pt); g.tick(); };
   const toTabs = () => { while (g.app.screen !== SCREEN.MENU) press(g, "Escape"); g.app.cursor = ITEMS.indexOf("RECORDS"); press(g, "Enter"); press(g, "ArrowRight"); g.tick(Math.ceil(TOAST_T * 60) + 2); };
+  const G0 = RECP.recordsGeom({ W: 600, H: 520, touch: false, shell: false, css: 1 }), u = G0.u, ctr = (r) => [(r.x + r.w / 2) * u, (r.y + r.h / 2) * u];
+  const zone = (key) => { g.tick(); const S = RECP._dbg.last.S, fp = S.feet.find((q) => q.v === S.fv).fp, z = fp.zones.find((q) => q.key === key); return [((z.x0 + z.x1) / 2) * u, fp.mid * u]; };
   for (const pt of ["mouse", "touch"]) {
     toTabs();
+    const [cx, cy] = zone("KeyC"), [rx, ry] = zone("KeyR"), [ax, ay] = ctr(G0.d.confirm.again), [kx, ky] = ctr(G0.d.confirm.copy);
     const c0 = clip.length, r0 = reloads;
-    fire("pointerdown", 270, 478, pt); g.tick(); await flush();
+    fire("pointerdown", cx, cy, pt); g.tick(); await flush();
     const dn = clip.length - c0;
-    fire("pointerup", 270, 478, pt); await flush(); g.tick();
+    fire("pointerup", cx, cy, pt); await flush(); g.tick();
     check("STATS tab row, " + pt + " tap on C COPY MY STATS: copies once (" + (pt === "touch" ? "on pointerup" : "on pointerdown") + "), COPIED, still the tab row",
       g.app.screen === SCREEN.STATS && g.app.recFocus === 0 && dn === (pt === "touch" ? 0 : 1) && clip.length === c0 + 1 && g.app.toast.s === "COPIED" && reloads === r0, dn + "/" + (clip.length - c0) + "/" + g.app.recFocus);
     g.tick(Math.ceil(TOAST_T * 60) + 2);
-    tap(354, 478, pt);
+    tap(rx, ry, pt);
     check("STATS tab row, " + pt + " tap on R RESET arms, clears nothing", g.app.resetArm === true && reloads === r0 && g.app.recFocus === 0, g.app.resetArm + "/" + reloads);
     const c1 = clip.length;
-    fire("pointerdown", 492, 478, pt); g.tick(); await flush(); fire("pointerup", 492, 478, pt); await flush(); g.tick();
+    fire("pointerdown", kx, ky, pt); g.tick(); await flush(); fire("pointerup", kx, ky, pt); await flush(); g.tick();
     check("STATS tab row, " + pt + " tap on the armed C COPY: disarms, copies once, erases nothing", g.app.resetArm === false && clip.length === c1 + 1 && reloads === r0, g.app.resetArm + "/" + (clip.length - c1));
-    tap(354, 478, pt); tap(132, 478, pt);
-    check("STATS tab row, " + pt + ": R RESET then R AGAIN erases and reloads once", reloads === r0 + 1 && g.app.resetArm === false, reloads - r0);
+    tap(rx, ry, pt); tap(ax, ay, pt);
+    check("STATS tab row, " + pt + ": RESET then AGAIN ERASES erases and reloads once", reloads === r0 + 1 && g.app.resetArm === false, reloads - r0);
   }
 }
 
