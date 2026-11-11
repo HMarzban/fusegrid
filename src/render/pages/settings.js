@@ -35,7 +35,7 @@ import {roomLayer, pageRoomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
 import {paginate as pagesOf, pagerKeys, pageLabel, pageKeyAt, paintPager as kitPager, keySide, pageOfFocus} from "../kit/pager.js";
 import {deviceScale} from "../logo/draw2d.js";
-import {hints, tapMode} from "../hintcopy.js";
+import {hints, tapAt} from "../hintcopy.js";
 import {lookVal, FOOT_TAP, BACK_TAP} from "../kit/copy.js";
 
 export const DESK = deep({
@@ -226,7 +226,7 @@ function settingSpec(l, u, phoneM) {
     case "ANALYTICS": return u.anaNote ? {t: "note", s: u.anaNote} : {t: "rocker", on: u.ana ? "on" : "off"};
     case LABEL.ART_STYLE: {
       const s = ART_STYLES[ai], job = u.job || null;
-      if (job) return {t: phoneM ? "door" : "step", cands: lookVal(job, !!u.touch), job, i: ai, n: 3, fail: job.st === "fail", s};
+      if (job) return {t: phoneM ? "door" : "step", cands: lookVal(job, tapAt(!!u.touch, u.tap)), job, i: ai, n: 3, fail: job.st === "fail", s};
       return phoneM ? {t: "door", cands: [s]} : {t: "step", cands: [s], i: ai, n: 3, cl: ai === 0, cr: ai === 2};
     }
     case "CAMERA": { const i = clamp(v.cam | 0, 0, 2); return phoneM ? {t: "door", cands: [CAM_NAME[i]]} : {t: "step", cands: [CAM_NAME[i]], i, n: 3, cl: i === 0, cr: i === 2}; }
@@ -354,13 +354,13 @@ function rowPlan(c, G, l, spec, dv, ts) {
   return o;
 }
 /* the foot's word sets, longest first: each item is a label and its keycaps (label first, keycap last); a touch layout names the tap model */
-function footSets(touchy, words) {
-  if (tapMode(touchy)) return [[{t: FOOT_TAP}], [{t: COPY.tapRow}]];
+function footSets(tap, words) {
+  if (tap) return [[{t: FOOT_TAP}], [{t: COPY.tapRow}]];
   const pad = words.dev === "pad", it = [{t: COPY.row, caps: pad ? [words.move] : [["up"], ["dn"]]}, {t: COPY.change, caps: pad ? [words.move] : [["lf"], ["rt"]]}, {t: COPY.back, caps: [words.back]}];
   return [it, [it[0], it[2]], [it[2]]];
 }
 /* units (an item with its caps, or the build tag) packed greedily into at most maxL lines of maxW; a line break eats the separator */
-function footPlan(c, G, touchy, words, rev) {
+function footPlan(c, G, tap, words, rev) {
   if (!G.d.foot) return null; // a paged column: the page keys' strip stands where the foot was
   const d = G.d, dv = DEV[d.dev], ph = d.dev === "p", f = T.label(dv.sec), box = d.foot, maxW = box.w - 32, maxL = d.mode === "desk" ? 2 : 1, sw = W(c, f, "·");
   const unit = (it) => {
@@ -377,7 +377,7 @@ function footPlan(c, G, touchy, words, rev) {
     }
     return L;
   };
-  for (const set of footSets(touchy, words)) for (const withRev of rev ? [true, false] : [false]) {
+  for (const set of footSets(tap, words)) for (const withRev of rev ? [true, false] : [false]) {
     const us = set.map(unit);
     if (withRev) { const w = W(c, f, rev), bw = W(c, f, "|"); us.push({ps: [{sep: "|", w: bw, x: 0}, {t: rev, w, x: bw + 12}], w: bw + 12 + w, tag: true}); }
     const L = pack(us);
@@ -399,15 +399,15 @@ function footPlan(c, G, touchy, words, rev) {
   return null;
 }
 /* a paged column's back-out hint: the tap rule's words, or BACK and its keycap (label first, keycap last) */
-function hintPlan(c, G, touchy, words) {
+function hintPlan(c, G, tap, words) {
   const H = G.d.hint, dv = DEV.d, f = T.label(dv.sec);
-  if (G.d.stripHint && G.d.keys && !tapMode(touchy)) { /* a paged landscape column (R1 landscape): a controller's BACK and keycap ride the strip's lower line under PAGE n OF m (tap mode: the BACK key says it) */
+  if (G.d.stripHint && G.d.keys && !tap) { /* a paged landscape column (R1 landscape): a controller's BACK and keycap ride the strip's lower line under PAGE n OF m (tap mode: the BACK key says it) */
     const L = G.d.keys.label, fp = T.label(DEV.p.sec), ch = DEV.p.caph, bw = W(c, fp, COPY.back), cw = capW(c, words.back, {phone: true});
     return bw + 8 + cw <= L.w ? {f: fp, px: DEV.p.sec, y: L.y + L.h - ch / 2, ch, ph: true, ps: [{t: COPY.back, x: L.x, w: bw}, {cap: words.back, x: L.x + bw + 8, w: cw}]} : null;
   }
   if (!H) return null;
-  const y = H.y + H.h / 2, tw = W(c, f, tapMode(touchy) ? BACK_TAP : COPY.back);
-  if (tapMode(touchy)) return {f, px: dv.sec, y, ps: [{t: BACK_TAP, x: H.x, w: tw}]};
+  const y = H.y + H.h / 2, tw = W(c, f, tap ? BACK_TAP : COPY.back);
+  if (tap) return {f, px: dv.sec, y, ps: [{t: BACK_TAP, x: H.x, w: tw}]};
   return {f, px: dv.sec, y, ps: [{t: COPY.back, x: H.x, w: tw}, {cap: words.back, x: H.x + tw + 8, w: capW(c, words.back)}]};
 }
 function panePlan(c, G, u, words) {
@@ -472,11 +472,11 @@ function headPlan(c, G, u, title) {
   out.title = {s: title, px: d.ttl, x: h.x, y: h.y + h.h - d.ttl * ts * 0.55};
   return out;
 }
-function plan(c0, G, u, specs, touchy, words) {
+function plan(c0, G, u, specs, tap, words) {
   const c = mOf(c0), d = G.d, dv = DEV[d.dev], ts = d.ts, rows = {};
   for (const l of G.order) rows[l] = rowPlan(c, G, l, specs[l], dv, ts);
   const title = G.page === "settings" ? LABEL.SETTINGS : "GRAPHICS";
-  return {rows, head: headPlan(c, G, u, title), pane: panePlan(c, G, u, words), foot: footPlan(c, G, touchy, words, u.rev || ""), hint: hintPlan(c, G, touchy, words), c};
+  return {rows, head: headPlan(c, G, u, title), pane: panePlan(c, G, u, words), foot: footPlan(c, G, tap, words, u.rev || ""), hint: hintPlan(c, G, tap, words), c};
 }
 
 /* ---- painting ---- */
@@ -700,18 +700,18 @@ const S = {settings: null, graphics: null};
 function frame(c, F, ui, t, page, rows, specs, foc, fks, gRow) {
   if (!okBox(F)) return;
   const level = ui.level | 0 || 1, tok = worldTokens(level), G = geom(F, rows, page), u = G.u, words = hints(), ts = textScale(), touchy = !!F.touch, paused = !!(ui.paused || F.paused), pg = pageAt(G, foc);
-  const dev = deviceScale(c), dpr = capDpr(dev, touchy), tap = tapMode(touchy);
+  const dev = deviceScale(c), dpr = capDpr(dev, touchy), tap = tapAt(touchy, F.tap != null ? F.tap : ui.tap); // the frame's tap mode (menudraw hands shellview's in), or the ui's where the page is drawn straight
   const sig = JSON.stringify([level, G.mode, +u.toFixed(6), rows, JSON.stringify(specs, (k, v) => (k === "job" ? (v ? v.st : null) : v)), ui.kicker == null ? null : ui.kicker, ui.rev || "", words.dev, words.back, words.move, tap, ui.r3d ? 2 : ui.px ? 1 : 0, ts, dpr, paused, pg]);
   let s = S[page];
   if (!s || s.sig !== sig || s.G !== G || s.c !== c) {
-    const Pl = plan(c, G, ui, specs, touchy, words), ob = outer(G.d), pb = sc(ob, u);
+    const Pl = plan(c, G, ui, specs, tap, words), ob = outer(G.d), pb = sc(ob, u);
     const K = {biome: tok.name, level, W: F.W, H: F.H, look: "2d", textScale: ts, dpr};
     const pageKey = {...K, layer: page + ".page|" + sig}, pw = Math.round(pb.w * dpr), ph = Math.round(pb.h * dpr);
     const rd = pageRoomDpr(c, F, {rev: ui.rev}, dpr, pw * ph * 4); // MENU's room dpr (kit room.js: MENU's own room layer, the LOADING plate's too) unless this page needs less (no logo reserve: SETTINGS and GRAPHICS show no logo; lead ruling, R1 train)
     s = S[page] = {sig, G, c, Pl, ob, pb, pw, ph, pageKey, pageK: keyOf(pageKey), rd, roomK: keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: rd, look: "2d", textScale: 1}), room: null, page: null, subs: s ? s.subs : []};
     _dbg.plans++;
   }
-  const Pl = s.Pl, d = G.d, dv = DEV[d.dev], focus = Pl.rows[foc] ? foc : null, gp = page === "graphics" ? gfxPane(mOf(c), G, gRow) : null;
+  const Pl = s.Pl, d = G.d, dv = DEV[d.dev], focus = !tap && Pl.rows[foc] ? foc : null, gp = page === "graphics" ? gfxPane(mOf(c), G, gRow) : null;
   _dbg.last = {G, Pl, foc: focus, s, gp, pg};
   if (typeof c.clip !== "function" || typeof c.rect !== "function") return;
   if (canMake()) {

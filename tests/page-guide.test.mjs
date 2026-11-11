@@ -273,7 +273,10 @@ for (const b of ALL) {
   setHints(null);
   fresh();
   const f = frame(BOX.p393, UI("GUIDE", { focus: "ENEMIES" })), tok = worldTokens(1);
-  check("tap mode (a phone, touch words): GUIDE shows its cursor door focused, as MENU shows PLAY (one band, one ring)", f.t.paints.filter((p) => p.op === "fill" && p.style === tok.band).length === 1 && f.t.paints.filter((p) => p.op === "stroke" && near(p.lw, 3)).length === 1);
+  fresh();
+  const fk = frame({ ...BOX.p393, tap: false }, UI("GUIDE", { focus: "ENEMIES" }));
+  check("tap mode (a phone, R1 cohesion ruling 5): GUIDE shows no door focused (no band, no ring); the same phone driven by keys shows its cursor door (one band, one ring)", f.t.paints.filter((p) => p.op === "fill" && p.style === tok.band).length === 0 && f.t.paints.filter((p) => p.op === "stroke" && near(p.lw, 3)).length === 0 &&
+    fk.t.paints.filter((p) => p.op === "fill" && p.style === tok.band).length === 1 && fk.t.paints.filter((p) => p.op === "stroke" && near(p.lw, 3)).length === 1);
   const e = frame(BOX.p393, UI("ENEMIES", { focus: 3, tip: true }));
   check("tap mode: ENEMIES shows the tapped value's focus with its open tooltip", e.t.paints.some((p) => p.op === "fill" && p.style === tok.band) && P._dbg.last.tipOn);
 }
@@ -415,10 +418,11 @@ for (const b of TOUCHB) for (const page of ["GUIDE", "ENEMIES", "HOW TO PLAY"]) 
 /* ---- the probe record ---- */
 {
   for (const b of ["d1366", "p393"]) for (const page of PAGES) {
+    const BF = { ...BOX[b], tap: false }; // a keyboard on the phone too: its focus shows (tap mode hides GUIDE's door focus, ruling 5)
     fresh(); probe.setOn(true);
-    frame(BOX[b], UI(page), { dpr: 2 });
+    frame(BF, UI(page), { dpr: 2 });
     const s = probe.snapshot(); probe.setOn(false);
-    const G = P.guideGeom(BOX[b], page), kinds = new Set(s.pairs.map((p) => p.kind)), texts = s.texts.map((t) => t.s);
+    const G = P.guideGeom(BF, page), kinds = new Set(s.pairs.map((p) => p.kind)), texts = s.texts.map((t) => t.s);
     const need = page === "GUIDE" || page === "ENEMIES" ? ["band", "ring", "info"] : page === "POWER-UPS" ? ["info"] : [];
     check(`probe (${b}, ${page}): begin ${P.SHOT[page]} on sh, the plate with its ring and fill, ${need.join(", ") || "no"} pairs, the title and every text with a colour, no fault`,
       s.page === P.SHOT[page] && s.box.el === "sh" && s.rects.some((r) => r.name === "plate" && r.plate === G.T && r.fill) && need.every((k) => kinds.has(k)) && texts.includes(page) && s.texts.every((t) => !!t.col) && !s.fault && !s.overflow, J({ page: s.page, kinds: [...kinds], fault: s.fault }));

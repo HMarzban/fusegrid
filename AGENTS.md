@@ -257,8 +257,11 @@ SCREEN; `modeCur` its cursor, always from ONE LIFE: `↑↓` pick, confirm toggl
 `uiTog`; Esc / Backspace / EAST close it first, then leave for MENU). A controller's START always starts. `[ ]`, the shoulders, `1–5`
 and TRIGGER / NORTH (T14) work from any row and move no focus (no cap names them: the approved frame has none). A tap focuses its row (`levelFocus`) and acts as
 before; only START starts; the MODIFIERS door opens the list (and closes it, open); off the plate or BACK backs out (an open list closes first). Tap mode
-(Task 3.3, ruling 4: a touch layout whose `app.lastDev` is `touch`; any key or controller press leaves it, a tap re-enters it) focuses START as the
-page's one action; otherwise the focused row shows (see the page below), the foot is `levelFoot` (label first, keycap last). Read-only pages (HOW TO / POWER-UPS / ENEMIES /
+(ruling 4, R1 cohesion 4: ONE predicate for every page, shellview `tapOf`: a touch layout whose `app.lastDev` is `touch`; any key or controller press
+leaves it, a tap re-enters it; computed once a frame and handed to every page as its frame's `tap`, the INTRO's skip hint included; menudraw keeps the
+mode the last page frame was drawn in for the hits, so a tap meets the geometry on screen; `hintcopy.tapMode` is only the fallback of a page drawn
+straight, read through `tapAt`; `tests/tap-mode.test.mjs`) shows no focus on any page (ruling 5: SETTINGS / GRAPHICS rows, GUIDE doors, RECORDS)
+but MENU's PLAY (owner decision pending) and ENEMIES' open tooltip; LEVEL SELECT lights START as the page's one action, no ring; otherwise the focused row shows (see the page below), the foot is `levelFoot` (label first, keycap last). Read-only pages (HOW TO / POWER-UPS / ENEMIES /
 FLOOR / MEDALS) back out on any tap (MEDALS: off its tabs; HOW TO / POWER-UPS / FLOOR: off their page keys where they page; ENEMIES: off its
 points values and page keys, a tap on one opens its tooltip, and with a tooltip open the next tap only closes it); STATS taps its foot labels (touch: its COPY STATS / RESET keys), its pane is inert. PLAY's and START's
 tags name what differs from a default run, each setting named (`tagFor`: `EXPERT DIFFICULTY · FAST SPEED`), then a modifier
@@ -302,7 +305,7 @@ reads from shellview `guidePageCount`); a page key tap is the kit's `{k: "page",
 read-only page), painted with the kit's `paintPager`. FLOOR keeps both rule lines of every tile and its level line on every row (beside the name on all rows or under it on
 all). On a phone or compact page a controller adds a cue line under the head (`hints().dev === "pad"`; label first, keycap last: OPEN /
 POINTS / PAGE, BACK, HOW TO's `REBIND IN SETTINGS › CONTROLS` signpost where it fits), so a flip re-lays the page once. GUIDE's doors are keys with a quiet teaser and a strip of what is behind them (HOW TO's door: whole label-first
-key pairs, `MOVE [WASD] BOMB [SPACE]`); tap mode shows the cursor door focused, as MENU shows PLAY. ENEMIES: a slab per foe (3 x 3 on the desk,
+key pairs, `MOVE [WASD] BOMB [SPACE]`); tap mode shows no door focused (ruling 5; the page on screen stays the cursor door's). ENEMIES: a slab per foe (3 x 3 on the desk,
 rows on the phone, two columns compact) with the foe on a floor cell of the world it first appears in, its points as brick digits + PTS (`PTS`,
 pinned to `sim.js` killEnemy by a real kill per type), level pips and `APPEARS IN LEVELS …`, help from `FOES[].help` without its trailing points;
 the focused points value is a key (band, bare bomb, ring; an unfocused key under the name starts at its left edge; at 125 % the desk drops the
@@ -358,7 +361,7 @@ rows), the foe cells (40 to 26 desk, 28 to 22 phone), the gaps; a quiet line (th
 or drops, never clipped. It paints into the plate layer (the plate's key holds the card's key) and nothing live. Teasers (one quiet `#bcad9a` voice; words.js `MENU_WORDS`): DAILY `NEW · TODAY'S BOARD` or `YOUR TRIES
 TODAY · n`, RECORDS `BEST n` (played runs only) or `NO RUNS YET`, SETTINGS the art style, GUIDE `4 PAGES`, SOURCE `GITHUB`; each steps down
 or drops, never clipped. PLAY's tag: a default run `LEVEL n · WORLD`, else `tagFor(run)`, its modifier count, EXPERT bare, the level line
-last, on one or two lines. Tap mode (`tapMode`) focuses PLAY. Entry (the show's end and a skip alike): the plate, logo and foot fade in over
+last, on one or two lines. Tap mode (shellview `tapOf`) focuses PLAY. Entry (the show's end and a skip alike): the plate, logo and foot fade in over
 0.25 s; the slam is gone. The cabinet (`getCab`: played runs, today's tries) is read again on every arrival at MENU from another screen, so a run
 started from PLAY or DAILY never leaves a stale teaser. The plate layer is keyed by what it shows (the arrangement, the world, the teasers; the
 notes only on phone and compact, where SOURCE's teaser carries them), never by the hint words, tap mode or the run: PLAY's tag and keycap paint

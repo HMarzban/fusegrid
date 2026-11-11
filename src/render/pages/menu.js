@@ -35,7 +35,7 @@ import * as probe from "../kit/probe.js";
 import {drawLogo2d, deviceScale} from "../logo/draw2d.js";
 import {PLATE as LOGO} from "../logo/worlds.js";
 import {layout as logoLay} from "../logo/glyphs.js";
-import {hints, tapMode} from "../hintcopy.js";
+import {hints, tapMode, tapAt} from "../hintcopy.js";
 import {TZ, cardPlan, paintCard, recordCard} from "./card.js";
 
 export const DESK = deep({
@@ -247,7 +247,7 @@ function footPlan(c, G, ui, words, verb, sign) {
   if (sign) items.push({t: sign, col: CONST.ink});
   else {
     if (ui.note) items.push({t: ui.note});
-    if (tapMode(!!G.touch)) items.push({t: M.TAP});
+    if (G.tap) items.push({t: M.TAP});
     else {
       items.push({t: M.MOVE, caps: words.dev === "pad" ? [words.move] : [["up"], ["dn"]]});
       items.push(verb === M.SOURCE_PAD ? {t: verb} : {t: verb, caps: [words.ok]});
@@ -269,10 +269,10 @@ function footPlan(c, G, ui, words, verb, sign) {
   return {x, y, w: fw, h: FOOT_H, f, px: dv.sec, parts, mid: y + FOOT_H / 2};
 }
 export function plan(c0, G, ui) {
-  const c = mOf(c0), words = hints(), showCap = G.mode === "desk" && !tapMode(!!G.touch) && !G.touch, rows = {};
+  const c = mOf(c0), words = hints(), showCap = G.mode === "desk" && !G.tap && !G.touch, rows = {};
   for (const l of G.order) rows[l] = rowPlan(c, G, ui, l, words, showCap);
   const sign = !ui.note && padSign(ui.pad) ? (VIB.test(ui.pad) ? ui.pad + " · " + TO_CONTROLS : PAD_SIGN) : "";
-  const verbs = G.mode === "desk" ? (tapMode(!!G.touch) || sign ? [""] : words.dev === "pad" ? [M.START, M.OPEN, M.SOURCE_PAD] : [M.START, M.OPEN]) : [];
+  const verbs = G.mode === "desk" ? (G.tap || sign ? [""] : words.dev === "pad" ? [M.START, M.OPEN, M.SOURCE_PAD] : [M.START, M.OPEN]) : [];
   const foot = {};
   for (const v of verbs) foot[v] = footPlan(c, G, ui, words, v, sign);
   const run = ui.run || {}, card = G.d.card ? cardPlan(c, G.d.card, {level: ui.level, heat: run.heat, pact: run.pact}, G.d.dev) : null;
@@ -384,7 +384,7 @@ const rdOf = (F, dpr, plate, feet) => roomFit(F, dpr, ROOM_RESERVE + plate + fee
     blits MENU's room layer asks, so a hop between them never refills the room. ui: {rows, rev}. */
 export function roomRule(c0, F, ui, dpr) {
   if (!okBox(F)) return 1;
-  const c = mOf(c0), G = menuGeom(F, (ui && ui.rows) || MENU_ROWS), u = G.u, Gt = Object.assign(Object.create(G), {touch: !!F.touch}), words = hints(), bare = {...(ui || {}), note: "", pad: ""};
+  const c = mOf(c0), G = menuGeom(F, (ui && ui.rows) || MENU_ROWS), u = G.u, Gt = Object.assign(Object.create(G), {touch: !!F.touch, tap: tapMode(!!F.touch)}), /* the size reserve keeps the fallback: a tap flip never moves the room's dpr */ words = hints(), bare = {...(ui || {}), note: "", pad: ""};
   const reserve = G.mode === "desk" ? [M.START, M.OPEN, M.SOURCE_PAD].map((v) => footPlan(c, Gt, bare, words, v, "").w + 2) : [];
   const pb = sc(outer(G.d), u), feet = Math.ceil(reserve.reduce((n, w) => n + Math.round(w * u * dpr), 0) / FEET_STEP) * FEET_STEP * Math.round((FOOT_H + 6) * u * dpr) * 4;
   return rdOf(F, dpr, Math.round(pb.w * dpr) * Math.round(pb.h * dpr) * 4, feet);
@@ -403,9 +403,9 @@ function paintPlate(g, G, P, tok, dpr) {
 export function drawMenuPage(c, F, ui, t = 0) {
   if (!okBox(F)) return;
   const level = ui.level | 0 || 1, tok = worldTokens(level), G = menuGeom(F, ui.rows || MENU_ROWS), u = G.u, words = hints(), ts = textScale(), touchy = !!F.touch;
-  const dev = deviceScale(c), dpr = capDpr(dev, touchy), tap = tapMode(touchy);
+  const dev = deviceScale(c), dpr = capDpr(dev, touchy), tap = tapAt(touchy, F.tap);
   if (!same(S, G, ui, words, touchy, dpr, ts, c, tap)) {
-    S = {G, w: words, touch: touchy, dpr, ts, c, tap, ui: {...ui}, P: plan(c, Object.assign(Object.create(G), {touch: touchy}), ui), room: null, plate: null, foot: {}};
+    S = {G, w: words, touch: touchy, dpr, ts, c, tap, ui: {...ui}, P: plan(c, Object.assign(Object.create(G), {touch: touchy, tap}), ui), room: null, plate: null, foot: {}};
     sizes(S, G, F, level, tok);
     _dbg.plans++;
   }

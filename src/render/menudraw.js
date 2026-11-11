@@ -4,7 +4,7 @@
    rgba(7,10,18,a). Easing helpers duplicated from the intro beat table (spec §3): this file must not import from src/app. */
 import { LABEL, runParts } from "./words.js";
 import { rr } from "./icons.js";
-import { hints, tapMode } from "./hintcopy.js";
+import { hints, tapAt } from "./hintcopy.js";
 import { drawLogo2d, deviceScale, TITLE_RUNUP } from "./logo/draw2d.js";
 import * as menuPage from "./pages/menu.js";
 import * as levelPage from "./pages/level.js";
@@ -403,7 +403,7 @@ export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1, o = {}) {
   const ha = show ? easeOutCubic(seg(t, SKIP_GUARD, SKIP_GUARD + 0.3)) : 0;
   if (ha > 0) {
     const px = touch ? 18 : 10,
-      hint = tapMode(touch) ? "TAP TO SKIP" : hints().dev === "pad" ? "ANY BUTTON TO SKIP" : "ANY KEY TO SKIP",
+      hint = tapAt(touch, o.tap) ? "TAP TO SKIP" : hints().dev === "pad" ? "ANY BUTTON TO SKIP" : "ANY KEY TO SKIP",
       w = hint.length * px * 0.6,
       y = H - 8 - px / 2;
     c.globalAlpha = ha;
@@ -426,10 +426,14 @@ function backing(c, cx, cy, w, h) {
 /* MAIN MENU: the page is src/render/pages/menu.js (UI upgrade v202 Task 3.1): one geometry for draw and tap, rows by name. These keep the
    entry names shellview, the pointer and the tests call; L is layout(W, H, lg, css) for the box the page draws on (css: CSS px per box unit, the
    touch floors' scale), touch body[data-lay] p / l, the same argument for draw and tap. */
-const frameOf = (L, touch) => ({ W: L.W, H: L.H, touch: !!touch, shell: !!L.shell, css: L.css });
+/* tap: THE tap mode (shellview tapOf) a draw hands in through its ui; a hit's frame (the pointer has none) takes the mode the last page frame was
+   drawn in, so a tap's geometry is the one on screen (GUIDE's lines follow it); undefined until a page is drawn (the page's fallback, hintcopy tapAt) */
+let tapNow;
+const drawn = (tap) => (tapNow = tap == null ? undefined : !!tap);
+const frameOf = (L, touch, tap) => ({ W: L.W, H: L.H, touch: !!touch, shell: !!L.shell, css: L.css, tap: tap !== undefined ? tap : tapNow });
 export const menuGeom = (L, _n, touch) => menuPage.menuGeom(frameOf(L, touch));
 export const menuHit = (x, y, L, _n, touch) => menuPage.menuHit(x, y, frameOf(L, touch));
-export const drawMenu = (c, ui, L, t, touch) => menuPage.drawMenuPage(c, frameOf(L, touch), ui || {}, t);
+export const drawMenu = (c, ui, L, t, touch) => menuPage.drawMenuPage(c, frameOf(L, touch, drawn((ui || {}).tap)), ui || {}, t);
 /* A pane's head line and a pane line (the CONTROLS page's preview pane). */
 function paneHead(c, P, title, right, rc) {
   c.textBaseline = "middle";
@@ -471,7 +475,7 @@ export const levelFoot = (row, open) => levelPage.footText(levelPage.footItems(r
    ruling 4: shellview's app.lastDev; absent = hintcopy tapMode), lockR, lockT, enterT, rev (MENU's build tag: the shared room's dpr)} from shellview (times arrive formatted; this file never reads a store). */
 export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAttack, touch, info) {
   const I = info || {}, U = !!unlocked, lv = sel | 0 || 1;
-  levelPage.drawLevelPage(c, frameOf(L, touch), { level: lv, heat, pace, pact: U ? pact | 0 : 0, time: U && !!timeAttack, unlocked: U, best: (I.best || [])[lv - 1] || null, row: I.row || LABEL.LEVEL, open: !!I.open, cur: I.cur, trig: modeFocus(), tap: I.tap, lockR: I.lockR, lockT: I.lockT, enterT: I.enterT, rev: I.rev }, t);
+  levelPage.drawLevelPage(c, frameOf(L, touch, drawn(I.tap)), { level: lv, heat, pace, pact: U ? pact | 0 : 0, time: U && !!timeAttack, unlocked: U, best: (I.best || [])[lv - 1] || null, row: I.row || LABEL.LEVEL, open: !!I.open, cur: I.cur, trig: modeFocus(), tap: I.tap, lockR: I.lockR, lockT: I.lockT, enterT: I.enterT, rev: I.rev }, t);
 }
 
 /* LAZY PAGES (R20, R1: one plate, one ask; AGENTS.md "Lazy pages"). _rec.want: the test seam. */
@@ -506,8 +510,8 @@ export function loadingPage(c, F, title, ui, name) {
    LOAD: then a tap off the plate backs out (lazyHit, SETTINGS' rule). */
 const guideMod = () => lazy.get("guide");
 const gui = (page, kind, L, o, focus) => ({ page, focus, tip: !!(o && o.tip), pg: (o && o.pg) | 0, level: (o && o.level) | 0 || 1, look: kind === "px" ? "px" : "2d", narrow: !!L.narrow, rev: o && o.rev });
-const guideLoading = (c, L, touch, title, o) => loadingPage(c, frameOf(L, touch), title, { level: o && o.level, rev: o && o.rev }, "guide");
-const guidePage = (page) => (c, L, t, kind, touch, o) => { const g = lazyMod("guide"); if (!g) return guideLoading(c, L, touch, page, o); g.drawGuidePage(c, frameOf(L, touch), gui(page, kind, L, o, o && o.foe != null ? o.foe : null), t); };
+const guideLoading = (c, L, touch, title, o) => loadingPage(c, frameOf(L, touch, drawn(o && o.tap)), title, { level: o && o.level, rev: o && o.rev }, "guide");
+const guidePage = (page) => (c, L, t, kind, touch, o) => { const g = lazyMod("guide"); if (!g) return guideLoading(c, L, touch, page, o); g.drawGuidePage(c, frameOf(L, touch, drawn(o && o.tap)), gui(page, kind, L, o, o && o.foe != null ? o.foe : null), t); };
 export const drawHowTo = guidePage("HOW TO PLAY");
 export const drawItemsHelp = guidePage(LABEL.POWER_UPS);
 export const drawEnemiesHelp = guidePage("ENEMIES");
@@ -515,7 +519,7 @@ export const drawFloorHelp = guidePage("FLOOR");
 export function drawGuide(c, L, t, cursor, kind, touch, o) {
   const g = lazyMod("guide");
   if (!g) return guideLoading(c, L, touch, "GUIDE", o);
-  g.drawGuidePage(c, frameOf(L, touch), gui("GUIDE", kind, L, o, g.DOORS[cursor | 0]), t);
+  g.drawGuidePage(c, frameOf(L, touch, drawn(o && o.tap)), gui("GUIDE", kind, L, o, g.DOORS[cursor | 0]), t);
 }
 /** The GUIDE page's geometry (pages/guide.js guideGeom), null until the module is in. */
 export const guideGeom = (L, touch, page) => { const g = guideMod(); return g ? g.guideGeom(frameOf(L, touch), page || "GUIDE") : null; };
@@ -531,7 +535,7 @@ export const guidePages = (L, touch, page) => { const g = guideMod(); return g ?
    the page's (records.js drawRecordsPage); L is layout(W, H, lg, css) for the box the page draws on, touch body[data-lay] p / l. */
 const recMod = () => lazy.get("records");
 const recDraw = (page) => (c, ui, L, t, touch) => {
-  const m = lazyMod("records"), F = frameOf(L, touch);
+  const m = lazyMod("records"), F = frameOf(L, touch, drawn(ui && ui.tap));
   if (m) return m.drawRecordsPage(c, F, { ...ui, page }, t);
   return loadingPage(c, F, LABEL.RECORDS, ui || {}, "records");
 };
@@ -552,7 +556,7 @@ export const recPageHit = (x, y, L, touch, page, rows) => { const m = recMod(); 
    tap: L is layout(W, H, lg, css) for the box the page draws on (PAUSE: overlayBox's), touch body[data-lay] p / l (the draw reads ui.touch).
    Until the module is in: THE LOADING plate, -2 on it, -1 off it, *Geom null. ui is the page's (see its header); rows the visible list. */
 const page = () => lazy.get("settings");
-const setFrame = (L, touch) => ({ ...frameOf(L, touch), paused: !!L.paused, focus: L.focus });
+const setFrame = (L, touch, tap) => ({ ...frameOf(L, touch, tap), paused: !!L.paused, focus: L.focus });
 /* kit/copy.js words (CONTROLS' foot reads FOOT_TAP too) */
 export { FOOT_TAP, LOOK_NAME, lookVal };
 /** SETTINGS' geometry for the visible rows (pages/settings.js settingsGeom on this box); null until the page is in. */
@@ -562,7 +566,7 @@ export const graphicsGeom = (L, touch) => { const m = page(); return m ? m.graph
 export const settingsHit = (x, y, L, rows, touch) => { const m = page(), F = setFrame(L, touch); return m ? m.settingsHit(x, y, F, rows) : loadHit(x, y, F); };
 export const graphicsHit = (x, y, L, _n, touch) => { const m = page(), F = setFrame(L, touch); return m ? m.graphicsHit(x, y, F) : loadHit(x, y, F); };
 export function drawSettings(c, L, t, ui) {
-  const u = ui || {}, F = setFrame(L, u.touch), m = page();
+  const u = ui || {}, F = setFrame(L, u.touch, drawn(u.tap)), m = page();
   if (lazyMod("settings")) return m.drawSettingsPage(c, F, u, t);
   loadingPage(c, F, LABEL.SETTINGS, u, "settings");
 }
@@ -608,7 +612,7 @@ export function lookNote(m, job, now, pick) {
    touch, level, paused}; the page draws them (pages/settings.js drawGraphicsPage). */
 export const GFX_N = 8; // pinned equal to gfx.js GFX_ROWS.length
 export function drawGraphics(c, L, t, ui) {
-  const u = ui || {}, F = setFrame(L, u.touch), m = page();
+  const u = ui || {}, F = setFrame(L, u.touch, drawn(u.tap)), m = page();
   if (lazyMod("settings")) return m.drawGraphicsPage(c, F, u, t);
   loadingPage(c, F, "GRAPHICS", u, "settings");
 }

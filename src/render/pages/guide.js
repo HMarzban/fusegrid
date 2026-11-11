@@ -40,7 +40,7 @@ import {drawItemBody} from "../itemdraw.js";
 import {drawSpec} from "../featdraw.js";
 import {pixelArt, itemCell, foeCell as pxFoe, blitCell, blitAnim, foeAnim, seedOf as pxSeed} from "../hudart.js";
 import {foeM, blinkAt} from "../motion.js";
-import {hints, tapMode} from "../hintcopy.js";
+import {hints, tapAt} from "../hintcopy.js";
 
 export const GUIDE = GW.GUIDE, HOW = GW.HOW, PU = LABEL.POWER_UPS, EN = GW.ENEMIES, FL = GW.FLOOR;
 /* the doors in menuapp GUIDE_ROWS order (tests/page-guide pins it equal) */
@@ -218,7 +218,7 @@ function headOf(page, m, iw) {
 const TTL_CAP = 11.5; // the phone's primary cap floor (11) with a margin over the measured width
 function frameOf(F) {
   const ts = F.ts > 0 ? F.ts : textScale(), touch = !!F.touch, shell = !!F.shell, css = F.css > 0 ? F.css : 1;
-  return {ts, touch, shell, css, t125: ts > 1.1, phone: shell && touch && F.H > F.W * 1.3};
+  return {ts, touch, shell, css, t125: ts > 1.1, phone: shell && touch && F.H > F.W * 1.3, tap: tapAt(touch, F.tap)};
 }
 /* page breaks: whole bands, greedy, each page as tall as `room` holds (its header included); null when one band is taller than a page. With `need`
    (ENEMIES off the desk: the tooltip's height) every band also keeps that much room above or below it on its page (the pager's strip counts), and
@@ -238,7 +238,7 @@ function paginate(B, room, need = 0, PAGER = PAGE_KEY + PAGE_GAP, strict = false
   return {pages, h: B.top + Math.max(Math.max(...pages.map((p) => p.h)) + PAGER, r)};
 }
 function lay(F, page, mode, fr) {
-  const dev = mode === "desk" ? "d" : "p", dv = DEV[dev], W = hints(), m = {mode, dev, dv, ts: fr.ts, W, tap: tapMode(fr.touch), narrow: F.W < 560, cue: mode !== "desk" && W.dev === "pad"}, P0 = PAD[mode === "compact" ? "c" : dev];
+  const dev = mode === "desk" ? "d" : "p", dv = DEV[dev], W = hints(), m = {mode, dev, dv, ts: fr.ts, W, tap: fr.tap, narrow: F.W < 560, cue: mode !== "desk" && W.dev === "pad"}, P0 = PAD[mode === "compact" ? "c" : dev];
   const tipNeed0 = (iw) => (page === EN && mode !== "desk" ? tipNeed(m, iw - 2 * TIP_T[dev] - 4 - 2 * (mode === "compact" ? TIP_PAD.c : TIP_PAD.d), mode === "compact" && fr.hkEN).h + 2 * TIP_T[dev] + 5 : 0); // hkEN: the one-line tip's room
   let hk = false; // the page keys ride the head's row (compact's last step)
   const fit = (u, H, top0, tail, build) => {
@@ -284,7 +284,7 @@ const RECTS = ["cell", "pts", "dig", "digF", "pips"], YS = ["nameY", "helpY", "a
 let gm = null;
 export function guideGeom(F, page = GUIDE, hkEN = false) {
   const fr = {...frameOf(F), hkEN}, W = hints();
-  if (!hkEN && gm && gm.W === F.W && gm.H === F.H && gm.page === page && gm.touch === fr.touch && gm.shell === fr.shell && gm.css === fr.css && gm.ts === fr.ts && gm.words === W) return gm.G;
+  if (!hkEN && gm && gm.W === F.W && gm.H === F.H && gm.page === page && gm.touch === fr.touch && gm.shell === fr.shell && gm.css === fr.css && gm.ts === fr.ts && gm.tap === fr.tap && gm.words === W) return gm.G;
   let d = lay(F, page, fr.phone ? "phone" : "desk", fr);
   if (!fr.phone && fr.touch && !(d.u * fr.css >= Math.max(TOUCH_U, uFloor(fr.ts)) - 1e-9)) d = lay(F, page, "compact", fr);
   const u = d.u, x0 = d.ix, y0 = d.by, B = d.bd, pages = d.pg.pages, D = {mode: d.mode, dev: d.dev, u, plate: d.plate, foot: d.foot, T: DEV[d.dev].T, head: {}, items: {}, order: [], hit: {}, tips: null, pages: pages.length, pager: null};
@@ -323,11 +323,11 @@ export function guideGeom(F, page = GUIDE, hkEN = false) {
   /* compact ENEMIES whose tooltip holds its words nowhere beside its row: the page keys move to the head's row, freeing the body's foot for it */
   const tipScore = (ts0) => ts0.reduce((a, q) => a + (q.r.h + 0.01 < q.need ? 100 : 0) + (q.short ? 1 : 0), 0);
   if (page === EN && d.mode === "compact" && !hkEN && !d.hk && tipScore(D.tips) >= 100) { const A = guideGeom(F, page, true); if (A.mode === "compact" && Math.abs(A.u * fr.css - 1) < 1e-9 && tipScore(A.d.tips) < tipScore(D.tips)) return A; }
-  const G = {page, mode: d.mode, dev: d.dev, u, W: F.W, H: F.H, t125: fr.t125, touch: fr.touch, T: D.T * u, d: D, order: D.order.slice(), plate: sc(D.plate, u), foot: sc(D.foot, u), back: sc(D.head.back, u),
+  const G = {page, mode: d.mode, dev: d.dev, u, W: F.W, H: F.H, t125: fr.t125, touch: fr.touch, tap: fr.tap, T: D.T * u, d: D, order: D.order.slice(), plate: sc(D.plate, u), foot: sc(D.foot, u), back: sc(D.head.back, u),
     pages: pages.length, pageOf: {}, pager: D.pager ? {up: sc(D.pager.up, u), dn: sc(D.pager.dn, u)} : null, items: {}, hit: {}, tips: null};
   for (const n of D.order) { G.items[n] = sc(D.items[n].r, u); G.pageOf[n] = D.items[n].page; if (D.hit[n]) G.hit[n] = sc(D.hit[n], u); }
   if (D.tips) G.tips = D.tips.map((q) => ({r: sc(q.r, u), U: sc(q.U, u), up: q.up, cover: q.cover.slice()}));
-  gm = {W: F.W, H: F.H, page, touch: fr.touch, shell: fr.shell, css: fr.css, ts: fr.ts, words: W, G: deep(G)};
+  gm = {W: F.W, H: F.H, page, touch: fr.touch, shell: fr.shell, css: fr.css, ts: fr.ts, tap: fr.tap, words: W, G: deep(G)};
   return gm.G;
 }
 /* the tooltip for foe i, on its own page; the first place its measured words fit: desk with columns, whole row bands of two cards toward the middle
@@ -446,7 +446,7 @@ function cueOps(c, G, r) {
   return ops;
 }
 function plan(c0, G, ui) {
-  const c = mOf(c0), D = G.d, dv = DEV[D.dev], ts = textScale(), W = hints(), tap = tapMode(!!G.touch), ph = D.dev === "p";
+  const c = mOf(c0), D = G.d, dv = DEV[D.dev], ts = textScale(), W = hints(), tap = G.tap, ph = D.dev === "p";
   const pri = dv.pri, sec = dv.sec, bod = dv.bod, rest = [], focus = {}, tips = [], strips = {}, info = [];
   const fS = (px) => T.label(px), fB = (px) => T.body(px);
   const w = (f, s) => Wm(c, f, s);
@@ -730,7 +730,7 @@ function widths(c, ops, strips) { for (const p of ops) { if (p.op === "text" && 
 
 /* ---- the foot (desk): label first, keycap last ---- */
 function footPlan(c, G, ui) {
-  const D = G.d, dv = DEV.d, f = T.label(dv.sec), W = hints(), tap = tapMode(!!G.touch), items = [], pad = W.dev === "pad";
+  const D = G.d, dv = DEV.d, f = T.label(dv.sec), W = hints(), tap = G.tap, items = [], pad = W.dev === "pad";
   const mv = G.page !== GUIDE && G.page !== EN ? null : pad ? [W.move] : [["up"], ["dn"], ["lf"], ["rt"]];
   if (tap) items.push({t: G.page === GUIDE ? GW.TAP_DOOR + " · " + BACK_TAP : G.page === EN ? GW.TAP_POINTS + " · " + BACK_TAP : BACK_TAP});
   else {
@@ -801,7 +801,7 @@ const tipKeyOf = (q) => q.r.w.toFixed(2) + "x" + q.r.h.toFixed(2);
 export function drawGuidePage(c, F, ui, t = 0) {
   if (!okBox(F)) return;
   const page = ui.page || GUIDE, level = ui.level | 0 || 1, tok = worldTokens(level), G = guideGeom(F, page), u = G.u, words = hints(), ts = textScale(), touchy = !!F.touch;
-  const dev = deviceScale(c), dpr = capDpr(dev, touchy), tap = tapMode(touchy), A = ui.look === "px" ? pixelArt() : null, ph = G.d.dev === "p";
+  const dev = deviceScale(c), dpr = capDpr(dev, touchy), tap = G.tap, A = ui.look === "px" ? pixelArt() : null, ph = G.d.dev === "p";
   if (!same(S, G, ui, words, touchy, dpr, ts, c, tap, A)) {
     const P = plan(c, G, ui), mc = mOf(c);
     widths(mc, P.rest, P.strips); for (const k in P.focus) widths(mc, P.focus[k], P.strips); for (const q of P.tips) widths(mc, q, P.strips);
@@ -810,10 +810,10 @@ export function drawGuidePage(c, F, ui, t = 0) {
     sizes(S, G, F, level, tok, A ? "px" : "2d");
     _dbg.plans++;
   }
-  const P = S.P, foc = page === GUIDE ? (DOORS.includes(ui.focus) ? ui.focus : null) : page === EN && ui.focus != null && ui.focus >= 0 && ui.focus < FOES.length && (!tap || ui.tip) ? ui.focus | 0 : null;
+  const P = S.P, foc = page === GUIDE ? (DOORS.includes(ui.focus) && !tap ? ui.focus : null) : page === EN && ui.focus != null && ui.focus >= 0 && ui.focus < FOES.length && (!tap || ui.tip) ? ui.focus | 0 : null;
   const tipOn = page === EN && foc != null && !!ui.tip, o = {ph, A, strips: P.strips, time: 0.4};
   /* the page on screen: the focused door's or foe's (a foe in tap mode keeps its page with no focus shown), a read-only page's ui.pg */
-  const pg = page === GUIDE ? pageOfFocus(G, foc || DOORS[0]) : page === EN ? pageOfFocus(G, G.order[ui.focus | 0]) : clampPg(G, ui.pg);
+  const pg = page === GUIDE ? pageOfFocus(G, DOORS.includes(ui.focus) ? ui.focus : DOORS[0]) : page === EN ? pageOfFocus(G, G.order[ui.focus | 0]) : clampPg(G, ui.pg);
   _dbg.last = {G, P, foc, tipOn, S, pg};
   if (typeof c.clip !== "function" || typeof c.rect !== "function") return;
   if (canMake()) {

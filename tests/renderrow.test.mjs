@@ -6,7 +6,7 @@ import * as md from "../src/render/menudraw.js";
 import { rec as textrec } from "./lib/textrec.mjs";
 import { loaderSpot, stepLookNote } from "../src/render/shellview.js";
 import { overlayBox } from "../src/render/scenes.js";
-import { setHints } from "../src/render/hintcopy.js";
+import { setHints, tapMode } from "../src/render/hintcopy.js";
 import { SCREEN, optRows } from "../src/app/menuapp.js";
 import { worldTokens } from "../src/render/kit/tokens.js";
 import * as lazyPages from "../src/render/pages/lazy.js";
@@ -79,7 +79,7 @@ function recCtx() {
 
 // ---- lookVal: the words ----
 {
-  const w = (n, t) => md.lookVal(n, t)[0];
+  const w = (n, t) => md.lookVal(n, tapMode(t))[0]; // lookVal takes the page's tap mode (R1 cohesion 4): a page drawn straight reads the fallback
   check("files", w({ k: "px", st: "loading", done: 12, total: 26 }) === "PIXEL · 12 / 26");
   check("no count", w({ k: "px", st: "loading", total: 0 }) === "PIXEL · LOADING");
   check("slow", w({ k: "3d", st: "loading", done: 2, total: 20, slow: true }) === "REAL 3D · SLOW, STILL TRYING");
@@ -125,7 +125,7 @@ for (const dev of ["key", "touch", "pad"]) for (const R of [optRows(false), optR
     const name = name0 + " (" + R.length + " rows)";
     let worst = "", ok = true, first = true;
     for (const n of NOTES) {
-      const { c, o } = job(L, touch, R, n), cands = md.lookVal(n, touch), t = o.val.P.find((q) => q.k === "text"), win = o.val.P.find((q) => q.win);
+      const { c, o } = job(L, touch, R, n), cands = md.lookVal(n, tapMode(touch)), t = o.val.P.find((q) => q.k === "text"), win = o.val.P.find((q) => q.win);
       const right = o.val.x >= o.label.x + o.label.w + 6, inWin = !win || (t && t.x >= win.r.x && t.x + t.w <= win.r.x + win.r.w + 0.01);
       if (!cands.includes(o.word) || !right || !inWin || !t) { ok = false; worst = o.word + " " + JSON.stringify([o.val.x, o.label.x + o.label.w]); }
       /* fix round 1 (narrowed assertion 1): the word is exactly the rule's: the first of lookVal's words that fits the room whole, else the last

@@ -175,7 +175,7 @@ for (const ts of [1, 1.25]) {
   setTextScale(ts);
   for (const b of ALL) for (const r3d of [false, true]) {
     fresh();
-    const R = r3d ? R12 : R10, F = BOX[b], { t } = frame(F, UI({ rows: R, r3d, row: "ART STYLE" })), G = P.settingsGeom(F, R), S = P._dbg.last, tag = `${b} ${R.length} @${ts}`;
+    const R = r3d ? R12 : R10, F = BOX[b], { t } = frame(F, UI({ rows: R, r3d, row: "ART STYLE", tap: false })), G = P.settingsGeom(F, R), S = P._dbg.last, tag = `${b} ${R.length} @${ts}`; // tap false: keys drive (a touch box too), so the focus shows
     const labs = t.texts.slice(t.live).filter((q) => R.includes(q.s)).map((q) => q.s), live = t.texts.slice(0, t.live).filter((q) => R.includes(q.s)).map((q) => q.s);
     const onPage = G.pages[G.pageOf["ART STYLE"]];
     check(`draw (${tag}): the focused row's page at rest in the page layer, in order; the focused row's live on top`, J([...new Set(labs)]) === J(onPage) && J(live) === J(["ART STYLE"]), J([labs, live]));
@@ -192,6 +192,11 @@ for (const ts of [1, 1.25]) {
     const band = t.paints.find((p) => p.op === "fill" && p.style === worldTokens(1).band);
     const fr = G.rows["ART STYLE"];
     check(`the band is the focused row's geometry rect (${tag})`, !!band && near(band.box.x, fr.x, 0.6) && near(band.box.y, fr.y, 0.6) && near(band.box.w, fr.w, 0.6) && near(band.box.h, fr.h, 0.6), J([band && band.box, fr]));
+    if (F.touch) { /* R1 cohesion ruling 5: tap mode shows no focus (no live row, no band); the page on screen is still the focused row's */
+      fresh();
+      const { t: tt } = frame(F, UI({ rows: R, r3d, row: "ART STYLE", tap: true })), lt = tt.texts.slice(tt.live).filter((q) => R.includes(q.s)).map((q) => q.s), lv = tt.texts.slice(0, tt.live).filter((q) => R.includes(q.s));
+      check(`tap mode (${tag}): no focused row (no live row, no band), the focused row's page at rest`, lv.length === 0 && !tt.paints.some((p) => p.op === "fill" && p.style === worldTokens(1).band) && J([...new Set(lt)]) === J(onPage), J([lv.map((q) => q.s), lt]));
+    }
     const F2 = S.Pl.foot;
     if (G.pages.length > 1) check(`paged (${tag}): the page keys' strip and PAGE n OF m under the rows (a column or a touch #c: where the foot was; the phone keeps its foot under the plate)`, (G.mode === "phone" && F.shell ? !!F2 : !F2) && !!G.keys && t.texts.some((q) => q.s === "PAGE " + (G.pageOf["ART STYLE"] + 1) + " OF " + G.pages.length));
     if (!F2) continue;

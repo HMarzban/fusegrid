@@ -4,6 +4,7 @@ import { DEF_CONTROLS, bindBtn, bindKey, bindMoveSet, resetDevice } from "../src
 import { createHintDev, keyPress, pointerPress, wordsOf } from "../src/app/hints.js";
 import { hints, setHints, tapMode } from "../src/render/hintcopy.js";
 import * as md from "../src/render/menudraw.js";
+import { worldTokens } from "../src/render/kit/tokens.js";
 import { drawShell, loadControlsArt } from "../src/render/shellview.js";
 await loadControlsArt(); // the CONTROLS paint is lazy (v202): in before any CONTROLS draw
 import { want as wantPage } from "../src/render/pages/lazy.js";
@@ -371,7 +372,12 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
         moved = la.length === lb.length && la.every((q, i) => Math.abs(lb[i].w - q.w - (lb[i].adv - q.adv)) < 1e-6 && J(q.words) === J(lb[i].words)) && Math.abs(fb.w - fa.w - dW) < 1e-6 && (left || centred);
       }
       const touchWords = !T || (words(wa) === sp.COPY.tapRow && words(wb) === "ROW · CHANGE · BACK"); // touch: the tap model's words become the controller's keys, both feet present
-      check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps every rect but its foot's keycaps; the foot's plaque moves by the keycaps' advance alone, its words in order`, J(flat(a).filter(out(fa))) === J(flat(b).filter(out(fb))) && flat(a).filter(out(fa)).length > 0 && !!fa && !!fb && moved && touchWords && (T || words(wa) === words(wb)), J([words(wa), words(wb)]));
+      /* touch (R1 cohesion ruling 5): tap mode shows no focus, so the flip to a controller also brings the focused row's band; only that band and the
+         foot may change, and it is absent before and present after */
+      const A2 = (setHints(null), paint(p(T))), dA = sp._dbg.last, B2 = (setHints(PAD), paint(p(T))), dB = sp._dbg.last;
+      setHints(null);
+      const fo = T && dB.foc != null ? dB.Pl.rows[dB.foc].r : null, nb = (r) => (fo ? r.filter((x) => !inR(fo, x)) : r), bandOk = !T || (dA.foc == null && dB.foc != null);
+      check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps every rect but its foot's keycaps${T ? " (and the focused row, which tap mode hides)" : ""}; the foot's plaque moves by the keycaps' advance alone, its words in order`, bandOk && J(nb(flat(A2).filter(out(fa)))) === J(nb(flat(B2).filter(out(fb)))) && flat(a).filter(out(fa)).length > 0 && !!fa && !!fb && moved && touchWords && (T || words(wa) === words(wb)), J([words(wa), words(wb)]));
       continue;
     }
     if (nm === "LEVEL" && !T) { // v202 Task 3.3: the keyboard foot, MENU's rule: every rect but the caps the same, the plaque moved by the caps' advance alone, its words in order

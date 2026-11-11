@@ -43,7 +43,7 @@ import * as probe from "../kit/probe.js";
 import {PAGE_KEY, pagerKeys, pageLabel, pageKeyAt, paintPager as kitPager} from "../kit/pager.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {TOUCH, TOUCH_U} from "./menu.js";
-import {hints, tapMode} from "../hintcopy.js";
+import {hints, tapAt} from "../hintcopy.js";
 
 export const PAGES = Object.freeze(["scores", "stats", "medals"]);
 export const DESK = deep({
@@ -1066,7 +1066,7 @@ function sizes(S0, G, F, level, tok, ui) {
 export function drawRecordsPage(c, F, ui, t = 0) {
   if (!okBox(F) || PAGES.indexOf(ui.page) < 0) return;
   const level = ui.level | 0 || 1, tok = worldTokens(level), G = recordsGeom(F), u = G.u, words = hints(), touchy = !!F.touch;
-  const dpr = capDpr(deviceScale(c), touchy), tap = tapMode(touchy), foc = ui.page === "stats" && ui.arm ? "arm" : ui.page !== "medals" && ui.focus === "body" ? "body" : "tabs";
+  const dpr = capDpr(deviceScale(c), touchy), tap = tapAt(touchy, F.tap), foc = ui.page === "stats" && ui.arm ? "arm" : ui.page !== "medals" && ui.focus === "body" ? "body" : "tabs";
   MC = mOf(c);
   if (!same(S, G, ui, words, dpr, c, tap)) {
     const P = plan(c, G, ui);

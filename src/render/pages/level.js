@@ -38,7 +38,7 @@ import {roomLayer, roomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
 import {pageKeyAt, PAGE_KEY, PAGE_GAP, paintPager} from "../kit/pager.js";
 import {deviceScale} from "../logo/draw2d.js";
-import {hints, tapMode} from "../hintcopy.js";
+import {hints, tapAt} from "../hintcopy.js";
 import {cardPlan, paintCard, recordCard} from "./card.js";
 
 /* the rows by name: menuapp LEVEL_ROWS, pinned equal to these words in tests/words.test.mjs (src/render may not import src/app) */
@@ -604,7 +604,7 @@ function want(q, paint, u, dpr) {
 export function drawLevelPage(c, F, ui0, t = 0) {
   if (!okBox(F)) return;
   const level = ui0.level | 0 || 1, tok = worldTokens(level), U = !!ui0.unlocked, touchy = !!F.touch, words = hints(), ts = textScale();
-  const tap = ui0.tap != null ? !!ui0.tap : tapMode(touchy), open = !!ui0.open && U;
+  const tap = tapAt(touchy, ui0.tap != null ? ui0.tap : F.tap), open = !!ui0.open && U;
   const ui = {...ui0, level, unlocked: U, open, tap, pad: words.dev === "pad", cur: open ? ui0.cur | 0 : -1, trig: !open && U && words.dev === "pad" && ui0.trig >= 0 ? ui0.trig | 0 : -1};
   const G = levelGeom(F, {unlocked: U, open, row: ui.row}), u = G.u, d = G.d, dev = deviceScale(c), dpr = capDpr(dev, touchy);
   if (!same(S, G, ui, words, touchy, dpr, ts, c)) {

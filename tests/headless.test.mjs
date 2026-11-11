@@ -2021,7 +2021,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   const intro=(st,subT)=>({screen:SCREEN.INTRO,introStage:st,subT,pressT:0,boardReady:true,readyT:1});
   for(const v of ["p","l"]){
     check("O2 body[data-lay]="+v+" title paints TAP TO START",shot(intro(0,1),lay(v)).texts.includes("TAP TO START"));
-    check("O2 body[data-lay]="+v+" show paints TAP TO SKIP",shot(intro(1,0.6),lay(v)).texts.includes("TAP TO SKIP"));
+    check("O2 body[data-lay]="+v+" show paints TAP TO SKIP (the press that started it was a tap: shellview tapOf)",shot({...intro(1,0.6),lastDev:"touch"},lay(v)).texts.includes("TAP TO SKIP"));
   }
   check("O2 body[data-lay]=d title paints PRESS ANY KEY OR BUTTON",shot(intro(0,1),lay("d")).texts.includes("PRESS ANY KEY OR BUTTON"));
   const L=layout(600,520);
