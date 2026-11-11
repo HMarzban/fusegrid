@@ -129,6 +129,7 @@ check("GUIDE door ITEMS is POWER-UPS", J(GUIDE_ROWS) === J(["HOW TO PLAY", W.LAB
 {
   const { LOOK_LABEL } = await import("../src/app/jobs.js");
   check("MENU (v202 Task 3.1): words.js MENU_ROWS is menuapp ITEMS, ART_STYLES the app's look labels (jobs.js LOOK_LABEL) by RENDER value", J(W.MENU_ROWS) === J(ITEMS) && J(W.ART_STYLES) === J([LOOK_LABEL["2d"], LOOK_LABEL.px, LOOK_LABEL["3d"]]) && Object.isFrozen(W.MENU_ROWS) && Object.isFrozen(W.ART_STYLES));
+  check("CONTROLS words: the no-controller plaque and the appendix line, pinned", W.CONTROLS_WORDS.NONE === "NO CONTROLLER" && W.CONTROLS_WORDS.CONNECT === "Connect one and press a button." && Object.isFrozen(W.CONTROLS_WORDS));
   check("MENU words: the teasers and the foot name settings with LABEL's words; frozen", W.MENU_WORDS.LEVEL_TEASE === W.LABEL.LEVEL + " · " + W.LABEL.DIFFICULTY + " · SPEED" && W.MENU_WORDS.START === W.LABEL.START && Object.isFrozen(W.MENU_WORDS) && Object.values(W.MENU_WORDS).every((v) => typeof v === "string" && v === v.toUpperCase()));
 }
 check("LEVEL SELECT rows (Task 2.3): LEVEL, DIFFICULTY, GAME SPEED, MODIFIERS from words.js, then START", J(LEVEL_ROWS) === J([W.LABEL.LEVEL, W.LABEL.DIFFICULTY, W.LABEL.GAME_SPEED, W.LABEL.MODIFIERS, W.LABEL.START]) && W.LABEL.START === "START" && W.LABEL.CLOSE === "CLOSE" && md.LEVEL_TAP_LIST.endsWith(" " + W.LABEL.CLOSE));

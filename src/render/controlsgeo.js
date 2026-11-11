@@ -1,7 +1,8 @@
 // CONTROLS page geometry and copy, shared by draw, tap and the page reducer. Pure. BTN, DEF_KEY, DEF_PAD, VIB_LEVELS, SENS_LEVELS, keyName, moveLabel and softAliasesOf are local copies of src/app/controls.js (render never reads src/app), pinned equal in tests/controlsdraw.test.mjs.
 import { FOOT_TAP, VIB_LEVELS, bandOf, listGeom, listHit, pageBox, vibWord } from "./menudraw.js";
-import { KB_AT, KB_KEYS, KB_W, KB_H, PART_AT, PART_R, padBox, keyRect, kbBox } from "./padart.js";
+import { KB_AT, KB_KEYS, KB_W, KB_H, PART_AT, PART_R, BUMP, padBox, keyRect, kbBox } from "./padart.js";
 import { textScale } from "./kit/type.js";
+import { CONTROLS_WORDS } from "./words.js";
 
 const dpad = { g: "dpad", v: "all", w: "D-PAD" };
 export const BTN = Object.freeze({
@@ -41,7 +42,7 @@ export function softAliasesOf(k) {
 /** Result lines the page reducer shows through view.status. */
 export const STATUS = Object.freeze({ doneKey: "KEYBOARD BACK TO DEFAULTS", donePad: "CONTROLLER BACK TO DEFAULTS", nothing: "ALREADY ON THE DEFAULTS", back: "CONTROLLER BACK", cancelled: "CANCELLED · NOTHING CHANGED", same: "NO CHANGE" });
 /** Lines under the pad diagram when no controller is there. */
-export const CAPTION = Object.freeze({ none: "PRESS ANY BUTTON ON A CONTROLLER", touch: "TOUCH NEEDS NO SETUP" });
+export const CAPTION = Object.freeze({ none: CONTROLS_WORDS.CONNECT });
 const RULE = {
   MOVE: "WALK THE GRID", BOMB: "PLANT A BOMB", THROW: "NEEDS THE THROW POWER-UP · TOSS A BOMB", REMOTE: "NEEDS THE REMOTE POWER-UP · SET OFF YOUR BOMBS",
   PAUSE: "STOP THE RUN", SENSITIVITY: "HOW FAR THE STICK MOVES BEFORE IT COUNTS", VIBRATION: "HITS, BLASTS, PLANTS AND MENUS · LOW SKIPS MENUS",
@@ -210,13 +211,14 @@ export function padCross(plan, lit) {
   const W = plan.W, out = [], segs = (L) => L.pts.slice(1).map((p, i) => [L.pts[i], p]), own = (g) => (g === "MOVE" ? ["LS", "dpad", "RS"] : [g]);
   const obs = Object.entries(PART_R).map(([id, r]) => ({ id, x: PART_AT[id][0] * W, y: PART_AT[id][1] * W, r: r * W }));
   for (const id of ["SHL", "SHR"]) if (lit && lit[id]) for (const p of BUMP_AT) obs.push({ id, x: (id === "SHL" ? 1 - p[0] : p[0]) * W, y: p[1] * W, r: 0.036 * W });
-  for (const id of ["TRL", "TRR"]) if (lit && lit[id]) for (const dx of [-0.06, 0, 0.06]) obs.push({ id, x: ((id === "TRL" ? 0.24 : 0.76) + dx) * W, y: 0.02 * W, r: 0.05 * W });
+  for (const id of ["TRL", "TRR"]) if (lit && lit[id]) { const m = id === "TRL", a = ((m ? -9 : 9) * Math.PI) / 180; for (const d of [-0.05, -0.025, 0, 0.025, 0.05]) obs.push({ id, x: ((m ? 0.24 : 0.76) + d * Math.cos(a)) * W, y: (0.02 + d * Math.sin(a)) * W, r: 0.05 * W }); } // the trigger's long axis, rotated as drawn
   const L = plan.lines;
   for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) if (L[i].grp !== L[j].grp) for (const [a, b] of segs(L[i])) for (const [c, d] of segs(L[j])) if (segX(a, b, c, d)) out.push(L[i].grp + " x " + L[j].grp);
   for (const l of L) for (const [a, b] of segs(l)) for (const q of obs) if (!own(l.grp).includes(q.id) && segD([q.x, q.y], a, b) < q.r + 2) out.push(l.grp + " near " + q.id);
   return [...new Set(out)];
 }
-const BUMP_AT = [[0.66, 0.035], [0.74, 0.044], [0.82, 0.065], [0.88, 0.08], [0.93, 0.11], [0.96, 0.16]];
+const cub = (p, t) => [0, 1].map((k) => (1 - t) ** 3 * p[0][k] + 3 * (1 - t) ** 2 * t * p[1][k] + 3 * (1 - t) * t * t * p[2][k] + t ** 3 * p[3][k]);
+const BUMP_AT = [BUMP.slice(0, 4), BUMP.slice(3, 7)].flatMap((seg) => Array.from({ length: 9 }, (_, i) => cub(seg, i / 8))); // the bumper's centreline, sampled
 export const PAD_CAP = 460, PAD_FULL = 180, PAD_TALL = 0.74, PAD_KEEP = 0.7;
 /** Fits the controller into an art box aw x ah: the largest W (<= 460) whose clean plan fits, else (under PAD_FULL, or no clean plan) the compact
     drawing with no leaders, as large as the box allows. {W, plan|null, ox, oy}: ox oy put the body box's top-left in the box's own px. */

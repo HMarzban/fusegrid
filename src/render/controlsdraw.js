@@ -4,8 +4,9 @@ import { drawPad, drawCallouts, drawKeys, glyph, padBox, kbPrints, kbLegend, KB_
 import { geoFor, geomOf, rowsOf, statusOf, footOf, padStates, padRing, padCallouts, padFit, keyStates, keyRing, keyCallouts, kbFit, CAPTION, PAD_TALL } from "./controlsgeo.js";
 import { worldTokens } from "./kit/tokens.js";
 import { textScale } from "./kit/type.js";
+import { CONTROLS_WORDS } from "./words.js";
 
-const VAL_PX = 12, GLYPH_H = 16, TOK_GAP = 12, TAB_LABEL = ["KEYBOARD", "CONTROLLER"], SEG_W = 6, SEG_GAP = 2, WIDEST = "MEDIUM";
+const ARMED = ["PRESS AGAIN", "AGAIN"], VAL_PX = 12, GLYPH_H = 16, TOK_GAP = 12, TAB_LABEL = ["KEYBOARD", "CONTROLLER"], SEG_W = 6, SEG_GAP = 2, WIDEST = "MEDIUM";
 const tokW = (c, t) => (t.g === "stick" ? 18 : 16) * (GLYPH_H / 16) + 4 + mw(c, t.w);
 const padOff = (s) => s.tab === "pad" && (!s.pad || s.pad.state === "none" || s.pad.state === "lost");
 /* Dashes are short strokes: the headless stub has no line dash. */
@@ -67,7 +68,7 @@ export function drawRow(c, r, g, sel, s, touch) {
     c.fillText("SWAPPED", left + 15, cy);
     left += 15 + mw(c, "SWAPPED") + 8;
   }
-  if (armed) { c.fillStyle = TEXT; c.font = font(VAL_PX); c.textAlign = "right"; c.textBaseline = "middle"; if (mw(c, "PRESS AGAIN") <= rx - left) c.fillText("PRESS AGAIN", rx, cy); } // a long label keeps the row whole: the rule line says it
+  if (armed) { c.fillStyle = TEXT; c.font = font(VAL_PX); c.textAlign = "right"; c.textBaseline = "middle"; const say = ARMED.find((w) => mw(c, w) <= rx - left); if (say) c.fillText(say, rx, cy); } // a long label steps the word down, then leaves it to the rule line
   else if (r.val) {
     const whole = valW(c, r.val) <= rx - left, v = whole ? r.val : [r.val[r.id === "PAUSE" ? r.val.length - 1 : 0]];
     drawValue(c, v, rx, cy, rx - left);
@@ -99,7 +100,15 @@ export function stickView(c, s, x, y, r) {
   c.fillText(readsWord(s), tx, y + 16);
 }
 /* A rule's lines: its parts split at " · " where it runs long, each wrapped to two. */
+const ruleMemo = new WeakMap(); // per context: the lines of (text, width), so a steady frame measures no rule
 function ruleLines(c, s, w) {
+  let M = ruleMemo.get(c);
+  if (!M) ruleMemo.set(c, (M = new Map()));
+  const k = s + "|" + w;
+  if (!M.has(k)) { if (M.size > 32) M.clear(); M.set(k, ruleLines0(c, s, w)); }
+  return M.get(k);
+}
+function ruleLines0(c, s, w) {
   c.font = font(10, "700");
   if (mw(c, s) <= w) return [s];
   const i = s.indexOf(" · ");
@@ -131,14 +140,14 @@ function drawPadArt(c, s, row, A, tok, ui) {
   const F = fitPad(c, A.w, A.h - plq, it, lit), ox = A.x + F.ox, oy = A.y + F.oy, W = off ? F.W * 0.82 : F.W;
   drawPad(c, ox + (F.W - W) / 2, oy, W, { tok, lit, lock: off, ring: off ? null : padRing(s, row.id), press: s.echo, grips: row.id === "VIBRATION" && !off && !row.none && row.text !== "OFF", reduced: !!ui.reduced });
   _dbg.plan = F.plan;
-  if (F.plan) drawCallouts(c, ox, oy, F.plan);
+  if (F.plan) drawCallouts(c, ox, oy, F.plan, tok);
   if (off) {
     const P = { x: A.x, w: A.w }, y = A.y + A.h - plq;
     c.fillStyle = TEXT; c.font = sans(13, "800"); c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(NO_PAD, A.x + A.w / 2, y + 8);
-    paneLine(c, P, y + 26, s.device === "touch" ? CAPTION.touch : CAPTION.none, TEXT, 10, "center");
+    paneLine(c, P, y + 26, CAPTION.none, TEXT, 10, "center");
   }
 }
-const NO_PAD = "NO CONTROLLER";
+const NO_PAD = CONTROLS_WORDS.NONE;
 /** The plan the last drawing used (null when it drew no leaders): tests hold its callout strings apart, as MENU's card. */
 export const _dbg = { plan: null, legends: [] };
 let kbMemo = { k: "", F: null };
@@ -154,7 +163,7 @@ function drawKeyArt(c, s, row, A, tok) {
   _dbg.legends = kbMemo.legends;
   drawKeys(c, ox, oy, F.k, { tok, lit, ring: keyRing(s, row.id), prints, px: kbLegend(F.k, ts) });
   _dbg.plan = F.plan;
-  if (F.plan) drawCallouts(c, ox, oy, F.plan);
+  if (F.plan) drawCallouts(c, ox, oy, F.plan, tok);
 }
 /** The preview pane, as MENU's: head, drawing, rule. */
 function drawPane(c, s, row, G, tok, ui) {

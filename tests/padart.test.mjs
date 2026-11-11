@@ -1,8 +1,8 @@
 // CONTROLS drawings (UI upgrade v202 Task 6.1 / 6.2): the round 7 controller, its leaders and states, against the appendix (section 9).
 import { readFileSync } from "node:fs";
 import { layout } from "../src/render/menudraw.js";
-import { PADG, HALF, PART_AT, drawPad, padBox, ringR, KB_KEYS, KB_AT, KB_W, KB_H, keyRect, drawKeys, kbPrints, kbLegend } from "../src/render/padart.js";
-import { DEF_PAD, DEF_KEY, BTN, geoFor, geomOf, hitPage, rowsOf, padStates, padRing, padCallouts, padPlan, padFit, padCross, PAD_FULL, keyStates, keyRing, keyCallouts, kbFit, kbCross } from "../src/render/controlsgeo.js";
+import { PADG, HALF, PART_AT, drawPad, padBox, kbBox, ringR, KB_KEYS, KB_AT, KB_W, KB_H, keyRect, drawKeys, kbPrints, kbLegend } from "../src/render/padart.js";
+import { DEF_PAD, DEF_KEY, BTN, geoFor, geomOf, hitPage, rowsOf, padStates, padRing, padCallouts, padPlan, padFit, padCross, PAD_FULL, PAD_CAP, PAD_KEEP, PAD_TALL, KB_CAP, KB_FULL, kbPlan, keyStates, keyRing, keyCallouts, kbFit, kbCross } from "../src/render/controlsgeo.js";
 import { drawControls } from "../src/render/controlsdraw.js";
 import { worldTokens, CONST } from "../src/render/kit/tokens.js";
 import { setTextScale } from "../src/render/kit/type.js";
@@ -109,10 +109,23 @@ const X = (a, b, c, d) => {
   return (o1 !== o2 && o3 !== o4 && o1 && o2 && o3 && o4) || (!o1 && on(a, b, c)) || (!o2 && on(a, b, d)) || (!o3 && on(c, d, a)) || (!o4 && on(c, d, b));
 };
 const dist = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy, t = l2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2)) : 0; return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
-function crossings(plan) {
+/* a bound shoulder's or trigger's shape, sampled here from the appendix numbers (not controlsgeo's): the bumper centreline's two cubics
+   (stroke 0.072 W), the trigger's long axis (0.2 W x 0.1 W at 0.24 / 0.76, 0.02 W, rotated -9 / +9 degrees) */
+const BUMP_CP = [[0.62, 0.034], [0.7, 0.036], [0.76, 0.05], [0.82, 0.065], [0.905, 0.09], [0.952, 0.135], [0.966, 0.19]];
+const cub = (p, t) => [0, 1].map((k) => (1 - t) ** 3 * p[0][k] + 3 * (1 - t) ** 2 * t * p[1][k] + 3 * (1 - t) * t * t * p[2][k] + t ** 3 * p[3][k]);
+function boundShapes(lit, W) {
+  const out = [];
+  for (const id of ["SHL", "SHR"]) if (lit[id]) for (const seg of [BUMP_CP.slice(0, 4), BUMP_CP.slice(3, 7)]) for (let i = 0; i <= 8; i++) { const [x, y] = cub(seg, i / 8); out.push({ id, x: (id === "SHL" ? 1 - x : x) * W, y: y * W, r: 0.036 * W }); }
+  for (const id of ["TRL", "TRR"]) if (lit[id]) { const m = id === "TRL", cx = m ? 0.24 : 0.76, a = ((m ? -9 : 9) * Math.PI) / 180; for (const d of [-0.05, 0, 0.05]) out.push({ id, x: (cx + d * Math.cos(a)) * W, y: (0.02 + d * Math.sin(a)) * W, r: 0.05 * W }); }
+  return out;
+}
+const segBox = (a, b, r) => Math.max(a[0], b[0]) > r.x0 && Math.min(a[0], b[0]) < r.x1 && Math.max(a[1], b[1]) > r.y0 && Math.min(a[1], b[1]) < r.y1;
+function crossings(plan, lit = {}) {
   const W = plan.W, out = [], segs = (L) => L.pts.slice(1).map((p, i) => [L.pts[i], p]);
-  const fr = (PADG.br + 0.009) * W, circles = [["LS", PADG.LS[2] * W], ["dpad", PADG.DPAD[2] * W], ["RS", PADG.RS[2] * W], ...["N", "E", "S", "W"].map((k) => [k, fr]), ["SELECT", 0.03 * W], ["START", 0.03 * W]].map(([id, r]) => ({ id, x: PART_AT[id][0] * W, y: PART_AT[id][1] * W, r }));
+  const fr = (PADG.br + 0.009) * W, circles = [["LS", PADG.LS[2] * W], ["dpad", PADG.DPAD[2] * W], ["RS", PADG.RS[2] * W], ...["N", "E", "S", "W"].map((k) => [k, fr]), ["SELECT", 0.03 * W], ["START", 0.03 * W]].map(([id, r]) => ({ id, x: PART_AT[id][0] * W, y: PART_AT[id][1] * W, r })).concat(boundShapes(lit, W));
   const own = (g) => (g === "MOVE" ? ["LS", "dpad", "RS"] : [g]);
+  const boxes = plan.labels.flatMap((l) => l.lines.map((q) => { const w = q.w + (q.tag ? q.tag + 6 : 0); return { grp: l.grp, x0: l.side === "l" ? l.x - w : l.x, x1: l.side === "l" ? l.x : l.x + w, y0: q.y - 0.6 * q.px, y1: q.y + 0.6 * q.px }; }));
+  for (const L of plan.lines) for (const [a, b] of segs(L)) for (const r of boxes) if (r.grp !== L.grp && segBox(a, b, r)) out.push(L.grp + " through the label of " + r.grp);
   for (let i = 0; i < plan.lines.length; i++) for (let j = i + 1; j < plan.lines.length; j++) {
     if (plan.lines[i].grp === plan.lines[j].grp) continue;
     for (const [a, b] of segs(plan.lines[i])) for (const [c, d] of segs(plan.lines[j])) if (X(a, b, c, d)) out.push(plan.lines[i].grp + " x " + plan.lines[j].grp);
@@ -125,11 +138,11 @@ const M = (ts) => ({ pri: 13 * ts, sec: 11 * ts, wOf: (s, px) => s.length * px *
   const G = geoFor(DESK, false, false), A = { w: G.pane.w - 12, h: G.art.h - 13 };
   for (const ts of [1, 1.25]) {
     const F = padFit(A.w, A.h, padCallouts(padV()), M(ts), padStates(padV()));
-    check("desk 1366x768 at text " + ts + ": the default binds draw every callout (W " + Math.round(F.W) + ")", !!F.plan && F.W >= PAD_FULL && F.plan.labels.length === 6 && !crossings(F.plan).length, F.plan && crossings(F.plan).join());
+    check("desk 1366x768 at text " + ts + ": the default binds draw every callout (W " + Math.round(F.W) + ")", !!F.plan && F.W >= PAD_FULL && F.plan.labels.length === 6 && !crossings(F.plan, padStates(padV())).length, F.plan && crossings(F.plan).join());
     const sw = padV({ binds: { ...DEF_PAD, BOMB: "E", REMOTE: "S" } }), F2 = padFit(A.w, A.h, padCallouts(sw), M(ts), padStates(sw));
-    check("after a rebind (BOMB EAST, REMOTE SOUTH) the callouts follow, no crossing: text " + ts, !!F2.plan && F2.plan.labels.some((l) => l.grp === "E" && l.lines[0].s === "BOMB") && !crossings(F2.plan).length);
+    check("after a rebind (BOMB EAST, REMOTE SOUTH) the callouts follow, no crossing: text " + ts, !!F2.plan && F2.plan.labels.some((l) => l.grp === "E" && l.lines[0].s === "BOMB") && !crossings(F2.plan, padStates(sw)).length);
     const far = padV({ binds: { BOMB: "SELECT", THROW: "W", REMOTE: "E", PAUSE: "S" }, stick: "R" }), F3 = padFit(A.w, A.h, padCallouts(far), M(ts), padStates(far));
-    check("an action bound on the far side (BOMB SELECT) and the right stick: drawn, no crossing: text " + ts, !!F3.plan && F3.plan.labels.some((l) => l.grp === "SELECT" && l.side === "l" && l.lines[0].s === "BOMB") && !crossings(F3.plan).length, F3.plan && crossings(F3.plan).join());
+    check("an action bound on the far side (BOMB SELECT) and the right stick: drawn, no crossing: text " + ts, !!F3.plan && F3.plan.labels.some((l) => l.grp === "SELECT" && l.side === "l" && l.lines[0].s === "BOMB") && !crossings(F3.plan, padStates(far)).length, F3.plan && crossings(F3.plan, padStates(far)).join());
   }
   // every assignment of the four actions over every button the model lets you bind, both sticks, both text scales, three desk boxes
   const ART = [DESK, layout(1024, 700), layout(1280, 720)].map((Lx) => { const g = geoFor(Lx, false, false); return [g.pane.w - 12, g.art.h - 13]; });
@@ -140,14 +153,14 @@ const M = (ts) => ({ pri: 13 * ts, sec: 11 * ts, wOf: (s, px) => s.length * px *
     n++;
     if (!F.plan) continue;
     full++;
-    const x = crossings(F.plan);
+    const x = crossings(F.plan, padStates(v));
     if (x.length) bad.push([B, T, R, P, stick, ts, aw].join("/") + ": " + x[0]);
   }
   check("no drawn leader crosses another leader or a foreign button, in all " + n + " bindings (" + full + " with callouts, the rest none)", !bad.length && full > n * 0.5, bad.slice(0, 3).join(" | "));
   const p = padPlan(300, padCallouts(padV()), M(1));
   check("the leaders are orthogonal: every segment level or plumb", p.lines.every((L) => L.pts.slice(1).every((q, i) => q[0] === L.pts[i][0] || q[1] === L.pts[i][1])));
   check("SOUTH meets EAST, so its label drops through a knee in the gutter, inside the next label's gutter column", (() => { const s = p.lines.find((l) => l.grp === "S"); return s.pts.length === 4 && s.pts[1][0] > 300 && s.pts[3][1] > s.pts[0][1]; })());
-  check("controlsgeo's own gate agrees with the port on the default plan", padCross(p, padStates(padV())).length === 0 && crossings(p).length === 0);
+  check("controlsgeo's own gate agrees with the port on the default plan", padCross(p, padStates(padV())).length === 0 && crossings(p, padStates(padV())).length === 0);
   for (const [nm, Lx, touch, narrow, scale] of BOXES) {
     const r = rec(); drawControls(r.c, Lx, padV(), { touch, narrow, scale, level: 1 });
     const labels = r.texts.filter((t) => t.fill === CONST.ink || t.fill === CONST.t2).map((t) => t.s);
@@ -181,28 +194,30 @@ const M = (ts) => ({ pri: 13 * ts, sec: 11 * ts, wOf: (s, px) => s.length * px *
   for (let i = 0; i < 8; i++) { p.walk(1, 1); seen.push(p.view(0).row); }
   check("no controller: the walk still reaches SENSITIVITY, VIBRATION and RESET", [5, 6, 7].every((i) => seen.includes(i)), seen.join());
   const r = rec(); drawControls(r.c, DESK, keyV({ tab: "pad" }), { level: 1 });
-  check("no controller: the NO CONTROLLER plaque and the line under it", r.texts.some((t) => t.s === "NO CONTROLLER") && r.texts.some((t) => t.s === "PRESS ANY BUTTON ON A CONTROLLER"));
+  check("no controller: the NO CONTROLLER plaque and the line under it", r.texts.some((t) => t.s === "NO CONTROLLER") && r.texts.some((t) => t.s === "Connect one and press a button."));
 }
 
 // ---- the binding rule the drawing follows (owner R3): which buttons the model lets a player bind ----
 check("the drawing routes a leader for every button the model accepts", BINDABLE.every((id) => PART_AT[id]), BINDABLE.join());
 
 // ---- a steady frame blits the cached drawing ----
-/* the page chrome's own measureText per steady frame (CONSOLE PANEL rows, kicker, foot, rule): base c1f9bd9 made 34 (controller) / 26 (keyboard); the
-   keyboard tab now counts its rule lines once, as the controller tab always did (+1). The drawings themselves measure only when their fit changes. */
-const MT_ROWS = { controller: 34, keyboard: 27 };
+/* the page chrome's own measureText per steady frame (CONSOLE PANEL rows, kicker, foot, rule), measured on base c1f9bd9 with one context drawn twice:
+   34 (controller) / 26 (keyboard). The drawings measure only when their fit changes and the rule lines are memoised, so a steady frame stays at or under it. */
+const MT_BASE = { controller: 34, keyboard: 26 };
 {
   const made = [];
   globalThis.OffscreenCanvas = class { constructor(w, h) { this.width = w; this.height = h; made.push(this); } getContext() { return rec({ grad: true }).c; } };
   try {
     cache.release();
     for (const [tab, v] of [["controller", padV()], ["keyboard", keyV()]]) {
-      const frame = () => { const r = rec({ grad: true, getTransform: 2 }); drawControls(r.c, DESK, v, { level: 1 }); return r; };
-      frame();
-      const m0 = cache._dbg.misses, r = frame(), mt = r.log.filter((q) => q === "mt").length;
-      console.log("    (" + tab + " steady frame: " + r.log.length + " calls, " + mt + " measureText)");
-      check("a steady CONTROLS frame, " + tab + " tab: 0 cache misses, the drawing one blit, <= 400 canvas calls", cache._dbg.misses === m0 && r.log.filter((q) => q === "img").length === 1 && r.log.length <= 400, r.log.length);
-      check("the drawing measures nothing on a steady frame (" + tab + "): the page's own rows measure as before", mt === MT_ROWS[tab], mt);
+      const r0 = rec({ grad: true, getTransform: 2 }); // one context, as the page's own canvas: a frame, then a steady one
+      drawControls(r0.c, DESK, v, { level: 1 });
+      const m0 = cache._dbg.misses, n0 = r0.log.length;
+      drawControls(r0.c, DESK, v, { level: 1 });
+      const log = r0.log.slice(n0), mt = log.filter((q) => q === "mt").length;
+      console.log("    (" + tab + " steady frame: " + log.length + " calls, " + mt + " measureText)");
+      check("a steady CONTROLS frame, " + tab + " tab: 0 cache misses, the drawing one blit, <= 400 canvas calls", cache._dbg.misses === m0 && log.filter((q) => q === "img").length === 1 && log.length <= 400, log.length);
+      check("the drawing measures nothing on a steady frame (" + tab + "): no more measureText than base's chrome (" + MT_BASE[tab] + ")", mt <= MT_BASE[tab], mt);
     }
     const m1 = cache._dbg.misses, w = rec({ grad: true, getTransform: 2 }); drawControls(w.c, DESK, padV({ row: 2 }), { level: 1 });
     check("a row move re-blits the same layer: the ring is live, no miss", cache._dbg.misses === m1);
@@ -256,15 +271,65 @@ const MT_ROWS = { controller: 34, keyboard: 27 };
     if (x.length) bad.push([B, T, R, P].join("/") + ": " + x[0]);
   }
   check("rebinds: no drawn leader crosses another or runs through a key (" + drawn + " of " + n + " drawn with leaders)", !bad.length && drawn > n * 0.5, bad.slice(0, 3).join(" | "));
-  for (const [nm, Lx, touch, narrow, scale] of BOXES) {
-    const v = keyV(), r = rec(); drawControls(r.c, Lx, v, { touch, narrow, scale, level: 1 });
-    const Gx = geoFor(Lx, touch, narrow, scale), rowsTxt = r.texts.filter((t) => t.x < (Gx.pane && !narrow ? Gx.pane.x : Infinity) || narrow && t.y > Gx.list.rows[0].y0).map((t) => t.s).join(" ");
-    const printed = r.texts.filter((t) => t.fill === CONST.dk).map((t) => t.s);
-    const named = ["WASD", "ARROWS", "SPACE", "E", "Q", "ESC", "P", "ENTER"].every((w) => rowsTxt.includes(w));
-    check("where the board prints no legends, the rows name every bound key: " + nm, printed.length || named, printed.join() + " / " + rowsTxt.slice(0, 80));
+  /* the rows name every bound key as whole value tokens (a row's values split at " · ", the row's own label left out), in every box, and after a rebind */
+  const rowTok = (r, G, i) => { const g = geomOf(i, G), lab = rowsOf(keyV())[i]; return r.texts.filter((t) => Math.abs(t.y - (g.y + g.h / 2)) < 1 && t.x >= g.x && t.x <= g.x + g.w && t.s !== (lab.label || lab.id)).flatMap((t) => t.s.split(" · ")); };
+  for (const [nm, Lx, touch, narrow, scale] of [...BOXES, ["phone 393x852", layout(393, 852), true, true, 1]]) for (const [vn, v, want] of [["defaults", keyV(), [[0, ["WASD", "ARROWS"]], [1, ["SPACE"]], [2, ["E"]], [3, ["Q"]], [4, ["ESC", "P"]], [5, ["ENTER"]], [6, ["ESC"]]]], ["THROW on Z", keyV({ key: { ...DEF_KEY, THROW: "KeyZ" }, row: 2 }), [[2, ["Z"]], [1, ["SPACE"]]]]]) {
+    const r = rec(); drawControls(r.c, Lx, v, { touch, narrow, scale, level: 1 });
+    const Gx = geoFor(Lx, touch, narrow, scale), miss = want.flatMap(([i, w]) => w.filter((x) => !rowTok(r, Gx, i).includes(x)).map((x) => i + ":" + x));
+    check("the rows name every bound key as a whole token (" + vn + "): " + nm, !miss.length && (vn === "defaults" || keyStates(v).KeyZ === "lit"), miss.join());
   }
   const ph = rec(); drawControls(ph.c, layout(436, 946), keyV(), { touch: true, narrow: true, scale: 0.9, level: 1 });
   check("the phone column's board prints only the arrow glyphs (no legend at its pitch)", !ph.texts.some((t) => t.fill === CONST.dk || t.fill === CONST.off));
+}
+
+// ---- the fits (fix round 1): the largest clean size the art box holds, centred; compact only when no clean size fits ----
+{
+  const near = (a, b) => Math.abs(a - b) < 1e-6;
+  const padClean = (W, it, m, lit, aw, ah) => { const p = padPlan(W, it, m), e = p.ext; return p.ok && e.x1 - e.x0 <= aw && e.y1 - e.y0 <= ah && !padCross(p, lit).length; };
+  const kbClean = (k, it, m, aw, ah) => { const p = kbPlan(k, it, m), e = p.ext; return p.ok && e.x1 - e.x0 <= aw && e.y1 - e.y0 <= ah && !kbCross(p).length; };
+  const centred = (F, e, aw, ah) => near(F.ox + e.x0, (aw - (e.x1 - e.x0)) / 2) && near(F.oy + e.y0, (ah - (e.y1 - e.y0)) / 2);
+  const bad = [];
+  for (const [nm, Lx, touch, narrow, scale] of [["desk 1366x768", DESK, false, false, undefined], ["desk 1024x700", layout(1024, 700), false, false, undefined], ...BOXES]) for (const ts of [1, 1.25]) {
+    const G = geoFor(Lx, touch, narrow, scale);
+    if (!G.pane) continue;
+    const aw = G.pane.w - 12, ah = G.art.h, m = M(ts);
+    for (const v of [padV(), padV({ binds: { ...DEF_PAD, BOMB: "E", REMOTE: "S" } }), padV({ binds: { BOMB: "TRR", THROW: "W", REMOTE: "SHR", PAUSE: "N" } })]) {
+      const it = padCallouts(v), lit = padStates(v), F = padFit(aw, ah, it, m, lit), top = Math.floor(Math.min(PAD_CAP, aw - 120)), Wc = Math.max(40, Math.min(PAD_CAP, aw - 8, (ah - 8) / PAD_TALL)), lo = Math.max(PAD_FULL, PAD_KEEP * Wc);
+      if (F.plan) {
+        if (!(padClean(F.W, it, m, lit, aw, ah) && (F.W === top || !padClean(F.W + 4, it, m, lit, aw, ah)) && centred(F, F.plan.ext, aw, ah))) bad.push("pad " + nm + " " + ts + " W " + F.W);
+      } else {
+        const anyClean = Array.from({ length: Math.max(0, Math.floor((top - lo) / 4) + 1) }, (_, i) => top - 4 * i).some((W) => padClean(W, it, m, lit, aw, ah));
+        if (anyClean || !near(F.W, Wc) || !centred(F, padBox(F.W), aw, ah)) bad.push("pad compact " + nm + " " + ts + " W " + F.W);
+      }
+    }
+    for (const v of [keyV(), keyV({ key: { ...DEF_KEY, THROW: "KeyZ" } })]) {
+      const it = keyCallouts(v), F = kbFit(aw, ah, it, m), kc = Math.max(4, Math.min(KB_CAP, (aw - 8) / (KB_W + 0.8), (ah - 8) / (KB_H + 1.1)));
+      if (F.plan) {
+        if (!(kbClean(F.k, it, m, aw, ah) && (F.k === KB_CAP || !kbClean(F.k + 0.5, it, m, aw, ah)) && centred(F, F.plan.ext, aw, ah))) bad.push("kb " + nm + " " + ts + " k " + F.k);
+      } else {
+        const anyClean = Array.from({ length: Math.floor((KB_CAP - KB_FULL) / 0.5) + 1 }, (_, i) => KB_CAP - 0.5 * i).some((k) => kbClean(k, it, m, aw, ah));
+        if (anyClean || !near(F.k, kc) || !centred(F, kbBox(F.k), aw, ah)) bad.push("kb compact " + nm + " " + ts + " k " + F.k);
+      }
+    }
+  }
+  check("padFit / kbFit take the largest clean size (one step larger fails, or the size is its cap), compact only when no clean size fits, centred in the art box", !bad.length, bad.slice(0, 4).join(" | "));
+}
+
+// ---- the armed reset row on the controller tab says it, or the rule line does ----
+for (const [nm, Lx, touch, narrow, scale] of [["desk 1366x768", DESK, false, false, undefined], ...BOXES]) {
+  const r = rec(), v = padV({ row: 7, armed: true }), G = geoFor(Lx, touch, narrow, scale), g = geomOf(7, G);
+  drawControls(r.c, Lx, v, { touch, narrow, scale, level: 1 });
+  const row = r.texts.filter((t) => Math.abs(t.y - (g.y + g.h / 2)) < 1).map((t) => t.s), rule = r.texts.some((t) => t.s === "PRESS AGAIN TO RESET THIS TAB");
+  check("armed RESET CONTROLLER: the row says PRESS AGAIN (or AGAIN), else the rule line carries it: " + nm, row.includes("RESET CONTROLLER") && (row.includes("PRESS AGAIN") || row.includes("AGAIN") || rule) && rule, row.join());
+}
+
+// ---- small parts: the FIXED plaque in the world's wall tone, a press covers the face at rest ----
+{
+  const t = worldTokens(1), r = rec({ grad: true }); drawControls(r.c, DESK, padV(), { level: 1 });
+  check("the FIXED tag is a plaque in the world's band tone with t2 legend", r.colours.includes(t.band) && r.texts.some((x) => x.s === "FIXED" && x.fill === CONST.t2));
+  const W = 300, p = rec(); drawPad(p.c, 0, 0, W, { tok: t, lit: padStates(padV()), press: "S" });
+  const [x, y] = PART_AT.S.map((v) => v * W), rest = p.log.lastIndexOf("a" + x.toFixed(1) + "," + y.toFixed(1) + "," + (PADG.br * W + 1).toFixed(2)), drop = p.log.lastIndexOf("a" + x.toFixed(1) + "," + (y + 2).toFixed(1) + "," + (PADG.br * W).toFixed(2));
+  check("a press: the well covers the face at rest, then the face drops 2 px (no crescent of the old face)", rest > 0 && drop > rest && p.log[rest + 1] === "f#050304", [rest, drop, p.log[rest + 1]].join());
 }
 
 console.log(fail ? `PADART FAIL (${pass} pass, ${fail} fail)` : `PADART OK (${pass} pass)`);

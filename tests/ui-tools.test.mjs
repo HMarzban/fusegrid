@@ -631,3 +631,17 @@ test("compare: the mock beside the capture by absolute file URL, 'no reference' 
     assert.notEqual(spawnSync(process.execPath, [join(UI, "compare.mjs"), d], { encoding: "utf8" }).status, 0, "--ref is required");
   } finally { rmSync(d, { recursive: true, force: true }); rmSync(ref, { recursive: true, force: true }); }
 });
+
+test("CONTROLS (lead ruling b): its four rows exempt every probe gate with the reason; with no probe data such a row is judged on its record alone", () => {
+  for (const n of ["controls", "controlsnone", "controlspad", "controlscapture"]) {
+    assert.equal(SCREENS[n].need.length, 0, n);
+    assert.ok(EXEMPTABLE.every((g) => /CONSOLE PANEL/.test(SCREENS[n].exempt[g])), n);
+  }
+  const img = createRGBA(80, 40, [10, 10, 10]), none = evaluate(dump(null, { screen: "controls" }), img, null, SCREENS.controls.need);
+  assert.equal(none.record.status, "pass");
+  assert.ok(GATES.filter((g) => g !== "record").every((g) => none[g].status === "n/a"));
+  const bad = evaluate(dump(null, { screen: "controls", dpr: -1 }), img, null, SCREENS.controls.need);
+  assert.equal(bad.record.status, "fail", "a broken capture still fails its record");
+  const menu = evaluate(dump(null), img, null, SCREENS.menu.need);
+  assert.ok(GATES.every((g) => menu[g].status === "skipped"), "a row that exempts only some gates still skips every gate with no probe data");
+});

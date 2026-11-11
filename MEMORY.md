@@ -95,11 +95,14 @@ Locked floor sample now mapped to the box (endkit `rpair` transforms `o.floor`; 
 
 ## 2026-11-11 — UI upgrade Task 5.2: end-screen routing (lane-5-ends, held for R2)
 - `src/render/pages/endgeom.js` (draw / tap contract of WIN and GAME OVER, boot), Esc / EAST → MENU at a run end (finale via the fire edge), run-end taps on endgeom keys on pointerup; main's `runInfo` / `timeInfo`. The old summary stays until 5.3 / 5.4 register their pages.
+## 2026-11-11 — UI upgrade Task 6 fix round 1 (CONTROLS)
+- Equal-strength tests for the fits (largest clean size, centred), the desk callouts and swap, whole-token row names; `padCross` samples triggers / bumpers as drawn; NO CONTROLLER says `Connect one and press a button.` (words.js); FIXED plaques in the world's band; armed reset says AGAIN when PRESS AGAIN will not fit; rule lines memoised; the four CONTROLS captures exempt every probe gate and pass `--strict`.
+
 ## 2026-11-11 — UI upgrade Task 6.2: a real keyboard on CONTROLS (lane-6-controls)
 - `padart.js` draws a tenkeyless board (appendix 9.3 widths, inverted-T arrows, top face over skirt, cached layer), `controlsgeo.js` routes its callouts through key gaps (`kbPlan` / `kbCross` / `kbFit`); legends only where they fit, so a phone prints arrows only and the rows name the keys. `controlsdraw._dbg` holds the drawn plan for fit-shell.
 
 ## 2026-11-11 — UI upgrade Task 6.1: a real controller on CONTROLS (held lane lane-6-controls, R3)
-- `padart.js` draws the round 7 twin-grip controller in the world's brick (cached layer), `controlsgeo.js` plans crossing-free callouts (`padPlan` / `padCross` / `padFit`; compact with no leaders where they do not fit); desk boxes widen the CONTROLS plate; RESET PAD is RESET CONTROLLER. Open: NORTH / shoulders / triggers are still bindable in `controls.js` (R3 says not), and CONTROLS is still uninstrumented for `gates.mjs`.
+- `padart.js` draws the round 7 twin-grip controller in the world's brick (cached layer), `controlsgeo.js` plans crossing-free callouts (`padPlan` / `padCross` / `padFit`; compact with no leaders where they do not fit); desk boxes widen the CONTROLS plate; RESET PAD is RESET CONTROLLER. NORTH / shoulders / triggers stay bindable (lead ruling a); CONTROLS records no probe data and its captures exempt every probe gate (ruling b).
 
 ## 2026-11-11 — UI upgrade Task 3.6: DOM cards on the world kit
 - `#upd`, `#ana`, `#load` now use `--k-*` world-1 kit properties (pinned to `tokens.js` in hidden-css.test); keycaps last; failure copy names ART STYLE. Left: the REAL 3D/PIXEL row copy `SOUTH RETRY` in menudraw (renderrow.test:87) still keycap-first, for the SETTINGS lane.

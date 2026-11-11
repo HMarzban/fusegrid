@@ -88,6 +88,8 @@ export const MENU_WORDS = Object.freeze({
   SOURCE_PAD_SHORT: "CLICK OR ENTER", // its step-down on the phone / compact SOURCE row, where the whole sentence does not fit
   PAD_READY: "CONTROLLER READY", PAD_BACK: "CONTROLLER BACK", // the app's pad notes (controlswire), read back to make the signpost
 });
+/* CONTROLS (v202 Task 6.1, appendix 9.2): the no-controller plaque and its line, the appendix's own sentence. */
+export const CONTROLS_WORDS = Object.freeze({ NONE: "NO CONTROLLER", CONNECT: "Connect one and press a button." });
 /* The next-run card (v202 Task 3.2, MENU; LEVEL SELECT reuses it): its kicker, the level's mark (level 1, a finale, the last one), its
    section labels and its stat cells. ENEMIES counts the kinds when their names do not fit (the GUIDE page's word). */
 export const CARD_WORDS = Object.freeze({

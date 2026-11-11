@@ -183,6 +183,7 @@ export function drawPad(c, x, y, W, o) {
   const p = q.press && !lock && q.press.length === 1 && PART_AT[q.press];
   if (p) { // a live press: the face drops 2 px and flashes (REDUCE FLASH: the drop only)
     const fx = x + p[0] * W, fy = y + p[1] * W + 2, r = PADG.br * W;
+    ring0(c, fx, fy - 2, r + 1); c.fillStyle = "#050304"; c.fill(); // the well first, so no crescent of the face at rest shows over the drop
     ring0(c, fx, fy, r); c.fillStyle = on[q.press] ? t.lit : t.key; c.fill(); c.strokeStyle = OL; c.lineWidth = 1.6; c.stroke();
     if (!q.reduced) alpha(c, 0.5, () => { ring0(c, fx, fy, r); c.fillStyle = "#fff3b0"; c.fill(); });
   }
@@ -195,7 +196,7 @@ export function drawPad(c, x, y, W, o) {
 }
 /** A plan's leaders and callouts (controlsgeo padPlan), the drawing's origin at x y: plain orthogonal lines, 1.5 px t2 over a 3.5 px dark underlay,
     a 3 px dot on the button; ACTION in cream over the position in t2, a FIXED tag after a fixed one. No cord, no spark. */
-export function drawCallouts(c, x, y, plan) {
+export function drawCallouts(c, x, y, plan, tok) {
   c.lineJoin = "round";
   for (const L of plan.lines) for (const [col, w] of [[OL, 3.5], [CONST.t2, 1.5]]) {
     c.beginPath(); L.pts.forEach((p, i) => (i ? c.lineTo(x + p[0], y + p[1]) : c.moveTo(x + p[0], y + p[1]))); c.strokeStyle = col; c.lineWidth = w; c.stroke();
@@ -206,10 +207,11 @@ export function drawCallouts(c, x, y, plan) {
     const bx = x + b.x, ly = y + ln.y, tw = ln.tag || 0, tx = b.side === "l" ? bx - tw - (tw ? 6 : 0) : bx;
     c.font = sans(ln.px, "700"); c.textAlign = b.side === "l" ? "right" : "left"; c.fillStyle = ln.act ? CONST.ink : CONST.t2;
     c.fillText(ln.s, tx, ly);
-    if (tw) { // the FIXED tag: a dark wall chip, its legend in the locked ink
+    if (tw) { // the FIXED tag: a wall plaque (the world's band tone, the dark outline), its legend in t2
       const cx = b.side === "l" ? bx - tw : bx + ln.w + 6, th = ln.px + 4;
-      c.fillStyle = OL; c.fillRect(cx, ly - th / 2, tw, th);
-      c.fillStyle = CONST.off; c.textAlign = "left"; c.fillText(FIXED, cx + 4, ly);
+      c.fillStyle = tok ? tok.band : CONST.dk; c.fillRect(cx, ly - th / 2, tw, th);
+      c.strokeStyle = OL; c.lineWidth = 1.5; c.strokeRect(cx + 0.75, ly - th / 2 + 0.75, tw - 1.5, th - 1.5);
+      c.fillStyle = CONST.t2; c.textAlign = "left"; c.fillText(FIXED, cx + 4, ly);
     }
   }
 }

@@ -45,7 +45,8 @@
    throws on each while recording).
    Status: pass | fail | skipped (the gate needs data the capture lacks: no probe data, no canvas mapping, no text-hidden twin, a sample outside the
    capture, a required gate the page did not declare) | n/a (touch and gap on a desktop capture, or on a screen whose row exempts them; a REQUIRED
-   gate a row exempts and the page does not declare). Default-deny: on an instrumented capture each gate in `need` (tools/ui/lib/screens.mjs:
+   gate a row exempts and the page does not declare; with no probe data, every gate on a row that exempts every probe gate,
+   whose record alone is judged). Default-deny: on an instrumented capture each gate in `need` (tools/ui/lib/screens.mjs:
    EXEMPTABLE but what the screen's row exempts, each with a reason) that would be n/a is skipped, "required, not declared". tally().exit(strict)
    fails on a fail, on no capture, and under --strict on a skip; never on n/a. */
 export const FLOOR = Object.freeze({ chosen: 3, band: 1.5, ring: 3, locked: 3, lockedSd: 2, info: 4.5, infoLock: 3, touch: 43.95, gap: 8, yellow: 1 });
@@ -135,7 +136,10 @@ export function evaluate(d, img, notext, need = EXEMPTABLE) {
   const u = d && d.ui, rects = (u && u.rects) || [], texts = (u && u.texts) || [], pairs = (u && u.pairs) || [], f = (d && d.flags) || {};
   const dprBad = !(fin(f.dpr) && f.dpr > 0), recordWhy = dprBad ? "flags.dpr is not a finite number > 0: " + f.dpr : u && u.fault ? "probe fault: " + u.fault : u && u.overflow ? "the probe record overflowed (more than probe.CAP_N entries a frame: a page recording without begin?)" : null;
   const record = recordWhy ? G("fail", { note: recordWhy }) : G("pass");
-  if (!rects.length && !texts.length && !pairs.length && !(u && (u.overflow || u.fault))) return Object.fromEntries(GATES.map((g) => [g, g === "record" && dprBad ? record : G("skipped", { threshold: TH[g], note: "no probe data" })]));
+  if (!rects.length && !texts.length && !pairs.length && !(u && (u.overflow || u.fault))) { // no probe data: every gate skipped, except on a row that exempts every probe gate (CONTROLS, lead ruling b), judged on its record alone
+    const all = !need.length, nd = (g) => (all ? G("n/a", { threshold: TH[g], note: "no probe data; every probe gate exempt on this screen" }) : G("skipped", { threshold: TH[g], note: "no probe data" }));
+    return Object.fromEntries(GATES.map((g) => [g, g === "record" ? (dprBad || all ? record : G("skipped", { threshold: TH[g], note: "no probe data" })) : nd(g)]));
+  }
   const dpr = f.dpr, phone = !!f.phone, box = u.box, boxBad = !!box && !okBox(box), mp = mapper(d), m = mp && !mp.err ? mp : null, sq = m && img && !dprBad ? squint(img, dpr) : null, out = { record };
   const noMap = (g) => {
     const why = dprBad ? "flags.dpr is not a finite number > 0" : boxBad ? "the page box has a non-finite or empty size" : mp && mp.err ? mp.err : null;

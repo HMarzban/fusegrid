@@ -265,9 +265,13 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
   const planWords = () => Object.values(settingsPage._dbg.last.Pl.rows).flatMap((o) => [o.label.s, ...o.val.P.filter((q) => q.s != null).map((q) => q.s)]);
   const shot = (nm, box, cur) => {
     const a = mkApp(SCREEN[nm]); if (cur != null) a.cursor = cur; const R = rec(); drawShell(R.c, a, { state: "PLAY", time: 1 }, box, "2d", () => [], () => 0, () => ({}));
-    if (nm === "CONTROLS" && (ctlDbg.plan || ctlDbg.legends.length)) { // Tasks 6.1 / 6.2: the drawing's callouts and key legends show where the pane holds them (a desk box), so they leave the 600x520 comparison, held here: each drawn whole, inside the box. Both paint after the rows: the last of each string is the drawing's
+    if (nm === "CONTROLS") { // Tasks 6.1 / 6.2: the drawing's callouts and key legends show where the pane holds them (a desk box), so they leave the 600x520 comparison, held here: each drawn whole, inside the CONTROLS pane. Both paint after the rows: the last of each string is the drawing's. A desk box (d, 800 wide and up) must draw the plan for the default binds
+      const lay = box.ownerDocument.body.getAttribute("data-lay"), Pn = controlsGeo(box, "2d", false).pane;
+      if (lay === "d" && box.width >= 800 && !ctlDbg.plan) calloutBad.push(box.width + "x" + box.height + ": no callout plan");
+      if (!ctlDbg.plan && !ctlDbg.legends.length) return R.texts;
       const left = R.texts.slice(), Wb = box.width, Hb = box.height, FX = ctlDbg.plan ? ctlDbg.plan.labels.flatMap((l) => l.lines.filter((x) => x.tag).map(() => "FIXED")) : [];
-      for (const s of [...(ctlDbg.plan ? ctlDbg.plan.labels.flatMap((l) => l.lines.map((x) => x.s)) : []), ...FX, ...ctlDbg.legends]) { const i = left.findLastIndex((q) => q.s === s); if (i < 0 || /…/.test(s) || left[i].x < 0 || left[i].x + left[i].w > Wb || left[i].y < 0 || left[i].y > Hb) calloutBad.push(Wb + "x" + Hb + ":" + s); else left.splice(i, 1); }
+      const inPane = (q) => !!Pn && q.x >= Pn.x - 0.5 && q.x + q.w <= Pn.x + Pn.w + 0.5 && q.y >= Pn.y - 0.5 && q.y <= Pn.y + Pn.h + 0.5;
+      for (const s of [...(ctlDbg.plan ? ctlDbg.plan.labels.flatMap((l) => l.lines.map((x) => x.s)) : []), ...FX, ...ctlDbg.legends]) { const i = left.findLastIndex((q) => q.s === s); if (i < 0 || /…/.test(s) || !inPane(left[i])) calloutBad.push(Wb + "x" + Hb + ":" + s); else left.splice(i, 1); }
       return left;
     }
     if (nm === "SETTINGS" || nm === "GRAPHICS") R.texts.plan = planWords();
@@ -327,7 +331,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     });
     check(`every page's text sits inside the box (${tg})`, out.length === 0, out.join());
     check(`every page prints exactly its 600x520 strings, in order${tab ? " (MENU: the 1024x768 tablet's words by token; RECORDS' three tabs: the 1024x768 tablet's, exactly)" : ""}: nothing elided (${tg})`, same.length === 0, same.join());
-    check(`CONTROLS: every callout and key legend the drawing plans is drawn whole, inside the box (${tg})`, calloutBad.length === 0, calloutBad.join());
+    check(`CONTROLS: every callout and key legend the drawing plans is drawn whole, inside its pane, and a desk box draws the plan (${tg})`, calloutBad.length === 0, calloutBad.join());
     calloutBad.length = 0;
     const cbad = cardOut.s.filter((q) => q.card.some((t) => /…/.test(t)) || !q.card.every((t) => q.drawn.includes(t)) || J(q.inCard) !== J(q.plan) || q.out.length || !["JUNGLE", "×2", "BOOSTER", "LIVES", "FUSE", "2.5s", "SCORE"].every((w) => q.card.includes(w)));
     const compact = lay === "l" && W === 600; // MENU's compact arrangement: no card slot, PLAY's tag carries the run

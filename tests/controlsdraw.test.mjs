@@ -9,7 +9,7 @@ lazyPages._set("settings", settingsPage); // the lazy SETTINGS page, in as if it
 import { CAPTION, geomOf, geoFor, hitPage, rowsOf, statusOf, footOf, padStates, padRing, keyStates, keyRing, keyCallouts, kbPlan, padLabels, keyName, moveLabel, softAliasesOf, BTN, DEF_KEY, DEF_PAD, DEF_VIB, VIB_LEVELS, SENS_LEVELS, sensIdx, vibWord, NO_VIB, FEEL_NOTHING, STATUS } from "../src/render/controlsgeo.js";
 import { PART_AT, BODY_PATH, KB_AT, keyRect, kbPrints, kbLegend, trace, glyph, drawPad, drawKeys } from "../src/render/padart.js";
 import { worldTokens, CONST } from "../src/render/kit/tokens.js";
-import { drawControls } from "../src/render/controlsdraw.js";
+import { drawControls, _dbg as ctlDbg } from "../src/render/controlsdraw.js";
 import * as model from "../src/app/controls.js";
 import { optRows } from "../src/app/menuapp.js";
 import { shellGeo, fitBox } from "../src/app/fit.js";
@@ -339,7 +339,7 @@ const paint = (v, ui, Lx = L600) => { const r = recCtx(); drawControls(r.c, Lx, 
   check("the selected page is static too", paint(keyV(), { t: 0 }).log.join() === paint(keyV(), { t: 9 }).log.join());
   const no = paint(keyV({ tab: "pad" }));
   check("no pad: NO CONTROLLER YET and the pane line, no leader words, no lit fuse", has(no, "NO CONTROLLER YET") && has(no, CAPTION.none) && !no.log.includes("f#ff8a3c"));
-  check("touch, no pad: the touch pane line", has(paint(keyV({ tab: "pad", device: "touch" })), CAPTION.touch));
+  check("touch, no pad: the same appendix line under the plaque", CAPTION.none === "Connect one and press a button." && has(paint(keyV({ tab: "pad", device: "touch" })), CAPTION.none) && has(paint(keyV({ tab: "pad", device: "touch" })), "NO CONTROLLER"));
   const lost = paint(padV({ pad: { state: "lost" } }));
   check("lost: CONTROLLER LOST kicker and the plug-in rule", has(lost, "CONTROLLER LOST") && lost.texts.some((t) => t.s.startsWith("PLUG IT BACK IN")));
   check("connected: no fuse, the bound inputs in the world's brick", !paint(padV()).log.includes("f#ff8a3c") && paint(padV()).log.includes("f" + worldTokens(1).lit));
@@ -348,13 +348,17 @@ const paint = (v, ui, Lx = L600) => { const r = recCtx(); drawControls(r.c, Lx, 
   check("sensitivity: the live stick view reads the resolver's word, never its own sum", has(paint(padV({ row: 5, stickVal: [0.42, -0.1], reads: "RIGHT" })), "READS RIGHT") && has(paint(padV({ row: 5, stickVal: [0.42, -0.1] })), "READS NOTHING"));
   const DESK = layout(1366, 768), lit = paint(padV(), {}, DESK), call = (r) => r.texts.filter((t) => t.fill === CONST.ink || t.fill === CONST.t2);
   check("the controller's bound parts carry callouts in cream, ACTION over the position, sans", ["BOMB", "SOUTH", "THROW", "WEST", "REMOTE", "EAST", "PAUSE", "START", "SELECT", "MOVE"].every((w) => call(lit).some((t) => t.s === w && !t.mono)) && call(lit).find((t) => t.s === "BOMB").fill === CONST.ink && call(lit).find((t) => t.s === "SOUTH").fill === CONST.t2);
-  for (const [box, Lx, touch, narrow, scale] of BOXES) {
-    const r = recCtx(); drawControls(r.c, Lx, padV(), { touch, narrow, scale });
-    const words = call(r).map((t) => t.s), G = geoFor(Lx, touch, narrow, scale);
-    check("callouts all or none: every bound action, or the compact drawing the rows name: " + box, !words.length || ["BOMB", "THROW", "REMOTE", "PAUSE", "MOVE"].every((w) => words.includes(w)), words.join());
+  /* callouts all or none: the desk draws every bound action's callout from a plan; every other box draws none, and its rows name each button */
+  const rowVals = (r, G, i) => { const g = geomOf(i, G); return r.texts.filter((t) => t.mono && Math.abs(t.y - (g.y + g.h / 2)) < 1 && t.x >= g.x && t.x <= g.x + g.w).map((t) => t.s); };
+  for (const [box, Lx, touch, narrow, scale] of [["desk 1366x768", DESK, false, false, undefined], ...BOXES]) {
+    const desk = box.startsWith("desk"), r = recCtx(); drawControls(r.c, Lx, padV(), { touch, narrow, scale });
+    const words = call(r).map((t) => t.s), G = geoFor(Lx, touch, narrow, scale), plan = ctlDbg.plan;
+    const named = [[0, ["D-PAD", "L-STICK"]], [1, ["SOUTH"]], [2, ["WEST"]], [3, ["EAST"]], [4, ["START", "SELECT"]]].every(([i, w]) => w.every((x) => rowVals(r, G, i).includes(x)));
+    check("callouts all or none: " + (desk ? "the desk draws every bound action's callout" : "no callout, and the rows name every button") + ": " + box, desk ? !!plan && ["BOMB", "THROW", "REMOTE", "PAUSE", "MOVE"].every((w) => words.includes(w)) : !plan && !words.length && named, words.join());
     const sw = recCtx(); drawControls(sw.c, Lx, padV({ binds: { ...DEF_PAD, BOMB: "E", REMOTE: "S" }, swap: { row: "REMOTE", part: "S" } }), { touch, narrow, scale });
-    const S2 = call(sw);
-    check("a swap's displaced part keeps its word: " + box, !G.pane || !S2.length || (S2.some((t) => t.s === "REMOTE") && S2.some((t) => t.s === "BOMB")));
+    const P2 = ctlDbg.plan, act = (g) => { const l = P2 && P2.labels.find((q) => q.grp === g); return l && l.lines[0].s; };
+    check("a swap: " + (desk ? "SOUTH's callout reads REMOTE, EAST's reads BOMB" : "the REMOTE row reads SOUTH, the BOMB row EAST, and SWAPPED") + ": " + box,
+      desk ? act("S") === "REMOTE" && act("E") === "BOMB" && call(sw).some((t) => t.s === "REMOTE") && call(sw).some((t) => t.s === "BOMB") : rowVals(sw, G, 3).includes("SOUTH") && rowVals(sw, G, 1).includes("EAST") && sw.texts.some((t) => t.s === "SWAPPED"), [act("S"), act("E"), rowVals(sw, G, 3), rowVals(sw, G, 1)].join("/"));
   }
   check("the pane's words read at game size", lit.texts.filter((t) => t.mono || t.fill === CONST.ink || t.fill === CONST.t2).every((t) => t.px >= 10 - 1e-6));
   const kb = paint(keyV());
