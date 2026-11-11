@@ -25,7 +25,7 @@ lazy._set("records", RP);
 const MP = await import("../src/render/pages/menu.js");
 const md = await import("../src/render/menudraw.js");
 const W = await import("../src/render/words.js");
-const { setTextScale } = await import("../src/render/kit/type.js");
+const { setTextScale, DEV } = await import("../src/render/kit/type.js");
 const { CONST } = await import("../src/render/kit/tokens.js");
 const probe = await import("../src/render/kit/probe.js");
 const { ITEMS, SCREEN, createMenuApp } = await import("../src/app/menuapp.js");
@@ -43,6 +43,10 @@ const BOX = {
   d1366: { W: 1366, H: 768, touch: false, shell: true, css: 1 },
   d1920: { W: 1920, H: 1080, touch: false, shell: true, css: 1 },
   d1024: { W: 1024, H: 768, touch: false, shell: true, css: 1 },
+  /* laptop windows (a 1366 x 768 screen's browser viewport is about 657 tall): the desk gives way before it scales (v202 fix round 1) */
+  d1366s: { W: 1366, H: 657, touch: false, shell: true, css: 1 },
+  d1280s: { W: 1280, H: 650, touch: false, shell: true, css: 1 },
+  d1024s: { W: 1024, H: 600, touch: false, shell: true, css: 1 },
   c600: { W: 600, H: 520, touch: false, shell: false, css: 1 },
   iso: { W: 608, H: 352, touch: false, shell: false, css: 1 },
   p393: { W: PG.w, H: PG.h, touch: true, shell: true, css: PG.s },
@@ -157,10 +161,12 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
   for (const [nm, F2] of [["600x520", BOX.c600], ["608x352", BOX.iso], ["1366x768", F]]) for (const mask of [BADGE.CLEAR | BADGE.MAX, 0, 15]) {
     const t = snap(F2, UI({ plaques: mask })), G2 = RP.recordsGeom(F2), u = G2.u, B2 = G2.d.bodies.scores, row = B2.badges;
     const tags = W.BADGE_NAMES.map((n) => t.s.texts.find((x) => x.s === n && near(x.y + x.capH / 2, (row.y + row.h / 2) * u, 2 * u + 1)));
-    const want = [1, 2, 4, 8].map((bit) => (mask & bit ? CONST.medal : CONST.off));
+    const want = [1, 2, 4, 8].map((bit) => (mask & bit ? CONST.ink : CONST.off)), prs = (t.s.pairs || []).filter((q) => /^badge /.test(q.name || (q.o && q.o.name) || ""));
+    const pcol = W.BADGE_NAMES.map((n) => { const q = prs.find((x) => (x.name || (x.o && x.o.name)) === "badge " + n); return q ? q.col || (q.o && q.o.col) : null; });
     const alphaOK = t.t.paints.filter((p) => p.op === "fillText" || true).every((p) => p.alpha === 1 || p.alpha === undefined) && t.t.writes.filter((w) => w.k === "globalAlpha").every((w) => w.v === 1);
-    check(`badges at ${nm}, mask ${mask}: CLEAR / HARD / EXPERT / CROWN on their own row inside the plate, between the difficulties and the table; earned in the medal colour, the rest in the off ink at full alpha`,
-      tags.every(Boolean) && tags.every((x, i) => x.col === want[i]) && tags.every((x) => inside(x, G2.plate)) && row.y > B2.bank.y + B2.bank.h && row.y + row.h < B2.head.y && alphaOK, J(tags.map((x) => x && [x.s, x.col])));
+    /* fix round 1: the medal colour is only an outline: an earned badge's word is ink inside its medal-colour outline and glyph (the info pair's colour) */
+    check(`badges at ${nm}, mask ${mask}: CLEAR / HARD / EXPERT / CROWN on their own row inside the plate, between the difficulties and the table; earned = an ink word in the medal-colour outline, the rest in the off ink, at full alpha`,
+      tags.every(Boolean) && tags.every((x, i) => x.col === want[i]) && pcol.every((col, i) => col === (mask & [1, 2, 4, 8][i] ? CONST.medal : CONST.off)) && tags.every((x) => inside(x, G2.plate)) && row.y > B2.bank.y + B2.bank.h && row.y + row.h < B2.head.y && alphaOK, J(tags.map((x) => x && [x.s, x.col])));
   }
 }
 /* placeholders never read as a played run: main's getter drops the seeded rows (a fresh profile's SCORES is the empty table), the page draws what it is
@@ -192,6 +198,15 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
   const t = snap(BOX.c600, UI({ page: "medals", rows: undefined })).s.texts;
   check("MEDALS with rows undefined: eight name-free placeholders, 0/8, nothing earned, no throw", t.filter((x) => x.s === "—").length === 8 && J(t.filter((x) => /^\d\/8$/.test(x.s)).map((x) => x.s)) === J(["0/8"]) && !MEDAL_ROWS.some(([n]) => t.some((x) => x.s === n)));
 }
+/* restored from the old menudraw 13f (fix round 1): rows undefined draws no earned glyph (no medal-colour paint at all, in the frame or its layers),
+   and the page leaves globalAlpha at 1 (every paint on the target at full alpha, both with and without earned rows) */
+for (const rows of [undefined, medalRows(255)]) {
+  cache.release();
+  const m0 = made.length, f = frame(BOX.c600, UI({ page: "medals", rows })), all = [f.t, ...made.slice(m0).map((q) => q.r)];
+  const med = all.reduce((n, t) => n + t.paints.filter((p) => String(p.style).toLowerCase() === CONST.medal).length, 0);
+  const alpha = f.t.ctx.globalAlpha === 1 && f.t.paints.every((p) => p.alpha === 1 || p.alpha === undefined); // left at 1, and every paint on the target at full alpha
+  check(`MEDALS (rows ${rows ? "all earned" : "undefined"}): ${rows ? "earned glyphs in the medal colour" : "no earned glyph (no medal-colour paint)"}; globalAlpha left at 1`, (rows ? med > 0 : med === 0) && alpha, J({ med, alpha }));
+}
 
 /* every key's legend inside its key (the focused one past its bomb, or the ring alone where the bomb would push it out), at 1 and 1.25 on every box */
 for (const b of ALL) for (const ts of [1, 1.25]) {
@@ -210,15 +225,43 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
 }
 
 /* ---- focus, yellow, label first ---- */
-for (const b of ["d1366", "p393", "c600"]) {
+/* every #ffd447 FILL the recorder saw (fill, fillRect, fillText), by colour, not only the probe's rects (fix round 1): the medal is an outline, a stroke,
+   never a fill, so a page with earned badges and medals still fills no #ffd447 */
+const yelPaints = (t) => t.paints.filter((p) => (p.op === "fill" || p.op === "fillRect") && String(p.style).toLowerCase() === CONST.yel).length + t.texts.filter((x) => String(x.fill).toLowerCase() === CONST.yel).length;
+/* the focus is the bare bomb + the ring; a touch box shows it only with a controller (tap mode shows no focus, as LEVEL SELECT; fix round 1) */
+for (const b of ["d1366", "p393", "c600", "c600t", "c740x360"]) {
   const F = BOX[b], G = RP.recordsGeom(F);
   for (const [page, focus] of [["scores", "tabs"], ["scores", "body"], ["medals", "tabs"]]) {
+    if (F.touch) {
+      setHints(null);
+      const t = snap(F, UI({ page, focus })), tr = t.t.paints.filter((p) => p.op === "stroke" && p.style === CONST.ink && p.lw === 3);
+      check(`tap mode (${b}, ${page} ${focus}): no ring, no focused rect`, tr.length === 0 && !t.s.rects.some((r) => r.focus), J({ rings: tr.length }));
+      setHints(wordsOf("pad", DEF_CONTROLS));
+    }
     const f = snap(F, UI({ page, focus })), rings = f.t.paints.filter((p) => p.op === "stroke" && p.style === CONST.ink && p.lw === 3);
     const target = page === "scores" && focus === "body" ? G.keys[0] : G.tabs[page === "scores" ? 0 : 2];
-    const yel = f.s.rects.filter((r) => r.fill === CONST.yel).length, foc = f.s.rects.filter((r) => r.focus);
+    const yel = yelPaints(f.t), foc = f.s.rects.filter((r) => r.focus);
     check(`focus (${b}, ${page} ${focus}): one 3 px cream ring round ${focus === "body" ? "the chosen difficulty" : "the open tab"}; one focused rect; no yellow fill (the page's main action is none)`,
       rings.length === 1 && rings[0].box.x < target.x && rings[0].box.x + rings[0].box.w > target.x + target.w && foc.length === 1 && yel === 0, J({ rings: rings.map((r) => r.box), foc: foc.map((r) => r.name), yel }));
+    setHints(null);
   }
+}
+/* the bomb is never dropped (fix round 1): with the focus shown (a keyboard box, or a controller on a touch box), every focused tab and difficulty,
+   at 1 and 1.25, has its legend whole inside the key and clear of the bare bomb (left + 8, DEV bombs wide) */
+{
+  const bad = [];
+  for (const b of ALL) for (const ts of [1, 1.25]) {
+    setTextScale(ts); setHints(BOX[b].touch ? wordsOf("pad", DEF_CONTROLS) : null);
+    const F = BOX[b], G = RP.recordsGeom(F), dv = DEV[G.dev], u = G.u;
+    for (const [page, focus, h] of [["scores", "tabs", 0], ["medals", "tabs", 0], ["scores", "body", 0], ["scores", "body", 1], ["scores", "body", 2]]) {
+      const { s } = snap(F, UI({ page, focus, heat: h })), fr = s.rects.find((r) => r.focus);
+      if (!fr) { bad.push(b + " " + ts + " " + page + " " + focus + ": no focus"); continue; }
+      const word = fr.name.replace(/^(tab|difficulty) /, ""), t = s.texts.find((x) => x.s === word && x.x >= fr.x - 0.5 && x.x + x.w <= fr.x + fr.w + 0.5 && x.y >= fr.y - 4 && x.y < fr.y + fr.h);
+      if (!t || t.x < fr.x + (8 + dv.bombs) * u - 0.01 || t.x + t.w > fr.x + fr.w - 2 * u + 0.01) bad.push(b + " " + ts + " " + page + " " + focus + " " + word + ": " + J(t && [t.x, t.w]) + " in " + J([fr.x, fr.w]));
+    }
+    setHints(null); setTextScale(1);
+  }
+  check("the focus bomb is never dropped: every focused legend, every box, 1 and 1.25, sits whole in its key clear of the bomb", bad.length === 0, bad.slice(0, 6).join(" | "));
 }
 {
   /* every foot reads label first, keycaps last, for keys and a controller */
@@ -289,6 +332,8 @@ for (const b of ["d1366", "p393", "c600"]) {
 
 /* ---- the lazy page: LOADING until it lands, every hit inert ---- */
 {
+  const w00 = md._rec.want;
+  md._rec.want = () => new Promise(() => {}); // an import still in flight
   lazy._set("records", null);
   const t = rec({ widthK: K8 }), L = md.layout(1366, 768, 300, 1);
   md.drawScores(t.ctx, UI({}), L, 0, false);
@@ -306,7 +351,31 @@ for (const b of ["d1366", "p393", "c600"]) {
     LL.pointerdown.forEach((fn) => fn({ clientX: 2, clientY: 2 }));
   }
   check("a tap on SCORES or MEDALS while the page loads does nothing (never backs out)", log.length === 0, J(log));
+  /* fix round 1, I2: every LOADING frame asks for the page again, so a failed import is retried (want keeps one in flight, a failed one is dropped) */
+  const asks = [], w0 = w00;
+  let n = 0;
+  md._rec.want = (name) => { asks.push(name); return ++n === 1 ? Promise.reject(new Error("network blip")) : (lazy._set("records", RP), Promise.resolve(RP)); };
+  lazy._set("records", null);
+  md.drawScores(rec({ widthK: K8 }).ctx, UI({}), L, 0, false);
+  await new Promise((r) => setTimeout(r, 0));
+  const still = lazy.get("records");
+  md.drawStats(rec({ widthK: K8 }).ctx, UI({}), L, 0, false);
+  await new Promise((r) => setTimeout(r, 0));
+  check("a LOADING frame asks for the page; a rejected import (a network blip) leaves LOADING, and the next LOADING frame asks again and the page lands",
+    J(asks) === J(["records", "records"]) && still === null && lazy.get("records") === RP, J({ asks, still: !!still }));
+  md._rec.want = w0;
   lazy._set("records", RP);
+}
+/* fix round 1, I2: MENU's frame asks lazy.idle() for every page once, in the first idle callback after it */
+{
+  const g = globalThis, had = g.requestIdleCallback, ric = [];
+  g.requestIdleCallback = (f) => { ric.push(f); return ric.length; };
+  const { createMenuApp } = await import("../src/app/menuapp.js"), app = createMenuApp({ settings: {} });
+  app.screen = SCREEN.MENU; app.subT = 9;
+  SV.drawShell(rec({ widthK: K8 }).ctx, app, {}, null, "2d", () => [], () => 0);
+  SV.drawShell(rec({ widthK: K8 }).ctx, app, {}, null, "2d", () => [], () => 0);
+  check("MENU's frame calls lazy.idle(): one idle callback is queued (asked once, not per frame)", ric.length === 1, ric.length);
+  if (had) g.requestIdleCallback = had; else delete g.requestIdleCallback;
 }
 
 /* ---- the capture recipes and the gates' rows ---- */
@@ -321,6 +390,31 @@ const SV0 = statsView(clampStats({ a: { runs: 47, rooms: 132, deaths: 61, kills:
   recordBest(recordBest(recordBest({}, "0:0:1", 4820, 5), "1:0:1", 8120, 5), "2:0:1", 3100, 3), 0b10100100);
 const NOTES = statsNotes({ a: { sessions: 5, first: "2026-11-01", last: "2026-11-10" } }, { d: "2026-11-10", best: 900, played: 2, g: 3 }, "2026-11-10");
 const SUI = (o) => ({ page: "stats", level: 1, focus: "tabs", view: SV0, notes: NOTES, wipe: [CLEAR_KEYS, KEEP_KEYS], arm: false, unlocked: false, ...o });
+for (const b of ["d1366", "p393", "c600"]) for (const ui of [UI({ plaques: 15 }), UI({ page: "medals", rows: medalRows(255) }), UI({ page: "stats", view: { ...SV0, medals: 8 }, notes: NOTES, wipe: [CLEAR_KEYS, KEEP_KEYS] })]) {
+  cache.release(); // every layer repaints, so the layers' own paints are seen (the recorder canvases made below)
+  const m0 = made.length, f = frame(BOX[b], ui), all = [f.t, ...made.slice(m0).map((q) => q.r)];
+  const yel = all.reduce((n, t) => n + yelPaints(t), 0), strokes = all.reduce((n, t) => n + t.paints.filter((p) => p.op === "stroke" && String(p.style).toLowerCase() === CONST.medal).length, 0);
+  /* STATS' one allowed fill is the POWER-UPS line's FLAME pickup icon (its own game palette); SCORES and MEDALS fill none */
+  check(`one yellow (${b}, ${ui.page}, everything earned): ${ui.page === "stats" ? "at most the FLAME icon's one" : "no"} #ffd447 fill, by colour, in the frame and its layers; the medal colour only strokes (${strokes})`, yel <= (ui.page === "stats" ? 1 : 0) && strokes > 0, J({ yel, strokes }));
+}
+/* the laptop windows at text scale 1: the page gives way (margins, pads, the bodies) instead of scaling, so every word keeps its floor (gates cap:
+   desktop primary 14 / secondary 11 / hud 18 cap px, body 17.9 font px, 0.05 tolerance), on every tab, the armed reset included */
+{
+  const FLOOR = { primary: 14, secondary: 11, hud: 18 };
+  for (const b of ["d1366s", "d1280s", "d1024s"]) {
+    setTextScale(1);
+    const F = BOX[b], G = RP.recordsGeom(F), bad = [];
+    for (const ui of [UI({}), UI({ page: "medals" }), UI({ page: "stats", level: 1, focus: "tabs", view: SV0, notes: NOTES, wipe: [CLEAR_KEYS, KEEP_KEYS] }), UI({ page: "stats", view: SV0, notes: NOTES, wipe: [CLEAR_KEYS, KEEP_KEYS], arm: true })]) {
+      for (const t of snap(F, ui).s.texts) {
+        if (t.role === "body" ? t.px < 17.9 - 0.05 : FLOOR[t.role] != null && t.capH < FLOOR[t.role] - 0.05) bad.push([ui.page + (ui.arm ? " armed" : ""), t.s, t.role, +(t.capH || 0).toFixed(2), t.px]);
+      }
+    }
+    check(`laptop ${F.W}x${F.H} at 100 %: the desk gives way (step ${G.d.sl}) before it scales: u ${G.u.toFixed(3)} >= ${RP.FIT_U}, every text at its floor on SCORES, MEDALS, STATS and the armed reset`,
+      G.u >= RP.FIT_U && G.d.sl > 0 && bad.length === 0, J({ u: G.u, sl: G.d.sl, bad: bad.slice(0, 4) }));
+  }
+  const a = RP.recordsGeom(BOX.d1366), c = RP.recordsGeom(BOX.c600);
+  check("the 1366x768 reference frame gives nothing way (step 0); #c's 600x520 cannot fit, so it scales at step 3 with every word kept (MENU kicker, course)", a.d.sl === 0 && a.u === 1 && c.d.sl === RP.KEEP_SL && !!c.d.kick && !!c.d.bodies.stats.course, J({ a: a.d.sl, c: c.d.sl }));
+}
 /* the sentence names every CLEAR and KEEP group, derived from reset.js's own lists */
 {
   const keys = Object.keys(W.RESET_GROUP).sort(), lists = [...CLEAR_KEYS, ...KEEP_KEYS].sort(), s = W.resetSentence(CLEAR_KEYS, KEEP_KEYS);

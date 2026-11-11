@@ -336,12 +336,20 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     return { F, caps: [...(F ? F.parts.filter((q) => q.cap).map((q) => ({ x: q.x, y: F.mid - CAPH / 2, w: q.w, h: CAPH })) : []), ...(P.rows.PLAY.cap ? [P.rows.PLAY.cap] : [])],
       adv: F ? F.parts.reduce((n, q) => n + (q.cap ? q.gap + q.w : 0), 0) : 0, words: F ? F.parts.filter((q) => !q.cap).map((q) => q.t || q.sep) : [] };
   };
+  /* RECORDS (v202 Tasks 4.1 / 4.2, fix round 1 I3): the same strength as MENU's: its kit foot under the plate is centred, so it moves by exactly
+     the caps' advance; every other rect stays */
+  const recCaps = () => {
+    const S = RP._dbg.last.S, q = S && S.feet && S.feet.find((f) => f.v === S.fv), fp = q && q.fp, F = fp ? { x: fp.x, y: fp.y, w: fp.w, h: fp.h, mid: fp.mid } : null;
+    return { F, page: S && S.ui.page, foc: RP._dbg.last.foc, sum: fp ? 36 + fp.parts.reduce((n, p, i) => n + (i ? (p.cap ? p.gap : 12) : 0) + p.w, 0) : 0, caps: fp ? fp.parts.filter((p) => p.cap).map((p) => ({ x: p.x, y: fp.mid - CAPH / 2, w: p.w, h: CAPH })) : [],
+      adv: fp ? fp.parts.reduce((n, p) => n + (p.cap ? p.gap + p.w : 0), 0) : 0, words: fp ? fp.parts.filter((p) => !p.cap).map((p) => p.t || p.sep) : [] };
+  };
   const norm = (r, q) => flat(r).filter((x) => !q.caps.some((z) => inR(z, x))).map((x) => (q.F && inR(q.F, x) ? ["plaque", x[0], x[1] - q.F.x, x[2], q.F.x + q.F.w - (x[1] + x[3]), x[4]] : x));
   for (const T of [false, true]) for (const [nm, p] of Object.entries(pages)) {
     /* LEVEL SELECT's foot (v202 Task 3.3): its caps, their advance, its plaque and its words, read back from the page's plan as MENU's */
     const lvFoot = () => { const { P, verb } = lvp._dbg.last, F = verb != null && P.foot[verb] ? P.foot[verb] : null; return { F, caps: F ? F.parts.filter((q) => q.cap).map((q) => ({ x: q.x, y: F.mid - CAPH / 2, w: q.w, h: CAPH })) : [], adv: F ? F.parts.reduce((n, q) => n + (q.cap ? q.gap + q.w : 0), 0) : 0, words: F ? F.parts.filter((q) => !q.cap).map((q) => q.t || q.sep) : [] }; };
-    setHints(null); const a = paint(p(T)), qa = /^MENU/.test(nm) ? capsOf() : nm === "LEVEL" ? lvFoot() : null;
-    setHints(PAD); const b = paint(p(T)), qb = /^MENU/.test(nm) ? capsOf() : nm === "LEVEL" ? lvFoot() : null;
+    const rec = /^(SCORES|MEDALS|STATS)/.test(nm), qOf = () => (/^MENU/.test(nm) ? capsOf() : nm === "LEVEL" ? lvFoot() : rec ? recCaps() : null);
+    setHints(null); const a = paint(p(T)), qa = qOf();
+    setHints(PAD); const b = paint(p(T)), qb = qOf();
     setHints(null);
     if (/^MENU/.test(nm)) {
       const na = norm(a, qa), nb = norm(b, qb), d = qb.adv - qa.adv, moved = !qa.F === !qb.F && (!qa.F || (Math.abs(qb.F.w - qa.F.w - d) < 1e-9 && Math.abs(qb.F.x - qa.F.x + d / 2) < 1e-9));
@@ -387,9 +395,17 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
       check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps its geometry (plate, slots, hits${cueOn ? "; plus the controller cue band only: every x and width holds, every slot's height" : ""})`, ga === gb && !ca && !!cb === cueOn, ga.length + " vs " + gb.length);
       continue;
     }
-    if (/^(SCORES|MEDALS|STATS)/.test(nm) && RP._dbg.last.G.mode === "desk") { // v202 Task 4.1: the kit foot under the plate is words and keycaps; everything above it keeps every rect
-      const fy = RP.recordsGeom({ W: L.W, H: L.H, touch: false, shell: false, css: 1 }).d.foot.y - 2, up = (r) => flat(r).filter((x) => x[2] + x[4] <= fy);
-      check(`a flip changes words only: ${nm} keeps every rect above its foot`, J(up(a)) === J(up(b)) && up(a).length > 20, up(a).length + " vs " + up(b).length);
+    if (rec && qa.F) {
+      /* where the two devices name the same items (MEDALS, and every page's TAB / BACK words), the plaque moves by exactly the caps' advance with its words
+         in order, as MENU's; SCORES' and STATS' controller feet name a different item set by design (no TAB in SCORES' body, MEDALS NORTH for RESET: no
+         route to the wipe), so there the plaque stays centred, its width is its parts' and its words are that device's footItems, in order */
+      const off = (r, q) => flat(r).filter((x) => !q.caps.some((z) => inR(z, x)) && !inR(q.F, x)), want = (dev) => [].concat(...RP.footItems(qa.page, qa.foc, dev === "key" ? wordsOf("key", DEF_CONTROLS) : PAD).map((it, i) => (i ? ["·", it.t] : [it.t])));
+      const sameSet = J(qa.words) === J(qb.words), d = qb.adv - qa.adv;
+      const moved = !!qb.F && (sameSet ? Math.abs(qb.F.w - qa.F.w - d) < 1e-6 && Math.abs(qb.F.x - qa.F.x + d / 2) < 1e-6 : Math.abs(qb.F.x + qb.F.w / 2 - (qa.F.x + qa.F.w / 2)) < 1e-6 && Math.abs(qb.F.w - qb.sum) < 1e-6 && Math.abs(qa.F.w - qa.sum) < 1e-6);
+      const na = sameSet ? norm(a, qa) : off(a, qa), nb = sameSet ? norm(b, qb) : off(b, qb);
+      check(`a flip changes words only: ${nm} keeps every rect but its keycaps${sameSet ? "; the foot's plaque moves by the caps' advance alone (" + d.toFixed(1) + ")" : "; the foot stays centred at its parts' width"}, its words that device's, in order`,
+        J(na) === J(nb) && na.length > 20 && moved && J(qa.words) === J(want("key")) && J(qb.words) === J(want("pad")) && qa.words.length > 2 && (!sameSet || na.some((x) => x[0] === "plaque")),
+        J({ n: [na.length, nb.length], d, F: [[qa.F.x, qa.F.w, qa.sum], qb.F && [qb.F.x, qb.F.w, qb.sum]], words: [qa.words, qb.words], want: [want("key"), want("pad")] }));
       continue;
     }
     check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps every rect`, J(flat(a)) === J(flat(b)), J(flat(a)).length + " vs " + J(flat(b)).length);

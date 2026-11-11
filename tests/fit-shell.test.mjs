@@ -337,8 +337,12 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
         S.x - G.T >= 0 && S.y - G.T >= 0 && S.x + S.w + G.T <= g.w && S.y + S.h + G.T <= g.h && rects.every((r) => inPlate(r, S)) && hits.every(([r, k, i]) => { const h = md.levelHit(...ctr(r), L, U, touch, open); return h.k === k && (i == null || h.i === i); }) &&
           md.levelHit(...inert, L, U, touch, open).k === "none" && md.levelHit(1, 1, L, U, touch, open).k === "back");
     }
-    const Lr = md.layout(g.w, g.h, g.logo, g.s), sc = RP.recordsGeom({ W: g.w, H: g.h, touch, shell: true, css: g.s }), ring = { x: sc.plate.x - sc.T - 2 * sc.u, y: sc.plate.y - sc.T - 2 * sc.u, w: sc.plate.w + 2 * sc.T + 4 * sc.u, h: sc.plate.h + 2 * sc.T + 5 * sc.u, f: 1 }; // SCORES / MEDALS: pages/records.js (v202 Task 4.1), the page's own frame
+    const Lr = md.layout(g.w, g.h, g.logo, g.s), sc = RP.recordsGeom({ W: g.w, H: g.h, touch, shell: true, css: g.s }), ring = { x: sc.plate.x - sc.T - 2 * sc.u, y: sc.plate.y - sc.T - 2 * sc.u, w: sc.plate.w + 2 * sc.T + 4 * sc.u, h: sc.plate.h + 2 * sc.T + 5 * sc.u, f: 1 }; // SCORES / MEDALS: pages/records.js (v202 Task 4.1); f is checked below as the page's own u (fix round 1, I4), the page's own frame
     check(`HIGH SCORES: the plate and its ring in the box, the difficulties in the plate, each taps to itself (${tg})`, inBox(ring) && sc.keys.every((r, i) => inPlate(r, sc.plate) && md.scoresHit(...ctr(r), Lr, touch) === i), J([ring, g.w, g.h]));
+    /* RECORDS' real scale (fix round 1, I4): at or above the reference frame the page is unscaled, 1 box unit per design px on a keyboard box and 1 / css
+       on a touch one (the CSS px column); only the 600x520 box may scale */
+    const small = W === 600 && H === 520, uWant = touch ? 1 / g.s : 1;
+    check(`RECORDS: the page's own scale is ${small ? "at most" : "exactly"} ${uWant.toFixed(4)} (${tg})`, small ? sc.u <= uWant + 1e-9 : Math.abs(sc.u - uWant) < 1e-9, J({ u: sc.u, uWant, s: g.s }));
     for (const [nm, geo, hit, n, R] of [["SETTINGS (ten rows)", md.settingsGeom, md.settingsHit, 10, optRows(false)], ["SETTINGS (twelve rows)", md.settingsGeom, md.settingsHit, 12, optRows(true)], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N, 0]]) {
       const q = geo(L, touch, R), first = q.rows[q.order[0]]; // v202 Task 3.4: the page's geometry, rows by name (pages/settings.js); a row taps to itself with its page on screen (the focus)
       const Lf = (l) => ({ ...L, focus: q.order.indexOf(q.pages[q.pageOf[l]][0]) });

@@ -175,7 +175,11 @@ for (const [nm, L, touch] of BOXES) for (let p = 0; p < 3; p++) {
     check(`SCORES (${nm}): no point taps both a RECORDS tab and a difficulty`, clash === 0 && G.keys.every((r) => r.y >= T[0].y + T[0].h + 4), clash);
   }
   const ring = (Rx) => Rx.paints.some((q) => q.op === "stroke" && q.style === "#fff2df" && q.lw === 3 && q.box && q.box.x < T[p].x && q.box.x + q.box.w > T[p].x + T[p].w && q.box.y < T[p].y - 2 * G.u);
-  check(`${PAGES[p]} (${nm}): the tab row's focus is the kit's ring on the open tab${p ? "" : "; none while the body has it"}`, ring(R) && (p === 2 || !ring(paintPage(p, L, touch, false))));
+  /* a touch box shows the focus only with a controller: tap mode draws no ring (fix round 1, as LEVEL SELECT) */
+  if (touch) { check(`${PAGES[p]} (${nm}): tap mode draws no ring`, !ring(R)); setHints(wordsOf("pad", DEF_CONTROLS)); }
+  const Rf = touch ? paintPage(p, L, touch, true) : R;
+  check(`${PAGES[p]} (${nm}): the tab row's focus is the kit's ring on the open tab${p ? "" : "; none while the body has it"}`, ring(Rf) && (p === 2 || !ring(paintPage(p, L, touch, false))));
+  setHints(null);
 }
 {
   /* the strip never moves: SCORES, STATS and MEDALS draw one plate and one strip (recordsGeom has no page argument) */
@@ -210,7 +214,12 @@ for (const [nm, L, touch] of BOXES) for (let p = 0; p < 3; p++) {
     paintPage(1, L, false, tabs);
     const fp = RP._dbg.last.S.feet.find((f) => f.v === (tabs ? "tabs" : "body")).fp, u = RG(L, false).u, at = (t) => { const z = fp.zones[fp.parts.filter((q) => q.t != null).findIndex((q) => q.t === t)]; return [((z.x0 + z.x1) / 2) * u, fp.mid * u]; };
     const got = ["COPY MY STATS", "RESET", "TAB", "BACK"].map((t) => md.statsHit(...at(t), L, false, tabs, false));
-    check(`statsHit maps COPY MY STATS / RESET at their painted place (${tabs ? "tab row" : "body"}); TAB is off the plate (backs out), BACK backs out`, J(got) === J(["KeyC", "KeyR", "back", "back"]), J(got)); // the foot sits under the plate: its TAB words are no key, so a tap there is off the plate (backs out, as the old lead did)
+    check(`statsHit maps COPY MY STATS / RESET at their painted place (${tabs ? "tab row" : "body"}); TAB on the foot plaque is inert, BACK backs out`, J(got) === J(["KeyC", "KeyR", "plate", "back"]), J(got)); // fix round 1: the foot plaque's words and keycaps look like keys, so a tap there is inert (as other pages), never a back-out; BACK is its key
+    paintPage(0, L, false, tabs);
+    const sp = RP._dbg.last.S.feet.find((f) => f.v === (tabs ? "tabs" : "body")).fp, zi = (t) => sp.zones[sp.parts.filter((q) => q.t != null).findIndex((q) => q.t === t)], zt = zi(W.LABEL.TAB), zb = zi("BACK");
+    const capX = (zt.x1 - 4) * u; // the TAB item's last keycap
+    check(`the desk foot plaque is inert on SCORES too (-2), its TAB keycaps included; its BACK label backs out (-1), and so does just under the plaque (${tabs ? "tab row" : "body"})`,
+      md.scoresHit(capX, sp.mid * u, L, false) === -2 && md.scoresHit(((zb.x0 + zb.x1) / 2) * u, sp.mid * u, L, false) === -1 && md.scoresHit(capX, (sp.y + sp.h + 4) * u, L, false) === -1, J([zt, zb]));
   }
 }
 

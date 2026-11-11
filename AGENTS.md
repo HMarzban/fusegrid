@@ -102,22 +102,28 @@ never reaches the app. On those pages `Q` / `E` never also confirm. Esc, Backspa
 MENU on RECORDS.
 RECORDS page (UI upgrade v202 Task 4.1; `src/render/pages/records.js`, LAZY: one `pages/lazy.js` entry `records`, loaded in the first idle
 after MENU's first frame; until it lands menudraw paints `loadingPage` (the room, a small plate, LOADING) and every RECORDS hit is -2, inert,
-so a tap never backs out of a page still loading; tests `want` / `_set` it). The room of `app.level` opaque under it (MENU's own room layer
+so a tap never backs out of a page still loading; every LOADING frame asks `want("records")` again (menudraw `_rec`, the test seam), so a failed
+import is retried and a network blip recovers; tests `want` / `_set` it). The room of `app.level` opaque under it (MENU's own room layer
 when MENU last painted the box and level: no re-raster on a MENU <-> RECORDS trip; `shellCovers` SCORES and TROPHIES). `recordsGeom(F)`
 (F = MENU's frame: W, H, touch, shell, css, ts; the pointer hands RECORDS `layout(cw, ch, lg, css)`) is one plate for every tab: desk
 (keyboard boxes; the S7-pages frame, plate 980 wide, 1080 at 125 %, kicker MENU over the RECORDS title, tabs 150 x 36 over an 11 px trough,
-the pane as tall as the tallest body, the foot under the plate, label first, keycaps last; a small box scales as one piece), phone (a
+the pane as tall as the tallest body, the foot under the plate, label first, keycaps last; a shorter window gives way before it scales, fix
+round 1: `SHORT` steps 1 margins, 2 pads and gaps, 3 tighter bodies, then 4 STATS' course, 5 the MENU kicker and LIFETIME pitch, 6 one-line
+bests, 4-6 only where they make it fit at `FIT_U` 0.995; the plate narrows by up to `PW_GIVE` 40 first; 1366x657, 1280x650 and 1024x600 keep
+every floor at 100 %; #c's 600x520 and the iso guard scale at step 3, every word kept; the foot plaque is inert, its BACK backs out), phone (a
 touch-portrait shell box, CSS px: BACK key and title, three equal 44 px tabs, the pane to the plate's foot; no foot) and compact (any other
 touch box: BACK, the title where it fits, the tabs in one header row; the plate at most 980 wide). SCORES: the DIFFICULTY bank (the R7 filter;
-its keys stay 44 CSS px on touch), BADGES (the four plaques, bits CLEAR / PLUS / MAX / CROWN as words.js `BADGE_NAMES`: earned in the medal
-outline, not yet a lock tag; two lines on a narrow table, dropped first where a short touch box would shrink the table under `BADGE_K` 0.8),
+its keys stay 44 CSS px on touch), BADGES (the four plaques, bits CLEAR / PLUS / MAX / CROWN as words.js `BADGE_NAMES`: earned = an ink word
+in the medal-colour outline (a stroke: the medal colour is never a fill), not yet a lock tag; two lines on a narrow table, dropped first where a short touch box would shrink the table under `BADGE_K` 0.8),
 the ten-row table RANK · SCORE · LEVEL · MODIFIERS (a count by `modsCount`, R10; no modifier glyph exists) · DATE, stepped down to a bare
 count, then the month and day; under 520 design px wide each row stacks its modifiers (NO MODIFIERS for none) and full date under the score.
 The rows arrive with `highscores.isPlaceholder` rows dropped (main's getter), so a fresh profile reads NO NORMAL DIFFICULTY RUNS YET. MEDALS:
-eight sunk tiles (earned: the medal outline and dot; a goal: the off ink), each goal whole (wrapped, never cut), `n/8 EARNED`. A body taller
+eight sunk tiles (earned: the medal outline and its centre ring, both strokes; a goal: the outline in t2 with a small lock), each goal whole (wrapped, never cut), `n/8 EARNED`. A body taller
 than its pane on a touch box scales into it (`k`; text floors give way only there, the landscape phones' #c). Cached: one page layer per tab
 and data (plate, header, trough, tabs at rest, pane, body at rest), one foot layer per focus, the room; live: the open tab (lit brick), the
-focus (bare bomb + 3 px ring on the open tab, or on the chosen difficulty in the body), the chosen difficulty and SCORES' rows. A focus move or a
+focus (bare bomb + 3 px ring on the open tab, or on the chosen difficulty in the body; never in tap mode, as LEVEL SELECT; the bomb is never
+dropped: a legend that will not fit beside it steps down to its 100 % size, then, on the landscape phones' #c only, to what fits), the chosen
+difficulty and SCORES' rows. A focus move or a
 filter step misses nothing; a tab step paints its page and foot once. STATS (Task 4.2): app/stats.js `statsView` (the numbers:
 runs, secs, medals, the lifetime counters, the hero = the saved best with the highest score and its difficulty / modifiers / speed
 from its key, the three plain-bucket bests), worded on the page: the hero (BEST RUN, the qualifier on up to two lines, the score

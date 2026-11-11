@@ -563,7 +563,15 @@ export const guidePages = (L, touch, page) => { const g = guideMod(); return g ?
    lands they paint the LOADING plate and every hit is inert (-2, or "plate"). The entry names stay: shellview, the pointer and the tests call them. ui is
    the page's (records.js drawRecordsPage); L is layout(W, H, lg, css) for the box the page draws on, touch body[data-lay] p / l. */
 const recMod = () => lazy.get("records");
-const recDraw = (page) => (c, ui, L, t, touch) => { const m = recMod(), F = frameOf(L, touch); return m ? m.drawRecordsPage(c, F, { ...ui, page }, t) : recLoading(c, F, ui && ui.level); };
+/* every LOADING frame asks again: want() keeps one import in flight and a failed one is retried by the next ask, so a network blip before the
+   worker caches the file recovers on the next frame (fix round 1, I2). _rec.want is the test seam. */
+export const _rec = { want: (n) => lazy.want(n) };
+const recDraw = (page) => (c, ui, L, t, touch) => {
+  const m = recMod(), F = frameOf(L, touch);
+  if (m) return m.drawRecordsPage(c, F, { ...ui, page }, t);
+  Promise.resolve().then(() => _rec.want("records")).catch(() => {});
+  return recLoading(c, F, ui && ui.level);
+};
 export const drawScores = recDraw("scores"), drawStats = recDraw("stats"), drawTrophies = recDraw("medals");
 /* The RECORDS tab under a tap, else -1; -2 while the page module is still loading (inert). */
 export const recTabHit = (x, y, L, _page, touch) => { const m = recMod(); return m ? m.tabHit(x, y, frameOf(L, touch)) : -2; };

@@ -62,18 +62,18 @@ const okBox = (F) => !!F && F.W > 0 && F.H > 0 && Number.isFinite(F.W) && Number
    bank stay at their size (they are touch targets); under them the badges and the table take the height left (avail), scaled by tk where they need
    more, the badges dropping first on a short touch box (tk under BADGE_K with them). row: the kicker left of the bank, else above it. */
 export const BADGE_K = 0.8;
-function scoresBody(dv, ts, iw, D, row, avail) {
+function scoresBody(dv, ts, iw, D, row, avail, c = 0) {
   const kick = dv.sec * ts * 1.2, bh = dv.bkh + 6, x0 = row ? D.kick : 0, bw = row ? Math.min(iw - x0, 3 * D.bank + 2 * BANK_GAP + 6) : iw, y0 = row ? 0 : kick + 6;
   const bank = R(x0, y0, bw, bh), kw = (bw - 6 - 2 * BANK_GAP) / 3, keys = [0, 1, 2].map((i) => R(x0 + 3 + i * (kw + BANK_GAP), y0 + 3, kw, dv.bkh));
-  const stack = iw < 520, top = y0 + bh, hh = Math.round(dv.sec * ts * 1.5), rp = stack ? Math.round(dv.pri * ts * 1.15 + dv.sec * ts * 1.2 + 8) : Math.max(D.row, Math.round(dv.pri * ts * 1.15)), tbl = hh + 10 * rp, bl = stack ? 2 : 1, bH = bl * dv.tg + (bl - 1) * 6, withB = 14 + bH + 14 + tbl;
+  const stack = iw < 520, top = y0 + bh, hh = Math.round(dv.sec * ts * 1.5), rp = stack ? Math.round(dv.pri * ts * 1.15 + dv.sec * ts * 1.2 + 8) : Math.max(c ? 22 : D.row, Math.round(dv.pri * ts * 1.15)), tbl = hh + 10 * rp, bl = stack ? 2 : 1, bH = bl * dv.tg + (bl - 1) * 6, bg = c ? 8 : 14, withB = bg + bH + bg + tbl;
   let badges = true, tk = 1;
-  if (avail > 0 && top + withB > avail) { tk = (avail - top) / withB; if (tk < BADGE_K) { badges = false; tk = Math.min(1, (avail - top) / (14 + tbl)); } }
-  const lw = iw / tk, by = 14, hy = badges ? by + bH + 14 : 14, at = (r) => R(r.x * tk, top + r.y * tk, r.w * tk, r.h * tk);
+  if (avail > 0 && top + withB > avail) { tk = (avail - top) / withB; if (tk < BADGE_K) { badges = false; tk = Math.min(1, (avail - top) / (bg + tbl)); } }
+  const lw = iw / tk, by = bg, hy = badges ? by + bH + bg : bg, at = (r) => R(r.x * tk, top + r.y * tk, r.w * tk, r.h * tk);
   return {kick: row ? R(0, 0, x0 - 12, bh) : R(0, 0, iw, kick), bank, keys, badges: badges ? at(R(0, by, lw, bH)) : null, bl, head: at(R(0, hy, lw, hh)), rp, stack, rows: at(R(0, hy + hh, lw, 10 * rp)), tk, top, h: top + (hy + tbl) * tk};
 }
 /* MEDALS: eight tiles, two columns from 640 wide (or on a short touch box, where two columns of three-line goals scale less than one column) */
-function medalsBody(dv, ts, iw, cols = iw >= 640 ? 2 : 1, lines = 2) {
-  const cnt = dv.sec * ts * 1.2, gap = cols > 1 ? 8 : 6, pad = 8, y0 = cnt + 8;
+function medalsBody(dv, ts, iw, cols = iw >= 640 ? 2 : 1, lines = 2, c = 0) {
+  const cnt = dv.sec * ts * 1.2, gap = c ? 4 : cols > 1 ? 8 : 6, pad = c ? 5 : 8, y0 = cnt + (c ? 4 : 8);
   const th = Math.round(2 * pad + dv.pri * ts * 1.15 + 4 + lines * dv.sec * ts * 1.2), tw = (iw - (cols - 1) * gap) / cols, n = 8 / cols;
   const tiles = Array.from({length: 8}, (_, i) => R((i % cols) * (tw + gap), y0 + Math.floor(i / cols) * (th + gap), tw, th));
   return {count: R(0, 0, iw, cnt), tiles, cols, pad, lines, h: y0 + n * th + (n - 1) * gap};
@@ -137,22 +137,21 @@ function place(b, x, y, k) {
   for (const [n, v] of Object.entries(b)) out[n] = Array.isArray(v) ? v.map((r) => (r && typeof r === "object" ? R(x + r.x * k, y + r.y * k, r.w * k, r.h * k) : r)) : v && typeof v === "object" && "w" in v ? R(x + v.x * k, y + v.y * k, v.w * k, v.h * k) : v;
   return out;
 }
-function bodiesAt(dv, ts, iw, D, row, bx, by, avail) {
-  const out = {}, s = scoresBody(dv, ts, iw, D, row, avail);
+function bodiesAt(dv, ts, iw, D, row, bx, by, avail, c = 0, st0 = 0) {
+  const out = {}, s = scoresBody(dv, ts, iw, D, row, avail, c);
   out.scores = place(s, bx, by, 1);
   Object.assign(out.scores, {k: s.tk, y: by + s.top});
   const opts = [[iw >= 640 ? 2 : 1, 2], ...(iw < 640 && iw >= 340 ? [[2, 3]] : [])].map(([cl, ln]) => {
-    let m = medalsBody(dv, ts, iw, cl, ln), k = 1;
-    if (avail > 0 && m.h > avail) { k = avail / m.h; m = medalsBody(dv, ts, iw / k, cl, ln); }
+    let m = medalsBody(dv, ts, iw, cl, ln, c), k = 1;
+    if (avail > 0 && m.h > avail) { k = avail / m.h; m = medalsBody(dv, ts, iw / k, cl, ln, c); }
     return {m, k};
   });
   const best = opts.reduce((a, o) => (o.k > a.k + 1e-9 ? o : a));
   out.medals = place(best.m, bx, by, best.k);
   /* STATS: on a touch box COPY STATS and RESET sit under the body at their size; the body above them scales into what is left */
   const actH = avail > 0 ? DEV.p.btnh : 0, room = avail > 0 ? avail - actH - 14 : 0, narrow = iw < 700;
-  let st = statsBody(dv, ts, iw, D, narrow), sk = 1;
-  let tt = 0;
-  for (let t = 1; room > 0 && st.h > room && t <= 3; t++) st = statsBody(dv, ts, iw, D, narrow, tt = t);
+  let tt = st0, st = statsBody(dv, ts, iw, D, narrow, tt), sk = 1;
+  for (let t = tt + 1; room > 0 && st.h > room && t <= 3; t++) st = statsBody(dv, ts, iw, D, narrow, tt = t);
   /* step 4 (one-line bests) only where it makes the body fit; a body that must scale anyway keeps its two-line bests and every level */
   if (room > 0 && st.h > room) { const s4 = statsBody(dv, ts, iw, D, narrow, 4); if (s4.h <= room) st = s4; }
   if (room > 0 && st.h > room) { sk = room / st.h; st = statsBody(dv, ts, iw / sk, D, (iw / sk) < 700, tt); }
@@ -161,19 +160,46 @@ function bodiesAt(dv, ts, iw, D, row, bx, by, avail) {
   return out;
 }
 
+/* the desk gives way before it scales (as MENU's): SHORT[sl] for sl = 0.. in order, the first that fits the box at u 1 wins, else the last scales as
+   one piece. 1 the margins close (the plate's ring 18 from the top, the foot 10 under the plate, 4 under it); 2 the plate's and the pane's pads and the
+   head's gaps close; 3 the bodies tighten (SCORES' rows 24 and badge gaps 8, MEDALS' gaps 4 and pads 5, STATS' gaps 10); 4 STATS' level course drops
+   (REACHED LEVEL n · WORLD still says it); 5 the MENU kicker drops (the title stays) and STATS' LIFETIME pitch closes; 6 STATS' bests take one line.
+   Steps 4 to 6 take something away, so they are used only where they make the page fit (u >= FIT_U, inside the text floors' tolerance); a box that
+   must scale anyway (#c's 600 x 520, the iso guard) scales at step 3, every word kept. A narrower window narrows the plate first, down to 40 px under
+   the mock's (the bodies keep their columns), then scales. */
+const SHORT = deep([
+  {top: 0, foot: 24, bot: 4, pad: null, gap: 10, pg: PANE_GAP, pane: null, c: 0, st: 0, kick: true},
+  {top: 18, foot: 10, bot: 4, pad: null, gap: 10, pg: PANE_GAP, pane: null, c: 0, st: 0, kick: true},
+  {top: 18, foot: 10, bot: 4, pad: [10, 12], gap: 6, pg: 6, pane: [12, 12], c: 0, st: 0, kick: true},
+  {top: 18, foot: 10, bot: 4, pad: [10, 12], gap: 6, pg: 6, pane: [12, 12], c: 1, st: 1, kick: true},
+  {top: 18, foot: 10, bot: 4, pad: [10, 12], gap: 6, pg: 6, pane: [12, 12], c: 1, st: 2, kick: true},
+  {top: 18, foot: 10, bot: 4, pad: [10, 12], gap: 6, pg: 6, pane: [12, 12], c: 1, st: 3, kick: false},
+  {top: 18, foot: 10, bot: 4, pad: [10, 12], gap: 6, pg: 6, pane: [12, 12], c: 1, st: 4, kick: false},
+]);
+export const PW_GIVE = 40, FIT_U = 0.995, KEEP_SL = 3;
+function deskAt(F, t125, sl) {
+  const D = DESK[t125 ? "d125" : "d"], K = SHORT[sl], dv = DEV.d, ts = F.ts, T0 = dv.T, side = T0 + 2 + GUT;
+  const pad = [K.pad ? K.pad[0] : D.pad[0], D.pad[1], K.pad ? K.pad[1] : D.pad[2], D.pad[3]], pp = [K.pane ? K.pane[0] : D.pane[0], D.pane[1], K.pane ? K.pane[1] : D.pane[2], D.pane[3]];
+  const pw0 = Math.max(D.w - PW_GIVE, Math.min(D.w, F.W - 2 * side)), uw = Math.min(1, F.W / (pw0 + 2 * side));
+  const kick = K.kick ? dv.sec * ts * 1.2 : 0, ttl = dv.ttl * ts * 1.05, head = (K.kick ? kick + 2 : 0) + ttl, tabsH = 2 + dv.bkh + TROUGH;
+  const iw = pw0 - pad[1] - pad[3] - 4 - pp[1] - pp[3];
+  const bh = Math.max(scoresBody(dv, ts, iw, D, true, 0, K.c).h, medalsBody(dv, ts, iw, undefined, 2, K.c).h, statsBody(dv, ts, iw, D, iw < 700, K.st).h), paneH = 4 + pp[0] + bh + pp[2];
+  const ph = pad[0] + head + K.gap + tabsH + K.pg + paneH + pad[2], top = K.top || side, below = K.foot + FOOT_H + (K.top ? K.bot : side + 4);
+  const u = Math.min(uw, F.H / (top + ph + below));
+  return {D, K, dv, ts, T0, side, pad, pp, pw0, kick, ttl, head, tabsH, iw, bh, paneH, ph, top, below, u};
+}
 function desk(F, t125) {
-  const D = DESK[t125 ? "d125" : "d"], dv = DEV.d, ts = F.ts, T0 = dv.T, pw = D.w;
-  const kick = dv.sec * ts * 1.2, ttl = dv.ttl * ts * 1.05, head = kick + 2 + ttl, tabsH = 2 + dv.bkh + TROUGH;
-  const iw = pw - D.pad[1] - D.pad[3] - 4 - D.pane[1] - D.pane[3];
-  const bh = Math.max(scoresBody(dv, ts, iw, D, true, 0).h, medalsBody(dv, ts, iw).h, statsBody(dv, ts, iw, D, iw < 700).h), paneH = 4 + D.pane[0] + bh + D.pane[2];
-  const ph = D.pad[0] + head + 10 + tabsH + PANE_GAP + paneH + D.pad[2], block = ph + D.foot + FOOT_H;
-  const side = T0 + 2 + GUT, u = Math.min(1, F.W / (pw + 2 * side), F.H / (block + 2 * side + 4));
-  const Wd = F.W / u, Hd = F.H / u, px = (Wd - pw) / 2, py = Math.max(side, (Hd - block) / 2);
-  const ix = px + D.pad[3], iwP = pw - D.pad[1] - D.pad[3], hy = py + D.pad[0], ty = hy + head + 10 + 2;
+  let A = deskAt(F, t125, 0);
+  for (let sl = 1; A.u < 1 && sl < SHORT.length; sl++) { const B = deskAt(F, t125, sl); if (B.u > A.u + 1e-6) A = B; } // a step that gains nothing is not taken
+  if (A.u < FIT_U) { A = deskAt(F, t125, KEEP_SL); }
+  else if (A.u < 1) { for (let sl = 1; sl <= KEEP_SL; sl++) { const B = deskAt(F, t125, sl); if (B.u >= 1 - 1e-9) { A = B; break; } } }
+  const {D, K, dv, ts, T0, pad, pp, kick, ttl, head, iw, bh, paneH, ph, top, below, u} = A;
+  const Wd = F.W / u, Hd = F.H / u, pw = A.pw0, px = (Wd - pw) / 2, py = Math.max(top, (Hd - ph - K.foot - FOOT_H) / 2);
+  const ix = px + pad[3], iwP = pw - pad[1] - pad[3], hy = py + pad[0], ty = hy + head + K.gap + 2;
   const tabs = [0, 1, 2].map((i) => R(ix + i * (D.tabW + TAB_GAP), ty, D.tabW, dv.bkh));
-  const pane = R(ix, ty + dv.bkh + TROUGH + PANE_GAP, iwP, paneH), bx = pane.x + 2 + D.pane[3], by = pane.y + 2 + D.pane[0];
-  return {mode: "desk", dev: "d", u, t125, T: T0, plate: R(px, py, pw, ph), kick: R(ix, hy, iwP, kick), title: R(ix, hy + kick + 2, iwP, ttl), back: null,
-    tabs, trough: R(ix, ty + dv.bkh, iwP, TROUGH), pane, body: R(bx, by, iw, bh), bodies: bodiesAt(dv, ts, iw, D, true, bx, by, 0), foot: R(px, py + ph + D.foot, pw, FOOT_H),
+  const pane = R(ix, ty + dv.bkh + TROUGH + K.pg, iwP, paneH), bx = pane.x + 2 + pp[3], by = pane.y + 2 + pp[0];
+  return {mode: "desk", dev: "d", u, t125, sl: SHORT.indexOf(K), T: T0, plate: R(px, py, pw, ph), kick: K.kick ? R(ix, hy, iwP, kick) : null, title: R(ix, hy + (K.kick ? kick + 2 : 0), iwP, ttl), back: null,
+    tabs, trough: R(ix, ty + dv.bkh, iwP, TROUGH), pane, body: R(bx, by, iw, bh), bodies: bodiesAt(dv, ts, iw, D, true, bx, by, 0, K.c, K.st), foot: R(px, py + ph + K.foot, pw, FOOT_H),
     confirm: confirmGeom(pane, dv, ts, false, 8, t125, R(px, py, pw, ph))};
 }
 /* every touch box, in CSS px (u = 1 / css, or less where the frame itself does not fit). phone (a touch-portrait shell box): BACK and the title, the tabs
@@ -194,7 +220,7 @@ function touchFrame(F, t125) {
     title = R(ix + P.back + 14, hy, iwP - P.back - 14, dv.keyh);
   } else {
     /* a tab must hold its longest word (6 letters, at a generous 0.66 em); where three would not beside BACK, BACK steps down to its chevron alone */
-    const need = 6 * 0.66 * dv.pri * ts + 16, fit3 = (bw) => (iwP - bw - 12 - 2 * TAB_GAP) / 3;
+    const need = 6 * 0.66 * dv.pri * ts + dv.bombs + 14, fit3 = (bw) => (iwP - bw - 12 - 2 * TAB_GAP) / 3;
     if (fit3(P.back) < need) back = R(ix, hy, dv.keyh, dv.keyh);
     const room = iwP - back.w - 12, withT = (room - TITLE_W - 12 - 2 * TAB_GAP) / 3, tw = Math.min(DESK.d.tabW, withT >= TAB_MIN ? withT : (room - 2 * TAB_GAP) / 3), x0 = ix + iwP - 3 * tw - 2 * TAB_GAP;
     tabs = [0, 1, 2].map((i) => R(x0 + i * (tw + TAB_GAP), hy + dv.keyh - dv.bkh, tw, dv.bkh));
@@ -210,10 +236,11 @@ let gm = null;
 /** The one geometry for draw and tap; see the header. */
 export function recordsGeom(F) {
   const ts = F.ts > 0 ? F.ts : textScale(), t125 = big(ts), touchy = !!F.touch, css = F.css > 0 ? F.css : 1;
-  if (gm && gm.W === F.W && gm.H === F.H && gm.touch === touchy && gm.ts === ts && gm.css === css) return gm.G;
+  const shell = !!F.shell;
+  if (gm && gm.W === F.W && gm.H === F.H && gm.touch === touchy && gm.ts === ts && gm.css === css && gm.shell === shell) return gm.G;
   const d = touchy ? touchFrame({...F, ts}, t125) : desk({...F, ts}, t125), u = d.u;
   const G = {mode: d.mode, dev: d.dev, u, t125, ts, W: F.W, H: F.H, d, T: d.T * u, plate: sc(d.plate, u), tabs: d.tabs.map((r) => sc(r, u)), back: sc(d.back, u), foot: sc(d.foot, u), keys: d.bodies.scores.keys.map((r) => sc(r, u)), pane: sc(d.pane, u)};
-  gm = {W: F.W, H: F.H, touch: touchy, ts, css, G: deep(G)};
+  gm = {W: F.W, H: F.H, touch: touchy, ts, css, shell, G: deep(G)};
   return gm.G;
 }
 /* box -> design px */
@@ -225,18 +252,26 @@ export function tabHit(x, y, F) {
   for (let i = 0; i < 3; i++) { const r = G.d.tabs[i]; if (inR(R(r.x - (i ? TAB_GAP / 2 : 0), r.y - 4, r.w + (i ? TAB_GAP / 2 : 0) + (i < 2 ? TAB_GAP / 2 : 0), r.h + 4 + TROUGH), dx, dy)) return i; }
   return -1;
 }
-const onPlate = (G, dx, dy) => inR(G.d.plate, dx, dy);
+/* on the plate, or on the desk foot's plaque (its words and keycaps look like keys: a tap there is inert, never a back-out; fix round 1): the plaque as
+   last painted for this geometry, else the foot's whole row */
+const onPlate = (G, dx, dy) => {
+  if (inR(G.d.plate, dx, dy)) return true;
+  if (!G.d.foot) return false;
+  const q = S && S.G === G && S.feet ? S.feet.find((f) => f.v === S.fv) : null;
+  return inR(q ? R(q.fp.x, q.fp.y, q.fp.w, q.fp.h) : G.d.foot, dx, dy);
+};
 /** SCORES: the difficulty under (x, y); -2 on the plate (inert), -1 off it or on the BACK key (main backs out). */
 export function scoresHit(x, y, F) {
   if (!okBox(F)) return -1;
   const G = recordsGeom(F), [dx, dy] = toD(G, x, y), b = G.d.bodies.scores;
   if (inR(G.d.back, dx, dy)) return -1;
   for (let i = 0; i < 3; i++) { const r = b.keys[i]; if (inR(R(r.x - BANK_GAP / 2, b.bank.y, r.w + BANK_GAP, b.bank.h), dx, dy)) return i; }
+  if (footHit(G, dx, dy) === "back") return -1; // the foot's BACK label (its words and keycap) backs out; the rest of the plaque is inert
   return onPlate(G, dx, dy) ? -2 : -1;
 }
 /* the desk foot's tap zones: each item from its label to its last keycap, on the foot painted for this geometry (the last plan) */
 function footHit(G, dx, dy) {
-  const S0 = S, q = S0 && S0.G === G && S0.ui.page === "stats" ? S0.feet.find((f) => f.v === S0.fv) : null;
+  const S0 = S, q = S0 && S0.G === G && S0.feet ? S0.feet.find((f) => f.v === S0.fv) : null;
   if (!q || dy < q.fp.y || dy > q.fp.y + q.fp.h) return null;
   for (const z of q.fp.zones) if (dx >= z.x0 - 6 && dx <= z.x1 + 6) return z.key || null;
   return null;
@@ -259,7 +294,7 @@ export function statsHit(x, y, F, arm) {
 export function plateHit(x, y, F) {
   if (!okBox(F)) return -1;
   const G = recordsGeom(F), [dx, dy] = toD(G, x, y);
-  return inR(G.d.back, dx, dy) ? -1 : onPlate(G, dx, dy) ? -2 : -1;
+  return inR(G.d.back, dx, dy) || footHit(G, dx, dy) === "back" ? -1 : onPlate(G, dx, dy) ? -2 : -1;
 }
 
 /* measuring: a context that cannot measure plans on a 0.6 em estimate */
@@ -334,9 +369,19 @@ export function plan(c0, G, ui) {
   const c = mOf(c0), d = G.d, dv = DEV[G.dev], ts = G.ts, out = {};
   out.title = {s: LABEL.RECORDS, px: G.dev === "p" ? 28 : dv.ttl};
   const tf = T.label(dv.pri);
-  /* the focus bomb sits inside a key only where the legend still fits beside it (else the ring alone marks the focus) */
-  const fitsBomb = (r, w) => r.w >= w + dv.bombs + 6 + 16;
-  out.tabs = RECORD_TABS.map((s, i) => { const w = W(c, tf, s); return {s, w, r: d.tabs[i], bomb: fitsBomb(d.tabs[i], w)}; });
+  /* the focus bomb is always drawn (fix round 1). A focused legend that would not fit beside it steps down: to its 100 % size (still above the
+     floors), then, only on a touch box whose tabs are too narrow even for that (the landscape phones' #c, where the floors give way), to what fits; lp is
+     the legend's type px before the text scale, lw its width. Unfocused, a legend keeps dv.pri. */
+  const fitsBomb = (r, w) => r.w >= w + dv.bombs + 14;
+  const leg = (r, s) => {
+    const w = W(c, tf, s);
+    if (fitsBomb(r, w)) return {w, lp: dv.pri, lw: w, fit: true};
+    const p1 = dv.pri / G.ts, w1 = W(c, T.label(p1), s);
+    if (G.ts > 1 && fitsBomb(r, w1)) return {w, lp: p1, lw: w1, fit: true};
+    if (G.dev === "p") { const k = Math.max(0.5, (r.w - dv.bombs - 14) / w1), w2 = W(c, T.label(p1 * k), s); return {w, lp: p1 * k, lw: w2, fit: fitsBomb(r, w2)}; }
+    return {w, lp: dv.pri, lw: w, fit: false};
+  };
+  out.tabs = RECORD_TABS.map((s, i) => { const L = leg(d.tabs[i], s); return {s, w: L.w, lp: L.lp, lw: L.lw, r: d.tabs[i], bomb: L.fit}; });
   if (ui.page === "scores") {
     const b = d.bodies.scores, h = Math.max(0, Math.min(2, ui.heat | 0)), list = Array.isArray(ui.scores) ? ui.scores : [];
     const bf = T.label(dv.sec), room = b.badges ? b.badges.w / b.k : 0, lay = (x0) => { /* the four tags left to right from x0, a new line at x0 where one would pass the row (bl lines at most) */
@@ -351,7 +396,7 @@ export function plan(c0, G, ui) {
       return out.every((t) => t.ln < b.bl && t.x + t.w <= room + 1e-6) ? out : null;
     };
     const lab = W(c, bf, RW.BADGES) + 14, badges = lay(lab) || lay(0) || [];
-    out.scores = {h, bank: DIFF.slice(), bomb: d.bodies.scores.keys.map((r, i) => fitsBomb(r, W(c, tf, DIFF[i]))), badges, bf, label: badges.length && badges[0].x > 0, table: list.length ? tablePlan(c, G, b, list, ts) : null, n: Math.min(10, list.length),
+    out.scores = {h, bank: DIFF.slice(), bleg: d.bodies.scores.keys.map((r, i) => leg(r, DIFF[i])), badges, bf, label: badges.length && badges[0].x > 0, table: list.length ? tablePlan(c, G, b, list, ts) : null, n: Math.min(10, list.length),
       empty: list.length ? null : [fit(c, T.label(dv.pri), [noRunsYet(h), "NO RUNS YET"], b.rows.w / b.k), fit(c, T.body(dv.bod), [pickToSet(h), ""], b.rows.w / b.k)]};
   }
   if (ui.page === "stats") out.stats = statsPlan(c, G, ui);
@@ -375,7 +420,7 @@ function ic(c, n, x, y, s, col) {
   c.save(); c.translate(x, y); c.scale(s / 16, s / 16);
   c.strokeStyle = c.fillStyle = col; c.lineCap = c.lineJoin = "round"; c.beginPath();
   if (n === "medal") { c.lineWidth = 2.6; c.moveTo(5, 1); c.lineTo(11, 1); c.lineTo(15, 5); c.lineTo(15, 11); c.lineTo(11, 15); c.lineTo(5, 15); c.lineTo(1, 11); c.lineTo(1, 5); c.closePath(); c.stroke(); }
-  else if (n === "dot") { c.arc(8, 8, 3, 0, Math.PI * 2); c.fill(); }
+  else if (n === "dot") { c.lineWidth = 2.2; c.arc(8, 8, 2.6, 0, Math.PI * 2); c.stroke(); }
   else if (n === "lock") { c.lineWidth = 2; c.moveTo(4.5, 7); c.lineTo(4.5, 5); c.arc(8, 5, 3.5, Math.PI, 0); c.lineTo(11.5, 7); c.stroke(); c.beginPath(); c.rect(3, 7, 10, 7.5); c.fill(); }
   else if (n === "back") { c.lineWidth = 2.6; c.moveTo(10, 3); c.lineTo(5, 8); c.lineTo(10, 13); c.stroke(); }
   else if (n === "flag") { c.lineWidth = 1.8; c.moveTo(4, 15); c.lineTo(4, 2); c.moveTo(4, 2.5); c.lineTo(12, 2.5); c.lineTo(10, 5.5); c.lineTo(12, 8.5); c.lineTo(4, 8.5); c.stroke(); }
@@ -387,7 +432,8 @@ function ic(c, n, x, y, s, col) {
   else { const P = {up: [3, 11, 8, 5, 13, 11], dn: [3, 5, 8, 11, 13, 5], lf: [11, 3, 5, 8, 11, 13], rt: [5, 3, 11, 8, 5, 13]}[n]; if (P) { c.moveTo(P[0], P[1]); c.lineTo(P[2], P[3]); c.lineTo(P[4], P[5]); c.closePath(); c.fill(); } }
   c.restore();
 }
-/* earned: the medal outline and its dot in the medal colour; a goal not yet earned: the outline in t2 with a small lock inside */
+/* earned: the medal outline and its centre ring in the medal colour, both strokes (appendix: the medal is an outline, never a #ffd447 fill); a goal
+   not yet earned: the outline in t2 with a small lock inside */
 function medalGlyph(c, x, y, s, on) { ic(c, "medal", x, y, s, on ? CONST.medal : CONST.t2); if (on) ic(c, "dot", x, y, s, CONST.medal); else ic(c, "lock", x + s * 0.25, y + s * 0.22, s * 0.5, CONST.t2); }
 function trough(c, r, tok) {
   rf(c, r.x, r.y, r.w, r.h, 3, CONST.ol);
@@ -402,11 +448,13 @@ function pane(c, r, tok) {
   c.fillStyle = tok.pane; c.fillRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4); c.fillStyle = "rgba(0,0,0,0.4)"; c.fillRect(r.x + 2, r.y + 2, r.w - 4, 3);
   c.restore();
 }
-/* a tag (appendix 4): 2 px outline in its colour on the dark chip, a glyph, the word */
+/* a tag (appendix 4): the dark chip, its 2 px outline stroked in its colour, a glyph, the word (an earned badge's word in ink: the medal colour is
+   only ever an outline) */
 function tag(c, x, y, w, h, s, f, col, glyph, on) {
-  rf(c, x, y, w, h, 4, col); rf(c, x + 2, y + 2, w - 4, h - 4, 3, CONST.ol);
+  rf(c, x, y, w, h, 4, CONST.ol);
+  c.strokeStyle = col; c.lineWidth = 2; c.beginPath(); sp(c, x + 1, y + 1, w - 2, h - 2, 3.5); c.stroke();
   if (glyph === "medal") medalGlyph(c, x + 8, y + h / 2 - 8, 16, on); else ic(c, "lock", x + 8, y + h / 2 - 8, 16, col);
-  text(c, s, x + 8 + 16 + 6, y + h / 2, f, col);
+  text(c, s, x + 8 + 16 + 6, y + h / 2, f, on ? CONST.ink : col);
 }
 /* the static page: plate, header, the trough with every tab at rest, the pane, the body at rest */
 function paintPage(c, G, P, ui, tok) {
@@ -436,9 +484,17 @@ function scoresStatic(c, G, P, tok) {
   for (const t of S.badges) tag(c, gr.x + t.x, gr.y + t.ln * (th + 6), t.w, th, t.s, S.bf, t.on ? CONST.medal : CONST.off, t.on ? "medal" : "lock", t.on);
   c.restore();
 }
+/* a lit key with the focus (bare bomb + ring) or none (tap mode shows no focus, as LEVEL SELECT); the bomb is never dropped: a legend that does not fit
+   beside it (fits false) moves to the key's right end */
+export const legX = (r, lw, dv, focused, fits) => (focused && !fits ? r.x + r.w - 6 - lw / 2 : r.x + (r.w + (focused ? dv.bombs + 6 : 0)) / 2);
+function focusKey(c, r, label, L, focused, tok, dv, ph) {
+  if (!focused || (L.fit && L.lp === dv.pri)) return key(c, r.x, r.y, r.w, r.h, "lit", {tok, label, phone: ph, ring: focused, bomb: focused});
+  key(c, r.x, r.y, r.w, r.h, "lit", {tok, label: null, phone: ph, ring: true, bomb: true});
+  text(c, label, legX(r, L.lw, dv, true, L.fit), r.y - 2 + r.h / 2, T.label(L.lp), tok.dk, "center");
+}
 function scoresLive(c, G, P, ui, tok, foc) {
   const b = G.d.bodies.scores, S = P.scores, dv = DEV[G.dev], k = b.k, ph = G.dev === "p", r = b.keys[S.h];
-  key(c, r.x, r.y, r.w, r.h, "lit", {tok, label: S.bank[S.h], phone: ph, ring: foc, bomb: foc && S.bomb[S.h]});
+  focusKey(c, r, S.bank[S.h], S.bleg[S.h], foc, tok, dv, ph);
   c.save(); c.translate(b.x, b.y); c.scale(k, k); c.translate(-b.x, -b.y);
   const rr = R(b.x, b.y + (b.rows.y - b.y) / k, b.rows.w / k, b.rows.h / k), rp = b.rp;
   if (S.empty) {
@@ -635,10 +691,10 @@ export function footItems(page, foc, words) {
     if (pad) return [{t: ST.COPY, caps: ["WEST"], key: "KeyC"}, {t: ST.MEDALS_T, caps: ["NORTH"], key: "KeyT"}, {t: RW.TAB, caps: [words.move]}, {t: RW.BACK, caps: [words.back], key: "back"}];
     return [{t: ST.COPY, caps: ["C"], key: "KeyC"}, {t: ST.RESET, caps: ["R"], key: "KeyR"}, {t: RW.TAB, caps: foc === "body" ? ["Q", "E"] : [A("lf"), A("rt")]}, {t: RW.BACK, caps: [words.back], key: "back"}];
   }
-  if (pad) return page === "scores" && foc === "body" ? [{t: LABEL.DIFFICULTY, caps: [words.move]}, {t: RW.BACK, caps: [words.back]}] : [{t: RW.TAB, caps: [words.move]}, {t: RW.BACK, caps: [words.back]}];
-  if (page === "scores") return foc === "body" ? [{t: LABEL.DIFFICULTY, caps: [A("lf"), A("rt")]}, {t: RW.TAB, caps: ["Q", "E"]}, {t: RW.BACK, caps: [words.back]}]
-    : [{t: RW.TAB, caps: [A("lf"), A("rt")]}, {t: LABEL.DIFFICULTY, caps: [A("dn")]}, {t: RW.BACK, caps: [words.back]}];
-  return [{t: RW.TAB, caps: [A("lf"), A("rt")]}, {t: RW.BACK, caps: [words.back]}];
+  if (pad) return page === "scores" && foc === "body" ? [{t: LABEL.DIFFICULTY, caps: [words.move]}, {t: RW.BACK, caps: [words.back], key: "back"}] : [{t: RW.TAB, caps: [words.move]}, {t: RW.BACK, caps: [words.back], key: "back"}];
+  if (page === "scores") return foc === "body" ? [{t: LABEL.DIFFICULTY, caps: [A("lf"), A("rt")]}, {t: RW.TAB, caps: ["Q", "E"]}, {t: RW.BACK, caps: [words.back], key: "back"}]
+    : [{t: RW.TAB, caps: [A("lf"), A("rt")]}, {t: LABEL.DIFFICULTY, caps: [A("dn")]}, {t: RW.BACK, caps: [words.back], key: "back"}];
+  return [{t: RW.TAB, caps: [A("lf"), A("rt")]}, {t: RW.BACK, caps: [words.back], key: "back"}];
 }
 function footPlan(c, G, items) {
   const d = G.d, dv = DEV.d, f = T.label(dv.sec), parts = [];
@@ -674,7 +730,7 @@ function paintFoot(c, P, tok) {
 }
 
 /* ---------- probe ---------- */
-function record(G, P, ui, foc, dpr, el, F0, tok, touchy) {
+function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
   const u = G.u, d = G.d, dv = DEV[G.dev], ts = G.ts, b = (r) => [r.x * u, r.y * u, r.w * u, r.h * u], page = ui.page, pi = PAGES.indexOf(page);
   probe.begin("records." + page, {w: G.W, h: G.H, dpr, el});
   probe.rect("plate", ...b(d.plate), {plate: G.T});
@@ -684,27 +740,29 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy) {
   if (d.title) txt(P.title.s, d.title.x, d.title.y + d.title.h / 2, measureOr(P.title.s, P.title.px, true), P.title.px, CONST.ink, "primary");
   P.tabs.forEach((t, i) => {
     const on = i === pi, r = on ? R(t.r.x, t.r.y - 2, t.r.w, t.r.h) : t.r;
-    probe.rect("tab " + t.s, ...b(r), {touch: touchy, set: "tabs", kind: "tab", focus: on && foc === "tabs", fill: on ? tok.lit : tok.well});
-    txt(t.s, r.x + r.w / 2 - t.w / 2 + (on && foc === "tabs" && t.bomb ? (dv.bombs + 6) / 2 : 0), r.y + r.h / 2, t.w, dv.pri, on ? CONST.dk : CONST.t2, "primary");
+    const fo = on && foc === "tabs" && !tap;
+    probe.rect("tab " + t.s, ...b(r), {touch: touchy, set: "tabs", kind: "tab", focus: fo, fill: on ? tok.lit : tok.well});
+    const lw = fo ? t.lw : t.w;
+    txt(t.s, legX(r, lw, dv, fo, t.bomb) - lw / 2, r.y + r.h / 2, lw, fo ? t.lp : dv.pri, on ? CONST.dk : CONST.t2, "primary");
   });
   const on = P.tabs[pi].r, off = P.tabs[pi === 0 ? 1 : 0].r;
   /* a squint pair samples the face beside the legend (the right end of each key), so a bigger legend at 125 % never stands in for the face */
   const face = (r, lift) => R(r.x + r.w - 26, r.y + 4 - lift, 20, r.h - 10);
   probe.pair("chosen", b(face(on, 2)), b(face(off, 0)), {name: "open tab vs not"});
   let fr = null;
-  if (foc === "tabs") fr = R(on.x, on.y - 2, on.w, on.h);
+  if (foc === "tabs" && !tap) fr = R(on.x, on.y - 2, on.w, on.h);
   if (page === "scores") {
     const B = d.bodies.scores, S = P.scores, k = B.k;
-    B.keys.forEach((r, i) => { const ch = i === S.h, rr = ch ? R(r.x, r.y - 2, r.w, r.h) : r; probe.rect("difficulty " + S.bank[i], ...b(rr), {touch: touchy, set: "filter", kind: "bank", focus: ch && foc === "body", fill: ch ? tok.lit : tok.well}); txt(S.bank[i], rr.x + rr.w / 2 - measureOr(S.bank[i], dv.pri) / 2 + (ch && foc === "body" && S.bomb[i] ? (dv.bombs + 6) / 2 : 0), rr.y + rr.h / 2, measureOr(S.bank[i], dv.pri), dv.pri, ch ? CONST.dk : CONST.t2, "primary"); });
+    B.keys.forEach((r, i) => { const ch = i === S.h, rr = ch ? R(r.x, r.y - 2, r.w, r.h) : r; const fo = ch && foc === "body" && !tap; probe.rect("difficulty " + S.bank[i], ...b(rr), {touch: touchy, set: "filter", kind: "bank", focus: fo, fill: ch ? tok.lit : tok.well}); const Lg = S.bleg[i], lw = fo ? Lg.lw : measureOr(S.bank[i], dv.pri); txt(S.bank[i], legX(rr, lw, dv, fo, Lg.fit) - lw / 2, rr.y + rr.h / 2, lw, fo ? Lg.lp : dv.pri, ch ? CONST.dk : CONST.t2, "primary"); });
     const kc = B.keys[S.h], ko = B.keys[(S.h + 1) % 3];
     probe.pair("chosen", b(R(kc.x + kc.w - 20, kc.y + 2, 14, kc.h - 10)), b(R(ko.x + ko.w - 20, ko.y + 4, 14, ko.h - 10)), {name: "chosen difficulty vs not"});
-    if (foc === "body") fr = R(kc.x, kc.y - 2, kc.w, kc.h);
+    if (foc === "body" && !tap) fr = R(kc.x, kc.y - 2, kc.w, kc.h);
     txt(LABEL.DIFFICULTY, B.kick.x, B.kick.y + B.kick.h / 2, measureOr(LABEL.DIFFICULTY, dv.sec), dv.sec, CONST.t2, "secondary");
     const th = B.badges ? (B.badges.h - (B.bl - 1) * 6 * k) / B.bl : 0;
     if (B.badges && S.label) txt(RW.BADGES, B.badges.x, B.badges.y + th / 2, measureOr(RW.BADGES, dv.sec) * k, dv.sec * k, CONST.t2, "secondary");
     if (B.badges) for (const t of S.badges) {
       const x = B.badges.x + t.x * k, y = B.badges.y + t.ln * (th + 6 * k), col = t.on ? CONST.medal : CONST.off;
-      txt(t.s, x + 30 * k, y + th / 2, measureOr(t.s, dv.sec) * k, dv.sec * k, col, "secondary", t.on ? {} : {lock: true});
+      txt(t.s, x + 30 * k, y + th / 2, measureOr(t.s, dv.sec) * k, dv.sec * k, t.on ? CONST.ink : col, "secondary", t.on ? {} : {lock: true});
       probe.pair("info", b(R(x + 8 * k, y + th / 2 - 8 * k, 16 * k, 16 * k)), b(R(x + 4 * k, y + 4 * k, 24 * k, th - 8 * k)), {col, name: "badge " + t.s, ...(t.on ? {} : {lock: true})});
     }
     const rr = B.rows, rp = B.rp * k;
@@ -813,7 +871,7 @@ const nWOr = (s, px) => nW(MC, T.num(px), s);
 /* ---------- the page ---------- */
 const FIELDS = ["page", "level", "heat", "plaques", "scores", "rows", "view", "notes", "wipe", "arm", "unlocked"];
 let S = null;
-export const _dbg = {plans: 0, last: null};
+export const _dbg = {plans: 0, last: null, foci: new Set()}; // foci: every page:focus painted (a sweep proves it reached each branch)
 function same(S0, G, ui, w, dpr, c, tap) {
   if (!S0 || S0.G !== G || S0.w !== w || S0.dpr !== dpr || S0.c !== c || S0.tap !== tap) return false;
   for (const k of FIELDS) if (S0.ui[k] !== ui[k]) return false;
@@ -859,6 +917,7 @@ export function drawRecordsPage(c, F, ui, t = 0) {
   }
   const P = S.P;
   _dbg.last = {G, P, foc, S};
+  _dbg.foci.add(ui.page + ":" + foc);
   if (typeof c.clip !== "function" || typeof c.rect !== "function") return;
   const q = S.feet.find((f) => f.v === foc) || S.feet[0] || null;
   S.fv = q ? q.v : null;
@@ -882,10 +941,10 @@ export function drawRecordsPage(c, F, ui, t = 0) {
   }
   c.save(); c.scale(u, u);
   const pi = PAGES.indexOf(ui.page), tr = G.d.tabs[pi];
-  key(c, tr.x, tr.y, tr.w, tr.h, "lit", {tok, label: P.tabs[pi].s, phone: G.dev === "p", ring: foc === "tabs", bomb: foc === "tabs" && P.tabs[pi].bomb});
-  if (ui.page === "scores") scoresLive(c, G, P, ui, tok, foc === "body");
+  { const t0 = P.tabs[pi]; focusKey(c, tr, t0.s, {fit: t0.bomb, lp: t0.lp, lw: t0.lw}, foc === "tabs" && !tap, tok, DEV[G.dev], G.dev === "p"); }
+  if (ui.page === "scores") scoresLive(c, G, P, ui, tok, foc === "body" && !tap);
   if (ui.page === "stats" && ui.arm) confirmLive(c, G, tok);
   if (ui.toast && ui.toast.s) toastTag(c, G, ui.toast, tok);
   c.restore();
-  if (probe.probe.on) record(G, P, ui, foc, dpr, F.shell ? "sh" : "c", q && q.fp, tok, touchy);
+  if (probe.probe.on) record(G, P, ui, foc, dpr, F.shell ? "sh" : "c", q && q.fp, tok, touchy, tap);
 }
