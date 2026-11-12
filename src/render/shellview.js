@@ -101,6 +101,10 @@ export function stepLookNote(app, now = nowS()) {
    board stage too), and never over the PAUSE pill
    or the touch pad, which live outside the stage. The rect is read only while the
    loader has something docked to place. */
+/* true once the first load's stage was on screen (index.html __load.lit): the title then starts its logo at rest */
+export const settledTitle = (host = globalThis) => { const L = host.__load; return !!(L && typeof L.lit === "function" && L.lit()); };
+/* the title's board-ready fraction (its veil): 0 until the board is ready (3D), then 0.4 s up, or at once after the first load, whose floor already stands */
+export const titleReady = (app, settled) => (!app.boardReady ? 0 : settled ? 1 : Math.min(1, app.readyT / 0.4));
 export function loaderSpot(app, world, canvas, host = globalThis) {
   const L = host.__load;
   if (!L || typeof L.spot !== "function") return null;
@@ -299,8 +303,10 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab, r
     return;
   }
   const { cw, ch: chh, lg: logoY, css, play } = dims(canvas, kind), tap = tapOf(app, canvas); // THE tap mode, once a frame, handed to every page
-  if (s === SCREEN.INTRO) // board alpha eases the veil from opaque once the board is ready (3D waits on three)
-    return menudraw.drawIntroChrome(c, app.introStage, app.subT, cw, chh, layOf(canvas), app.boardReady ? Math.min(1, app.readyT / 0.4) : 0, { level: app.level, reduced: !!(app.settings && app.settings.flx), tap });
+  if (s === SCREEN.INTRO) { // board alpha eases the veil from opaque once the board is ready (3D waits on three)
+    const settled = settledTitle();
+    return menudraw.drawIntroChrome(c, app.introStage, app.subT, cw, chh, layOf(canvas), titleReady(app, settled), { level: app.level, reduced: !!(app.settings && app.settings.flx), tap, settled });
+  }
   if (s === SCREEN.ATTRACT) {
     // no dim: the demo IS the show; only the blinking footer hint
     const L = menudraw.layout(cw, chh, logoY);

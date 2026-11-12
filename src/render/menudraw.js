@@ -106,7 +106,9 @@ export function titleLogoBox(W, H, lay) {
    8S, and the skip hint
    appears only past SKIP_GUARD. lay is body[data-lay] (p/l = touch copy);
    rk is the board-ready fraction: 0 paints an opaque veil (3D still loading),
-   1 the stage veil. o: {level (the world the logo wears), reduced (REDUCE FLASH)}. */
+   1 the stage veil. o: {level (the world the logo wears), reduced (REDUCE FLASH),
+   settled (the first load drew logo B here already, index.html #loadst: the logo
+   starts at rest, no fade, slide or pop; the prompt keeps its fade)}. */
 export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1, o = {}) {
   const L = layout(W, H),
     touch = lay === "p" || lay === "l",
@@ -116,7 +118,8 @@ export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1, o = {}) {
   const v0 = show ? 0.45 + (0.12 - 0.45) * easeInOutCubic(seg(t, 0, 8 * SHOW_STEP)) : 0.45;
   c.fillStyle = "rgba(7,10,18," + (rk >= 1 ? v0 : 1 - clamp01(rk) * (1 - v0)) + ")";
   c.fillRect(0, 0, W, H);
-  const reveal = show ? 1 : easeOutCubic(seg(t, 0, TITLE_IN)),
+  const still = show || !!o.settled,
+    reveal = still ? 1 : easeOutCubic(seg(t, 0, TITLE_IN)),
     exit = show ? easeInCubic(seg(t, 0, 0.3)) : 0;
   const a = reveal * (1 - exit);
   if (a > 0.01) {
@@ -126,7 +129,7 @@ export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1, o = {}) {
     c.translate(0, slide);
     c.globalAlpha *= a;
     const B = titleLogoBox(W, H, lay);
-    drawLogo2d(c, { level: o.level, place: "title", box: B.box, cy: B.cy, dev: B.dev, dpr, touch, t, run: show && TITLE_RUNUP ? seg(t, 0, 0.3) : undefined, reduced: o.reduced, scale: show ? 1 : 0.92 + 0.08 * easeOutBack(seg(t, 0, 0.45)) });
+    drawLogo2d(c, { level: o.level, place: "title", box: B.box, cy: B.cy, dev: B.dev, dpr, touch, t, run: show && TITLE_RUNUP ? seg(t, 0, 0.3) : undefined, reduced: o.reduced, scale: still ? 1 : 0.92 + 0.08 * easeOutBack(seg(t, 0, 0.45)) });
     c.restore();
   }
   const pin = show ? 1 - exit : easeOutCubic(seg(t, 0.6, TITLE_IN));

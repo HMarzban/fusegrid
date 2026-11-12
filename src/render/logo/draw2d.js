@@ -25,7 +25,7 @@
    a registry epoch are in the memo, and the look (with that epoch for a lazy look) in every layer key, so a kind that registers again never
    blits the layer its last painter made. */
 import {P, BD, BOMB, SPARK, glyph, layout, cord, bomb, spark, sparkAt, fit, flat} from "./glyphs.js";
-import {PLATE, plan, motif, worldOf} from "./worlds.js";
+import {PLATE, plan, motif, worldOf, titleFit} from "./worlds.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
 import {plate as kitPlate} from "../kit/paint.js";
 import {worldTokens} from "../kit/tokens.js";
@@ -111,6 +111,10 @@ const LOOKS = {}, ST = {look: "2d", ep: 0}, PEND = [];
 export const setLogoLook = (k) => { ST.look = k; };
 export function registerLogo(k, L) { LOOKS[k] = L; ST.ep++; }
 export const logoLook = () => (ST.look !== "2d" && LOOKS[ST.look] ? ST.look : "2d");
+const spotY = (B, cy, h) => (cy != null ? Math.max(B.y + EDGE, Math.min(B.y + B.h - h - EDGE, cy - h / 2)) : B.y + (B.h - h) / 2);
+/* The title's placement at k 1 in the box's units, as geo() makes it: the fitted plate (titleFit inside the box less EDGE on every side) and the
+   outer extent's top-left. The first load (index.html #loadst) draws its plate and logo there; tests/firstload.test.mjs pins them to this. */
+export function titleSpot(B, cy, dev) { const f = titleFit(dev, B.w - 2 * EDGE, B.h - 2 * EDGE); return {x: B.x + (B.w - f.outer.w) / 2, y: spotY(B, cy, f.outer.h), f}; }
 const same = (G, o, lk) => !!G && G.in.lk === lk && G.in.ep === ST.ep && G.in.level === lev(o) && G.in.dev === o.dev && G.in.k === o.k && G.in.dpr === o.dpr && G.in.css === o.css && G.in.touch === !!o.touch && G.in.cy === o.cy
   && G.in.bx === o.box.x && G.in.by === o.box.y && G.in.bw === o.box.w && G.in.bh === o.box.h;
 function geo(o, lk) {
@@ -126,7 +130,7 @@ function geo(o, lk) {
     G.Wc = Math.ceil(G.outer.w * dprL); G.Hc = Math.ceil(G.outer.h * dprL);
     G.dxL = Math.round(-G.outer.x * dprL); G.dyL = Math.round(-G.outer.y * dprL);
     G.ox = B.x + (B.w - G.outer.w) / 2;
-    G.oy = o.cy != null ? Math.max(B.y + EDGE, Math.min(B.y + B.h - G.outer.h - EDGE, o.cy - G.outer.h / 2)) : B.y + (B.h - G.outer.h) / 2;
+    G.oy = spotY(B, o.cy, G.outer.h);
   };
   put();
   G.room = {w: B.w - 2 * EDGE, h: B.h - 2 * EDGE};

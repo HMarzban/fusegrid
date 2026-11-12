@@ -42,7 +42,13 @@ main's `let show`, never `demo`), plays under the title and the show and is
 dropped for good at GAME / ATTRACT; MENU covers the board (the room look opaque
 from its first frame, the plate, logo and foot fading in over 0.25 s), so no
 blast is seen under it. In 3D the title paints an opaque veil until three
-settles (`app.boardReady`, set on resolve or reject).
+settles (`app.boardReady`, set on resolve or reject). The first load (v206,
+`index.html` `#loadst`) draws the title being made where the title paints, so
+the hand-off is its spark arriving at the tip: when it was on screen
+(`__load.lit()`: 150 ms with the boot job alive, latched at its end) shellview
+`settledTitle` hands `drawIntroChrome` `settled` and the logo starts at rest
+(no fade, slide or pop; the prompt keeps its fade from 0.6 s). A cached visit
+that never saw it, and a deep link, keep the reveal.
 
 The wordmark is logo B (LIT FUSE), drawn by ONE painter, `src/render/logo/draw2d.js`
 `drawLogo2d` (UI upgrade Task 7.2), from `glyphs.js` / `worlds.js` `plan()` alone,
@@ -78,7 +84,7 @@ the prompt: the geometry's FITTED title (`worlds.js` `titleFit`, `plan({fit})`,
 `PLATE.title.fitted`: the mock's plate scaled as one piece, pad, ring and bed tile
 x cap / 88 or 76, the kit plate's fixed reach outside, tier title whatever the
 cap; cap 67.93 at 600x520, 119.34 stacked). The reveal fades, slides and pops the
-whole logo (0.92 -> 1 over 0.45 s, the old GRID letters' pop). The title waits lit,
+whole logo (0.92 -> 1 over 0.45 s, the old GRID letters' pop; none under `o.settled`). The title waits lit,
 the spark flickering at the tip, and keeps it there through the show's 0.3 s exit:
 `TITLE_RUNUP` (false, lead ruling; one constant the owner may flip) would run it
 up the cord instead; the run-up stays reachable as the painter's `o.run`. MENU's
@@ -601,7 +607,7 @@ not shell screens. Do not add them as `SCREEN` values.
   `src/render/shellview.js` (`drawShell` + the `kindSize`/`dims` logical box),
   `src/app/update.js` (`mountUpdate`: registers the SW and owns the NEW
   VERSION READY card; `U` is its key, live only while the card shows),
-  `src/app/loadbar.js` + the `#load` plate and inline `#loadjs` script in `index.html` (the honest loading bar, v197: finished files against totals `tests/loadbar.test.mjs` pins to the real graphs, `--write` re-pins; indeterminate when there are no numbers, shown after about 150 ms, a failure card with RETRY / USE CLASSIC 2D; `rcache.js` paints it before a lazy look's fetch and bake; `#wrap` stays hidden until the title paints; `armUnlock`'s `skip` keeps the card's buttons from pressing the title),
+  `src/app/loadbar.js` + the `#load` plate and inline `#loadjs` script in `index.html` (the honest loading bar, v197: finished files against totals `tests/loadbar.test.mjs` pins to the real graphs, `--write` re-pins; indeterminate when there are no numbers, shown after about 150 ms, a failure card with RETRY / USE CLASSIC 2D; `rcache.js` paints it before a lazy look's fetch and bake; `#wrap` stays hidden until the title paints; `armUnlock`'s `skip` keeps the card's buttons from pressing the title; since v206 the first load is direction B · RICH: `#loadst`, boot only and beside `#load` (a fixed child would be placed against `#load`'s translate) so the chip and a look's docked card keep `#load`'s own box, draws `#c`'s border box as the stage, its floor (`--k-fl0` / `--k-fl1`) filling cell by cell with the finished files (round(195 n / (files + 1)), whole rows from the bottom), and the title's kit plate and logo B (inline SVG from `glyphs.js`; the stacked build on a portrait phone, re-placed on resize) at the title's rects in `#c`'s content box (fit.js `fitBox` and `portraitGeo`'s top, menudraw `titleLogoBox` and the prompt's backing, draw2d `titleSpot`; `tests/firstload.test.mjs` pins them at 1366x768, 1280x720, 852x393, 393x852 and 375x667); logo B's fuse lights from the collar as the progress (never done), the spark riding the front, so STARTING is the spark at the tip. `#load` is its status box in the title prompt's backing (sans 900 at the prompt's size, floored 20 / 16 px: the 14 / 11 px caps; `SLOW CONNECTION · STILL TRYING` replaces the count) and, on a 30 s stall or a failure, a kit card under the plate (`#loadsub` the second line; a failure has the coral notch and headline and the fuse goes out). REAL 3D (saved `r3d`, or `?render=3d|iso`) skips the floor, its board being tilted; REDUCE FLASH or reduced motion hold the spark's amber frame; it fades over 180 ms at the hand-off and never shows on a load under 150 ms),
   `src/app/fit.js` (`mountFit`: stage scale per layout reserve `FIT_RES`, and
   `body[data-lay]` = `d` desktop / `p` touch portrait / `l` touch landscape —
   the ONE predicate `index.html`'s touch layout keys off, never a media
@@ -1250,7 +1256,7 @@ not shell screens. Do not add them as `SCREEN` values.
   `days_played` (STATS `a.days` bucket at boot) and `look`. `src/app` never
   calls `Date`: main injects `now`. GA reports need the params registered as
   custom definitions (owner step).
-- DOM cards on the world kit (UI upgrade v202 Task 3.6): `#upd`, `#ana` and `#load` (plate, chip, failure card) take their colours from `--k-*` custom properties in `index.html`'s `:root`, the static world-1 (JUNGLE) values of `worldTokens(1)` (`pane well key hover band lit frame ink off dk cor`; `frame` = wall, the flat stand-in), no raw palette hex (the scrim, shadows and glint stay plain rgba); `tests/hidden-css.test.mjs` pins each equal to `src/render/kit/tokens.js`, so they cannot drift, and the boot graph grows by nothing. Keycaps come last (`RELOAD U`, `LATER EAST`, `ALLOW Y`, `NO THANKS N`, `RETRY SOUTH`); ALLOW and NO THANKS are one CSS rule; a look's failure card names ART STYLE. `#updbg`'s blur stays (CSS on a DOM element).
+- DOM cards on the world kit (UI upgrade v202 Task 3.6): `#upd`, `#ana` and `#load` (plate, chip, failure card) take their colours from `--k-*` custom properties in `index.html`'s `:root`, the static world-1 (JUNGLE) values of `worldTokens(1)` (`pane well key hover band lit frame ink off dk cor`, and for the first load's `#loadst` `fl0 fl1 bedA bedB wallHi ol t2` and logo B's JUNGLE `side`; `fl0` / `fl1` are the board's floors at their luminance under the title's 0.45 veil, `tokens.js` `FLOOR`; `frame` = wall, the flat stand-in), no raw palette hex (the scrim, shadows and glint stay plain rgba); `tests/hidden-css.test.mjs` pins each equal to `src/render/kit/tokens.js`, so they cannot drift, and the boot graph grows by nothing. Keycaps come last (`RELOAD U`, `LATER EAST`, `ALLOW Y`, `NO THANKS N`, `RETRY SOUTH`); ALLOW and NO THANKS are one CSS rule; a look's failure card names ART STYLE. `#updbg`'s blur stays (CSS on a DOM element).
 - `src/pwa/` — Node-testable app-shell list + SW register. `src/main.js`
   registers `./sw.js` (module, scope `./`). Precache lives in `shell.js`
   (`fusegrid-shell-vN`). Must include `vendor/three.module.js` and the whole

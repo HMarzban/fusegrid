@@ -235,7 +235,7 @@ const U = (n) => "http://x/g/src/m" + n + ".js";
   b.time(9000);
   check("no slow note before 10 s", !/SLOW/.test(b.el("loadmsg").textContent) && b.el("loadact").hidden);
   b.time(11000);
-  check("10 s with no finished file: the slow note, no RETRY yet", /· SLOW CONNECTION, STILL TRYING$/.test(b.el("loadmsg").textContent) && b.el("loadact").hidden && !("data-act" in b.el("load").attrs));
+  check("10 s with no finished file: the slow note, no RETRY yet", b.el("loadmsg").textContent === "SLOW CONNECTION · STILL TRYING" && b.el("loadact").hidden && !("data-act" in b.el("load").attrs));
   check("the live status says it once, in words, with no count", b.say() === "Slow connection, still trying.");
   b.time(29000);
   check("still no RETRY before 30 s", b.el("loadact").hidden);

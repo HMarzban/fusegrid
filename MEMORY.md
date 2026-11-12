@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — Task 9.9: the first load is the title lighting up (lane-9.9-first-load)
+- Owner "Build B, RICH": index.html `#loadst` draws the title's stage, floor, plate and logo B at the title's real rects (pinned by tests/firstload.test.mjs; the mock's numbers were off by draw2d's EDGE), the fuse is the progress; the title starts settled after it (`__load.lit`). Open: owner's look on a real phone and a slow link.
+
 ## 2026-11-12 — Task 9.8: phone PAUSE and run ends use the whole screen (lane-9.8-phone-overlays)
 - Release check: on `p` PAUSE / run ends were squeezed into #c's board box. Now shellMode 3 draws them on #sh's over box (fit.over: PORT_GAME.top to the bottom safe area), renderers skip the overlay ({over}), pointer maps through it; probe.place + gatelib map the band. GAME OVER / finale touch keys stack or break a label once so no label overruns. d / l pinned by a golden hash.
 

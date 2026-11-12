@@ -143,7 +143,8 @@
   /* world-1 (JUNGLE) kit tokens as custom properties: the DOM cards cannot import render/kit at boot, so these are static and
      tests/hidden-css.test.mjs pins every value equal to worldTokens(1) in src/render/kit/tokens.js (frame = wall, the flat stand-in) */
   :root{--k-pane:#04160d;--k-well:#051709;--k-key:#34270c;--k-hover:#139516;--k-band:#524b27;--k-lit:#87f674;--k-frame:#d4a030;
-    --k-ink:#fff2df;--k-off:#8f8476;--k-dk:#1e1216;--k-cor:#ff5d73}
+    --k-ink:#fff2df;--k-off:#8f8476;--k-dk:#1e1216;--k-cor:#ff5d73;
+    --k-fl0:#0f481d;--k-fl1:#0b3a16;--k-bedA:#061e0c;--k-bedB:#07250e;--k-wallHi:#ffe878;--k-ol:#0b0609;--k-t2:#dccbb8;--k-side:#0e4a28}
   /* NEW VERSION READY card (src/app/update.js): the CONSOLE PANEL plate as a
      DOM card, centred on the screen (owner 2026-10-19: "must appear in center
      of the page") over a blurred, dimmed backdrop (#updbg; a tap on it = LATER),
@@ -223,7 +224,7 @@
   #load[data-dock]:not([data-act]) #loadbar{position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:0}
   #load[data-note=bad]{box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 var(--k-cor)}
   #load[data-note=bad] #loadmsg{color:var(--k-cor)}
-  #load[data-dock] b{display:none}
+  #load[data-dock] b,#load[data-boot] b{display:none}
   #load[data-act]{pointer-events:auto}
   #loadmsg{font:400 12px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--k-off);letter-spacing:0}
   #loadbar{position:relative;height:6px;overflow:hidden;background:var(--k-well);border-radius:2px}
@@ -245,12 +246,39 @@
   #loadretryk[hidden],#loadkeepk[hidden],body[data-lay=p] #loadretryk,body[data-lay=l] #loadretryk,body[data-lay=p] #loadkeepk,body[data-lay=l] #loadkeepk{display:none}
   /* reduced motion: no glint and no glide; a wait with no number keeps a still striped track, never an empty one */
   @media (prefers-reduced-motion:reduce){#loadrun{animation:none;opacity:0}#loadfill{transition:none}#loadbar[data-ind]{background:repeating-linear-gradient(-45deg,var(--k-well) 0 4px,var(--k-key) 4px 8px)}}
+  /* the first load (v206): the title made where it paints. #loadst (boot only, beside #load so the chip keeps its box) is #c's box,
+     its floor filling with the files, the kit plate and logo B; #load is the prompt's box, or a card under the plate (firstload.test) */
+  #loadst{position:fixed;inset:0;z-index:20;pointer-events:none;animation:updFade .16s linear 150ms both}#loadst[hidden]{display:none}
+  #loadst[data-end]{animation:ldOut .18s linear both}@keyframes ldOut{to{opacity:0}}#lsg,#lpl,#llg,#lfl{position:absolute}
+  #lsg{background:var(--k-pane);border-radius:6px;box-shadow:0 0 0 2px var(--k-ol),0 6px 0 var(--k-ol);overflow:hidden}
+  #lsg::before,#lsg::after{content:"";position:absolute;z-index:1;left:0;right:0;height:calc(var(--c)*.2);background:var(--k-frame);box-shadow:0 0 0 2px var(--k-ol)}
+  #lsg::before{top:0}#lsg::after{bottom:0}
+  #lfl{--r:0;--q:0;inset:1px;background:repeating-conic-gradient(var(--k-fl0) 0 25%,var(--k-fl1) 0 50%) 0 0/calc(var(--c)*2) calc(var(--c)*2);-webkit-mask:linear-gradient(black 0 0) 0 100%/100% calc(var(--r)*var(--c)) no-repeat,linear-gradient(black 0 0) left 0 bottom calc(var(--r)*var(--c))/calc(var(--q)*var(--c)) var(--c) no-repeat}
+  #loadst[data-3d] #lfl{display:none}
+  #lpl{border:0 solid var(--k-frame);border-radius:4px;background:repeating-conic-gradient(var(--k-bedA) 0 25%,var(--k-bedB) 0 50%) 0 0/var(--t) var(--t);box-shadow:0 0 0 2px var(--k-ol),0 1px 0 2px var(--k-ol),inset 0 0 0 1px var(--k-wallHi),inset 0 0 0 3px var(--k-ol)}
+  #llg{height:auto;overflow:visible;fill-rule:evenodd}#llg .o{fill:var(--k-ol);stroke:var(--k-ol);stroke-width:20;stroke-linejoin:round}
+  #llg .sd{fill:var(--k-side)}.fF{fill:#ffd447}.fG{fill:var(--k-cor)}.cd{fill:none;stroke-linecap:round;stroke:var(--k-ol);stroke-width:15}
+  .cd .cu,.cd .cl{stroke:var(--k-dk);stroke-width:10}#llg .cl{stroke:#ff9d5a;transition:stroke-dasharray .18s}
+  #lsp use,#lsp circle{stroke:var(--k-ol);stroke-width:2.5}#lsp circle{fill:var(--k-ink)}.fa use{fill:#ffd447}.fb use{fill:var(--k-cor)}
+  .fa{animation:spA .143s steps(1) infinite}.fb{visibility:hidden;animation:spB .143s steps(1) infinite}@keyframes spA{50%{visibility:hidden}}
+  @keyframes spB{50%{visibility:visible}}#loadst[data-still] .fa,#loadst[data-still] .fb{animation:none}#loadst[data-still] .fa use{fill:#ffb347}
+  #loadst[data-out] #lsp{display:none}@media (prefers-reduced-motion:reduce){#llg .cl{transition:none}}
+  #load[data-boot]{left:var(--lx);top:var(--ly);width:max-content;min-width:var(--lw);max-width:calc(100vw - 16px);min-height:var(--lh);padding:0 var(--lp);gap:0;justify-content:center;background:rgba(7,10,18,.9);border:1px solid var(--line);border-radius:0;box-shadow:none;--fs:20px}
+  #load[data-t]{--fs:16px}#load[data-boot] #loadbar{position:absolute;opacity:0;width:1px}
+  #load[data-boot] #loadmsg{font:900 var(--lf)/1.2 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--k-ink);text-align:center}
+  #load[data-slow] #loadmsg{color:var(--k-t2)}
+  #load[data-boot][data-act]{top:var(--cy);translate:-50% 0;width:var(--cw);min-width:0;min-height:0;padding:16px 18px 18px;gap:12px;background:var(--k-pane);border:2px solid var(--k-ol);border-radius:6px;box-shadow:0 6px 0 var(--k-ol),inset 0 3px 0 rgba(0,0,0,.4)}
+  #load[data-boot][data-act] #loadmsg,#loadsub{font:700 var(--fs)/1.3 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:left;letter-spacing:0}
+  #loadsub{color:var(--k-t2)}#loadsub:empty{display:none}#load[data-act][data-fail]{box-shadow:0 6px 0 var(--k-ol),inset 4px 0 0 var(--k-cor)}
+  #load[data-fail] #loadmsg{color:var(--k-cor)}#load[data-boot] #loadact button{height:50px;font-size:var(--fs)}#load[data-boot] #loadretryk{font-size:var(--fs)}#load[data-t] #loadact button{height:52px}
+  #load[data-t] kbd{display:none}
   .muted{opacity:.45}
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 </style>
 </head>
 <body>
-<div id="load" hidden data-boot><b>FUSE/GRID</b><div id="loadbar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" data-ind><div id="loadfill"></div><div id="loadrun"></div></div><span id="loadmsg">LOADING</span><div id="loadact" hidden><button id="loadretry" type="button"><span id="loadretryw">RETRY</span><kbd id="loadretryk">ENTER</kbd></button><button id="loadkeep" type="button" hidden><span id="loadkeepw">USE CLASSIC 2D</span><kbd id="loadkeepk">ESC</kbd></button></div></div>
+<div id="loadst" hidden aria-hidden="true"><div id="lsg"><div id="lfl"></div></div><div id="lpl"></div><svg id=llg viewBox="-20 -40 677 176"><defs><path id=gF d="M0 50L0 8A8 8 0 0 1 8 0L58 0 58 23 26 23 26 34 40 35 40 57 26 57 26 100 8 100A8 8 0 0 1 0 92Z"/><path id=gU d="M0 51L0 0 25 0 25 77 45 77 45 0 70 0 70 71A30 30 0 0 1 40 101L30 101A30 30 0 0 1 0 71Z"/><path id=gS d="M2 29A30 30 0 0 1 32 -2L48 -1A16 16 0 0 1 64 14L64 30 38 30 38 22 28 22 28 40 47 40A19 19 0 0 1 66 59L66 71A30 30 0 0 1 36 101L16 101A16 16 0 0 1 0 86L0 70 26 70 26 78 40 78 40 60 21 60A19 19 0 0 1 2 41Z"/><path id=gE d="M0 50L0 8A8 8 0 0 1 8 0L60 0 60 23 26 23 26 39 50 40 50 61 26 61 26 77 60 77 60 100 8 100A8 8 0 0 1 0 92Z"/><path id=gG d="M0 50L0 29A30 30 0 0 1 30 -2L56 -1A16 16 0 0 1 72 14L72 30 46 30 46 23 26 23 26 77 46 77 46 70 40 70 40 50 72 50 72 76A26 26 0 0 1 46 101L30 101A30 30 0 0 1 0 71Z"/><path id=gR d="M0 50L0 8A8 8 0 0 1 8 0L39 -1A28 28 0 0 1 68 27L68 34A21 21 0 0 1 47 55L26 55 26 100 8 100A8 8 0 0 1 0 92ZM26 28L26 22 42 22 42 34 26 34ZM28 54L30 51A2 2 0 0 1 31 50L50 50A2 2 0 0 1 52 51L67 97A2 2 0 0 1 65 100L41 100A2 2 0 0 1 40 99L27 60A2 2 0 0 1 27 58Z"/><path id=gI d="M0 50L0 6A6 6 0 0 1 6 0L22 0A6 6 0 0 1 28 6L28 94A6 6 0 0 1 22 100L6 100A6 6 0 0 1 0 94Z"/><path id=gD d="M0 50L0 8A8 8 0 0 1 8 0L34 -1A35 35 0 0 1 70 34L70 66A35 35 0 0 1 34 101L8 100A8 8 0 0 1 0 92ZM26 50L26 23 36 23A10 10 0 0 1 46 33L46 67A10 10 0 0 1 36 77L26 77Z"/><g id=xF><use href=#gF /><use href=#gU x=65 /><use href=#gS x=144 /><use href=#gE x=219 /></g><g id=xG><use href=#gG x=369 /><use href=#gR x=451 /><use href=#gI x=528 /><use href=#gD x=567 /></g><g id=xL><use href=#xF /><use href=#xG /></g><path id=sk d="M0-17 3.5-3.5 17 0 3.5 3.5 0 17-3.5 3.5-17 0-3.5-3.5Z"/><path id=lcp pathLength=100 d="M353 32L356 27C364 18 365 -3 379 -18"/></defs><g class=o><use href=#xL /><use href=#xL y=14 /><ellipse id=lbo cx=325 cy=69.4 rx=39 ry=37.6 /></g><use href=#xL y=14 class=sd /><use href=#xF class=fF /><use href=#xG class=fG /><g id=lbm><ellipse cx=325 cy=65.4 rx=36 ry=34.6 fill=#15181f /><ellipse cx=320 cy=59.4 rx=27 ry=24.6 fill=#2a3550 /><ellipse cx=322 cy=62.4 rx=23 ry=21.6 fill=#15181f /><path d="M316 65.4h18M325 56.4v18" stroke=#fff2df stroke-width=5 /></g><g class=cd><use href=#lcp /><use href=#lcp class=cu /><use id=lcl href=#lcp class=cl /></g><g id=lsp><g class=fa transform=rotate(15)><use href=#sk /><circle r=6.5 /></g><g class=fb transform="rotate(45) scale(.8)"><use href=#sk /><circle r=6.5 /></g></g></svg></div>
+<div id="load" hidden data-boot><b>FUSE/GRID</b><div id="loadbar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" data-ind><div id="loadfill"></div><div id="loadrun"></div></div><span id="loadmsg">LOADING</span><span id="loadsub"></span><div id="loadact" hidden><button id="loadretry" type="button"><span id="loadretryw">RETRY</span><kbd id="loadretryk">ENTER</kbd></button><button id="loadkeep" type="button" hidden><span id="loadkeepw">USE CLASSIC 2D</span><kbd id="loadkeepk">ESC</kbd></button></div></div>
 <div id="loadsay" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 <!-- The one loader. It runs before any module, so it is plain inline JS, and the
      first-load job counts finished files against data-files, which
@@ -273,6 +301,42 @@
   var say=function(s){if(say0)say0.textContent=say0.textContent===s?s+"\u00a0":s};
   var bootFiles=+$("loadjs").getAttribute("data-files");
   jobs.boot={k:"boot",label:"",files:bootFiles,total:bootFiles,weigh:function(u){return u.indexOf(base+"src/")===0&&/\.js(\?|$)/.test(u)?1:0},seen:{},n:0,w:0,f:0,fb:1,ph:0,t:0,last:now(),dock:false};
+  /* the first load (v206): #loadst, in #c's content box units (GL line build, GS stacked: ring x, y, w, h, T, logo x, y, w, bed tile;
+     UL / US the letters; tests/firstload.test.mjs pins them). The fuse is n / (files + 1); REAL 3D skips the floor; lit(): it was seen */
+  var st=$("loadst"),sub=$("loadsub"),cp=$("lcp"),cl=$("lcl"),sk=$("lsp"),fl=$("lfl"),lg=$("llg"),t0=now(),lit=null,tch="ontouchstart" in w,P,X,Y,kx,ky,S={},q=/[?&]render=(\w+)/.exec(location.search||"");
+  var GL=[16.02,16,567.96,185.94,12.35,70.06,48.42,459.89,61.75],GS=[18.42,16,563.16,449.97,15.7,52.97,56.83,494.07,87.93],UL=[0,0,65,0,144,0,219,0,369,0,451,0,528,0,567,0],US=[50,0,115,0,194,0,269,0,0,130,82,130,159,130,198,130];
+  try{S=JSON.parse(localStorage.getItem("nb.settings.v1"))||{}}catch(e){}
+  if(q?/3d|iso/.test(q[1]):S.r3d)st.setAttribute("data-3d","");
+  if(S.flx||w.matchMedia&&w.matchMedia("(prefers-reduced-motion:reduce)").matches)st.setAttribute("data-still","");
+  if(tch)E.setAttribute("data-t","");
+  var pt=function(v){return Math.round(v*100)/100+"px"},ps=function(el,k,v){el.style.setProperty(k,pt(v))};
+  function at(el,x,y,ww,hh){var t=el.style;t.left=pt(X+1+x*kx);t.top=pt(Y+1+y*ky);t.width=pt(ww*kx);if(hh!=null)t.height=pt(hh*ky)}
+  function place(){
+    var W=w.innerWidth,H=w.innerHeight;if(!W)return;
+    var p=tch&&!(W>H),R=p?[16,250]:tch?[332,16]:[40,48],s=Math.max(.3,Math.min((W-R[0])/600,(H-R[1])/520,1.8)),G=p?GS:GL,U=p?US:UL,pl=$("lpl"),sg=$("lsg"),u,i,f;
+    X=(W-600*s)/2;Y=p?Math.floor(Math.max(60,Math.min((H-520*s)/2,H-190-520*s))):(H-520*s)/2;kx=(600*s-2)/600;ky=(520*s-2)/520;
+    sg.style.left=pt(X);sg.style.top=pt(Y);sg.style.width=pt(600*s);sg.style.height=pt(520*s);ps(sg,"--c",40*kx);
+    at(pl,G[0],G[1],G[2],G[3]);pl.style.borderWidth=pt(G[4]*kx);ps(pl,"--t",G[8]*kx);at(lg,G[5],G[6],G[7]);
+    if(p!==P){P=p;u=d.querySelectorAll?d.querySelectorAll("#xF use,#xG use"):[];for(i=0;i<u.length;i++){u[i].setAttribute("x",U[2*i]);u[i].setAttribute("y",U[2*i+1])}
+      lg.setAttribute("viewBox",p?"-20 -40 414 306":"-20 -40 677 176");$("lbm").setAttribute("transform",p?"translate(-11 130)":"");$("lbo").setAttribute("transform",p?"translate(-11 130)":"");
+      cp.setAttribute("d",p?"M342 162L345 157C359 135 336 75 356 -16":"M353 32L356 27C364 18 365 -3 379 -18")}
+    f=Math.max((tch?26:18)*ky,tch?16:20);
+    ps(E,"--lx",W/2);ps(E,"--ly",Y+1+500*ky);ps(E,"--lw",(tch?211.2:272.4)*kx);ps(E,"--lh",f+12*ky);ps(E,"--lf",f);ps(E,"--lp",12*kx);
+    ps(E,"--cy",p?Y+520*s+16:Y+1+240*ky);ps(E,"--cw",p?W-32:420*kx);
+  }
+  /* the stage's state, from the boot job alone (a look begun during boot only names itself in the status box) */
+  function stage(){
+    var B=jobs.boot;
+    if(!B){if(lit==null){lit=!st.hidden&&now()-t0>=150;if(lit){st.setAttribute("data-end","");later(function(){st.hidden=true},200)}else st.hidden=true}return}
+    st.hidden=false;
+    var out=failed==="boot",g=out?0:B.f,m=Math.round(195*g),T=cp.getTotalLength?cp.getTotalLength():0,p=cp.getPointAtLength?cp.getPointAtLength(T*g):{x:0,y:0};
+    if(out)st.setAttribute("data-out","");
+    fl.style.setProperty("--r",Math.floor(m/15));fl.style.setProperty("--q",m%15);
+    cl.style.strokeDasharray=g*100+" 100";cl.style.opacity=g>0?1:0;
+    sk.setAttribute("transform","translate("+p.x+" "+p.y+")");
+  }
+  place();
+  w.addEventListener("resize",function(){if(jobs.boot)place()});
   /* a look job's counted phases after its files (rcache hands app.lookJob): the RENDER row's own words (menudraw lookVal) */
   var PH={bake:"ART",build:"BUILDING",shaders:"SHADERS"};
   function view(){return failed?jobs[failed]:(cur&&jobs[cur])||jobs.boot||null}
@@ -286,7 +350,8 @@
   function paint(){
     var j=view();
     if(!jobs.boot)E.removeAttribute("data-boot");
-    E.removeAttribute("data-note");
+    stage();
+    E.removeAttribute("data-note");E.removeAttribute("data-slow");E.removeAttribute("data-fail");sub.textContent="";
     if(!j){if(chipNote())return;E.hidden=true;shown=null;msg.removeAttribute("role");return}
     /* a docked look job is the chip: down while its RENDER row says it, and in live PLAY */
     if(j.dock&&!failed&&(sp.row||sp.off)){E.hidden=true;shown=null;return}
@@ -295,17 +360,19 @@
     if(j.dock)E.setAttribute("data-dock","");else E.removeAttribute("data-dock");
     if(failed){
       msg.setAttribute("role","alert");
-      msg.textContent=(j.k==="boot"?"COULD NOT LOAD THE GAME. CHECK YOUR CONNECTION, THEN RETRY.":j.label+(again?" COULD NOT LOAD. CHECK YOUR CONNECTION, THEN RETRY, OR CHANGE ART STYLE IN SETTINGS.":" STILL WILL NOT LOAD. RETRY RELOADS THE PAGE; A RUN IN PROGRESS ENDS. ART STYLE IS IN SETTINGS."));
+      if(j.k==="boot"){sub.textContent="CHECK YOUR CONNECTION, THEN RETRY.";E.setAttribute("data-fail","")}
+      msg.textContent=(j.k==="boot"?"COULD NOT LOAD THE GAME.":j.label+(again?" COULD NOT LOAD. CHECK YOUR CONNECTION, THEN RETRY, OR CHANGE ART STYLE IN SETTINGS.":" STILL WILL NOT LOAD. RETRY RELOADS THE PAGE; A RUN IN PROGRESS ENDS. ART STYLE IS IN SETTINGS."));
       bar.hidden=true;act.hidden=false;keep.hidden=!drop;E.setAttribute("data-act","");return
     }
     bar.hidden=false;msg.removeAttribute("role");
     var ind=j.ind||(!j.ph&&!j.n),all=j.n>=j.files,c=Math.min(j.n,j.files)+" / "+j.files+" FILES";
     var t=j.k==="boot"?(ind?"LOADING":all?"STARTING":"LOADING · "+c):j.ph?(j.st?j.label+" · "+j.st:"PREPARING "+j.label):ind?"LOADING "+j.label:j.label+" · "+c;
-    if(j.slow)t+=" · SLOW CONNECTION, STILL TRYING";
+    /* the boot status box keeps one line (the count stays in the fuse); a stalled boot's card carries the count under it */
+    if(j.slow)t=jobs.boot?(E.setAttribute("data-slow",""),"SLOW CONNECTION · STILL TRYING"):t+" · SLOW CONNECTION, STILL TRYING";
     msg.textContent=t;
     /* only a stalled FIRST load offers RETRY: reloading under a look's bar could end a run */
     var ask=j.stall&&j.k==="boot";
-    act.hidden=!ask;keep.hidden=true;
+    act.hidden=!ask;keep.hidden=true;if(ask)sub.textContent="LOADING · "+c;
     if(ask)E.setAttribute("data-act","");else E.removeAttribute("data-act");
     if(ind){bar.setAttribute("data-ind","");bar.removeAttribute("aria-valuenow");bar.removeAttribute("aria-valuetext")}
     else{bar.removeAttribute("data-ind");fill.style.transform="scaleX("+j.f+")";bar.setAttribute("aria-valuenow",String(Math.floor(j.f*100)));bar.setAttribute("aria-valuetext",t)}
@@ -373,6 +440,8 @@
     },
     /* true while a look job or a chip note could need placing: shellview reads the stage rect only then */
     wants:function(){for(var k in jobs)if(k!=="boot")return true;return !!cn},
+    /* the first load's stage was on screen (150 ms with the boot job alive; latched when it ends): shellview hands the title settled */
+    lit:function(){return lit!=null?lit:!!jobs.boot&&now()-t0>=150},
     fail:function(k,onDrop,onAgain){
       if(!jobs[k])return;
       failed=k;drop=onDrop||null;again=onAgain||null;paint();

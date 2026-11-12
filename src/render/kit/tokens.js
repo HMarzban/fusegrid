@@ -10,6 +10,8 @@ export const CONST = deep({ink: "#fff2df", t2: "#dccbb8", off: "#8f8476", dk: "#
   yel: "#ffd447", yelInk: "#2a1426", yelLip: "#c8981e", cor: "#ff5d73", cord: "#ff9d5a", cord2: "#b8582a", medal: "#ffd447"});
 export const LUM = deep({bed: 0.012, bedA: 0.010, bedB: 0.014, pane: 0.006, well: 0.007, key: 0.022, band: 0.07,
   mid: 0.24, lit: 0.72, lit2: 0.5, lip: 0.22, rule: 0.03, wallTex: 0.06});
+/* the first load's stage floor (index.html #loadst, v206): the board's floor0 / floor1 at the luminance they show under the title's 0.45 veil */
+export const FLOOR = deep({fl0: 0.049, fl1: 0.031});
 export const TINT = deep({ICE: {h: 192, s: 0.62, brick: {h: 190, s: 1.1}, frame: {h: 196, s: 0.5, warm: 0.06}}});
 export const WALLTEX_A = deep({JUNGLE: 0.605865478515625, ICE: 0.531402587890625, FACTORY: 0.594146728515625, WATER: 0.515716552734375, ARENA: 0.496063232421875, SAND: 0.649017333984375, VOID: 0.119598388671875, CROWN: 0.488250732421875});
 
@@ -49,7 +51,7 @@ function tokens(b0) {
     well: toL(b.floor0, LUM.well), key: toL(b.wall, LUM.key), keyhi: rgba(b.wallHi, 0.22), band: toL(b.wallHi, LUM.band), rule: toL(b.wall, LUM.rule),
     lit: toL(b.brickA, LUM.lit), lithi: rgba(toL(b.brickHi, 0.92), 0.7), lit2: toL(b.brickB, LUM.lit2), lip: toL(b.brickB, LUM.lip), mid: toL(b.brickB, LUM.mid),
     wall: b.wall, wallHi: b.wallHi, bg1: b.bg1, glow: rgba(b.name === "ICE" ? b.bg0 : b.brickA, 0.25),
-    brickA: b.brickA, brickB: b.brickB, floor0: b.floor0, floor1: b.floor1, frame: b.wall, boss: b.wallHi,
+    brickA: b.brickA, brickB: b.brickB, floor0: b.floor0, floor1: b.floor1, fl0: toL(b.floor0, FLOOR.fl0), fl1: toL(b.floor1, FLOOR.fl1), frame: b.wall, boss: b.wallHi,
     wallTex: {veil: toL(b.bg1, 0.002), a: WALLTEX_A[b.name]}, name: b.name, biome: b});
 }
 const memo = new Map();

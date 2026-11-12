@@ -42,8 +42,12 @@ const { worldTokens } = await import("../src/render/kit/tokens.js");
 const T = worldTokens(1), root = /:root\{([^}]*--k-[^}]*)\}/.exec(css);
 const K = {};
 if (root) for (const m of root[1].matchAll(/--k-([\w]+):([^;}]+)/g)) K[m[1]] = m[2].trim();
-const WANT = { pane: T.pane, well: T.well, key: T.key, hover: T.lip, band: T.band, lit: T.lit, frame: T.frame, ink: T.ink, off: T.off, dk: T.dk, cor: T.cor };
-for (const [k, v] of Object.entries(WANT)) check("--k-" + k + " equals worldTokens(1)." + k, K[k] === v, K[k] + " vs " + v);
+/* v206 first load (index.html #loadst): the stage floor (fl0 / fl1, the board's floors under the title's veil), the plate's bed and ring line, the ink
+   outline, the slow line and logo B's JUNGLE side are kit tokens too */
+const { WORLDS } = await import("../src/render/logo/worlds.js");
+const WANT = { pane: T.pane, well: T.well, key: T.key, hover: T.lip, band: T.band, lit: T.lit, frame: T.frame, ink: T.ink, off: T.off, dk: T.dk, cor: T.cor,
+  fl0: T.fl0, fl1: T.fl1, bedA: T.bedA, bedB: T.bedB, wallHi: T.wallHi, ol: T.ol, t2: T.t2, side: WORLDS.JUNGLE.side };
+for (const [k, v] of Object.entries(WANT)) check("--k-" + k + " equals worldTokens(1)." + k, K[k] === v && /^#[0-9a-f]{6}$/.test(v), K[k] + " vs " + v);
 const rules = (re) => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter((m) => re.test(m[1].trim())).map((m) => m[2]);
 const cards = css.slice(css.indexOf("#upd{"), css.indexOf(".muted{"));
 check("the cards carry no raw palette hex (the old #37f0d0 / #2a3550 / #7385ad family)", !/#(37f0d0|2a3550|7385ad|dfe7f5|26324a|141a2b)\b|rgba\(10,14,24|rgba\(55,240,208/i.test(cards));

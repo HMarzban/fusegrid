@@ -27,7 +27,7 @@ function wrap(r, cv) {
       return (...a) => {
         const e = { cv, op: String(k), a };
         if (PAINT.test(e.op)) Object.assign(e, { fill: t.fillStyle, stroke: t.strokeStyle, gco: t.globalCompositeOperation || "source-over", lw: t.lineWidth });
-        if (e.op === "drawImage") e.m = t.getTransform();
+        if (e.op === "drawImage") { e.m = t.getTransform(); e.ga = t.globalAlpha; }
         seq.push(e); LOG.push(e);
         return v(...a);
       };
@@ -200,6 +200,11 @@ if (D) {
     const w0 = tip0(0, 2), x1 = tip0(1, 0.05), x2 = tip0(1, 0.2), off = (r) => [r.c.x + r.c.w / 2 - r.l.x, r.c.y + r.c.h / 2 - r.l.y];
     check("the title waits lit (spark at the tip) and keeps it there, flickering, through the exit: no run, the spark's place on the layer never moves",
       w0.n === 2 && x1.n === 2 && x2.n === 2 && x1.run === undefined && x2.run === undefined && near(off(w0)[0], off(x1)[0], 1.01) && near(off(w0)[1], off(x2)[1], 1.01), J([off(w0), off(x1), off(x2)]));
+    /* v206 first load: the loader drew logo B where the title paints it, so a title that follows it starts settled (no fade, slide or pop) */
+    const at0 = (tt, o) => { const t = target(); md.drawIntroChrome(t.ctx, 0, tt, 600, 520, "d", 1, { level: 1, ...o }); const b = blits(t); return b[0] && { ...devRect(b[0]), a: b[0].ga }; };
+    const set = at0(0.02, { settled: true }), pop = at0(0.02), rest = at0(2);
+    check("settled (o.settled, the loader was on screen): the first title frame is the resting logo, full size and opaque; without it the reveal still pops",
+      !!set && near(set.w, rest.w, 0.01) && near(set.h, rest.h, 0.01) && near(set.x, rest.x, 0.01) && Math.abs(set.y - rest.y) <= 4.01 && set.a >= 0.999 && pop.a < 0.5 && !!pop && pop.w < rest.w - 1, J([set, pop && pop.w, rest]));
   }
 
   /* (e) runtime: no filter or shadow write, no pixel read, on any canvas the painter touched */
