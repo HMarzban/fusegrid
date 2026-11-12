@@ -4,7 +4,7 @@
    rgba(7,10,18,a). Easing helpers duplicated from the intro beat table (spec §3): this file must not import from src/app. */
 import { LABEL, runParts } from "./words.js";
 import { hints, tapAt } from "./hintcopy.js";
-import { drawLogo2d, deviceScale, TITLE_RUNUP } from "./logo/draw2d.js";
+import { drawLogo2d, deviceScale, TITLE_RUNUP, titleSpot } from "./logo/draw2d.js";
 import * as menuPage from "./pages/menu.js";
 import * as levelPage from "./pages/level.js";
 import * as kitProbe from "./kit/probe.js";
@@ -83,18 +83,20 @@ export function layout(W, H, lg, css, play) {
   });
 }
 
-/* The title's logo box (logo B on the kit plate, logo/draw2d.js): the board
-   canvas inside a 12 px margin, above the prompt's backing by 10 px, centred
-   on the old wordmark's line (logoCy - 35.5 x logoScale); the stacked build on
-   touch portrait, the line build elsewhere. It keeps its last answer, so a
-   steady frame allocates no box. MENU's logo is the page header's (pages/menu.js). */
+/* The title's logo box (logo B on the kit plate, logo/draw2d.js): a box centred on the board (H / 2) inside a 12 px margin, as tall as leaves
+   the prompt's backing room under the plate 10 px clear, so the fitted plate is centred on the board whatever its build (Task 9.11, owner: "the
+   fuse grid must be in center of board not in top") and the prompt hangs under it (py: its centre line); the stacked build on touch portrait,
+   the line build elsewhere. It keeps its last answer, so a steady frame allocates no box. MENU's logo is the page header's (pages/menu.js). */
 let tlb = null;
 export function titleLogoBox(W, H, lay) {
   if (tlb && tlb.W === W && tlb.H === H && tlb.lay === lay) return tlb.v;
-  const L = layout(W, H),
-    px = lay === "p" || lay === "l" ? 26 : 18,
-    m = 12;
-  tlb = { W, H, lay, v: Object.freeze({ box: Object.freeze({ x: m, y: m, w: W - 2 * m, h: L.footY - (px + 12) / 2 - 10 - m }), cy: L.logoCy - 35.5 * L.logoScale, dev: lay === "p" ? "p" : "d" }) };
+  const ph = (lay === "p" || lay === "l" ? 26 : 18) + 12,
+    m = 12,
+    dev = lay === "p" ? "p" : "d",
+    half = H / 2 - m - ph - 10,
+    box = Object.freeze({ x: m, y: H / 2 - half, w: W - 2 * m, h: 2 * half }),
+    s = titleSpot(box, H / 2, dev);
+  tlb = { W, H, lay, v: Object.freeze({ box, cy: H / 2, dev, py: s.y + s.f.outer.h + 10 + ph / 2 }) };
   return tlb.v;
 }
 /* INTRO chrome (opening spec §3/§7). Title (stage 0): logo reveal (fade +
@@ -140,15 +142,16 @@ export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1, o = {}) {
     // a steady dark box (drawAttractHint's idiom) under a fill that pulses
     // 0.45<->1 on the beat: legible at the pulse minimum over bright bricks
     c.globalAlpha = pin;
-    backing(c, L.cx, L.footY, prompt.length * px * 0.6 + 24, px + 12);
+    const py = titleLogoBox(W, H, lay).py;
+    backing(c, L.cx, py, prompt.length * px * 0.6 + 24, px + 12);
     c.font = font(px, "900");
     c.textAlign = "center";
     c.textBaseline = "middle";
     c.globalAlpha = show ? pin : pin * (0.725 + 0.275 * Math.cos((2 * Math.PI * t) / (4 * SHOW_STEP)));
     c.fillStyle = ACCENT;
-    c.fillText(prompt, L.cx, L.footY);
+    c.fillText(prompt, L.cx, py);
     c.globalAlpha = 1;
-    if (kitProbe.probe.on) { const w = c.measureText(prompt).width; kitProbe.text(prompt, L.cx - w / 2, L.footY - 0.35 * px, w, 0.7 * px, { role: "primary", col: ACCENT, px }); }
+    if (kitProbe.probe.on) { const w = c.measureText(prompt).width; kitProbe.text(prompt, L.cx - w / 2, py - 0.35 * px, w, 0.7 * px, { role: "primary", col: ACCENT, px }); }
   }
   const ha = show ? easeOutCubic(seg(t, SKIP_GUARD, SKIP_GUARD + 0.3)) : 0;
   if (ha > 0) {

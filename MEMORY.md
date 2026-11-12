@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — Task 9.11: the title centred on the board (lane-9.11-title-centre)
+- Owner: "the fuse grid must be in center of board not in top". `titleLogoBox` is a box centred on H / 2 with the prompt hanging 10 under the plate (`py`; contact sheet pick over prompt-at-foot); stacked cap 119.34 -> 103.69. index.html GL / GS re-pinned (+ the plate's foot), the stall / failure card lifts to fit the window (landscape phone: over the plate's foot).
+
 ## 2026-11-12 — look-load card on the world kit
 - Owner: "Yes, restyle it". The PIXEL / REAL 3D preparing card (`#load` outside boot and dock) is the kit plate at the text floors (20 / 16 px words, outlined 10 px bar, no wordmark); reduced motion drops the first load's fades. loadbar.test pins it. Then ("yes, raise the chip too"): the docked chip's words at 20 / 16 px, max-content up to --chip-w, slow note on its own line.
 

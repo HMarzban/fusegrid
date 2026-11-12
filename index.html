@@ -268,7 +268,7 @@
   #load[data-t]{--fs:16px}#load[data-boot] #loadbar{position:absolute;opacity:0;width:1px}
   #load[data-boot] #loadmsg{font:900 var(--lf)/1.2 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--k-ink);text-align:center}
   #load[data-slow] #loadmsg{color:var(--k-t2)}
-  #load[data-boot][data-act]{top:var(--cy);translate:-50% 0;width:var(--cw);min-width:0;min-height:0;padding:16px 18px 18px;gap:12px;background:var(--k-pane);border:2px solid var(--k-ol);border-radius:6px;box-shadow:0 6px 0 var(--k-ol),inset 0 3px 0 rgba(0,0,0,.4)}
+  #load[data-boot][data-act]{top:var(--cy);translate:-50% min(0px,calc(100dvh - 8px - var(--cy) - 100%));width:var(--cw);min-width:0;min-height:0;padding:16px 18px 18px;gap:12px;background:var(--k-pane);border:2px solid var(--k-ol);border-radius:6px;box-shadow:0 6px 0 var(--k-ol),inset 0 3px 0 rgba(0,0,0,.4)}
   #load[data-boot][data-act] #loadmsg,#loadsub{font:700 var(--fs)/1.3 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:left;letter-spacing:0}
   #loadsub{color:var(--k-t2)}#loadsub:empty{display:none}#load[data-act][data-fail]{box-shadow:0 6px 0 var(--k-ol),inset 4px 0 0 var(--k-cor)}
   #load[data-fail] #loadmsg{color:var(--k-cor)}#load[data-boot] #loadact button{height:50px;font-size:var(--fs)}#load[data-boot] #loadretryk{font-size:var(--fs)}#load[data-t] #loadact button{height:52px}
@@ -302,10 +302,10 @@
   var say=function(s){if(say0)say0.textContent=say0.textContent===s?s+"\u00a0":s};
   var bootFiles=+$("loadjs").getAttribute("data-files");
   jobs.boot={k:"boot",label:"",files:bootFiles,total:bootFiles,weigh:function(u){return u.indexOf(base+"src/")===0&&/\.js(\?|$)/.test(u)?1:0},seen:{},n:0,w:0,f:0,fb:1,ph:0,t:0,last:now(),dock:false};
-  /* the first load (v206): #loadst, in #c's content box units (GL line build, GS stacked: ring x, y, w, h, T, logo x, y, w, bed tile;
+  /* the first load (v206): #loadst, in #c's content box units (GL line build, GS stacked: ring x, y, w, h, T, logo x, y, w, bed tile, the plate's foot (the prompt hangs 10 under it);
      UL / US the letters; tests/firstload.test.mjs pins them). The fuse is n / (files + 1); REAL 3D skips the floor; lit(): it was seen */
   var st=$("loadst"),sub=$("loadsub"),cp=$("lcp"),cl=$("lcl"),sk=$("lsp"),fl=$("lfl"),lg=$("llg"),t0=now(),lit=null,tch="ontouchstart" in w,P,X,Y,kx,ky,S={},q=/[?&]render=(\w+)/.exec(location.search||"");
-  var GL=[16.02,16,567.96,185.94,12.35,70.06,48.42,459.89,61.75],GS=[18.42,16,563.16,449.97,15.7,52.97,56.83,494.07,87.93],UL=[0,0,65,0,144,0,219,0,369,0,451,0,528,0,567,0],US=[50,0,115,0,194,0,269,0,0,130,82,130,159,130,198,130];
+  var GL=[16.02,166.53,567.96,185.94,12.35,70.06,198.95,459.89,61.75,355.47],GS=[55.35,64.02,489.31,390.97,13.64,85.36,99.49,429.28,76.4,457.98],UL=[0,0,65,0,144,0,219,0,369,0,451,0,528,0,567,0],US=[50,0,115,0,194,0,269,0,0,130,82,130,159,130,198,130];
   try{S=JSON.parse(localStorage.getItem("nb.settings.v1"))||{}}catch(e){}
   if(q?/3d|iso/.test(q[1]):S.r3d)st.setAttribute("data-3d","");
   if(S.flx||w.matchMedia&&w.matchMedia("(prefers-reduced-motion:reduce)").matches)st.setAttribute("data-still","");
@@ -322,8 +322,8 @@
       lg.setAttribute("viewBox",p?"-20 -40 414 306":"-20 -40 677 176");$("lbm").setAttribute("transform",p?"translate(-11 130)":"");$("lbo").setAttribute("transform",p?"translate(-11 130)":"");
       cp.setAttribute("d",p?"M342 162L345 157C359 135 336 75 356 -16":"M353 32L356 27C364 18 365 -3 379 -18")}
     f=Math.max((tch?26:18)*ky,tch?16:20);
-    ps(E,"--lx",W/2);ps(E,"--ly",Y+1+500*ky);ps(E,"--lw",(tch?211.2:272.4)*kx);ps(E,"--lh",f+12*ky);ps(E,"--lf",f);ps(E,"--lp",12*kx);
-    ps(E,"--cy",p?Y+520*s+16:Y+1+240*ky);ps(E,"--cw",p?W-32:420*kx);
+    ps(E,"--lx",W/2);ps(E,"--ly",Y+1+(G[9]+(tch?29:25))*ky);ps(E,"--lw",(tch?211.2:272.4)*kx);ps(E,"--lh",f+12*ky);ps(E,"--lf",f);ps(E,"--lp",12*kx);
+    ps(E,"--cy",p?Y+520*s+16:Y+1+(G[9]+10)*ky);ps(E,"--cw",p?W-32:420*kx);
   }
   /* the stage's state, from the boot job alone (a look begun during boot only names itself in the status box) */
   function stage(){

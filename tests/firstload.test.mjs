@@ -165,6 +165,7 @@ for (const [W, H, touch] of SIZES) {
   check("it is hidden in markup (no JS, no stage) and appears with #load's 150 ms delay", /<div id="loadst" hidden/.test(html) && /150ms/.test(rule("#loadst")));
   check("the floor and the plate wear the kit tokens (no raw hex)", /var\(--k-fl0\)/.test(rule("#lfl")) && /var\(--k-fl1\)/.test(rule("#lfl")) && /var\(--k-bedA\)/.test(rule("#lpl")) && /var\(--k-bedB\)/.test(rule("#lpl")) && !/#[0-9a-f]{3,6}\b/i.test(rule("#lfl") + rule("#lpl") + rule("#lsg")));
   check("the fuse eases, and stops easing under prefers-reduced-motion", /transition:stroke-dasharray/.test(rule("#llg \\.cl")) && /prefers-reduced-motion:reduce\)\{[^@]*#llg \.cl\{transition:none\}/.test(css));
+  check("the card (stall, failure) lifts by just what it needs to end 8 px inside the window (a landscape phone under the centred plate)", /translate:-50% min\(0px,calc\(100dvh - 8px - var\(--cy\) - 100%\)\)/.test(rule("#load\\[data-boot\\]\\[data-act\\]")), rule("#load\\[data-boot\\]\\[data-act\\]"));
   check("no glow, blur or filter on the stage", !/filter|blur|drop-shadow/.test(css.slice(css.indexOf("#loadst{"), css.indexOf("#loadst{") + 4000)));
   const yel = (css.match(/#ffd447/gi) || []).length;
   check("yellow only inside the logo (FUSE's face, the spark's frame A)", /\.fF\{fill:#ffd447\}/.test(css) && /\.fa use\{fill:#ffd447\}/.test(css) && yel === 2, yel);

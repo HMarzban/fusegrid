@@ -818,6 +818,22 @@ function check(name, cond, detail) {
       nr.fills[0] === "rgba(7,10,18,1)" && rd.fills[0] === "rgba(7,10,18,0.45)", nr.fills[0] + " / " + rd.fills[0]);
   }
   {
+    /* the title centred on the board (Task 9.11, owner: "the fuse grid must be in center of board not in top"): the fitted plate's outer extent
+       is centred on the box (H / 2) at every layout and size, clear of the HUD band (y 42), and the prompt's backing hangs under it, 10 px clear
+       (the contact sheet's pick over the prompt at the board's foot: the prompt reads as the logo's) */
+    const { titleSpot } = await import("../src/render/logo/draw2d.js");
+    const bad = [];
+    for (const [W, H] of [[600, 520], [608, 352]]) for (const lay of ["d", "p", "l"]) {
+      const B = md.titleLogoBox(W, H, lay), { y, f } = titleSpot(B.box, B.cy, B.dev), top = y, bot = y + f.outer.h, mid = (top + bot) / 2;
+      const r = []; const c = new Proxy({}, { get: (t, p) => (p === "fillRect" ? (...a) => r.push([t.fillStyle, ...a]) : p in t ? t[p] : () => {}), set: (t, p, v) => ((t[p] = v), true) });
+      c.globalAlpha = 1;
+      md.drawIntroChrome(c, 0, 1, W, H, lay);
+      const pr = r.find((x) => x[0] === "rgba(7,10,18,0.9)"), ptop = pr ? pr[2] : -1, pbot = pr ? pr[2] + pr[4] : 1e9;
+      if (Math.abs(mid - H / 2) > 0.01 || top < 42 || Math.abs(bot + 10 - ptop) > 1e-9 || pbot > H - 12 + 1e-9) bad.push([W, H, lay, +top.toFixed(2), +bot.toFixed(2), +ptop.toFixed(2), +pbot.toFixed(2), f.cap]);
+    }
+    check("the title's plate is centred on the board (outer centre = H / 2), clear of the HUD band, the prompt's backing exactly 10 px under it, inside the 12 px margin", bad.length === 0, JSON.stringify(bad));
+  }
+  {
     /* MENU entry (v202 Task 3.1; the slam over the show's blast is gone: the room look covers the board from MENU's first frame): every entry,
        the show's end and a skip alike, paints the room opaque at once and fades the plate, logo and foot in over 0.25 s */
     const L = md.layout(600, 520), { ITEMS } = await import("../src/app/menuapp.js");

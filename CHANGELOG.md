@@ -31,6 +31,7 @@ The HUD leaves the board and joins the world.
 
 ### Changed
 
+- **The title stands in the middle:** the FUSE/GRID plate is centred on the board instead of hugging its top, with PRESS ANY KEY OR BUTTON (TAP TO START) right under it, in all three looks; the first load builds the title in the same place.
 - **A new first load:** while the game loads, the title builds itself where it will stand: the level's floor fills in cell by cell, the FUSE/GRID logo sits on its plate and its fuse lights up toward the tip as the files arrive, then the title takes over without a jump. A slow connection or a failure says so in a card under the logo, with RETRY.
 - **Loading PIXEL or REAL 3D** shows the same world-kit card: an outlined plate, a brick-green bar and readable words, in place of the small grey one; the strip at the top while a look loads from SETTINGS reads at the same size.
 - The old LV chip and difficulty token are gone from the board; LEVEL names the level.
