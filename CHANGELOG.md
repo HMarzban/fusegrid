@@ -15,6 +15,32 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v204 · 2026-11-12
+
+Pause and the end of a run move into the world too.
+
+### Added
+
+- **A new PAUSE.** The level and its world on top, PAUSED, the rules you are playing with as tags, RESUME as the one
+  yellow key, then SETTINGS, RESTART and QUIT TO MENU. On a phone the rows sit two by two so every button stays tappable.
+- **LEVEL CLEAR and the finale.** A clear shows your time, enemies and power-ups; a finale shows the whole run on its level
+  course, the score with its difficulty, any medals you just earned, and NEXT LEVEL / MENU / COPY RESULT / COPY MAP keys you can tap.
+- **GAME OVER is its own screen.** How far you got, your score, how short of your best you fell (only from a saved best),
+  TRY AGAIN with what board you get, and MENU, COPY RESULT, COPY MAP.
+
+### Changed
+
+- **Esc, Backspace or a controller's EAST at the end of a run go to MENU**, with the same feel as quitting from PAUSE.
+- **SETTINGS inside PAUSE on a phone** keeps 44 px rows and turns into pages instead of shrinking.
+- A run end that is still loading shows the same LOADING plate as the menus.
+
+### Notes
+
+- **Rollback:** revert the release commit and bump `CACHE_NAME` (and `REV` in `sw.js`) again, so installed copies update.
+- **Checks were trimmed for this cut** (owner's call): the new screens were captured and gated in CLASSIC 2D, world 1, on a
+  desktop and a phone only. The full look x world x box matrix, the headed perf run and the walk-through are deferred to the
+  owner's device checks (U8–U11).
+
 ## shell v203 · 2026-11-12
 
 The menus move into the world you're about to play. (v202 is kept for the controller release's own

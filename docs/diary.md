@@ -840,6 +840,13 @@ The loading work that sat on its own branch since 2026-11-06 became one commit. 
 needs all at once, and the floor-tile builder, the demo player and the CONTROLS page's drawing load once the title
 is up. A new RENDER look no longer freezes the game while it builds: PIXEL and REAL 3D get ready in small slices behind
 the look you already have and swap in when they're done.
+## 2026-11-12: pause and the run's end join the world (shell v204, R2)
+
+PAUSE and the three run ends (LEVEL CLEAR, the finale, GAME OVER) left the old dark overlay for the world kit, merged
+from two lanes built on an older base and bent to R1's rules on the way in: one LOADING plate, one tap-mode
+predicate, every word in words.js. The checks were trimmed by the owner's call, so the phone and the full matrix wait
+for the owner's own devices.
+
 ## 2026-11-12: the menus move into the world (shell v203, R1)
 
 The UI upgrade's first cut. The owner picked the look over seven design rounds, then saw two contact sheets

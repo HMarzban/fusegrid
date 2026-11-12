@@ -24,8 +24,12 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-07 — v201 pushed: controller play, rebinding, CONTROLS page
 - Owner: "make it ready and push it up", a day before the planned Sunday. Released as one squashed commit on `origin/main`'s v200 tip (`feature/controls` and `feature/delivery` are never pushed); CHANGELOG and sitemap dated 2026-11-07; the brand of the test controller left the tracked docs (A5). 578 tests; the stubbed-pad browser pass re-run on the release tree, its leftover fails all stale against `e1384f5` or timing (record's go/no-go). M1-M7 ship open by the owner's call. The new share card (`og.png` + alt text) ships beside it as its own commit; the owner re-uploads Social preview by hand.
+## 2026-11-12 — Release R2 (shell v204) prepared locally (feature/ui-upgrade)
+- Merged lanes 5.1 PAUSE + 5 ends onto R1; adapted to R1 kit rules (PAUSE / END words in words.js, tap mode via tapOf, run-end LOADING through menudraw loadingPage, one needFor with scoped exemptions); carry-ins: PAUSE views on touch #c use the phone column, back feel on EAST / MENU tap, needFor readers, pause CLEAR comment. Trimmed gates 0 fail; U8-U11 open.
+
 ## 2026-11-12 — Release R1 (shell v203) prepared locally (feature/ui-upgrade)
 - Fixes before the cut: STATS armed confirm plate on landscape #c (the page's plate, words.js resetShort, keys below, AGAIN ERASES >= 8 from the idle keys; 667x375 a named exemption >= 9 px cap), hudart PIXEL count pinned (27/27 verified), key-driven phone captures, stale text. Cache v203; boot +222 KB raw vs v201 is an owner decision before the push; U1-U7, U14, U15 open.
+
 ## 2026-11-11 — UI upgrade Task 5.1 fix round 1 (PAUSE)
 - times.test now pins the TIME TRIAL tag; css reaches PAUSE through `opts.pause`; seam taps go to the row above; touch rows never closer than 8 CSS px; `pausetags` capture shows the tag row in Chrome.
 
@@ -76,6 +80,7 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-11 — UI upgrade Task 3.3: LEVEL SELECT on the world kit
 - `src/render/pages/level.js` (one levelGeom, opaque, the selected level's room; level keys, banks, MODIFIERS door + inline list, the one card with BEST, START); old painter deleted from menudraw; tap mode follows app.lastDev (ruling 4); CROWN card copy ALL NINE · ONE OF EACH. Compact pages its groups on the least landscape phones (never under 44 px); a controller gets a cue line on phone and compact.
+
 ## 2026-11-11 — End screens: fix round 1 (lane-5-ends)
 Drawn WIN / GAME OVER keys tapped through createGame (end-routing, keys.test rows); bests §11 equal strength; endPlan memo; back feel leaving GAME OVER; no confetti under REDUCE FLASH; medal rules in sentence case; finale plate 840; cord / crack / dust beats; scoped gate exemptions (`needFor`); `winrun` from-start finale capture.
 
@@ -157,6 +162,7 @@ Owner: "finish them all", in parallel, ahead of the #30 playtest. `?gen=3` only,
 
 ## 2026-11-01 — clean-up and docs sync
 - Owner: clean up, sync docs, then known gaps and #18 #30 #22 #34 in parallel. `.codex/` (another tool's agent config) git-ignored, not deleted; 180 stale `fg-px-*` capture profiles removed; stale AGENTS lines fixed; #26 got the open-GATE note; the pass-2 art notes moved off closed #23 onto #19 / #21.
+
 ## 2026-10-26 — v192: tiles design pass 2 (#28) done, harness #25 built
 - Owner picks O1 Heat, O3 superset only if needed (unused), O7 no AI retune, O8 capped, O9 BOOSTER room 1; then T1 TRAP rules (no chain, off/hold, PLUS spares trigger foe, MAX kills no foe), I1 ICE CORE x1.0 + MAX brake, B1 BOOSTER = assist tile (MAX not easier), C1 CONVEYOR EASY accepted. Confirmed MAX Δ lose: TRAP +5.9, ICE +4.6, CONVEYOR +5.4; static V19 = 0 for all four. `tools/balance/` harness + featchecks on main; tuned code on branches pass2-trap/ice/conveyor/booster for #18–#22. Addendum in the tiles record.
 
@@ -218,7 +224,6 @@ Owner: "finish them all", in parallel, ahead of the #30 playtest. `?gen=3` only,
 - **Records to read:** `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md` (what, rulings, loose ends), `2026-10-25-floor-tiles-direction-d-design.md` (tile look), `docs/superpowers/plans/2026-10-25-floor-tiles-direction-d.md` (executed plan); pages: options https://claude.ai/artifact/G12wGJ3x1AqY4rxKaTkb84, tiles https://claude.ai/artifact/USKX6ZL1HW9Es7NbEHgPes, outline https://claude.ai/artifact/JXdMhA5tH5ngA5pYFZaxM9; ledger of rulings `.claude/worktrees/tiles-d/.superpowers/sdd/ledger/progress.md`.
 - **Loose ends (full list in the record):** not shipped (needs go, CACHE_NAME v185, release docs, real-GPU perf); gen-2 default for everyone = #10-#13; only 4 tiles have sim, dial = #28; no coach/FLOOR line/GUIDE for tiles; PIXEL tiles are code-built; no colourblind gate for the new tiles; ATTRACT has no ambient; top corner bosses hidden by the HUD plate; 3D shadow direction fixed by the frozen light.
 - **Owner prefs seen this round:** wants options shown before building, then parallel agents ("boost up ... in paraller"), statuses and estimates on request, commits of docs only when asked.
-
 
 ## 2026-10-25 — Floor tile redesign: four options shown, nothing built
 - Owner: "redesign all the floor tiles (all 8 worlds, CLASSIC 2D, PIXEL and REAL 3D). Make them look like a real, mature game. Show me options before building." Diagnosis: round 3 tiles are flat emblems in a dashed frame (the frame is also the heat tell), so they read as stickers. Options (A FIXTURE, B TERRAIN, C SIGNAL, D = A+B mix) painted as 2D painters with auto-quantised PIXEL and relief-lit 3D previews, art-director critique + one fix round. Page: https://claude.ai/artifact/G12wGJ3x1AqY4rxKaTkb84. Sources (local scratch, may vanish): `/private/tmp/claude-501/-Users-macbook-workspace-rollblock/fe9d02f1-e334-4e40-a0df-ce6c84ae1af6/scratchpad/floor-options/` (`lib.js`, `dirA-D.js`, `BRIEF.md`).
@@ -1487,12 +1492,16 @@ Owner: "finish them all", in parallel, ahead of the #30 playtest. `?gen=3` only,
 - DECISION (user): (1) keep zero-dependency — no Three.js, no build; (2) target option (b) **pseudo-3D dimetric** — tilt camera ~30°, extrude bricks/walls to depth-sorted blocks on Canvas-2D. Touches NO sim/protocol code; all 16 tests stay green. Deferred: option (c) full 3D arena (forces sim+protocol changes; big swing).
 - Determinism rule locked: all spatial/visual math stays in the renderer; sim collision/kill/fuse stay keyed to fixed integers; camera is a render-only input stream, never fed to `step()`. Silent-killer noted: any sim float feeding a branch/count (e.g. `board.js:78` `Math.ceil(Math.hypot(...))`) is the ULP desync risk.
 - Next: design the dimetric renderer (renderer adapter + camera view + depth-sort + faux extrude/shadow). Implementation gate held pending design approval.
+
 ## 2026-08-23 — Campaigns trio shipped on campaigns/touch-render-net
 - A touch pad (fd18448, multitouch move+bomb via Input pipeline, 39 checks) · B renderer v2 (ea6b250, affine diamond tops + caster-slot shadows after spec-chain proven unsatisfiable, biome heights, 67 r3d) · C lockstep v1 (d3e1bcc..35b8572, seq-first windows, neutral LEAVE, pinned codes, fail-closed decode, two-world proof 59 checks; ?net=local). Specs committed incl restored netcode doc.
+
 ## 2026-08-24 — ENGINE DECISION REVERSAL: Path A vendored Three.js approved by user
 - User judged dimetric 'not really 3D' and game elements 'not game-like'; explicitly approved vendored three.module.js (no npm, no build, MIT) + keep 2D fallback. Sim/protocol/tests untouched by design. Dimetric demotes to ?render=iso legacy. Branch campaign/real3d. This supersedes the 2026-08-16 zero-dep-renderer lock for the RENDER LAYER ONLY — sim purity invariants unchanged.
+
 ## 2026-08-25 — Black-screen 3D toggle bug root-caused + fixed (56c6db5)
 - #c 2D context first-call-wins: boot 2D renderer claimed {alpha:false}; 3D overlay then inherited the OPAQUE context → clearRect composited black over #gl (toggle-path black screen; boot ?render=3d unaffected). Fix: main pre-claims #c ctx {alpha:true} before any renderer + regression tests (getContext order, live __GAME__.renderer — was a stale boot copy, now a getter). Repro'd+verified via Playwright (headed Chrome DPR2, WebKit DPR2): toggle→3D green, toggle-back→2D green.
+
 ## 2026-09-05 — R1: player redesigned after user rejection ("too silly / not mature enough")
 - P1's SIGNAL RUNNER read as a WHITE EGG WITH A TEAL CAP at the live 28px size, in both renderers, while every gate stayed green — a fit box and an op-stream recorder structurally cannot see roundness, brightness or stubbiness. Three levers: TAPER (2D hull is a shouldered wedge with a neck step, a near-level shoulder ledge and a `±0.50r` waist, shedding 1.71× within half a radius; the lower third is two long dark legs, not the hull's base), VALUE (`PLAYER_HULL` `#dfe7f2` L0.90 → `#8d97ac` L0.59 — brightness WAS the cuteness; hex chosen from the 3D capture because 3D has no dark contour and value alone separates it from the floor), EDGE (cap → pointed crest wholly inside the helmet contour; sheen ellipse → two hard pauldron facets).
 - 3D reshaped, never retyped: `SLOT_MESH.player` still 5, fat-world still 141, histogram unchanged (2 Box, 1 each Buffer/Lathe/Extrude). Tapered `TORSO_P`; yoke chips → canted asymmetric WEDGE pauldrons mirrored by negating x AND reversing point order (`ExtrudeGeometry` cap normals follow signed area); crown seg 6 → seg 5 `rotateY(PI/5)` because three.js lathes start a VERTEX at +Z and the visor needs a flat FACE. Hero is now `31.8×20.6×30.0` vs walker `29.0×26.5×27.5` — tallest, widest, and the only shouldered footprint.

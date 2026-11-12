@@ -167,7 +167,7 @@ ITEMS, CUBES, PICKUPS). A difficulty or speed value is printed with its setting'
 name wherever nothing beside it names the setting (`EXPERT DIFFICULTY`,
 `FAST SPEED`), on its own line or row, because NORMAL is both; DEFAULT RULES
 is the plain run (NORMAL difficulty and speed, no modifiers). `src/render/words.js`
-is the one table (`DIFF`, `SPEED`, `MOD` by PACT bit, `TIME_TRIAL`, `LABEL`,
+is the one table (`DIFF`, `SPEED`, `MOD` by PACT bit, `TIME_TRIAL`, `LABEL`, `PAUSE_WORDS`, the run ends' `END_WORDS`,
 `DEFAULT_RULES`, `tagFor`, `runWords`, `runParts` the one non-default filter,
 `modsCount` and `levelsOf` the one singular / plural); src/app may not import
 it, so its few player strings (`ITEMS`, `OPT_ROWS`, `PAUSE_ITEMS`, `GUIDE_ROWS`
@@ -191,12 +191,12 @@ band + 3px notch + caret; `danger` rows select red). Labels are system-ui
 sans (OS-dependent, owner-accepted), values / tags / hints mono. Lists go
 through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box). MENU is on the world kit since UI upgrade Task 3.1 (MENU page, below). Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v203` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v204` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v203", the running build,
+as `rev`) and `update.js` (the card's "You are on v204", the running build,
 never a guessed next one) — never a second literal. The desk MENU's foot ends
-`| v203`; the phone column carries it as SOURCE's teaser (the round 7 frame);
-SETTINGS keeps its `BUILD v203` kicker. Never on the HUD.
+`| v204`; the phone column carries it as SOURCE's teaser (the round 7 frame);
+SETTINGS keeps its `BUILD v204` kicker. Never on the HUD.
 PAUSE is on the world kit since UI upgrade Task 5.1 (`src/render/pages/pause.js`, boot; `scenes.js` re-exports `PAUSE_ROWS`, `PAUSE_SHAPE`,
 `PAUSE_ROW_H` / `_D`, `pauseGeom`, `pauseHit`, `pauseKick`, `pauseKickers` / `pauseKicker`; the round 7 S7-pages 10-pause frame). It stays on `#c`
 over the frozen board in all three looks, through the one painter `drawPause` that `drawOverlay`'s PAUSE branch calls (view 0 only; views 1-3
@@ -393,7 +393,7 @@ MENU page (UI upgrade v202 Task 3.1, `src/render/pages/menu.js`; the round 7 S7-
 key (bare bomb + 3 px cream ring when focused); the doors are keys, a focused one wears the kit `band` + bomb + ring; no cord or spark but the logo's.
 Desk (every keyboard box; the 1366 x 768 frame at 1 box unit per CSS px): the logo in the plate's header, a 480 list (PLAY 64,
 doors 46, 8 px pitch, 24 px breaks after PLAY and before GUIDE; 125 %: 520, 72, 49) beside the next-run card (Task 3.2, below), the foot under
-the plate (`MOVE ▲▼ · START ENTER | v203`, label first, keycap last; the verb follows focus: START on PLAY, OPEN on a door, and with a controller
+the plate (`MOVE ▲▼ · START ENTER | v204`, label first, keycap last; the verb follows focus: START on PLAY, OPEN on a door, and with a controller
 on SOURCE `NEEDS A CLICK OR ENTER`, no keycap; a touch layout reads `TAP A ROW`; a note leads it, the controller's signpost replaces it in cream).
 Phone and compact have no foot: while a controller drives, SOURCE's teaser leads with `NEEDS A CLICK OR ENTER` (step-down `CLICK OR ENTER`, words.js
 `SOURCE_PAD_SHORT`; R1 cohesion 11), cream, before the signpost and the build tag.
@@ -492,7 +492,7 @@ is the band + the bare bomb, no ring (no key takes focus). A changed value flash
 every row a preset wrote. The ANALYTICS pad note replaces the rocker, or takes the row's second line where it does not fit. A look being prepared
 turns ART STYLE's value into one well window over the value's room with `lookVal`'s first words that fit whole and the fill line at its foot
 (no line on a failure, its words coral). TOUCH FLOOR (lead ruling, fix round 1): on every touch layout, SETTINGS, GRAPHICS and their PAUSE views,
-rows are >= 44 CSS px and >= 8 apart; where they do not all fit (a 640-tall phone, landscape phones' #c, a phone's PAUSE view), the list PAGES:
+rows are >= 44 CSS px and >= 8 apart; where they do not all fit (a 640-tall phone, landscape phones' #c, every touch PAUSE view: since R2 a PAUSE view on a touch #c takes the phone's CSS px column inside the pause band, y 44 .. H - 8, never the scaled column), the list PAGES:
 as many whole rows as fit, a strip of `PAGE n OF m` and two page keys ▲ ▼ (the kit pager's: 46 CSS px, 8 CSS px under the rows, 10 apart; a key with no page is a well) under them, and
 under those, where a PAUSE column's foot drops, a back-out hint line (`kit/copy.js` `BACK_TAP`, or BACK and its keycap for a controller; R1 kit).
 A landscape phone's `#c` (R1 landscape) takes the phone's column in CSS px (`land`), never the scaled column: paged, its foot drops and the BACK key
@@ -503,7 +503,7 @@ focuses the first row of the page it opens (nothing confirmed); no drag scroll. 
 holding both columns at u >= 0.8: list 480 (540 at 125 %) beside a 400 (440) pane, rows 38 (36), courses 12, the plate centred 944 wide; the
 pane is a slab of floor framed in wall cells: SETTINGS shows ART STYLE `n OF 3`, the three looks as keys (the chosen one lit) and the REAL 3D
 rows note; GRAPHICS the focused row's name and help; the foot in the pane, label first, keycap last, `ROW ▲▼ · CHANGE ◀▶ · BACK ESC | vREV`; the
-kicker `BUILD vREV` hidden at 125 % on the desk, where the foot carries the tag), col (a keyboard #c, PAUSE, the iso guard, a short or narrow window: the
+kicker `BUILD vREV` hidden at 125 % on the desk, where the foot carries the tag), col (a keyboard #c, a keyboard PAUSE, the iso guard, a short or narrow window: the
 list alone, rows 34 on keys, courses 10, GRAPHICS' two help lines under the rows, the foot at the plate's bottom, or the page keys' strip where
 it pages) and phone (a touch-portrait shell box, and a landscape phone's touch #c: the column in CSS px, BACK beside the title, rows 44 8 apart (the mock's 52 pitch), ART STYLE
 and CAMERA as door rows, the foot under the plate). Cached: the room (MENU's own `roomLayer` at MENU's room dpr, `kit/room.js` `roomDpr`, MENU's rule, for
@@ -1567,6 +1567,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; the tile boards were `?gen=3` only from v188 to v197).
+- Release state (2026-11-12): shell **v204** (UI upgrade release R2: PAUSE on the world kit (`pages/pause.js`), the run ends WIN / FINALE / GAME OVER as their own lazy pages (`pages/endwin.js`, `endlose.js`, `endgeom.js`, `endkit.js`) through the one LOADING plate, PAUSE views on a touch #c on the phone column) is PREPARED as a local release commit on `feature/ui-upgrade` on top of R1 (v203). NOT LIVE: the owner pushes. Owner acceptance U8–U11 OPEN; release gate check trimmed (CLASSIC 2D, world 1, desktop and phone, the R2 screens only; the full matrix, perf and headed checks deferred to the owner's device checks). Rollback: revert the release commit and bump `CACHE_NAME` / `REV` again.
 - Release state (2026-11-12): shell **v203** (UI upgrade release R1: the world kit menus, MENU's seven rows and next-run card, LEVEL SELECT rows, SETTINGS / GRAPHICS, GUIDE with FLOOR, RECORDS (SCORES · STATS · MEDALS), the cards, the player-word renames, logo B in CLASSIC 2D; plan `docs/superpowers/plans/2026-11-10-ui-upgrade-v202.md`, perf record `docs/superpowers/specs/2026-11-10-ui-upgrade-v202-perf.md` "R1 (v203)") is PREPARED as a local release commit on `feature/ui-upgrade`. It is NOT LIVE: the owner pushes after squashing `feature/delivery` (v202 is reserved for that squash). Owner checks U1–U7, U14, U15 (real phone, real controller) are OPEN. Owner decision before the push: boot growth +222 KB raw (+86 KB gzip) vs v201's c4e7598 against the plan's +60 KB (option: LEVEL SELECT lazy with idle preload, ~58 KB raw). Rollback: revert the release commit and bump `CACHE_NAME` / `REV` again.
 - Release state (2026-11-12): shell **v202** (delivery and loading: the boot graph preloaded and lighter (gen 3, the ATTRACT bot, iso, `?net=local` and the CONTROLS paint load after the title), the two-stage service worker cache, PIXEL and REAL 3D prepared in slices and swapped in when ready, the RENDER row's progress; record `docs/superpowers/specs/2026-11-06-delivery-loading-design.md`) is PREPARED as one local squash commit of `feature/delivery` on `main`. NOT LIVE: the owner pushes. Rollback: revert the squash commit and bump `CACHE_NAME` / `REV` again.
 - Release state (2026-11-07): shell **v201** (CONTROLS: controller play, rebinding, the CONTROLS page in the menu kit, VIBRATION levels and patterns with MEDIUM by default, SENSITIVITY levels, hints that follow the device; 578 tests; record `docs/superpowers/specs/2026-11-06-controls-built.md`) is LIVE: pushed to `main` on 2026-11-07 on the owner's word as one squashed commit (`ad2e940`, with the new share card beside it, `334ea8b`; `feature/controls` is never pushed, its history carries local notes), Pages CI green, live `sw.js` v201; GitHub release **v2.4.0**, shell v200 → v201. The owner played it on a real controller and reported it works, details not yet reported, so its human checks M1-M7 ship open, and the VIBRATION test buzz was felt on a real pad on 2026-11-03 (in-run patterns not yet reported). Shell **v200** (loose ends: PASS no longer causes false holds, GATE tips mention the hold, no crash on a hand-made conveyor loop; no board changes; GitHub release **v2.3.1**, shell v198 → v200) is LIVE on the owner's word. 478 tests. Shell **v199** (TRAP warning marks and arm sound, `carryPins` and `gatePins` keep a tile from closing your only way out, faster board building, bot and harness see every tile; BOOSTER flare dropped by the owner; record `docs/superpowers/specs/2026-11-02-tiles-finish-v199.md`) is LIVE on the owner's word. 475 tests. Shell **v198** (GitHub release **v2.3.0**, shell v188 → v198) makes the tile boards what everyone plays: ordinary runs and the DAILY deal gen 3, `?gen=3` is gone, F3 links exist (owner: "Ship without a playtest", waiving #30's playtest; record `docs/superpowers/specs/2026-11-02-tiles-default-v198.md`, with the known risks). Older text below that says `?gen=3` is history. Shell **v197** (loading bar, REAL 3D new-world freeze fix #36, boot graph minus 75 KB raw, and on `?gen=3` BOOSTER marks, ICE brake tip, REAL 3D heat look; rulings and numbers in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`) is LIVE on the owner's word (2026-11-02). A design on local branch `descent-design` is unmerged and stays unpushed until the owner says.

@@ -310,7 +310,7 @@ function record(G, Pl, cur, tok, dpr) {
     probe.rect(o.label, ...b(r), {touch: G.touch, set: "pause", focus: f, ...(o.hero ? {fill: CONST.yel} : f ? {fill: tok.band} : {})});
     o.lines.forEach((s, k) => txt(s, f ? o.foc : o.rest, o.ys[k], o.ws[k], o.px, o.hero ? CONST.yelInk : o.danger && !f ? CONST.cor : CONST.ink, "primary"));
     if (o.cap) { probe.rect(o.label + " cap", ...b(R(o.cap.x, o.cap.y, o.cap.w, o.cap.h))); const w = Pl.caps[i]; txt(o.cap.s, o.cap.x + o.cap.w / 2 - w / 2, o.cap.y + o.cap.h / 2, w, DEV[d.dev].sec, o.hero ? CONST.yel : CONST.t2, "secondary"); }
-    if (o.glyph && !(f && o.glyph.hide)) { const g = o.glyph, p = 6; probe.pair("info", b(R(g.x, g.y, g.s, g.s)), b(R(g.x - p, g.y - p, g.s + 2 * p, g.s + 2 * p)), {col: g.col, name: o.label + " " + g.n}); }
+    if (o.glyph && !(f && o.glyph.hide)) { const g = o.glyph, p = 6, e = g.s / 16; probe.pair("info", b(R(g.x - e, g.y - e, g.s + 2 * e, g.s + 2 * e)), b(R(g.x - p, g.y - p, g.s + 2 * p, g.s + 2 * p)), {col: g.col, name: o.label + " " + g.n}); } // a: the ink, one grid unit past the 16-unit box (round caps reach out of it)
   });
   if (Pl.foot) txt(Pl.foot, d.cx - Pl.fw / 2, d.footY, Pl.fw, Pl.fpx, CONST.t2, "secondary");
   const k = d.rows[cur], left = !(d.mode === "grid" && cur & 1), x0 = left ? d.plate.x + 1 : k.x + k.w + 7, x1 = left ? k.x - 7 : d.plate.x + d.plate.w - 1, bed = R(x0, k.y, Math.max(1, x1 - x0), k.h);
