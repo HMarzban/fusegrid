@@ -111,7 +111,10 @@ check("loadbar.js is precached and in the boot graph (rcache reads it)", PRECACH
 // CSS: compositor only, reduced motion, the hidden rule
 const css = strip(html.slice(html.indexOf("<style"), html.indexOf("</style>")));
 const rule = (sel) => (new RegExp("(?:^|\\n|\\})\\s*" + sel + "\\{([^}]*)\\}").exec(css) || [])[1] || "";
-check("the plate is the CONSOLE PANEL plate, centred, off the pointer", /border:1px solid var\(--k-frame\)/.test(rule("#load")) && /border-radius:6px/.test(rule("#load")) && /pointer-events:none/.test(rule("#load")));
+check("the plate is the world kit plate (outline, hard drop, lit notch), centred, off the pointer", /border:2px solid var\(--k-ol\)/.test(rule("#load")) && /0 6px 0 var\(--k-ol\)/.test(rule("#load")) && /inset 4px 0 0 var\(--k-lit\)/.test(rule("#load")) && /border-radius:6px/.test(rule("#load")) && /pointer-events:none/.test(rule("#load")));
+check("a look's card speaks at the text floors: 900 weight at --fs, 20 px desk / 16 px touch, cream ink; no wordmark line", /--fs:20px/.test(rule("#load")) && /--fs:16px/.test(rule("#load\\[data-t\\]")) && /font:900 var\(--fs\)/.test(rule("#loadmsg")) && /var\(--k-ink\)/.test(rule("#loadmsg")) && /display:none/.test(rule("#load b")));
+check("the bar is a kit well: 10 px, outlined; the chip's 3 px bar drops the outline", /height:10px/.test(rule("#loadbar")) && /inset 0 0 0 2px var\(--k-ol\)/.test(rule("#loadbar")) && /box-shadow:none/.test(rule("#load\\[data-dock\\]:not\\(\\[data-act\\]\\) #loadbar")));
+check("reduced motion: the card and the first-load stage appear and leave with no fade (their 150 ms delay kept)", /prefers-reduced-motion:reduce\)\{[^@]*#load,#loadst\{animation-duration:\.001s\}/.test(css));
 check("it appears only after 150 ms, with no JS involved", /150ms/.test(rule("#load")));
 check("it is hidden in markup (no JS, no bar)", /<div id="load" hidden data-boot>/.test(html));
 check("fill and glint move by transform only", /transition:transform/.test(rule("#loadfill")) && !/width|left/.test(rule("#loadfill").replace(/inset:0/, "")) && /@keyframes loadRun\{from\{transform:[^}]*\}to\{transform:[^}]*\}\}/.test(css));

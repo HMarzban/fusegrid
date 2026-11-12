@@ -32,6 +32,7 @@ The HUD leaves the board and joins the world.
 ### Changed
 
 - **A new first load:** while the game loads, the title builds itself where it will stand: the level's floor fills in cell by cell, the FUSE/GRID logo sits on its plate and its fuse lights up toward the tip as the files arrive, then the title takes over without a jump. A slow connection or a failure says so in a card under the logo, with RETRY.
+- **Loading PIXEL or REAL 3D** shows the same world-kit card: an outlined plate, a brick-green bar and readable words, in place of the small grey one.
 - The old LV chip and difficulty token are gone from the board; LEVEL names the level.
 - Menu pages sit centred in a tall window (the old top margin is now the minimum), and the room behind them is drawn at the board's size in a run, its floor and walls continuing to the window's edges instead of zooming in.
 - **CONTROLS joins the world:** the controller page is on the level's own kit like every other menu: KEYBOARD and CONTROLLER as brick tabs, your binds as keys with their button shapes, SENSITIVITY and VIBRATION as steppers with a meter, and beside them a big drawing of the controller or keyboard with every action called out, the button you are on ringed. Rebinding listens right in the drawing, with no time limit. On a phone it is one column with 44 px rows, paged where they do not fit.

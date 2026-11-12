@@ -203,15 +203,15 @@
      long main-thread job (parse, atlas bake, three scene build). The fill only
      ever states finished files; the glint only says "still alive". Never takes a
      pointer unless its buttons are up. */
-  #load{position:fixed;z-index:21;left:50%;top:50%;translate:-50% -50%;width:min(340px,calc(100vw - 32px));
-    display:flex;flex-direction:column;gap:10px;padding:16px 18px 16px 22px;
-    background:var(--k-pane);border:1px solid var(--k-frame);border-radius:6px;
-    box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 var(--k-lit);color:var(--k-ink);pointer-events:none;
+  #load{position:fixed;z-index:21;left:50%;top:50%;translate:-50% -50%;width:min(420px,calc(100vw - 32px));--fs:20px;
+    display:flex;flex-direction:column;gap:12px;padding:16px 18px 18px 22px;
+    background:var(--k-pane);border:2px solid var(--k-ol);border-radius:6px;
+    box-shadow:0 6px 0 var(--k-ol),inset 4px 0 0 var(--k-lit),inset 0 3px 0 rgba(0,0,0,.4);color:var(--k-ink);pointer-events:none;
     user-select:none;-webkit-user-select:none;animation:updFade .16s linear 150ms both}
   #load[hidden]{display:none}
   /* until the title paints, the unsized #c would draw an empty framed box behind the plate */
   #load[data-boot]~#wrap{visibility:hidden}
-  #load b{font:700 18px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:0}
+  #load b{display:none;font:700 18px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:0}
   /* the chip (v202): a look's job after boot, only while its RENDER row is off screen and never in live PLAY.
      One line, a 3 px bar along its bottom, no wordmark, no pointer, no keys. shellview hands the drawn stage's
      top-centre (--chip-x/-y/-w): inside the stage, so never over the PAUSE pill or the touch pad. data-note: the
@@ -221,13 +221,13 @@
   #load[data-dock]:not([data-act]){top:max(var(--chip-y,0px),calc(6px + env(safe-area-inset-top,0px)));left:var(--chip-x,50%);
     flex-direction:row;align-items:center;gap:0;box-sizing:border-box;height:28px;width:auto;max-width:min(380px,var(--chip-w,calc(100vw - 32px)));padding:0 14px 3px 17px;overflow:hidden}
   #load[data-dock]:not([data-act]) #loadmsg{font-size:11px;line-height:25px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #load[data-dock]:not([data-act]) #loadbar{position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:0}
+  #load[data-dock]:not([data-act]) #loadbar{position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:0;box-shadow:none}
   #load[data-note=bad]{box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 var(--k-cor)}
   #load[data-note=bad] #loadmsg{color:var(--k-cor)}
   #load[data-dock] b,#load[data-boot] b{display:none}
   #load[data-act]{pointer-events:auto}
-  #loadmsg{font:400 12px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--k-off);letter-spacing:0}
-  #loadbar{position:relative;height:6px;overflow:hidden;background:var(--k-well);border-radius:2px}
+  #loadmsg{font:900 var(--fs)/1.25 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--k-ink);letter-spacing:0}
+  #loadbar{position:relative;height:10px;overflow:hidden;background:var(--k-well);border-radius:3px;box-shadow:inset 0 0 0 2px var(--k-ol)}
   #loadbar[hidden]{display:none}
   #loadfill{position:absolute;inset:0;background:var(--k-lit);transform:scaleX(0);transform-origin:0 50%;transition:transform .18s linear;will-change:transform}
   #loadbar[data-ind] #loadfill{opacity:0}
@@ -245,7 +245,7 @@
   #loadretryk,#loadkeepk{display:inline-block;margin-left:8px;font:900 11px ui-monospace,monospace;padding:2px 6px;background:var(--k-dk);border:1px solid var(--k-off);border-radius:3px;color:var(--k-ink);letter-spacing:0}
   #loadretryk[hidden],#loadkeepk[hidden],body[data-lay=p] #loadretryk,body[data-lay=l] #loadretryk,body[data-lay=p] #loadkeepk,body[data-lay=l] #loadkeepk{display:none}
   /* reduced motion: no glint and no glide; a wait with no number keeps a still striped track, never an empty one */
-  @media (prefers-reduced-motion:reduce){#loadrun{animation:none;opacity:0}#loadfill{transition:none}#loadbar[data-ind]{background:repeating-linear-gradient(-45deg,var(--k-well) 0 4px,var(--k-key) 4px 8px)}}
+  @media (prefers-reduced-motion:reduce){#loadrun{animation:none;opacity:0}#loadfill{transition:none}#load,#loadst{animation-duration:.001s}#loadbar[data-ind]{background:repeating-linear-gradient(-45deg,var(--k-well) 0 4px,var(--k-key) 4px 8px)}}
   /* the first load (v206): the title made where it paints. #loadst (boot only, beside #load so the chip keeps its box) is #c's box,
      its floor filling with the files, the kit plate and logo B; #load is the prompt's box, or a card under the plate (firstload.test) */
   #loadst{position:fixed;inset:0;z-index:20;pointer-events:none;animation:updFade .16s linear 150ms both}#loadst[hidden]{display:none}
