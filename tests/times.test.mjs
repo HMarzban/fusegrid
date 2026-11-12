@@ -20,7 +20,6 @@ import { readFileSync } from "node:fs";
 import { createGame } from "../src/main.js";
 import { SCREEN } from "../src/app/menuapp.js";
 import "../src/core/board3.js";
-import { rec as krec } from "./lib/textrec.mjs";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as endWin from "../src/render/pages/endwin.js";
 lazyPages._set("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
@@ -396,7 +395,7 @@ const HUD_W = {
     );
   }
   const main = readFileSync("src/main.js", "utf8"), hl = (main.match(/.*hud\.frame\(.*/) || [""])[0];
-  check("main hands the HUD the frame's render options (o.time) in GAME", /hud\.frame\(fit, app\.screen === SCREEN\.GAME \? world : null, ro, curKind, \{ proj: renderer\.proj, cam \}\)/.test(hl) && /time: \{ on: !!app\.timeAttack, t: roomT/.test(main), hl.trim());
+  check("main hands the HUD the frame's render options (o.time) in GAME", /hud\.frame\(fit, app\.screen === SCREEN\.GAME \? world : null, ro, curKind, \{ proj: renderer\.proj, cam \}\)/.test(hl) && (/time: \{ on: !!app\.timeAttack, t: roomT/.test(main) || (/timeInfo = \(\) => \(\{ on: !!app\.timeAttack, t: roomT/.test(main) && /time: timeInfo\(\)/.test(main))) /* R2: main builds the frame's time through timeInfo() */, hl.trim());
 }
 
 /* ---- SELF-REVIEW PIN A: the stopwatch is roomT, NOT world.time.

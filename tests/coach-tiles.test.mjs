@@ -44,6 +44,8 @@ const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[
     check(`${k} heat ${h}: the name in caps, the body in sentence case`, casedOK(t), t);
     check(`${k} heat ${h}: a short step-down line, its name first, sentence case, never longer, at most 30 chars of body`, casedOK(sh) && sh.startsWith(TILE_NAME[k] + " · ") && sh.length <= t.length && sh.length - TILE_NAME[k].length - 3 <= 30, sh);
   });
+  /* R4 carry-in: a short line never drops a rule a player needs: TRAP's says its marks hurt you at every heat */
+  check("TRAP's short tip keeps its hazard (MARKS HURT ...) at every heat", FEAT_PROFILE.every((pr) => /MARKS HURT/.test(tileTip("PLATE", pr, true).toUpperCase())), FEAT_PROFILE.map((pr) => tileTip("PLATE", pr, true)).join(" | "));
   console.log(JSON.stringify(tips, null, 1));
   for (const k of KINDS) tips[k].forEach((s, h) => {
     check(`${k} heat ${h} starts with its name`, s.startsWith(TILE_NAME[k] + " · "), s);

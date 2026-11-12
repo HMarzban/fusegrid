@@ -7,7 +7,7 @@
    so 18 small files of REAL 3D do not read as 95 % with 1.27 MB still to come. */
 export const LOOK = Object.freeze({
   "3d": Object.freeze({ label: "REAL 3D", files: 21, re: /\/(render\/three\/|render\/logo\/draw3d\.js|vendor\/three\.module\.js)/, big: /\/vendor\/three\.module\.js/, bigW: 120 }),
-  px: Object.freeze({ label: "PIXEL", files: 29, re: /\/render\/(pixel\/|featpx|hudart)/ }),
+  px: Object.freeze({ label: "PIXEL", files: 28, re: /\/render\/(pixel\/|featpx|hudart)/ }),
 });
 
 /* gen 3's tile code (src/app/lazyload.js): it loads in the title's first idle, so a run
@@ -19,7 +19,7 @@ export const TILES = Object.freeze({ label: "FLOOR TILES", files: 3, re: /\/core
    warms, nothing evaluates), and imports only in an idle state (v202). */
 export const TREE = Object.freeze({
   "3d": Object.freeze(["src/render/logo/draw3d.js","src/render/three/ambientfx.js","src/render/three/blast.js","src/render/three/burstfx.js","src/render/three/entities.js","src/render/three/entityanim.js","src/render/three/featmesh.js","src/render/three/flythrough.js","src/render/three/gatebars.js","src/render/three/groundfx.js","src/render/three/lights.js","src/render/three/materials.js","src/render/three/particles.js","src/render/three/progpin.js","src/render/three/rimart.js","src/render/three/scene.js","src/render/three/textures.js","src/render/three/upload.js","src/render/three/wellfx.js","src/render/three/wrapper.js","vendor/three.module.js"]),
-  px: Object.freeze(["src/render/featpx.js","src/render/featpxcells.js","src/render/hudart.js","src/render/pixel/ambient.js","src/render/pixel/anim.js","src/render/pixel/art/blast.js","src/render/pixel/art/bomb.js","src/render/pixel/art/feat.js","src/render/pixel/art/foes.js","src/render/pixel/art/fx.js","src/render/pixel/art/index.js","src/render/pixel/art/items.js","src/render/pixel/art/logo.js","src/render/pixel/art/mako.js","src/render/pixel/art/tiles.js","src/render/pixel/art/walls.js","src/render/pixel/atlas.js","src/render/pixel/entities.js","src/render/pixel/fallback.js","src/render/pixel/foegen.js","src/render/pixel/grid.js","src/render/pixel/logo.js","src/render/pixel/manifest.js","src/render/pixel/oneshot.js","src/render/pixel/palette.js","src/render/pixel/renderer.js","src/render/pixel/snap.js","src/render/pixel/timing.js","src/render/pixel/world.js"]),
+  px: Object.freeze(["src/render/featpx.js","src/render/featpxcells.js","src/render/pixel/ambient.js","src/render/pixel/anim.js","src/render/pixel/art/blast.js","src/render/pixel/art/bomb.js","src/render/pixel/art/feat.js","src/render/pixel/art/foes.js","src/render/pixel/art/fx.js","src/render/pixel/art/index.js","src/render/pixel/art/items.js","src/render/pixel/art/logo.js","src/render/pixel/art/mako.js","src/render/pixel/art/tiles.js","src/render/pixel/art/walls.js","src/render/pixel/atlas.js","src/render/pixel/entities.js","src/render/pixel/fallback.js","src/render/pixel/foegen.js","src/render/pixel/grid.js","src/render/pixel/logo.js","src/render/pixel/manifest.js","src/render/pixel/oneshot.js","src/render/pixel/palette.js","src/render/pixel/renderer.js","src/render/pixel/snap.js","src/render/pixel/timing.js","src/render/pixel/world.js"]),
 });
 
 export function lookPlan(k, L = LOOK[k]) {

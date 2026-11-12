@@ -493,9 +493,10 @@ const ease=(t)=>1-Math.pow(1-Math.min(1,Math.max(0,t)),3);
    over every band it meets while that stays clear of LBL.top, else it drops
    under them. drawPickupFx latches any overlap it still finds (an iso
    diagonal, two rise phases) into l.st, so a label only ever steps further
-   from its tile and never snaps back. Known per-look difference: a row-1
-   pickup stays above its tile in every look now that only the canvas top
-   bounds it. */
+   from its tile and never snaps back. Known per-look difference: in CLASSIC a
+   row-1 pickup's label still drops below its tile at full rise (LBL.top
+   bounds it; a stack drops at once), while a look whose tile projects
+   lower can keep it above. */
 export function labelBox(l, proj, still, cal, bw, cw){
   const T=CFG.TILE, cx=(l.tx+0.5)*T, BW=bw||BW0;
   const top=proj?proj(cx,l.ty*T,LBL.lift):{x:cx,y:l.ty*T};

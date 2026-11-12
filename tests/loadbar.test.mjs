@@ -227,7 +227,8 @@ const U = (n) => "http://x/g/src/m" + n + ".js";
   b.L.begin("px", P);
   check("PIXEL: an entry from before the job (GUIDE's idle hudart.js) is not counted", b.el("loadmsg").textContent === "LOADING PIXEL", b.el("loadmsg").textContent);
   b.files(P.urls.map(url), 200);
-  check("PIXEL: the tree fetched after begin() counts every file, hudart.js included (" + P.files + " / " + P.files + ")", P.urls.includes("src/render/hudart.js") && b.el("loadmsg").textContent === "PIXEL · " + P.files + " / " + P.files + " FILES", b.el("loadmsg").textContent);
+  /* R4 (UI upgrade Task 8.2): hud.js imports hudart.js, so it boots with the HUD and leaves the PIXEL tree; the stray early entry still never counts */
+  check("PIXEL: the tree fetched after begin() counts every file (" + P.files + " / " + P.files + "); hudart.js is in the boot graph (hud.js), not the PIXEL tree", boot.includes("src/render/hudart.js") && !P.urls.includes("src/render/hudart.js") && b.el("loadmsg").textContent === "PIXEL · " + P.files + " / " + P.files + " FILES", b.el("loadmsg").textContent);
 }
 {
   const b = boot1();

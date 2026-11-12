@@ -86,7 +86,7 @@ function tipShort(kind, pr) {
   if (kind === "BLOOM") return "BLAST " + pr.bloom.fwd + " FURTHER" + (pr.bloom.side ? ", " + pr.bloom.side + " EACH SIDE" : "");
   if (kind === "GLIDE") return !pr.glide.coast ? TILE_HELP.GLIDE[0] : pr.glide.coast === 1 ? "FAST ICE, YOU SLIDE A STEP" : glideBrakes(pr) ? "SLIDES ON · TURN BACK TO STOP" : "SLIDES ON TO A BLOCK";
   if (kind === "BELT") return "CARRIES " + (!pr.belt.actors ? "YOUR BOMBS" : pr.belt.foes === false ? "BOMBS AND YOU" : "BOMBS, YOU AND FOES");
-  if (kind === "PLATE") return pr.plate.kill === false ? "MARKS HURT ONLY YOU" : pr.plate.spare ? "MARKS HURT YOU" : "LURE A FOE ON";
+  if (kind === "PLATE") return pr.plate.kill === false ? "MARKS HURT ONLY YOU" : pr.plate.spare ? "MARKS HURT YOU" : "LURE A FOE ON · MARKS HURT YOU"; // R4 carry-in: the default heat keeps its hazard (30 chars)
   if (kind === "STREAM") return "FLOATS YOUR BOMBS";
   if (kind === "QUICK") return pr.quick.max === 1 ? "A BRICK GROWS BACK ONCE" : "BRICKS GROW BACK";
   if (kind === "GATE") return pr.gate.cross ? "SHUTS BEHIND YOU" : "SHUTS ON A CLOCK";

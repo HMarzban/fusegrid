@@ -230,3 +230,20 @@ test("every word on a strip key or the PAUSE key is whole inside it, at text sca
     } finally { setTextScale(1); }
   }
 });
+
+/* R4 carry-in (Task 8 re-review): REMOTE's word (and THROW's) is drawn whole inside its key on the 393 x 852 phone, at text scale 1 and 1.25 */
+test("393x852: REMOTE and THROW are drawn whole inside their keys, at text scale 1 and 1.25", () => {
+  try {
+    for (const ts of [1, 1.25]) {
+      setTextScale(ts);
+      const { r, st, G } = geom("p", 393, 852, W0({ players: [{ bombs: 2, range: 3, throw: true, remote: true }] }));
+      drawHud(r.ctx, G, st, worldTokens(3), {});
+      for (const [word, k] of [["REMOTE", G.strip.rem], ["THROW", G.strip.thr]]) {
+        const t = r.texts.filter((q) => q.s === word);
+        assert.ok(k && t.length >= 1, `x${ts}: ${word} is drawn on its key`);
+        const q = t[t.length - 1], x0 = q.align === "center" ? q.x - q.w / 2 : q.align === "right" || q.align === "end" ? q.x - q.w : q.x;
+        assert.ok(x0 >= k.x - 1e-6 && x0 + q.w <= k.x + k.w + 1e-6 && q.y >= k.y && q.y <= k.y + k.h, `x${ts}: ${word} ${JSON.stringify([x0, q.w, q.y])} inside ${JSON.stringify(k)}`);
+      }
+    }
+  } finally { setTextScale(1); }
+});

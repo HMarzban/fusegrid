@@ -167,7 +167,7 @@ test("the REAL 3D bezel's far (top) corner bosses stay inside the canvas at the 
         const v = new THREE.Vector3(sx * x, B.hWall + 6, z).project(cam);
         top = Math.min(top, (1 - v.y) / 2 * H);
       }
-      assert.ok(top >= 8, B.name + " dist " + dist + ": far corner top y " + top.toFixed(1));
+      assert.ok(top >= 56, B.name + " dist " + dist + ": far corner top y " + top.toFixed(1)); // R4 carry-in: the measured least is 58.35 (was a loose 8)
     }
   }
 });
