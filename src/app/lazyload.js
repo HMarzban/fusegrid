@@ -28,12 +28,41 @@ export function deepLoad(search, opts = {}) {
   return Promise.all(w).then(() => opts);
 }
 
-/* A run start that needs gen 3 before it is in (a link slower than the intro show): go()
-   runs once it is, behind the FLOOR TILES plate; a failed fetch is that plate's RETRY card. */
-export function holdGen3(go, L = globalThis.__load) {
-  const run = () => {
-    if (L) L.begin("tiles", lookPlan(null, TILES), false);
-    return loadGen3().then(() => { if (L) L.end("tiles"); go(); }, (e) => { if (L) L.fail("tiles", null, run); else console.error(e); });
+/* One held run start (v202): gen 3 not in yet (a link slower than the intro show), or a
+   deep link's lazy look not on screen yet (look() true: rcache's boot stand-in). The world
+   stays frozen behind the plate (FLOOR TILES, or PREPARING <LOOK>), a held start counts as
+   idle so the look's job runs, and the start runs ONCE: a second ask while held only
+   replaces its args (one run_start per run). release() is polled each frame for the look.
+   cancel() drops the start and returns to MENU: BACK TO MENU on the FLOOR TILES card
+   (Escape, the pad's back word, a tap), and P / Escape while held. */
+export function createHold({ run, menu, look = () => false, ok = hasGen3, load = loadGen3, L }) {
+  let args = null, why = null, tok = 0;
+  const LB = () => (L !== undefined ? L : globalThis.__load);
+  const go = () => { const a = args; why = null; args = null; run(a); };
+  const h = {
+    get on() { return why !== null; },
+    get why() { return why; },
+    /* true: the start is held (or joined the held one); false: run it now */
+    start(a) {
+      if (why) return (args = a), true;
+      if (!(a && a.seed != null && a.gen !== 3) && !ok()) { args = a; why = "gen3"; tiles(++tok); return true; }
+      if (look()) { args = a; why = "look"; return true; }
+      return false;
+    },
+    release() { if (why === "look" && !look()) go(); },
+    cancel() {
+      if (!why) return false;
+      const w = why, l = LB();
+      why = null; args = null; tok++;
+      if (w === "gen3" && l) l.end("tiles", true); // its FLOOR TILES plate or failure card goes too
+      menu();
+      return true;
+    },
   };
-  return run();
+  function tiles(t) {
+    const l = LB();
+    if (l) l.begin("tiles", lookPlan(null, TILES), false);
+    return load().then(() => { if (t !== tok) return; if (l) l.end("tiles"); go(); }, (e) => { if (t !== tok) return; if (l) l.fail("tiles", () => h.cancel(), () => tiles(t), "BACK TO MENU"); else console.error(e); });
+  }
+  return h;
 }

@@ -180,6 +180,7 @@ export function createMenuApp(opts = {}) {
     boardReady: true,
     readyT: 0,
     warmT: 0, _warmA: null, _warmK: null, // v202 warm on intent: the rest on the ART STYLE row
+    _bootMiss: null, // the saved look that failed at boot: CLASSIC for this session only, its retry too (delivery review 3)
     lookJob: null, // v202: the ART STYLE row's look job, set by main from rcache: {k, state "loading"|"preparing"|"ready"|"failed", phase, done, total, f, ind, fails} or null
     _showPending: false,
     showBoom: false,
@@ -857,7 +858,8 @@ export function createMenuApp(opts = {}) {
        and report through onSettings once, never as two half-states. */
     _optRender(v) {
       const b = renderBits(v);
-      if (this.settings.r3d === b.r3d && this.settings.px === b.px) return false;
+      if (this.settings.r3d === b.r3d && this.settings.px === b.px && this.render3d === !!b.r3d && this.pixel === !!b.px) return false; // the session fields too: Enter retries a saved look that failed at boot
+      if (RENDER_KINDS[b.r3d ? 2 : b.px] !== this._bootMiss) this._bootMiss = null; // another look picked: its failure reverts as built
       this.settings.r3d = b.r3d;
       this.settings.px = b.px;
       this._setR3d(b.r3d);
@@ -867,8 +869,10 @@ export function createMenuApp(opts = {}) {
       return true;
     },
     /* v202 Q4: a look that did not load leaves the pick on the look still on screen (on), never CLASSIC 2D by default */
-    lookFailed(k, on) {
-      if (RENDER_KINDS[renderVal(this)] === k) this._optRender(Math.max(0, RENDER_KINDS.indexOf(on)));
+    lookFailed(k, on, boot) {
+      if (RENDER_KINDS[renderVal(this)] !== k) return;
+      if (boot || this._bootMiss === k) { this._bootMiss = k; this._setR3d(on === "3d"); this.pixel = on === "px"; return; } // a saved look that failed at boot (or its retry): `on` (CLASSIC) for this session only, nb.settings.v1 keeps the pick and the next boot retries
+      this._optRender(Math.max(0, RENDER_KINDS.indexOf(on)));
     },
     /* PAUSE kicker (Q1): a look picked mid-run waits for an idle state: "REAL 3D NEXT" while it builds, "REAL 3D READY" once parked for the swap */
     get lookNext() {

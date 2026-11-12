@@ -221,12 +221,12 @@ the cntroller side ha?" reversed the 2026-11-02 ruling that kept it a CONSOLE PA
 CONSOLE PANEL kit in `menudraw.js` (`plate`, `head`, `foot`, `paintRow`, `listGeom` / `listHit`, `pageBox`, `segs`, the ellipsis `clip` / `wrap`)
 is gone with its last page; menudraw keeps only the fonts and colours the controller drawings' glyphs read (`TEXT`, `MUTED`, `sans`). MENU is on
 the world kit since UI upgrade Task 3.1 (MENU page, below). Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v209` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v210` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v209", the running build,
+as `rev`) and `update.js` (the card's "You are on v210", the running build,
 never a guessed next one) — never a second literal. The desk MENU's foot ends
-`| v209`; the phone column carries it as SOURCE's teaser (the round 7 frame);
-SETTINGS keeps its `BUILD v209` kicker. Never on the HUD.
+`| v210`; the phone column carries it as SOURCE's teaser (the round 7 frame);
+SETTINGS keeps its `BUILD v210` kicker. Never on the HUD.
 PAUSE is on the world kit since UI upgrade Task 5.1 (`src/render/pages/pause.js`, boot; `scenes.js` re-exports `PAUSE_ROWS`, `PAUSE_SHAPE`,
 `PAUSE_ROW_H` / `_D`, `pauseGeom`, `pauseHit`, `pauseKick`, `pauseKickers` / `pauseKicker`; the round 7 S7-pages 10-pause frame). It sits over
 `#c`'s frozen board in all three looks, drawn on the stage (`#sh` over `#c` at device px, Task 9.12; on a portrait phone on `#sh`'s over box under the HUD plate, Task 9.8: see SHELL BOX), through the one painter `drawPause` that `drawOverlay`'s PAUSE branch calls (view 0 only; views 1-3
@@ -343,7 +343,10 @@ STYLE row's selected value, `app.render3d`, never the live renderer: a REAL 3D p
 loads), shellview hands `drawSettings` that list and the focused row's LABEL (`app.optLabel()`), `settingsGeom` / `settingsHit`
 size to it, and every reader acts by `optLabel()`. Every ART STYLE write
 (a pick, RESET DEFAULTS, `lookFailed` from a failed load or a lost context that cannot be rebuilt) goes through `_setR3d` before
-`onSettings`: the cursor keeps its label, or lands on ART STYLE when its row went away. `SCREEN.FLOOR = 15` is appended too
+`onSettings`: the cursor keeps its label, or lands on ART STYLE when its row went away. A SAVED look that fails at boot (nothing chosen on
+screen yet: rcache `onFail(k, on, boot)`) goes through `_setR3d` too but never reaches `onSettings`: CLASSIC 2D for this session only,
+`nb.settings.v1` keeps the pick and the next boot retries; Enter on ART STYLE retries it, and a retry that fails again stays session-only
+(menuapp `_bootMiss`, cleared by a pick of another look, whose failure reverts as built; delivery review 3, shell v210). `SCREEN.FLOOR = 15` is appended too
 (2026-10-25): the fourth GUIDE door (`GUIDE_ROWS` HOW TO PLAY, POWER-UPS, ENEMIES,
 FLOOR; GUIDE is a 2x2 of doors on the desk (a touch desk included) and compact, one column of four on the phone), backs out to
 GUIDE. `drawFloorHelp` lists the eight floor tiles at CORE / PLUS / MAX in the
@@ -441,7 +444,7 @@ MENU page (UI upgrade v202 Task 3.1, `src/render/pages/menu.js`; the round 7 S7-
 key (bare bomb + 3 px cream ring when focused); the doors are keys, a focused one wears the kit `band` + bomb + ring; no cord or spark but the logo's.
 Desk (every keyboard box; the 1366 x 768 frame at 1 box unit per CSS px): the logo in the plate's header, a 480 list (PLAY 64,
 doors 46, 8 px pitch, 24 px breaks after PLAY and before GUIDE; 125 %: 520, 72, 49) beside the next-run card (Task 3.2, below), the foot under
-the plate (`MOVE ▲▼ · START ENTER | v209`, label first, keycap last; the verb follows focus: START on PLAY, OPEN on a door, and with a controller
+the plate (`MOVE ▲▼ · START ENTER | v210`, label first, keycap last; the verb follows focus: START on PLAY, OPEN on a door, and with a controller
 on SOURCE `NEEDS A CLICK OR ENTER`, no keycap; a touch layout reads `TAP A ROW`; a note leads it, the controller's signpost replaces it in cream).
 Phone and compact have no foot: while a controller drives, SOURCE's teaser leads with `NEEDS A CLICK OR ENTER` (step-down `CLICK OR ENTER`, words.js
 `SOURCE_PAD_SHORT`; R1 cohesion 11), cream, before the signpost and the build tag.
@@ -618,7 +621,7 @@ not shell screens. Do not add them as `SCREEN` values.
   `src/render/shellview.js` (`drawShell` + the `kindSize`/`dims` logical box),
   `src/app/update.js` (`mountUpdate`: registers the SW and owns the NEW
   VERSION READY card; `U` is its key, live only while the card shows),
-  `src/app/loadbar.js` + the `#load` plate and inline `#loadjs` script in `index.html` (the honest loading bar, v197: finished files against totals `tests/loadbar.test.mjs` pins to the real graphs, `--write` re-pins; indeterminate when there are no numbers, shown after about 150 ms, a failure card with RETRY / USE CLASSIC 2D; `rcache.js` paints it before a lazy look's fetch and bake; `#wrap` stays hidden until the title paints; `armUnlock`'s `skip` keeps the card's buttons from pressing the title; since v209 the first load is direction B · RICH: `#loadst`, boot only and beside `#load` (a fixed child would be placed against `#load`'s translate) so the chip and a look's docked card keep `#load`'s own box, draws `#c`'s border box as the stage, its floor (`--k-fl0` / `--k-fl1`) filling cell by cell with the finished files (round(195 n / (files + 1)), whole rows from the bottom), and the title's kit plate and logo B (inline SVG from `glyphs.js`; the stacked build on a portrait phone, re-placed on resize) at the title's rects in `#c`'s content box (fit.js `fitBox` and `portraitGeo`'s top, menudraw `titleLogoBox` and the prompt's backing, draw2d `titleSpot`; `tests/firstload.test.mjs` pins them at 1366x768, 1280x720, 852x393, 393x852 and 375x667); logo B's fuse lights from the collar as the progress (never done), the spark riding the front, so STARTING is the spark at the tip. `#load` is its status box in the title prompt's backing (sans 900 at the prompt's size, floored 20 / 16 px: the 14 / 11 px caps; `SLOW CONNECTION · STILL TRYING` replaces the count) and, on a 30 s stall or a failure, a kit card under the plate, lifted just enough to end 8 px inside the window where it does not fit there (a landscape phone, over the plate's foot) (`#loadsub` the second line; a failure has the coral notch and headline and the fuse goes out). REAL 3D (saved `r3d`, or `?render=3d|iso`) skips the floor, its board being tilted; REDUCE FLASH or reduced motion hold the spark's amber frame; it fades over 180 ms at the hand-off and never shows on a load under 150 ms),
+  `src/app/loadbar.js` + the `#load` plate and inline `#loadjs` script in `index.html` (the honest loading bar, v197: finished files against totals `tests/loadbar.test.mjs` pins to the real graphs, `--write` re-pins; indeterminate when there are no numbers, shown after about 150 ms, a failure card with RETRY / USE CLASSIC 2D (a held run start's FLOOR TILES card: RETRY / BACK TO MENU, `__load.fail`'s drop label, shell v210); `rcache.js` paints it before a lazy look's fetch and bake; `#wrap` stays hidden until the title paints; `armUnlock`'s `skip` keeps the card's buttons from pressing the title; since v209 the first load is direction B · RICH: `#loadst`, boot only and beside `#load` (a fixed child would be placed against `#load`'s translate) so the chip and a look's docked card keep `#load`'s own box, draws `#c`'s border box as the stage, its floor (`--k-fl0` / `--k-fl1`) filling cell by cell with the finished files (round(195 n / (files + 1)), whole rows from the bottom), and the title's kit plate and logo B (inline SVG from `glyphs.js`; the stacked build on a portrait phone, re-placed on resize) at the title's rects in `#c`'s content box (fit.js `fitBox` and `portraitGeo`'s top, menudraw `titleLogoBox` and the prompt's backing, draw2d `titleSpot`; `tests/firstload.test.mjs` pins them at 1366x768, 1280x720, 852x393, 393x852 and 375x667); logo B's fuse lights from the collar as the progress (never done), the spark riding the front, so STARTING is the spark at the tip. `#load` is its status box in the title prompt's backing (sans 900 at the prompt's size, floored 20 / 16 px: the 14 / 11 px caps; `SLOW CONNECTION · STILL TRYING` replaces the count) and, on a 30 s stall or a failure, a kit card under the plate, lifted just enough to end 8 px inside the window where it does not fit there (a landscape phone, over the plate's foot) (`#loadsub` the second line; a failure has the coral notch and headline and the fuse goes out). REAL 3D (saved `r3d`, or `?render=3d|iso`) skips the floor, its board being tilted; REDUCE FLASH or reduced motion hold the spark's amber frame; it fades over 180 ms at the hand-off and never shows on a load under 150 ms),
   `src/app/fit.js` (`mountFit`: stage scale per layout reserve `FIT_RES`, and
   `body[data-lay]` = `d` desktop / `p` touch portrait / `l` touch landscape —
   the ONE predicate `index.html`'s touch layout keys off, never a media
@@ -1051,6 +1054,10 @@ not shell screens. Do not add them as `SCREEN` values.
   lead ruling 9). ANTI-ALIAS applies on LEAVING the page (menu or pause view
   2): one live 3D context rebuild (`rebuild3d`; a failed new context keeps the
   old renderer and reverts the row); other looks just drop the cached 3D.
+  A rebuild (ANTI-ALIAS or SHADOWS) deferred behind another look's job, or
+  cancelled by a RENDER pick, is queued, never dropped (delivery review 5,
+  shell v210): rcache `rebuildAgain()` re-arms frameloop, which rebuilds once
+  that job ends, or drops the stale cached 3D if the look moved off it.
   `rcache.js`: a look unused for `REL_T` 10 s releases — 3D is disposed +
   `forceContextLoss` (`#gl` replaced), PIXEL `sleep()`s to 1×1 buffers (atlas
   kept), CLASSIC has no `sleep` and is kept; a lost WebGL
@@ -1080,7 +1087,9 @@ not shell screens. Do not add them as `SCREEN` values.
   `hintcopy.js` (the setter that keeps `menudraw.js` free of `src/app/`). The page's paint is lazy since v202:
   `controlspage.js`, `capture.js`, `rumble.js`, `pages/controls.js` (its shared parts come from `kit/parts.js`, so its fetch never pulls
   `pages/settings.js`: `tests/loadbar.test.mjs`), `controlsgeo.js` and `padart.js` load through `shellview.loadControlsArt` / the
-  wire's preload, never in the boot graph (`tests/loadbar.test.mjs` LAZY); the rest of the wire is boot. `SCREEN.CONTROLS = 16`; from PAUSE `pauseView 3`. The door
+  wire's preload, never in the boot graph (`tests/loadbar.test.mjs` LAZY); the rest of the wire is boot. `rumble.js` loads on the first
+  controller seen; a failed load retries on the next controller press or when CONTROLS opens with a controller in, never on a quiet poll
+  (delivery review 7, shell v210; `tests/controlslazy.test.mjs`). `SCREEN.CONTROLS = 16`; from PAUSE `pauseView 3`. The door
   sits between GRAPHICS and RESET DEFAULTS; SETTINGS is twelve rows in REAL 3D and ten otherwise, at its page's pitches (v202 Task 3.4: see SETTINGS page).
   CONTROLS page (UI upgrade v202 Task 6.3, `src/render/pages/controls.js`; the round 7 C7-controls frames): on the world kit, opaque (`shellCovers`), the
   room of `app.level` behind it (MENU's own room layer at play scale, `roomKey` / `play`), PAUSE view 3 over the board in the played room's tokens inside
@@ -1281,6 +1290,11 @@ not shell screens. Do not add them as `SCREEN` values.
   `src/render/pixel/**` tree (art sheets included), or a look breaks offline. Never cache
   `og.png`. Never imported by `src/core`. Bump `CACHE_NAME` and the REV
   token in `sw.js` together when the file list or shipped bytes change.
+  Install caches `BOOT` only; the idle stage (`LOOKS`: the off-boot files, PIXEL, then REAL 3D) fills ONLY inside an event's
+  `waitUntil` (delivery review 6, shell v210): the page's `FILL` message (`register.js` posts it to the active worker once
+  `ready`, and again on a later visible check) and a navigation; never a bare timer on activate. A pass resumes from what is
+  missing and stops writing once its worker is `redundant` or its `CACHE_NAME` is gone (no `caches.open` that would re-create a
+  cache a newer shell deleted); `tests/pwa.test.mjs` drives it on a fake worker scope.
   NEW VERSION READY (owner 2026-10-19, shell v179): a new worker installs
   (precache with `cache:"reload"`, register with `updateViaCache:"none"`) and
   WAITS; `register.js` hands a waiting registration (controller present, never
@@ -1336,6 +1350,12 @@ not shell screens. Do not add them as `SCREEN` values.
 Flags: `?render=3d|px|iso` (3d/px seed the boot only; iso is pinned), `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`,
 `?code=` (12-char challenge, URL-only — no opts fallback). CONTROLS adds no flag. No `?gen=` flag since v198; an old
 `?gen=3` link boots like any page.
+Held run starts (delivery reviews 1 and 4, shell v210; `src/app/lazyload.js` `createHold`, main's `hold`): a run start whose
+gen 3 is not in yet (FLOOR TILES plate), or a deep link (`?play=1`, `?code=`, `?render=3d|px&play=1`, started after the renderers
+mount) whose lazy look is not on screen yet (PREPARING plate), holds in GAME with the sim frozen; a held start counts as idle
+(`idleNow`), so the look's job runs, and the run starts ONCE (a second ask while held only replaces its args) on the swap, or in
+CLASSIC 2D for the session when the saved look fails. P / Escape on a held start cancels it to MENU (`__load.end(k, true)` clears
+its card); the FLOOR TILES failure card offers RETRY and BACK TO MENU (Escape, EAST, a tap).
 
 Node v26, `"type": "module"`. No build step, no bundler.
 
@@ -1745,7 +1765,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; the tile boards were `?gen=3` only from v188 to v197).
-- Release state (2026-11-12): shell **v209** (the menus centred with the room at play scale, CONTROLS on the world kit with its capture callout, the phone overlays on `#sh`, the first load B · RICH, the title centred, the look card and chip, the REAL 3D straight rim, every overlay sharp at device px, the run ends centred on the board, the controller toast in a run) is PREPARED on `feature/ui-upgrade` on top of R4 (v206; v207 and v208 were local-only bumps, never handed out). NOT LIVE: the owner pushes. Bumped because the lanes after v206 committed shipped bytes under the v206 name: a browser holding the v206 cache mixed old boot files with new lazy ones, so CONTROLS read DID NOT LOAD (`kit/room.js` has no export `roomKey`) and the pages kept their old top-aligned layout. Any shipped file committed after the last `CACHE_NAME` commit needs the bump before the owner loads it; lanes may skip it, the lead bumps before handing a build to the owner. Rollback: revert and bump `CACHE_NAME` / `REV` again.
+- Release state (2026-11-12): shell **v210** (v209 plus the 2026-11-06 delivery review fixes, ported: held run starts, a saved look that fails at boot kept, BACK TO MENU on the FLOOR TILES card, queued AA / SHADOWS rebuilds, the worker's fill inside `waitUntil`, the `rumble.js` retry; v209: the menus centred with the room at play scale, CONTROLS on the world kit with its capture callout, the phone overlays on `#sh`, the first load B · RICH, the title centred, the look card and chip, the REAL 3D straight rim, every overlay sharp at device px, the run ends centred on the board, the controller toast in a run) is PREPARED on `feature/ui-upgrade` on top of R4 (v206; v207 and v208 were local-only bumps, never handed out). NOT LIVE: the owner pushes. Bumped because the lanes after v206 committed shipped bytes under the v206 name: a browser holding the v206 cache mixed old boot files with new lazy ones, so CONTROLS read DID NOT LOAD (`kit/room.js` has no export `roomKey`) and the pages kept their old top-aligned layout. Any shipped file committed after the last `CACHE_NAME` commit needs the bump before the owner loads it; lanes may skip it, the lead bumps before handing a build to the owner. Rollback: revert and bump `CACHE_NAME` / `REV` again.
 - Release state (2026-11-12): shell **v206** (UI upgrade release R4: the HUD on the world kit (`src/render/hud.js` on `#hud`, off the board: seven labelled chips and the power-ups bar), the phone touch strip and tile tips; CLASSIC call-log pins re-pinned by ruling to `238a30af:71940` / `cef5c020:70998`, the old log minus its HUD tail only) is PREPARED as a local release commit on `feature/ui-upgrade` on top of R3 (v205). NOT LIVE: the owner pushes. Owner acceptance U15 OPEN; trimmed gate check (CLASSIC 2D, world 1, desktop and phone: play, hud). `hudart.js` now boots with the HUD (boot graph 122 files, PIXEL tree 28). Rollback: revert the release commit and bump `CACHE_NAME` / `REV` again.
 - Release state (2026-11-12): shell **v205** (UI upgrade release R3: CONTROLS art, the controller and keyboard drawings with callouts in the world's brick (`padart.js`, `controlsgeo.js`), and logo B in PIXEL and REAL 3D (`pixel/logo.js`, `logo/draw3d.js`)) is PREPARED as a local release commit on `feature/ui-upgrade` on top of R2 (v204). NOT LIVE: the owner pushes. Owner acceptance U12–U13 OPEN; trimmed gate check (CLASSIC 2D, world 1, desktop and phone: title, menu, the four CONTROLS captures; CONTROLS records no probe data, so its gates read n/a by its row's exemption). Rollback: revert the release commit and bump `CACHE_NAME` / `REV` again.
 - Release state (2026-11-12): shell **v204** (UI upgrade release R2: PAUSE on the world kit (`pages/pause.js`), the run ends WIN / FINALE / GAME OVER as their own lazy pages (`pages/endwin.js`, `endlose.js`, `endgeom.js`, `endkit.js`) through the one LOADING plate, PAUSE views on a touch #c on the phone column) is PREPARED as a local release commit on `feature/ui-upgrade` on top of R1 (v203). NOT LIVE: the owner pushes. Owner acceptance U8–U11 OPEN; release gate check trimmed (CLASSIC 2D, world 1, desktop and phone, the R2 screens only; the full matrix, perf and headed checks deferred to the owner's device checks). Rollback: revert the release commit and bump `CACHE_NAME` / `REV` again.

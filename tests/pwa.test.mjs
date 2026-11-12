@@ -483,18 +483,125 @@ check(
     /icon-512\.png/.test(pages),
 );
 
-console.log(fail ? "PWA FAIL" : "PWA OK");
-process.exit(fail ? 1 : 0);
-
 {
   const sw3 = readFileSync(join(ROOT, "sw.js"), "utf8");
   const L = LOOKS.flat();
   check("two-stage: BOOT + looks == PRECACHE, disjoint", BOOT.length + L.length === PRECACHE.length && new Set([...BOOT, ...L]).size === PRECACHE.length && [...BOOT, ...L].every((p) => PRECACHE.includes(p)));
   check("two-stage: three and all of pixel/** are in the looks", L.includes("./vendor/three.module.js") && PRECACHE.filter((p) => p.startsWith("./src/render/pixel/") && !p.endsWith("/load.js")).every((p) => L.includes(p)));
-  check("two-stage: the off-boot files first, then PIXEL, then REAL 3D with three", LOOKS.length === 3 && LOOKS[0].length === 15 && LOOKS[0].includes("./src/core/board3.js") && LOOKS[1].every((p) => !p.includes("three")) && LOOKS[2].includes("./vendor/three.module.js"));
+  check("two-stage: the off-boot files first, then PIXEL, then REAL 3D with three", LOOKS.length === 3 && LOOKS[0].length === 22 && LOOKS[0].includes("./src/core/board3.js") && LOOKS[1].every((p) => !p.includes("three")) && LOOKS[2].includes("./vendor/three.module.js"));
   check("two-stage: boot keeps shell, loader and the lazy seams", ["./index.html", "./src/main.js", "./src/render/pixel/load.js", "./src/render/three/load.js"].every((p) => BOOT.includes(p)));
   check("install caches BOOT only", /addAll\(BOOT\.map/.test(sw3) && !/addAll\(PRECACHE/.test(sw3));
-  check("looks fill is not awaited by activate and resumes on navigate", /setTimeout\(\(\) => fillLooks/.test(sw3) && /cache-first-navigate"\) event\.waitUntil/.test(sw3));
+  check("the fill runs only inside an event's waitUntil: FILL and navigate, never a bare timer", !/setTimeout\(\(\) => fillLooks/.test(sw3) && /"FILL"\) event\.waitUntil\(fillLooks/.test(sw3) && /cache-first-navigate"\) event\.waitUntil/.test(sw3));
   check("a look miss goes through getLook (cached on the way)", /getLook\(req\.url/.test(sw3) && /cache\.put\(url/.test(sw3));
   check("activate deletes only fusegrid-shell-v* keys", /k\.startsWith\(PREFIX\) && k !== CACHE_NAME/.test(sw3));
 }
+
+// ---- the idle fill on a fake worker scope (delivery review 6): inside waitUntil, resumes, stops once it is not current ----
+{
+  const BASE = "https://hmarzban.github.io/fusegrid/", OLD = "fusegrid-shell-v200";
+  const store = new Map(), opened = [];
+  const key = (u) => new URL(typeof u === "string" ? u : u.url, BASE).href;
+  const handle = (m) => ({ // a deleted cache's handle keeps its own map: writes land nowhere reachable
+    match: async (u) => (m.has(key(u)) ? m.get(key(u)) : undefined),
+    put: async (u, r) => { m.set(key(u), r); },
+    addAll: async (qs) => { for (const q of qs) m.set(key(q), { ok: true, clone() { return this; } }); },
+  });
+  const fake = {
+    has: async (n) => store.has(n),
+    open: async (n) => { opened.push(n); if (!store.has(n)) store.set(n, new Map()); return handle(store.get(n)); },
+    delete: async (n) => store.delete(n),
+    keys: async () => [...store.keys()],
+    match: async (u) => { for (const m of store.values()) if (m.has(key(u))) return m.get(key(u)); return undefined; },
+  };
+  let fetched = [], failAfter = Infinity, onFetch = null;
+  const H = {}, me = { state: "activated" }, reg = { active: me };
+  const saved = { self: globalThis.self, caches: globalThis.caches, fetch: globalThis.fetch, Request: globalThis.Request, setTimeout: globalThis.setTimeout };
+  const realST = globalThis.setTimeout;
+  globalThis.self = { addEventListener: (t, f) => { H[t] = f; }, location: { href: BASE + "sw.js", origin: "https://hmarzban.github.io" }, registration: reg, serviceWorker: me, skipWaiting: () => {}, clients: { claim: async () => {} } };
+  globalThis.caches = fake;
+  globalThis.Request = class { constructor(u) { this.url = new URL(u, BASE).href; } };
+  globalThis.fetch = async (q) => {
+    if (fetched.length >= failAfter) throw new TypeError("offline");
+    fetched.push(q.url);
+    if (onFetch) onFetch(q.url);
+    return { ok: true, clone() { return this; } };
+  };
+  globalThis.setTimeout = (f) => realST(f, 0); // the pass's 20 ms breath and the navigate delay, at once
+  const ev = (data) => { const w = []; return { data, w, waitUntil: (p) => w.push(p) }; };
+  const all = LOOKS.flat().map((u) => new URL(u, BASE).href);
+  const mine = () => store.get(CACHE_NAME) || new Map();
+  const tick = () => new Promise((r) => realST(r, 5));
+  try {
+    await import("../sw.js?fill");
+    store.set(OLD, new Map());
+    const inst = ev();
+    H.install(inst);
+    await Promise.all(inst.w);
+    check("sw fill: install caches BOOT, no look file", BOOT.every((u) => mine().has(key(u))) && all.every((u) => !mine().has(u)));
+    const act = ev();
+    H.activate(act);
+    await Promise.all(act.w);
+    await tick(); await tick();
+    check("sw fill: activate deletes the old shell and starts no fill outside a waitUntil", !store.has(OLD) && act.w.length === 1 && fetched.length === 0, fetched.length);
+    const f1 = ev({ type: "FILL" });
+    H.message(f1);
+    check("sw fill: a FILL message runs the pass inside its own waitUntil", f1.w.length === 1);
+    await Promise.all(f1.w);
+    check("sw fill: the pass caches every look file, each fetched once", all.every((u) => mine().has(u)) && fetched.length === all.length, fetched.length + "/" + all.length);
+    for (const u of all.slice(40)) mine().delete(u);
+    fetched = []; failAfter = 10;
+    const f2 = ev({ type: "FILL" });
+    H.message(f2);
+    await Promise.all(f2.w);
+    check("sw fill: a failed fetch ends the pass quietly (waitUntil resolves)", fetched.length === 10 && all.slice(40, 50).every((u) => mine().has(u)) && !mine().has(all[50]));
+    fetched = []; failAfter = Infinity;
+    const nav = { request: { method: "GET", url: BASE, mode: "navigate" }, w: [], r: null, respondWith(p) { this.r = p; }, waitUntil(p) { this.w.push(p); } };
+    H.fetch(nav);
+    await nav.r;
+    check("sw fill: a navigation keeps its trigger, inside the fetch's waitUntil", nav.w.length === 1);
+    await Promise.all(nav.w);
+    check("sw fill: the next pass resumes from what is missing, nothing cached is fetched again", fetched.length === all.length - 50 && fetched.every((u) => all.indexOf(u) >= 50) && all.every((u) => mine().has(u)), fetched.length);
+    for (const u of all.slice(-5)) mine().delete(u);
+    fetched = [];
+    me.state = "redundant"; // a newer worker took over: the old one is marked before that one's activate runs
+    const f3 = ev({ type: "FILL" });
+    H.message(f3);
+    await Promise.all(f3.w);
+    check("sw fill: a redundant worker stops: it fetches and writes nothing", fetched.length === 0 && !mine().has(all[all.length - 1]));
+    me.state = "activated";
+    globalThis.self.serviceWorker = undefined; // a browser without self.serviceWorker: the cache name is the only signal
+    store.delete(CACHE_NAME);
+    opened.length = 0;
+    const f4 = ev({ type: "FILL" });
+    H.message(f4);
+    await Promise.all(f4.w);
+    check("sw fill: its cache deleted by a newer shell: it stops and never re-creates it", fetched.length === 0 && !store.has(CACHE_NAME) && opened.length === 0, opened.join());
+    store.set(CACHE_NAME, new Map());
+    onFetch = () => { store.delete(CACHE_NAME); onFetch = null; }; // a newer worker activates while a file is on the wire
+    fetched = [];
+    const f5 = ev({ type: "FILL" });
+    H.message(f5);
+    await Promise.all(f5.w);
+    check("sw fill: a delete during a fetch: the file is not written and the cache stays gone", fetched.length === 1 && !store.has(CACHE_NAME), fetched.length);
+  } catch (e) {
+    check("sw fill: the fake worker scope ran", false, e && e.message);
+  } finally {
+    Object.assign(globalThis, saved);
+    if (saved.self === undefined) delete globalThis.self;
+    if (saved.caches === undefined) delete globalThis.caches;
+  }
+}
+
+// ---- the page asks for the fill: register.js posts FILL to the active worker once it is ready ----
+{
+  const posted = [];
+  const sw = { register: () => Promise.resolve({ update: () => Promise.resolve() }), addEventListener() {}, ready: Promise.resolve({ active: { postMessage: (m) => posted.push(m) } }) };
+  check("registerSW with a ready worker registers", registerSW({ navigator: { serviceWorker: sw }, href: "https://x.test/", top: 1, self: 1, document: null }) === true);
+  for (let i = 0; i < 4; i++) await Promise.resolve();
+  check("registerSW posts FILL to the active worker after registering", posted.length === 1 && posted[0].type === "FILL", posted.length);
+  const bare = { register: () => Promise.resolve({ update: () => Promise.resolve() }), addEventListener() {} };
+  check("registerSW without ready (old browser, fake) still registers, no throw", registerSW({ navigator: { serviceWorker: bare }, href: "https://x.test/", top: 1, self: 1, document: null }) === true);
+}
+
+console.log(fail ? "PWA FAIL" : "PWA OK");
+process.exit(fail ? 1 : 0);

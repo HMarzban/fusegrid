@@ -71,8 +71,7 @@ import {
 } from "./render/cameraCtl.js";
 import { createRig, resetOrbit, mountOrbitCtl, camPreset } from "./render/three/camrig.js";
 import { loadRenderer3D } from "./render/three/load.js";
-import { hasGen3 } from "./core/board2.js";
-import { holdGen3, warmBoot } from "./app/lazyload.js";
+import { createHold, warmBoot } from "./app/lazyload.js";
 
 export function createGame(canvas, opts = {}) {
   const upd = mountUpdate(() => ({ app, world, isRunEnd, SCREEN })); // registers the SW; NEW VERSION READY card (src/app/update.js)
@@ -210,11 +209,12 @@ export function createGame(canvas, opts = {}) {
   const net = flags.netLocal ? opts.createLocalPair(world, input) : null;
 
   /* run handoff (menu START / LEVEL select): fresh board, score reset. A gen-3 start before
-     board3.js is in (src/app/lazyload.js) holds, the world frozen, until it is; every later
-     path (PAUSE RESTART, the restart and room change inside step()) runs a world that passed here. */
-  let held = false;
+     board3.js is in, or a deep link's lazy look not on screen yet, holds (src/app/lazyload.js
+     createHold), the world frozen, until it is; every later path (PAUSE RESTART, the restart
+     and room change inside step()) runs a world that passed here. */
+  const hold = createHold({ run: (a) => onStart(a), menu: () => app.toMenu(), look: () => !rc.shownKind() });
   const onStart = (args) => {
-    if (!(args && args.seed != null && args.gen !== 3) && !hasGen3()) { held = true; holdGen3(() => { held = false; onStart(args); }); return; }
+    if (hold.start(args)) return;
     world.gen = args && args.seed != null ? (args.gen === 3 ? 3 : args.gen === 2 ? 2 : 1) : 3; // ordinary runs deal the tile boards (owner 2026-11-02); a DAILY / ?code= run plays the generation it names (#13)
     world.heat = clampHeat(args && args.heat);
     world.pact = clampPact(args && args.pact);
@@ -254,7 +254,7 @@ export function createGame(canvas, opts = {}) {
   // SETTINGS (nb.settings.v1): loaded once at boot; applySettings is the seam S2's OPTIONS rows call again.
   let settings = loadSettings();
   if (settings.snd === 0 && audio && audio.toggle) audio.toggle();
-  const idleNow = () => !(app.screen === SCREEN.GAME && world.state === "PLAY") && !(app.screen === SCREEN.INTRO && app.introStage === 1); // one idle predicate: the frame gate and the look jobs (rcache) share it
+  const idleNow = () => hold.on || (!(app.screen === SCREEN.GAME && world.state === "PLAY") && !(app.screen === SCREEN.INTRO && app.introStage === 1)); // one idle predicate: the frame gate and the look jobs (rcache) share it; a held start is idle
   const frames = mountFrames(loop, { running: () => running, idle: idleNow, kind: () => curKind, rc: () => rc, app: () => app, fit: () => fit, canvas, pre: (t) => ctl.poll(t), release: freeKit }); // GRAPHICS frame gate (src/app/frameloop.js): every getter is lazy
   const applySettings = (S) => {
     if (audio && audio.setVols) audio.setVols({ mus: S.mus / 100, sfx: S.sfx / 100 });
@@ -379,18 +379,6 @@ export function createGame(canvas, opts = {}) {
     };
   }
   stat("session_start", null, dateStr());
-  // R8: a decodable ?code= wins over ?play=1 — the more specific instruction.
-  // An undecodable code leaves chal null and the boot proceeds normally.
-  const chal = flags.code ? decodeChallenge(flags.code) : null;
-  if (chal) { app.playChallenge(chal); saveCabinetSeen(); }
-  if (autoplay && !chal) {
-    app.startRun();
-    saveCabinetSeen(); // ?play=1 skips bootFromIntro, whose own markCabinet never fires
-  }
-  /* Opening show world (src/app/intro.js): its OWN slot, never demo's. Backs
-     INTRO and the MENU it reveals; dropped for good on a user skip or at GAME / ATTRACT. Deep
-     links and autoplay never build it. */
-  let show = app.screen === SCREEN.INTRO ? createShow() : null, showKept = false;
 
   /* app.update() contract adapter over the live Input (held axes + fire) */
   const shellInput = {
@@ -446,7 +434,7 @@ export function createGame(canvas, opts = {}) {
   };
 
   const onPause = () => {
-    if (app.screen !== SCREEN.GAME) return; // I2: pause exists only inside GAME;
+    if (app.screen !== SCREEN.GAME || hold.cancel()) return; // I2: pause exists only inside GAME; P / Escape on a held start goes back to MENU
     // outside it the world is a frozen backdrop and PAUSE would ghost-render
     if (app.pauseView) {
       app.pauseBack(); // P/Escape on an inline page backs one level (GRAPHICS -> OPTIONS -> LIST), never to play
@@ -493,9 +481,23 @@ export function createGame(canvas, opts = {}) {
     return kindOf(urlKind, app);
   }
   let curKind = effKind(), shBox = null; // shBox: the #sh box the last frame drew the shell on (RECORDS' page counts read it)
-  const rc = mountRenderers({ canvas, opts, rig, make: { "2d": createRenderer }, size: kindSize, fit: () => fit, kind: effKind, perf: () => frames.knobs(), loadRenderer3D, loadRendererPx, bar: { afterFirstRender, lookPlan, paintYield }, eager: urlKind === "3d" || !!opts.render3d, eagerPx: urlKind === "px" || !!opts.pixel, idle: idleNow, poke: () => frames.poke(), debug: !!flags.debug, world: () => (app.screen === SCREEN.ATTRACT && demo ? demo.world : show ? show.world : world), hold: () => app.lookHold(), onJob: (j) => { app.lookJob = j; }, onSwap: (r, k) => { renderer = r; curKind = k; swapped = true; }, onReady: () => { app.boardReady = true; }, onFail: (k, on) => app.lookFailed(k, on), prefetch: true, onLost: () => { if (app.screen === SCREEN.GAME && world.state === "PLAY") onPause(); } });
+  const rc = mountRenderers({ canvas, opts, rig, make: { "2d": createRenderer }, size: kindSize, fit: () => fit, kind: effKind, perf: () => frames.knobs(), loadRenderer3D, loadRendererPx, bar: { afterFirstRender, lookPlan, paintYield }, eager: urlKind === "3d" || !!opts.render3d, eagerPx: urlKind === "px" || !!opts.pixel, idle: idleNow, poke: () => frames.poke(), debug: !!flags.debug, world: () => (app.screen === SCREEN.ATTRACT && demo ? demo.world : show ? show.world : world), hold: () => app.lookHold(), onJob: (j) => { app.lookJob = j; }, onSwap: (r, k) => { renderer = r; curKind = k; swapped = true; }, onReady: () => { app.boardReady = true; }, onFail: (k, on, boot) => app.lookFailed(k, on, boot), prefetch: true, onLost: () => { if (app.screen === SCREEN.GAME && world.state === "PLAY") onPause(); } });
   let renderer = rc.get(curKind), pick = curKind, swapped = false, gPrev = world.grid; // pick = the RENDER choice, curKind = the look on screen (rcache swaps on ready)
   app.boardReady = rc.shownKind() === curKind;
+  // R8: a decodable ?code= wins over ?play=1 — the more specific instruction.
+  // An undecodable code leaves chal null and the boot proceeds normally. After the
+  // renderers mount: a lazy look not on screen yet holds the start (delivery review 1).
+  const chal = flags.code ? decodeChallenge(flags.code) : null;
+  if (chal) { app.playChallenge(chal); saveCabinetSeen(); }
+  if (autoplay && !chal) {
+    app.startRun();
+    saveCabinetSeen(); // ?play=1 skips bootFromIntro, whose own markCabinet never fires
+  }
+  /* Opening show world (src/app/intro.js): its OWN slot, never demo's. Backs
+     INTRO and the MENU it reveals; dropped for good on a user skip or at GAME / ATTRACT. Deep
+     links and autoplay never build it. */
+  let show = app.screen === SCREEN.INTRO ? createShow() : null, showKept = false;
+  gPrev = world.grid; // a deep link's board is the first frame's, not a room start
 
   // drawShell getters (plan 5): hoisted once so the RAF loop below allocates
   // no new closures per frame.
@@ -530,7 +532,7 @@ export function createGame(canvas, opts = {}) {
       }
       audio.pump();
     }
-    if (held) acc = 0; // a run start waiting for gen 3: nothing steps, nothing reads a key
+    if (hold.on) { acc = 0; hold.release(); } // a run start waiting for gen 3 or its look: nothing steps, nothing reads a key
     else if (app.screen === SCREEN.GAME) {
       // §1 score-record edge, frame-polled (main latches prev world state) —
       // persistScore owns both the write AND the score_set edge (Minor-2)

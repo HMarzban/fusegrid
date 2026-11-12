@@ -292,7 +292,7 @@
 <script id="loadjs" data-files="122">
 (function(w,d){
   var $=function(i){return d.getElementById(i)},E=$("load"),bar=$("loadbar"),fill=$("loadfill"),msg=$("loadmsg"),act=$("loadact"),retry=$("loadretry"),keep=$("loadkeep"),retryW=$("loadretryw"),keepW=$("loadkeepw"),retryK=$("loadretryk"),keepK=$("loadkeepk");
-  var SLOW=10000,STALL=30000,say0=$("loadsay"),jobs={},cur=null,failed=null,drop=null,again=null,shown=null,words=false,iv=0,base=new URL("./",d.baseURI).href;
+  var SLOW=10000,STALL=30000,say0=$("loadsay"),jobs={},cur=null,failed=null,drop=null,again=null,dl="USE CLASSIC 2D",shown=null,words=false,iv=0,base=new URL("./",d.baseURI).href;
   /* sp: where the game says the chip may show (shellview loaderSpot); cn: the chip's READY / DID NOT LOAD line */
   var sp={row:false,off:false,x:null,y:null,w:null},cn=null;
   var later=function(f,ms){if(w.setTimeout)w.setTimeout(f,ms)};
@@ -419,9 +419,10 @@
       if(cur===k&&rs)say("Restoring "+j.label+".");else if(cur===k&&!was)say("Preparing "+j.label+".")
     },
     focus:function(k){cur=k;if(failed&&failed!==k&&failed!=="boot"){delete jobs[failed];failed=null;drop=null;again=null}paint()},
-    /* ready only after phase(): the files are in (a failed fetch never reaches it), and only for the look on screen */
-    end:function(k){
-      if(failed===k)return;var j=jobs[k],chip=!!j&&j.dock&&j.ph&&shown===j&&!E.hidden;delete jobs[k];
+    /* ready only after phase(): the files are in (a failed fetch never reaches it), and only for the look on screen.
+       force: the job's owner dropped it, so its failure card goes too (a held run start cancelled with P / Escape) */
+    end:function(k,force){
+      if(failed===k&&!force)return;if(failed===k){failed=null;drop=null;again=null;act.hidden=true;E.removeAttribute("data-act")}var j=jobs[k],chip=!!j&&j.dock&&j.ph&&shown===j&&!E.hidden;delete jobs[k];
       if(chip&&cur===k){cn={t:j.label+" · READY",bad:false,until:now()+800};later(paint,820)}
       paint();if(j&&k!=="boot"&&j.ph&&cur===k)say(j.label+" ready.")
     },
@@ -443,13 +444,14 @@
     wants:function(){for(var k in jobs)if(k!=="boot")return true;return !!cn},
     /* the first load's stage was on screen (150 ms with the boot job alive; latched when it ends): shellview hands the title settled */
     lit:function(){return lit!=null?lit:!!jobs.boot&&now()-t0>=150},
-    fail:function(k,onDrop,onAgain){
+    /* dropLabel: the second button's words (a held run start's FLOOR TILES card says BACK TO MENU) */
+    fail:function(k,onDrop,onAgain,dropLabel){
       if(!jobs[k])return;
-      failed=k;drop=onDrop||null;again=onAgain||null;paint();
+      failed=k;drop=onDrop||null;again=onAgain||null;dl=dropLabel||"USE CLASSIC 2D";keepW.textContent=dl+(words?" EAST":"");paint();
       if(k==="boot")retry.focus();
     },
     /* a pad's route to a look's failure card (src/app/loadbar.js loadCard); pad = last used, so the buttons name its words */
-    padLive:function(pad){var on=!!failed&&failed!=="boot";if(on&&words!==!!pad){words=!!pad;retryW.textContent="RETRY"+(pad?" SOUTH":"");keepW.textContent="USE CLASSIC 2D"+(pad?" EAST":"");retryK.hidden=keepK.hidden=!!pad}return on},
+    padLive:function(pad){var on=!!failed&&failed!=="boot";if(on&&words!==!!pad){words=!!pad;retryW.textContent="RETRY"+(pad?" SOUTH":"");keepW.textContent=dl+(pad?" EAST":"");retryK.hidden=keepK.hidden=!!pad}return on},
     padPress:function(id){if(!failed||failed==="boot")return;if(id==="S")retry.onclick();else if(id==="E"&&drop)keep.onclick()}
   };
   /* the flag form of spot().row, for a reader or a writer that only knows the row */

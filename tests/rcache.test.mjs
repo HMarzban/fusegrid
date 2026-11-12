@@ -35,7 +35,7 @@ function mkDoc() {
 
 function harness(o = {}) {
   const doc = mkDoc();
-  const log = { swaps: [], kinds: [], ready: 0, loads: 0, pxLoads: 0, fails: [], ons: [], built: [], jobs: [] };
+  const log = { swaps: [], kinds: [], ready: 0, loads: 0, pxLoads: 0, fails: [], ons: [], boots: [], built: [], jobs: [] };
   let k = o.kind || "2d";
   const mk = (tag) => (a, b, c) => {
     const opts = tag === "2d" ? b : c;
@@ -65,7 +65,7 @@ function harness(o = {}) {
     jobs: !!o.jobs, world: o.world ? () => o.world : undefined, idle: o.idle || undefined, hold: o.hold || undefined, poke: () => { log.pokes = (log.pokes || 0) + 1; }, now: o.clock ? () => o.clock.t : undefined, budgetMs: o.budgetMs,
     loadRenderer3D: () => { log.loads++; if (o.seq) o.seq.push("import:3d"); return new Promise((res, rej) => { resolve3d = () => res({ createRenderer3D: mk("3d") }); reject3d = () => rej(new Error("404")); }); },
     loadRendererPx: () => { log.pxLoads++; if (o.seq) o.seq.push("import:px"); return new Promise((res, rej) => { resolvePx = () => res({ createPixelRenderer: mk("px") }); rejectPx = () => rej(new Error("404")); }); },
-    onFail: (k, on) => { log.fails.push(k); log.ons.push(on); },
+    onFail: (k, on, boot) => { log.fails.push(k); log.ons.push(on); log.boots.push(boot); },
     fit: () => null, eager: !!o.eager, eagerPx: !!o.eagerPx, bar: o.bar || null,
     prefetch: o.prefetch, root: o.root, onLost: () => { log.lost = (log.lost || 0) + 1; },
   };
@@ -421,6 +421,26 @@ const showPx = async (h) => { h.rc.get("px"); await flush(); const rp = tagged(h
   check("a failed look keeps the look on screen: onFail(3d, px), PIXEL still shown and visible, nothing swapped", h.log.fails.join() === "3d" && h.log.ons.join() === "px" && h.rc.shownKind() === "px" && h.doc.getElementById("px").hidden === false && h.log.kinds.join() === "px" && rp.disposed === 0);
   check("the half-built 3D is disposed, its clone removed; lookJob = failed", r3.disposed === 1 && h.doc.parent.kids.length === kids0 && lastJob(h).state === "failed" && lastJob(h).k === "3d");
   check("a look failure is __load.miss(k, look kept), never the centred card (boot only)", misses.join() === "3d>PIXEL", misses.join());
+  check("a look picked with another on screen is not a boot failure (main reverts the pick as built)", h.log.boots.join() === "false");
+  h.done();
+  if (L0 === undefined) delete globalThis.__load; else globalThis.__load = L0;
+}
+// review 3: a saved look that fails at BOOT (nothing on screen yet) keeps the saved setting
+{
+  const misses = [];
+  const L0 = globalThis.__load;
+  globalThis.__load = { begin() {}, phase() {}, end() {}, focus() {}, fail() { misses.push("CARD"); }, miss(k, kept) { misses.push(k + ">" + kept); } };
+  const bar = { lookPlan: () => ({}), paintYield: () => Promise.resolve(), afterFirstRender: (r, done) => done() };
+  const h = harness({ kind: "px", prep: true, bar });
+  const r0 = h.rc.get("px");
+  await flush();
+  check("boot: a saved PIXEL is not on screen yet (the classic stand-in, shownKind null)", r0.tag === "2d" && h.rc.shownKind() === null);
+  tagged(h, "px")[0].reject(new Error("offline"));
+  await flush();
+  check("a failure at boot: onFail(px, 2d, boot=true), so main shows CLASSIC for this session and keeps nb.settings.v1", h.log.fails.join() === "px" && h.log.ons.join() === "2d" && h.log.boots.join() === "true");
+  check("the chip says it (miss, CLASSIC 2D kept), never the card; the title is released (onReady)", misses.join() === "px>CLASSIC 2D" && h.log.ready === 1 && lastJob(h).state === "failed");
+  h.setKind("2d");
+  check("the next frame's get(2d) puts CLASSIC on screen and keeps the failed note for the RENDER row", h.rc.get("2d").tag === "2d" && h.rc.shownKind() === "2d" && lastJob(h).state === "failed");
   h.done();
   if (L0 === undefined) delete globalThis.__load; else globalThis.__load = L0;
 }
@@ -434,7 +454,9 @@ const showPx = async (h) => { h.rc.get("px"); await flush(); const rp = tagged(h
   h.setKind("px"); h.rc.get("px");
   await flush();
   const rp = tagged(h, "px")[0];
+  h.rc.rebuildAgain();
   check("an AA / SHADOWS rebuild while another look's job is pending never cancels it", h.rc.rebuild3d({ aa: false }) === true && tagged(h, "3d").length === 1 && h.rc.job() && h.rc.job().k === "px");
+  check("review 5: it is queued, not dropped: rebuildAgain() asks frameloop to call again after that job, once per ask", h.rc.rebuildAgain() === true && h.rc.rebuildAgain() === false);
   rp.stop = true; rp.release();
   await flush();
   check("the PIXEL job still swaps in", h.log.swaps[h.log.swaps.length - 1] === rp && h.rc.shownKind() === "px");
@@ -459,8 +481,8 @@ const showPx = async (h) => { h.rc.get("px"); await flush(); const rp = tagged(h
 }
 {
   const msrc = readFileSync(new URL("../src/main.js", import.meta.url), "utf8"), asrc = readFileSync(new URL("../src/app/menuapp.js", import.meta.url), "utf8");
-  check("main: one idle predicate (not GAME + PLAY, not the INTRO show) feeds both the frame gate and rcache", /const idleNow = \(\) => !\(app\.screen === SCREEN\.GAME && world\.state === "PLAY"\) && !\(app\.screen === SCREEN\.INTRO && app\.introStage === 1\);/.test(msrc) && /mountFrames\(loop, \{[^}]*idle: idleNow/.test(msrc) && /mountRenderers\(\{[^\n]*idle: idleNow/.test(msrc));
-  check("main: onSwap sets the look on screen (curKind) and arms the dt reset; failure goes to app.lookFailed (no _optRender(0))", /onSwap: \(r, k\) => \{ renderer = r; curKind = k; swapped = true; \}/.test(msrc) && /onFail: \(k, on\) => app\.lookFailed\(k, on\)/.test(msrc) && !/_optRender\(0\)/.test(msrc));
+  check("main: one idle predicate (a held run start, or not GAME + PLAY and not the INTRO show) feeds both the frame gate and rcache", /const idleNow = \(\) => hold\.on \|\| \(!\(app\.screen === SCREEN\.GAME && world\.state === "PLAY"\) && !\(app\.screen === SCREEN\.INTRO && app\.introStage === 1\)\);/.test(msrc) && /mountFrames\(loop, \{[^}]*idle: idleNow/.test(msrc) && /mountRenderers\(\{[^\n]*idle: idleNow/.test(msrc));
+  check("main: onSwap sets the look on screen (curKind) and arms the dt reset; failure goes to app.lookFailed (no _optRender(0))", /onSwap: \(r, k\) => \{ renderer = r; curKind = k; swapped = true; \}/.test(msrc) && /onFail: \(k, on, boot\) => app\.lookFailed\(k, on, boot\)/.test(msrc) && !/_optRender\(0\)/.test(msrc));
   check("main: a swap, a run start or a room start (a new world.grid) drops the long frame from the next dt", /if \(swapped \|\| world\.grid !== gPrev\) \{ swapped = false; gPrev = world\.grid; last = null; \}/.test(msrc));
   check("menuapp: lookJob exposed, lookHold covers OPTIONS / GRAPHICS / CONTROLS / PAUSE views", /lookJob: null/.test(asrc) && /lookHold\(\) \{/.test(asrc));
   const { createGame } = await import("../src/main.js");
@@ -672,6 +694,22 @@ const showPx = async (h) => { h.rc.get("px"); await flush(); const rp = tagged(h
   h.rc.tick(1, "3d");
   await flush();
   check("a lost context that cannot be rebuilt: said as a failure, the pick reverts to CLASSIC 2D", h.log.fails[h.log.fails.length - 1] === "3d" && h.log.ons[h.log.ons.length - 1] === "2d" && lastJob(h).state === "failed" && r3.disposed === 1);
+  h.done();
+}
+// review 5: a pick that cancels an AA / SHADOWS rebuild queues it again
+{
+  const h = harness({ kind: "3d", pre3d: true, prep: true, jobs: true });
+  h.rc.get("3d");
+  await flush();
+  const r3 = tagged(h, "3d")[0];
+  r3.stop = true; r3.release();
+  await flush();
+  h.rc.rebuild3d({ aa: false });
+  await flush();
+  const rb = tagged(h, "3d")[1];
+  check("(an AA rebuild job is running)", !!rb && h.rc.job() && h.rc.job().rebuild === true && h.rc.rebuildAgain() === false);
+  h.setKind("px"); h.rc.get("px");
+  check("a RENDER pick cancels it (half-built context disposed) and queues it: rebuildAgain() is true once", rb.disposed === 1 && h.rc.rebuildAgain() === true && h.rc.rebuildAgain() === false);
   h.done();
 }
 {

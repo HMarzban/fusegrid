@@ -138,6 +138,8 @@ const CAUSES = [
   ["a REAL 3D load fails, PIXEL on screen", (g) => { g.app.lookJob = { k: "3d", state: "failed", fails: 1 }; g.app.lookFailed("3d", "px"); }, "px"],
   ["a lost REAL 3D context that cannot be rebuilt falls back (rcache onFail(3d, 2d))", (g) => { g.app.lookJob = { k: "3d", state: "failed", restore: true, fails: 1 }; g.app.lookFailed("3d", "2d"); }, "2d"],
   ["a failed rebuild3d reverts its row (ANTI-ALIAS, through setGfx: the list stays)", (g) => { g.app.setGfx("aa", g.app.settings.aa ? 0 : 1); }, "3d"],
+  /* delivery review 3: a saved REAL 3D that fails at boot shows CLASSIC 2D for this session only (onFail's boot flag): the cursor moves as any ART STYLE write */
+  ["a saved REAL 3D fails at boot (CLASSIC 2D for this session, rcache onFail(3d, 2d, true))", (g) => { g.app.lookJob = { k: "3d", state: "failed", fails: 1 }; g.app.lookFailed("3d", "2d", true); }, "2d"],
 ];
 const START = ["ART STYLE", "CAMERA", "BRIGHTNESS", "MUSIC", "GRAPHICS", "RESET DEFAULTS"];
 const land = (start, look) => (look === "3d" || optRows(false).includes(start) ? start : "ART STYLE");

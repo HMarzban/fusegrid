@@ -19,18 +19,19 @@ const noop = () => {};
 /* Not in the boot graph (v202 delivery): the page reducer and its capture load
    when CONTROLS opens or in idle after the title, with the render side's paint
    (art = shellview's loadControlsArt, handed in by main: src/app never imports
-   src/render); rumble.js loads on the first controller seen. A module that is
-   in stays in, so a later mount builds at once. */
+   src/render); rumble.js loads on the first controller seen, and a failed
+   load retries on the next controller press or when CONTROLS opens with a
+   controller in. A module that is in stays in, so a later mount builds at once. */
 let pageMod = null, pageP = null, artDone = false, artP = null, rumbleMod = null, rumbleP = null;
 const retry = (clear) => (e) => { clear(); throw e; };
 const loadPage = () => pageP || (pageP = import("./controlspage.js").then((m) => { pageMod = m; }, retry(() => { pageP = null; })));
 const loadArt = (art) => (!art ? Promise.resolve() : artP || (artP = Promise.resolve(art()).then(() => { artDone = true; }, retry(() => { artP = null; }))));
-const loadRumble = () => rumbleP || (rumbleP = import("./rumble.js").then((m) => { rumbleMod = m; }, retry(() => { rumbleP = null; })));
+const loadRumble = (imp) => rumbleP || (rumbleP = (imp ? Promise.resolve(imp()) : import("./rumble.js")).then((m) => { rumbleMod = m; }, retry(() => { rumbleP = null; })));
 /** Every lazy CONTROLS part in; resolves once they are. Tests await it once, so their mounts build at once. */
 export const preloadControls = (art) => Promise.all([loadPage(), loadArt(art), loadRumble()]);
 
 /** Mounts the pad, the page, the hints and rumble on the live shell. poll(t) belongs above the frame gate. */
-export function mountControls({ win, doc, input, app, SCREEN, world, onPause, getGamepads, store, audio, unlock, setHints, art, idle, defer }) {
+export function mountControls({ win, doc, input, app, SCREEN, world, onPause, getGamepads, store, audio, unlock, setHints, art, idle, defer, importRumble }) {
   const W = win !== undefined ? win : typeof window !== "undefined" ? window : null;
   const D = doc !== undefined ? doc : typeof document !== "undefined" ? document : null;
   const gp = getGamepads || padsOf();
@@ -54,6 +55,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     playing: () => app.lastDev === "pad" && app.screen === SCREEN.GAME && !(D && D.hidden), // a keyboard player with an idle pad connected feels nothing; the VIBRATION row's test pulse and the menu ticks are apart
     state: () => world.state,
   }))) || null;
+  const wantRumble = () => { if (!rumbleMod) loadRumble(importRumble).catch(noop); }; // in flight: the same promise; failed: a fresh try
   const canBuzz = () => routesOf(activePad()).length > 0; // gamepad.js, boot: the door and the READY note never wait on rumble.js
   const stopRumble = () => { if (c.vib > 0 && rum()) rumble.stop(); };
   const padView = () => {
@@ -108,7 +110,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     get loading() { return !page; },
     get failed() { return failed && !page; },
     view: (t) => (page ? page.view(t) : pre(t)),
-    open(d) { if (page) return page.open(d); openDev = d; want(); },
+    open(d) { if (pad.snap().connected) wantRumble(); if (page) return page.open(d); openDev = d; want(); }, // the VIBRATION row's test buzz needs rumble.js
     walk: (d, axis, h) => (page ? page.walk(d, axis, h) : false),
     adjust: (d, r) => (page ? page.adjust(d, r) : false),
     pick: (i) => (page ? page.pick(i) : false),
@@ -247,8 +249,8 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
       wasDir = dir;
       hintDev.pad(snap, app.ctlT);
       const inRun = app.screen === SCREEN.GAME && world.state === "PLAY" && !app.capturing;
+      if (snap.found || pressed) wantRumble(); // a press retries a load that failed
       if (snap.found) {
-        if (!rumbleMod) loadRumble().catch(noop);
         everSeen = true; shownT = null;
         if (inRun) { toast = { k: wasLost ? "back" : "ready", t0: t }; pending = ""; } else pending = wasLost ? BACK : READY; // in a run the HUD's toast says it once; the menus' note does not repeat it
         wasLost = false;

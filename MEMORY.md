@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — Task 9.13: the 2026-11-06 delivery review fixes, ported (shell v210)
+- Owner: "Yes, review them". 244a07a / f46f672 / 2a5621b were never merged; all still applied on v209 and are ported test first: held run starts (lazyload createHold), a saved look failing at boot stays saved (_bootMiss, through _setR3d), FLOOR TILES BACK TO MENU, queued AA / SHADOWS rebuilds (rcache rebuildAgain), the worker's fill only inside waitUntil (FILL message), the rumble.js retry, pwa.test's dead checks after process.exit. Left open as a design call: CONTROLS' in-flight LOADING plate taps (SETTINGS' rule, off backs out, vs GUIDE / RECORDS' inert rule).
+
 ## 2026-11-12 — Shell v209: the controller toast in a run
 - Owner: "I connected the controller and it does not a toast". A controller connected / back / lost while a run PLAYs is now a 3 s HUD toast in the tile tip's plate and slots (controlswire app.padToast, hud.js toastState, words.js PAD_TOAST; tests/hud-toast.test.mjs, controlswire block). Bumped v208 -> v209 (v208 may already be cached). Placement is the tile tip's documented slot, chosen without a contact sheet (the other place, over the chips, hides LIVES / SCORE mid-run); owner may veto.
 

@@ -73,10 +73,19 @@ export function registerSW(env) {
     const waiting = (reg) => {
       if (onUpdate && reg && reg.waiting && sw.controller) onUpdate(reg);
     };
+    /* The worker's idle stage (sw.js) runs inside this message's waitUntil:
+       ask the active worker once it is ready, and again on a later visible
+       check; a pass resumes from what is missing, so a repeat costs lookups. */
+    const fill = () => {
+      const r = sw.ready;
+      if (r && typeof r.then === "function")
+        r.then((g) => { const a = g && g.active; if (a && typeof a.postMessage === "function") a.postMessage({ type: "FILL" }); }).catch(() => {});
+    };
     sw
       .register(url, { type: "module", scope: "./", updateViaCache: "none" })
       .then((reg) => {
         if (!reg) return;
+        fill();
         waiting(reg);
         if (typeof reg.addEventListener === "function")
           reg.addEventListener("updatefound", () => {
@@ -92,6 +101,7 @@ export function registerSW(env) {
           const t = Date.now();
           if (t - last < 600000 || typeof reg.update !== "function") return;
           last = t;
+          fill();
           Promise.resolve(reg.update()).catch(() => {});
         };
         if (doc && typeof doc.addEventListener === "function")

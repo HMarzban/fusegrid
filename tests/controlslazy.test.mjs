@@ -141,6 +141,42 @@ const draw = (g) => { const R = rec(); drawShell(R.c, g.app, g.world, null, "2d"
   setHints(null);
 }
 
+// ---- 4. delivery review 7: a failed rumble.js load retries on the next controller press, or when CONTROLS opens; never on a quiet poll ----
+{
+  const stub = (screen) => ({ screen, pauseView: 0, ctlT: 0, lastDev: "key", introStage: 0, padCards: [], feel: "", wake: noop, _feel: noop, onControls: () => false,
+    get capturing() { return false; }, ctlBtn: () => false, ctlKey: () => false, back() { this.screen = SCREEN.SETTINGS; return true; } });
+  const rig = (W, fails) => {
+    let n = 0;
+    const calls = [], p = mkPad(calls), app = stub(SCREEN.MENU);
+    const importRumble = () => (++n <= fails ? Promise.reject(new Error("offline")) : import("../src/app/rumble.js"));
+    const c = W.mountControls({ win: null, doc: null, input: new Input(null), app, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => [p], store: null, defer: null, art: () => Promise.resolve(), importRumble });
+    let t = 0;
+    return { app, c, p, calls, n: () => n, poll: () => c.poll((t += 1000 / 60)) };
+  };
+  const A = rig(await import("../src/app/controlswire.js?rumble"), 1);
+  A.poll(); // the pad is found: the first load, which fails
+  await sleep(1);
+  check("rumble: the first controller seen asks for rumble.js once", A.n() === 1, A.n());
+  for (let i = 0; i < 5; i++) A.poll();
+  await sleep(1);
+  check("rumble: a failed load is not retried on a quiet poll", A.n() === 1, A.n());
+  A.p.set("N", true); A.poll(); A.p.set("N", false); A.poll();
+  check("rumble: the next controller press retries it", A.n() === 2, A.n());
+  await sleep(1);
+  A.p.set("N", true); A.poll(); A.p.set("N", false); A.poll();
+  check("rumble: once in, a press asks for nothing more", A.n() === 2, A.n());
+  const B = rig(await import("../src/app/controlswire.js?rumble2"), 1);
+  B.poll();
+  await sleep(1);
+  B.app.screen = SCREEN.CONTROLS; B.app.onControls = () => true;
+  B.app.controls.open("pad");
+  check("rumble: opening CONTROLS with a controller in retries a failed load (the VIBRATION test buzz needs it)", B.n() === 2, B.n());
+  const C = rig(await import("../src/app/controlswire.js?rumble3"), 1);
+  C.app.controls.open("key");
+  check("rumble: opening CONTROLS with no controller seen asks for nothing", C.n() === 0, C.n());
+  setHints(null);
+}
+
 delete globalThis.window; delete globalThis.location;
 console.log("\n  CONTROLSLAZY RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

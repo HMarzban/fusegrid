@@ -15,7 +15,7 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
-## shell v209 · 2026-11-12
+## shell v210 · 2026-11-12
 
 The menus centre, CONTROLS joins the world, the first load builds the title, and every overlay is sharp.
 
@@ -52,6 +52,20 @@ The menus centre, CONTROLS joins the world, the first load builds the title, and
 - **CONTROLS no longer says DID NOT LOAD after an update.** The game's offline cache kept its old name while files changed, so a
   returning browser mixed old cached files with new ones: the CONTROLS page failed to start and some menus kept their old,
   off-centre layout. The cache has a new name, so the NEW VERSION READY card appears; press RELOAD.
+- **A link straight into a run waits for its look.** Opening a run link (`?play=1`, a challenge code) with PIXEL or REAL 3D saved
+  no longer starts the run in CLASSIC 2D while the look is still on its way: the run holds, frozen, behind PREPARING and starts
+  once the look is on screen. P or Escape while it waits goes back to the menu.
+- **A saved art style that fails to load at start-up stays saved.** You see CLASSIC 2D for this visit, and the next visit tries
+  your pick again; ART STYLE says it did not load, and Enter on it tries again.
+- **The FLOOR TILES card has a way out.** If the floor tiles cannot load before a run, the card now offers RETRY and BACK TO
+  MENU (Escape, EAST or a tap), and P or Escape while they load goes back to the menu too.
+- **Changing ANTI-ALIAS or SHADOWS while another art style loads is no longer lost.** The change waits for that load to end and
+  then applies.
+- **Offline caching finishes reliably.** The game's offline copy of the PIXEL and REAL 3D files now fills only while the browser
+  keeps the service worker awake, picks up where it stopped, and an old copy of the game can no longer bring back a cache a
+  newer one deleted.
+- **Controller vibration recovers from a failed download.** If the vibration code did not load, the next controller press (or
+  opening CONTROLS with a controller in) tries again, so the VIBRATION test buzz works.
 
 ### Notes
 

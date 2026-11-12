@@ -1,6 +1,6 @@
 import { CACHE_NAME, BOOT, LOOKS, fetchPolicy } from "./src/pwa/shell.js";
 
-const REV = "fusegrid-shell-v209";
+const REV = "fusegrid-shell-v210";
 if (REV !== CACHE_NAME) throw new Error("PWA REV drift");
 const PREFIX = "fusegrid-shell-v";
 /* Shells before v179 have no NEW VERSION READY card, so a page they run can
@@ -23,7 +23,10 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
+  const type = event.data && event.data.type;
+  if (type === "SKIP_WAITING") self.skipWaiting();
+  // the page asks in its first idle after the title (register.js): the pass lives inside this event, so a stopped worker never strands it
+  else if (type === "FILL") event.waitUntil(fillLooks().catch(() => {}));
 });
 
 self.addEventListener("activate", (event) => {
@@ -38,28 +41,37 @@ self.addEventListener("activate", (event) => {
       )
       .then(() => self.clients.claim()),
   );
-  // idle stage: not awaited, so it never holds activation; resumed from what is missing
-  setTimeout(() => fillLooks().catch(() => {}), 1500);
+  // no fill here, so activation never waits on it: the page's FILL and the next navigation start it
 });
 
-/* The looks (PIXEL tree, then REAL 3D tree) are cached by the worker itself,
-   one look at a time, in this CACHE_NAME. A fetch for a look file is the same
-   request as the fill (inflight), so nothing is downloaded twice. */
+/* The idle stage (the off-boot files, the PIXEL tree, then the REAL 3D tree)
+   is cached by the worker itself, one file at a time, in this CACHE_NAME, and
+   only inside an event's waitUntil (a FILL message or a navigation). A fetch
+   for a look file is the same request as the fill (inflight), so nothing is
+   downloaded twice. Each pass resumes from what is missing. */
 const abs = (u) => new URL(u, self.location.href).href;
 const LOOK_URLS = new Set(LOOKS.flat().map(abs));
 const inflight = new Map();
-let filling = null;
+let filling = null, own = null;
+/* This worker's cache while it is still the one in use, else null. Never a
+   caches.open once a newer shell's activate deleted it: open re-creates a
+   missing cache. The handle is kept, and a deleted cache's handle writes
+   nowhere, so a put racing that delete cannot bring it back either. */
+async function current() {
+  const me = self.serviceWorker; // older browsers lack it: the cache name below is then the only signal
+  if (me && me.state === "redundant") return null; // replaced: marked before the newer worker's activate deletes this cache
+  if (!(await caches.has(CACHE_NAME))) return null;
+  return own || (own = await caches.open(CACHE_NAME));
+}
 function getLook(url) {
   let p = inflight.get(url);
   if (!p) {
-    p = caches
-      .open(CACHE_NAME)
-      .then((cache) =>
-        fetch(new Request(url, { cache: "no-cache" })).then(async (r) => {
-          if (r.ok) await cache.put(url, r.clone());
-          return r;
-        }),
-      )
+    p = fetch(new Request(url, { cache: "no-cache" }))
+      .then(async (r) => {
+        const cache = r.ok ? await current() : null;
+        if (cache) await cache.put(url, r.clone());
+        return r;
+      })
       .finally(() => inflight.delete(url));
     inflight.set(url, p);
   }
@@ -68,12 +80,13 @@ function getLook(url) {
 function fillLooks() {
   if (filling) return filling;
   filling = (async () => {
-    const cache = await caches.open(CACHE_NAME);
     for (const look of LOOKS)
       for (const u of look) {
+        const cache = await current();
+        if (!cache) return; // no longer current: stop writing
         const url = abs(u);
         if (await cache.match(url)) continue;
-        try { await getLook(url); } catch { return; } // offline or failed: resume on the next activate or fetch
+        try { await getLook(url); } catch { return; } // offline or failed: the next FILL or navigation resumes
         await new Promise((r) => setTimeout(r, 20));
       }
   })().finally(() => { filling = null; });

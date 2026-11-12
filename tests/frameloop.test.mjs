@@ -150,6 +150,32 @@ function rig(o = {}) {
   check("off 3D a stale cached context is dropped, not rebuilt", log[log.length - 1][0] === "drop");
 }
 
+// ---- 4b. review 5: a rebuild deferred behind another look's job (or cancelled by a pick) is queued, never dropped ----
+{
+  let live = true, again = false, defer = true;
+  const log = [];
+  const app = { screen: SCREEN.MENU, pauseView: 0, setGfx: (k, v) => log.push(["set", k, v]) };
+  const rc = { setKnobs() {}, liveAA: () => live, rebuildAgain: () => { const v = again; again = false; return v; },
+    rebuild3d: (K) => { log.push(["rb", K.aa]); if (defer) again = true; else live = K.aa; return true; }, drop3d: () => { log.push(["drop"]); live = null; } };
+  const R = rig({ rc, kind: "3d", app });
+  const S = AUTO();
+  R.F.apply(S);
+  R.F.kick(); R.step(3, 16);
+  S.aa = 0; R.F.apply(S);
+  R.step(1, 16);
+  check("off the page the AA change asks for a rebuild", log.filter((e) => e[0] === "rb").length === 1);
+  R.step(4, 16);
+  check("deferred (another look's job in flight): asked again on later frames, the row never reverted", log.filter((e) => e[0] === "rb").length >= 3 && !log.some((e) => e[0] === "set"));
+  defer = false;
+  R.step(2, 16);
+  const n = log.filter((e) => e[0] === "rb").length;
+  R.step(10, 16);
+  check("once the job is out of the way the rebuild runs, then never again for that epoch", live === false && log.filter((e) => e[0] === "rb").length === n);
+  live = true; again = true; R.st.kind = "px";
+  R.step(2, 16);
+  check("a rebuild cancelled by a pick that moved the look off 3D: the stale cached context is released (the next 3D build takes the new value)", log[log.length - 1][0] === "drop" && !log.some((e) => e[0] === "set"));
+}
+
 // ---- 5. visibility, input poke, info ----
 {
   let inv = 0;

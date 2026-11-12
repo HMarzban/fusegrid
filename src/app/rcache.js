@@ -20,7 +20,7 @@ export function mountRenderers(env) {
   const el = (id) => (typeof document !== "undefined" && document && document.getElementById ? document.getElementById(id) : null);
   const cache = {}, seen = {}, slept = {}, shd = new WeakMap(); // shd: the SHADOWS tier a 3D renderer was built with
   const mk = { "3d": opts.createRenderer3D || null, px: opts.createPixelRenderer || null }, LD = { "3d": [loadRenderer3D, "createRenderer3D"], px: [loadRendererPx, "createPixelRenderer"] }, loading = {}, fails = {};
-  let lastK = null, shown = null, job = null, relT = null, queued = false, lostNote = null;
+  let lastK = null, shown = null, job = null, relT = null, queued = false, lostNote = null, rbAgain = false; // rbAgain: an AA / SHADOWS rebuild deferred or cancelled, for frameloop to ask again
   /* a lost WebGL context (v202): rcache listens on the 3D canvas it built on; the
      listener comes off BEFORE every dispose, whose forceContextLoss fires that event */
   const lostR = new Set(), ears = new WeakMap(), waiters = [];
@@ -200,7 +200,7 @@ export function mountRenderers(env) {
       if (onFail) onFail("3d", "2d");
       return;
     }
-    const on = shown && !shown.boot ? shown.k : "2d";
+    const boot = !shown || !!shown.boot, on = boot ? "2d" : shown.k; // boot: nothing chosen on screen yet
     if (J.rebuild) {
       /* a failed 3D rebuild keeps the old context; a SHADOWS change it carried applies live on it (today's path) */
       const r3 = cache["3d"];
@@ -214,9 +214,11 @@ export function mountRenderers(env) {
     J.state = "failed";
     note(J);
     /* the centred card is boot-only now (design Q4): a look failure is __load.miss (chip +
-       polite line), the RENDER row shows it (app.lookJob), and the pick reverts to the look on screen */
+       polite line), the RENDER row shows it (app.lookJob), and the pick reverts to the look on screen.
+       At boot (a saved look, nothing on screen yet) CLASSIC shows for this session only: onFail's
+       third argument says so, the saved setting stays and the next boot retries (review 3) */
     settled(J.k, null, LOOK_LABEL[on]);
-    if (onFail) onFail(J.k, on);
+    if (onFail) onFail(J.k, on, boot);
   }
   function show(k, r) {
     sizeCanvases(k);
@@ -267,7 +269,7 @@ export function mountRenderers(env) {
   function get(k, inner) {
     if (k === "3d" && cache["3d"] && cache["3d"].dead && !(async() && shown && shown.r === cache["3d"])) drop3d(); // a dead context on screen is restored by tick, keeping the look
     if (!inner && LB()) LB().focus(k);
-    if (job && job.k !== k) cancelJob();
+    if (job && job.k !== k) { if (job.rebuild && !job.restore) rbAgain = true; cancelJob(); } // a pick cancels a rebuild: asked again (review 5)
     if (!job && shown && shown.k !== k) pub(null); // a real change of look clears a finished or failed note
     if (cache[k]) {
       delete slept[k];
@@ -320,7 +322,7 @@ export function mountRenderers(env) {
     const old = cache["3d"], oe = el("gl");
     if (!old || !oe || !mk["3d"] || !oe.cloneNode || !oe.parentNode) return false;
     if (!async()) return rebuildNow(K, old, oe);
-    if (job && job.k !== "3d" && !job.warm) return true; // another look is on its way in: never cancel it for a context it will replace
+    if (job && job.k !== "3d" && !job.warm) return (rbAgain = true); // another look is on its way in: never cancel it; frameloop asks again after it (review 5)
     if (job && job.restore) { job.K = K; return true; } // a lost context is being rebuilt: it takes the new knobs if it has not built yet
     if (job && job.k === "3d" && job.rebuild && job.K && job.K.aa === K.aa && job.K.shadow === K.shadow) return true;
     startJob("3d", { rebuild: true, K, onFail: fail || null });
@@ -407,6 +409,7 @@ export function mountRenderers(env) {
       }
     },
     liveShadow: () => (cache["3d"] && shd.has(cache["3d"]) ? shd.get(cache["3d"]) : null),
+    rebuildAgain: () => { const v = rbAgain; rbAgain = false; return v; },
     liveAA: () => (cache["3d"] && cache["3d"].liveAA != null ? cache["3d"].liveAA : null),
     rebuild3d,
     drop3d,
