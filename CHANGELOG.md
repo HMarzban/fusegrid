@@ -84,8 +84,7 @@ Pause and the end of a run move into the world too.
 
 ## shell v203 · 2026-11-12
 
-The menus move into the world you're about to play. (v202 is kept for the controller release's own
-squash; this cut follows it.)
+The menus move into the world you're about to play.
 
 ### Added
 
@@ -120,7 +119,6 @@ squash; this cut follows it.)
   CLASSIC logo) add about 222 KB raw (about 86 KB gzip) to what the first visit downloads, against the plan's 60 KB. One
   option: load LEVEL SELECT later, in the idle after MENU paints (about 58 KB raw, 20 KB gzip).
 
-## shell v201 · 2026-11-08
 ## shell v202 · 2026-11-12
 
 The game starts sooner, and a new look switches in only when it's ready.
