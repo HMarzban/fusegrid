@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — v212: share card C and the SEO words
+- Owner: "C, three looks", then "yes, polish card C and update all the SEO". og.png = card C2 (three looks side by side, real captures; the polish pass put logo B's plate in ARENA's colours and made it the hero, 643 x 212), alt text in index.html and README. SEO: meta / og / twitter / JSON-LD descriptions, manifest and the itch blurb now say NORMAL / HARD / EXPERT, eight levels, keyboard, touch or controller (no Heat CORE / PLUS / MAX); media.test renegotiated (requires the new words, refuses `Heat CORE`). GitHub About text and topics updated LIVE (deterministic-simulation -> gamepad). Cache v212 (index.html is precached). Open: owner re-uploads og.png to Social preview after the push.
+
 ## 2026-11-12 — Task 9.14: LEVEL SELECT loads after the title (shell v211)
 - pages/level.js is a lazy page (lazy.js `level`, LATER with kit/pager.js); boot 122 -> 120 files, -59.9 KB raw / -21.2 KB gzip (now +280 / +109 KB over v201's c4e7598); LOADING plate + R1 cohesion 1 taps; keys and START never need it; captures byte-identical once loaded.
 

@@ -111,7 +111,7 @@ if (existsSync(mediaReadme)) {
   );
   check(
     "media/README.md carries the itch blurb",
-    /Flip REAL 3D/.test(t) && /Heat CORE \/ PLUS \/ MAX/.test(t),
+    /Flip REAL 3D/.test(t) && /NORMAL \/ HARD \/ EXPERT/.test(t) && !/Heat CORE/.test(t),
   );
   check(
     "media/README.md lists the required tags",

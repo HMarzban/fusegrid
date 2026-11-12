@@ -149,10 +149,11 @@ listing carries).
 
 ```
 Play Fusegrid in the browser — a single-player bomb-grid arcade.
-Flip REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX.
+Flip REAL 3D ⇄ CLASSIC 2D ⇄ PIXEL. NORMAL / HARD / EXPERT.
 
 WASD / arrows move · Space bomb · P pause
-Shift+Space throw · Q remote · walk into a bomb to kick (need pickups)
+E throw · Q remote · walk into a bomb to kick (need pickups)
+Or plug in a controller: D-PAD move · SOUTH bomb · START pause
 
 https://hmarzban.github.io/fusegrid/
 ```

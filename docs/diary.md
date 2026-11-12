@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v211 on 2026-11-12.
+shell v212 on 2026-11-12.
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -913,6 +913,10 @@ The open size call got settled the practical way. LEVEL SELECT, about 60 KB of c
 like SETTINGS and GUIDE do, so a first visit downloads about 21 KB less (gzip). Measuring it honestly also corrected an
 old number: the new menus had grown since R1, so the first visit is about 109 KB (gzip) heavier than v201, not the 86
 KB written down at R1. Opened before it arrives, LEVEL SELECT shows the shared LOADING plate for a moment.
+
+The share card got the same treatment as everything else: a real capture, not a drawing. The owner picked the bold
+one of three, "C, three looks": the same moment in CLASSIC 2D, PIXEL and REAL 3D side by side, the first card that
+shows REAL 3D instead of only naming it (shell v212).
 
 ---
 
