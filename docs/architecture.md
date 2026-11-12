@@ -34,7 +34,7 @@ from [`rng.js`](../src/core/rng.js), with no DOM and no wall clock in the core.
 That's the whole trick: a recorded seed plus an input sequence replays exactly,
 without ever starting a browser.
 
-Three renderers read the same simulation state, and the OPTIONS RENDER row
+Three renderers read the same simulation state, and the SETTINGS ART STYLE row
 cycles them: CLASSIC 2D (Canvas 2D, the default), PIXEL (hand-pixelled sprites)
 and REAL 3D (WebGL). Three.js is vendored and loaded only for REAL 3D. Keeping
 rendering separate means a visual change can't change the game's rules, though
@@ -42,17 +42,17 @@ GPU output and visual readability still need checking in a real browser. The
 shell state machine owns the menus; pause, win and loss belong to the world.
 
 The menu pages follow one layout idea, **pick on the left, see it on the
-right**. LEVEL SELECT is a grid of room tiles beside a room card that shows
-the world, the foes you'll meet, your best time and what the heat changes.
-On a keyboard the main menu is a list beside a preview that follows the
-cursor; on a phone it's a hub of tiles. Every panel is only as tall as its
-content, and any teaser built from your record (a top score, a best time)
-reads only runs you played, never placeholders.
+right**. MENU is seven rows (PLAY, LEVEL SELECT, DAILY, RECORDS, SETTINGS,
+GUIDE, SOURCE) beside a next-run card that shows the world, the foes you'll
+meet, the floor tile and the run's lives, fuse and score multiplier; LEVEL
+SELECT is a short list of rows (LEVEL, DIFFICULTY, GAME SPEED, MODIFIERS,
+START) beside the same card. On a phone both become one column, and on a
+landscape phone a grid of tiles. Any teaser built from your record (a top
+score, a best time) reads only runs you played, never placeholders.
 
-The build you're running is named on the main menu (`v188` today): in the
-keyboard foot hint, under the phone hub, or on the SOURCE tile where a
-landscape touch screen has no room below the hub. OPTIONS shows it as its
-`BUILD` kicker and the NEW VERSION READY card says which build you're on.
+The build you're running is named on the main menu (`v206` today): at the end
+of the desktop foot, or on the SOURCE row's teaser on a phone. SETTINGS shows
+it as its `BUILD` kicker and the NEW VERSION READY card says which build you're on.
 There is one source for it: `shellview.js` and `update.js` both derive it
 from `CACHE_NAME` in [`shell.js`](../src/pwa/shell.js), so a release bump
 renames it everywhere at once.
@@ -64,18 +64,24 @@ bomb and its ring, `type.js` the system-font type scale, `room.js` the look of
 the picked level behind the page, and `cache.js` an offscreen layer cache, so a
 steady menu frame is a few blits plus the live focus. Each page is one module
 in [`src/render/pages/`](../src/render/pages/) (MENU, LEVEL SELECT, the cards,
-SETTINGS / GRAPHICS, GUIDE, RECORDS) with ONE geometry that both the painter
-and the tap handler read, so a tap lands where the key is drawn.
-[`menudraw.js`](../src/render/menudraw.js) keeps the entry names and delegates
-to them. MENU, LEVEL SELECT, the cards and the CLASSIC logo
-([`logo/`](../src/render/logo/)) load at boot; SETTINGS, GUIDE and RECORDS
-load through [`pages/lazy.js`](../src/render/pages/lazy.js) in the idle after
-MENU's first frame, and draw a LOADING plate until they land. Player words
-live in one table, [`words.js`](../src/render/words.js). Under `?debug=1`
+SETTINGS / GRAPHICS, GUIDE, RECORDS, PAUSE and the run ends) with ONE geometry
+that both the painter and the tap handler read, so a tap lands where the key is
+drawn. [`menudraw.js`](../src/render/menudraw.js) keeps the entry names and
+delegates to them. MENU, LEVEL SELECT, the cards, PAUSE and the CLASSIC logo
+([`logo/`](../src/render/logo/)) load at boot; SETTINGS, GUIDE, RECORDS and the
+run ends (LEVEL CLEAR and the finale in `endwin.js`, GAME OVER in `endlose.js`,
+one draw and tap contract in `endgeom.js`) load through
+[`pages/lazy.js`](../src/render/pages/lazy.js) in the idle after MENU's first
+frame, and draw one shared LOADING plate until they land. The logo is drawn by
+one painter in every look (PIXEL's grids in `pixel/logo.js`, REAL 3D's side in
+`logo/draw3d.js`, both lazy with their look), and CONTROLS draws the controller
+and the keyboard you play with ([`padart.js`](../src/render/padart.js)). Player
+words live in one table, [`words.js`](../src/render/words.js). Under `?debug=1`
 every page can record what it drew (`kit/probe.js`), which
-[`tools/ui/`](../tools/ui/) turns into captures and readability gates. The
-pause menu still borrows the CONSOLE PANEL kit from
-[`scenes.js`](../src/render/scenes.js) until the end screens get theirs. Touch follows one rule everywhere: a tap on a
+[`tools/ui/`](../tools/ui/) turns into captures and readability gates. On every
+touch layout a target is at least 44 CSS px with 8 px between targets; where a
+page cannot fit at that size it turns into pages with ▲ / ▼ keys (one pager,
+`kit/pager.js`) rather than shrinking its text. Touch follows one rule everywhere: a tap on a
 row is Enter on it, and a tap off the rows does nothing on the main menu or
 the pause list and backs out of any other page. A chip tap on LEVEL SELECT or
 SCORES goes through the same app call as its arrow key, so it sounds the
@@ -88,15 +94,19 @@ and a landscape tablet that box is the window at scale 1; a window under
 landscape phone, since a page narrower than 600 would cut its text. A
 portrait phone sizes the board by its width, which left the menus at about
 0.63 scale in a third of the screen, so there the box is the viewport at
-about 0.9 scale; it is narrower than 600, so pages re-flow there (LEVEL
-SELECT stacks its room card under the grid, MEDALS goes to one column). The
-board canvases never see the box: they keep their own size and position, so
-no renderer changes and the board still sits behind the menu with the logo on
-it. `fit.shell` hands the drawing code and the tap handler the same logical
+about 0.9 scale; it is narrower than 600, so pages re-flow there into one
+column. The board canvases never see the box: they keep their own size and
+position, so no renderer changes. A page covers the board with the look of
+the picked level, and the renderers skip the board raster under it. `fit.shell` hands the drawing code and the tap handler the same logical
 box, so a tap still lands where it is drawn. The intro, attract mode, play, the
 pause menu and a room WIN mid-run stay on the board canvas with `#sh` hidden. At the end of a run
 `#sh` shows but draws nothing and lets every tap through, so GAME OVER and the
-final WIN keep the board canvas and its taps.
+final WIN keep the board canvas and its taps. The HUD (shell v206,
+[`hud.js`](../src/render/hud.js)) draws on a fourth canvas, `#hud`, laid over the
+viewport and clicked through: seven labelled chips in the level's frame above the
+board on a desktop, in a grid with the PAUSE key on a portrait phone and in the
+side gutters on a landscape one, never over the board. It paints only when what it
+shows changes, so a still frame costs no canvas calls.
 
 The 3D renderer works to a fixed budget of 500 draw calls, and the tests' fully
 populated room draws 141. Anything repeated is instanced, so cost doesn't grow
@@ -136,7 +146,7 @@ the PIXEL code on demand, the way the 3D library already is.
 
 ## ⚙️ Level 3: graphics settings and frame pacing
 
-The GRAPHICS page (from OPTIONS, or inline from PAUSE) is one model for every
+The GRAPHICS page (from SETTINGS, or inline from PAUSE) is one model for every
 look: a QUALITY preset (BATTERY, AUTO, HIGH) over FRAME RATE, RESOLUTION,
 SHADOWS, ANTI-ALIAS, EFFECTS and the attract DEMO, plus an FPS meter. QUALITY
 isn't stored. It's read back from the six rows, and any other mix shows as
@@ -183,14 +193,17 @@ machine's numbers.
 
 Picking something up says what changed. A short label rises from the tile with
 the value after the pickup ("FLAME 3", a muted MAX at the cap, or which special
-bomb a new one replaces), the matching HUD chip pulses, and a bar along the
-bottom of the board lists the abilities the player is holding. When a hit
+bomb a new one replaces), the matching HUD chip pulses, and the power-ups bar
+under the board lists the abilities the player is holding. When a hit
 takes an ability away, its chip fades out rather than vanishing. All of the
-wording comes from the same item table the ITEMS help page uses, so there's
+wording comes from the same item table the POWER-UPS help page uses, so there's
 one source for each name and help line. A one-time tip explains each of the
 eight verbs that need explaining (the four plain stat pickups are covered by
-the label alone). On touch layouts, THROW and REMOTE get their own buttons,
-which appear only while the player has that power. These overlays run on the
+the label alone). On touch layouts the HUD paints a touch strip (a D-PAD of
+four keys and a yellow BOMB key) and THROW and REMOTE keys that appear only
+while the player has that power; the page's own buttons sit over them as
+transparent hit areas. A floor tile's first-use tip stands beside the board on
+a leader to the nearest tile of its kind. These overlays run on the
 play clock, freeze in PAUSE, and draw nothing at all when idle, so a quiet
 frame costs the same as before.
 
@@ -209,8 +222,8 @@ must unlock, such as copying STATS to the clipboard, runs on `pointerup`.
 One JavaScript predicate picks the layout: [`fit.js`](../src/app/fit.js) writes
 `body[data-lay]` as desktop, touch portrait or touch landscape, and the page
 styles key off that rather than a CSS media query. A portrait phone has spare
-height, so the stage is centred on menu screens and slides up under the pause
-button during play, giving the touch controls a bigger thumb area below. The
+height, so the stage is centred on menu screens and slides up under the HUD's
+chip plate during play, giving the touch strip a bigger thumb area below. The
 geometry is a pure function tested in Node; how it feels in the hand still
 needs a real phone.
 
@@ -450,12 +463,22 @@ installs in the background and waits; a **NEW VERSION READY** card
 menus or after a finished run, never in the middle of one. Pressing it hands
 control to the new worker and the page reloads once. Copies from before the
 card existed (shell v178 and older) update once on their own, because their
-page can't show it. Cleanup touches only this game's own caches. First-time offline
+page can't show it. Cleanup touches only this game's own caches.
+Since shell v202 the first visit is lighter: `index.html` preloads the boot
+import graph in one go, and the floor-tile board builder, the ATTRACT bot,
+the iso renderer, `?net=local` and the CONTROLS page's paint load after the
+title ([`lazyload.js`](../src/app/lazyload.js)); a run started before the
+tile builder is in holds behind a FLOOR TILES plate rather than dealing a
+different board. The worker caches the boot list at install and fills in the
+other looks in idle after it activates, PIXEL first. Switching to PIXEL or REAL
+3D builds the new look in slices of about 8 ms that pause in live play
+([`jobs.js`](../src/app/jobs.js)), keeps the old look on screen until the new
+one is ready, and keeps it if the new one fails. First-time offline
 loading and syncing progress between devices are outside this design.
 Play stats are opt-in Google Analytics 4 ([`analytics.js`](../src/app/analytics.js),
 [privacy](privacy.md)). A small corner card asks once without stopping the game
 (no backdrop, no keyboard grab; in a run only when it fits beside the board),
-and OPTIONS → ANALYTICS changes the answer. Nothing loads before ALLOW. Then `gtag.js` arrives
+and SETTINGS → ANALYTICS changes the answer. Nothing loads before ALLOW. Then `gtag.js` arrives
 as a plain script tag (still zero npm deps), its cookies are scoped to the
 game's own path on the shared `github.io` origin, and every ad signal is denied.
 It runs only on the Pages host with a real Measurement ID; `?debug=1` elsewhere

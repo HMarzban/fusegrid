@@ -11,7 +11,7 @@ bricks, foes and chiptune.
 [![License: MIT](https://img.shields.io/badge/license-MIT-c39cff.svg)](LICENSE)
 [![Play in the browser](https://img.shields.io/badge/play-in%20the%20browser-ffd447.svg)](https://hmarzban.github.io/fusegrid/)
 
-[![Play Fusegrid in the browser — share card shows the real LEVEL SELECT screen with its eight room tiles, CLASSIC 2D · PIXEL · REAL 3D, the CORE / PLUS / MAX heat chips and the FUSE/GRID wordmark](og.png)](https://hmarzban.github.io/fusegrid/)
+[![FUSE/GRID, a browser arcade bomber: one real moment from room 5 at MAX heat, split by a slash into CLASSIC 2D and PIXEL, with fire crossing the board. Left: CLASSIC 2D, PIXEL, REAL 3D, CORE, PLUS, MAX, and PLAY IN THE BROWSER.](og.png)](https://hmarzban.github.io/fusegrid/)
 
 ### ▶ PRESS START: [hmarzban.github.io/fusegrid/](https://hmarzban.github.io/fusegrid/)
 
@@ -45,12 +45,14 @@ No install needed, no account, no server. Just press start.
 | Q | EAST | Detonate remote *(needs REMOTE)* |
 | Walk into a bomb | Walk into a bomb | Kick it so it slides *(needs KICK)* |
 | R *(in a run)* | none | Reset the camera and zoom |
-| P / Esc | START / SELECT | Pause (RESUME / RESTART / SETTINGS / QUIT TO MENU); ↑↓ + Enter or SOUTH pick a row |
+| P / Esc | START / SELECT | Pause (RESUME / SETTINGS / RESTART / QUIT TO MENU); ↑↓ + Enter or SOUTH pick a row |
 | M *(paused)* | none, QUIT TO MENU is a row | Quit to menu |
-| Space / Enter *(end screen)* | SOUTH / START | Next level, back to the menu after the finale, or a new run after GAME OVER |
-| C *(end screen or STATS)* | WEST | Copy your result or your stats as text (both say COPIED, or COPY FAILED) |
-| B *(end screen)* | NORTH | Copy the board's challenge link (the end screen says BOARD LINK COPIED) |
-| T *(STATS)* | NORTH | Open the MEDALS page |
+| Space / Enter *(end screen)* | SOUTH / START | NEXT LEVEL, MENU after the finale, or TRY AGAIN after GAME OVER |
+| Esc *(finale or GAME OVER)* | EAST | Back to the menu |
+| C *(end screen or STATS)* | WEST | COPY RESULT or COPY MY STATS as text (both say COPIED, or COPY FAILED) |
+| B *(end screen)* | NORTH | COPY MAP: the board's challenge link (BOARD LINK COPIED) |
+| Q / E *(RECORDS)* | D-PAD on the tabs | Switch between SCORES, STATS and MEDALS |
+| T *(STATS)* | NORTH | Jump to MEDALS |
 | R, R *(STATS)* | none | Reset my cabinet (two presses; any other key cancels) |
 
 Menus run on the arrows, Enter and Esc, or on the D-PAD or stick, SOUTH or START, and EAST.
@@ -59,12 +61,13 @@ Buttons are named by position. Powers marked `*` in the in-game HOW TO need thei
 **Your binds, your call.** **SETTINGS → CONTROLS** rebinds both devices. The table
 shows the defaults. Arrows, Esc, Enter, the D-PAD and START stay put, so you can always get back.
 
-**On a phone or tablet,** a virtual D-pad and bomb button sit off the board.
-In portrait they dock low in the thumb zone (the board centres on the menus and
-slides up under the pause button during a run). In landscape they sit in the
-side gutters, with pause above. Holding THROW or REMOTE? A matching button pops
-up beside the bomb button (in the right gutter in landscape). STATS's MEDALS,
-Copy and Reset labels are tappable too.
+**On a phone or tablet,** a touch strip sits off the board: a D-PAD of four
+keys and a yellow BOMB key, every key at least 44 px. In portrait the strip docks
+low in the thumb zone under the board, and PAUSE sits in the HUD above it; in
+landscape the controls fill the side gutters, with PAUSE at the head of the right
+one. Holding THROW or REMOTE? Its key appears beside BOMB. Every menu row, tab and
+key is a tap target, and a page too long for the screen turns into pages with
+▲ / ▼ keys instead of shrinking its text.
 
 Want the full cast of power-ups and foes? Open **GUIDE → POWER-UPS / ENEMIES** in the
 game. The cabinet explains itself, and its wording comes straight from the
@@ -92,8 +95,11 @@ show levels 1–5 only. That's the gate, not a bug: beat level 5 and the map gro
 
 ### Turn up the DIFFICULTY
 
-On LEVEL SELECT, `←/→` picks the level, `↑/↓` picks DIFFICULTY and `[`/`]` picks
-GAME SPEED (SLOW / NORMAL / FAST). Enter starts, Esc backs out.
+LEVEL SELECT is a short list: LEVEL, DIFFICULTY, GAME SPEED, MODIFIERS (once
+open) and START. `↑/↓` walk the rows, `←/→` change the one you're on, and `[`/`]`
+step GAME SPEED (SLOW / NORMAL / FAST) from anywhere. Enter starts, Esc backs out.
+A card beside the list shows the run you're about to play: its world, the foes
+you'll meet, its floor tile, lives, fuse and score multiplier.
 
 | Difficulty | What changes |
 |---|---|
@@ -120,15 +126,16 @@ with every modifier off is bit-identical to baseline v6.
 
 ### Score
 
-The live HUD shows raw points. **HIGH SCORES** saves difficulty-scaled totals:
+The live HUD shows raw points. **RECORDS → SCORES** saves difficulty-scaled totals:
 NORMAL ×1, HARD ×2, EXPERT ×3.
 
 ---
 
 ## ✨ What's in the cabinet
 
-- **The opening.** A FUSE/GRID title waits for any key, tap or controller button. That press drops
-  the music and a ~4 s show that blasts the menu open. Any key skips it.
+- **The opening.** The FUSE/GRID title waits, its fuse sparking, for any key, tap or controller button.
+  That press drops the music and a ~4 s show that blasts the menu open. Any key skips it. The
+  wordmark is drawn in the art style you picked.
 - **A new board every run.** Every PLAY, restart and GAME OVER retry deals a
   fresh board; losing a life keeps the one you're on. Each world has its own
   bold level shape (fourteen in all), and you start sealed in a brick corner
@@ -145,40 +152,45 @@ NORMAL ×1, HARD ×2, EXPERT ×3.
   (30 / 60 / MAX), RESOLUTION, SHADOWS, ANTI-ALIAS, EFFECTS, DEMO and an FPS
   METER yourself (CUSTOM). Game speed never changes. Menus and pause idle at
   30 fps, and audio sleeps while the tab is hidden.
-- **Power-ups that talk back.** Every power-up floats a label with your new value
-  (`FLAME 4`, `MAX`, or `replaces …` on a bomb swap) and pulses its HUD chip.
-  An ability bar along the bottom of the board lists the powers you hold.
+- **A HUD off the board.** Seven labelled chips (LIVES, BOMBS, FLAME, LEVEL,
+  ENEMIES, TIME, SCORE) sit in the level's own frame, never over the play, and a
+  power-ups bar lists the powers you hold. Every power-up floats a label with your
+  new value (`FLAME 4`, `MAX`, or `replaces …` on a bomb swap) and pulses its chip.
+  The first time you step on a floor tile, a tip explains it beside the board.
 - **Coach.** A ghost demonstrates your first bomb on a fresh install, then you
   get one short tip the first time you grab KICK, THROW, REMOTE, PASS, LINE,
   POWER BOMB, PIERCE or SHIELD. Once each, ever.
-- **Run summary.** GAME OVER and the finale show your tally and a delta
-  against your saved best for that difficulty: NEW BEST, FURTHEST LEVEL YET, MATCHED,
-  or how far short you fell. Combo callouts and a close-call flash fire during
-  play (both respect reduce-flash).
+- **The end of a run.** LEVEL CLEAR shows your time, enemies and power-ups for the
+  level. The finale (FUSE/GRID CLEAR) shows the whole run on its level course, the
+  score with its difficulty and any medals you just earned. GAME OVER shows how far
+  you got and, only from a saved best for that difficulty, NEW BEST, FURTHEST LEVEL
+  YET, a match or how far short you fell. Combo callouts and a close-call flash fire
+  during play (both respect reduce-flash).
 - **DAILY.** One board a day, seeded from the date. Your tries and your best
   for the day stay on this device. Nobody is ranked; it's you against you.
 - **Challenge code.** On the end screen, `B` copies a twelve-character board
   code (seed, difficulty, modifiers, game speed and which board maker built it, never a score;
-  `F2` codes are the new mazes, `F1` codes keep the original boards). Open
+  `F3` codes are today's boards with floor tiles, `F2` the tile-free mazes, `F1` the original boards). Open
   `…/fusegrid/?code=XXXXXXXXXXXX` to play that same board.
 - **Ghost.** On a DAILY or challenge board (the boards you can play twice),
   clear a level faster than ever and replaying that exact board (same seed,
   level, difficulty, modifiers, game speed) races a translucent copy of your best
   route, in every look.
-- **STATS.** Lifetime runs, levels, deaths, kills, power-ups, play time, DAYS
-  PLAYED and your NORMAL / HARD / EXPERT bests. `C` (or a tap on `C COPY MY STATS`)
-  copies it as text. HIGH SCORES carries four local plaques.
-- **Medals.** Eight of them, each earned on a finale clear. `T` (or a tap on
-  `T MEDALS`) on STATS opens the MEDALS page.
-- **Reset my cabinet.** On STATS press `R` twice (or tap `R RESET`, then
-  `R AGAIN`) to wipe progress and reload. Settings, game speed and controls are kept. Anything
-  else cancels (`C`, or a tap on `C COPY`, cancels and copies your stats).
-- **Help on the cabinet.** **GUIDE** (HOW TO, POWER-UPS, ENEMIES, FLOOR), HIGH SCORES,
-  STATS and **SOURCE**, which opens this repository.
-- **Menus built for both hands.** On a keyboard, MENU shows a preview of the
-  row you point at and LEVEL SELECT is a grid of level tiles beside a level
-  card. On a phone, MENU is a hub of big tiles and every menu page fills the
-  screen.
+- **RECORDS.** Three tabs. **SCORES**: your ten best runs per difficulty and four
+  badges (CLEAR, HARD, EXPERT, CROWN). **STATS**: lifetime runs, levels, deaths, kills,
+  power-ups, play time, DAYS PLAYED, your best score, furthest level and your NORMAL /
+  HARD / EXPERT bests; `C` (or a tap on COPY STATS) copies it as text. **MEDALS**:
+  eight of them, each earned on a finale clear.
+- **Reset my cabinet.** On STATS press `R` twice (or tap RESET, then AGAIN ERASES)
+  to wipe progress and reload. A card names everything it erases and keeps: settings,
+  game speed, controls and your analytics answer are kept. Anything else cancels
+  (`C` cancels and copies your stats).
+- **Help on the cabinet.** **GUIDE** (HOW TO PLAY, POWER-UPS, ENEMIES, FLOOR) and
+  **SOURCE**, which opens this repository.
+- **Menus that wear the world.** MENU (PLAY, LEVEL SELECT, DAILY, RECORDS, SETTINGS,
+  GUIDE, SOURCE) and every page sit on the look of the level you picked, in its own
+  colours, with a card showing the run PLAY starts. Keyboard, controller and touch
+  all work everywhere; on a phone every row and key is at least 44 px.
 - **Plays offline.** Install it from the browser as a PWA. After your first
   online visit it runs offline.
 - **Updates on your timing.** When a new version is ready, a **NEW VERSION
@@ -186,7 +198,7 @@ NORMAL ×1, HARD ×2, EXPERT ×3.
   never in the middle of one. LATER hides it until your next run ends or
   the next time you open the game.
 - **Know your build.** The main menu shows which version you're running
-  (for example `v183`), so you can tell when an update has landed.
+  (for example `v206`), so you can tell when an update has landed.
 
 Everything the game remembers lives in your browser's local storage. There is
 no account, no server and no global ranking. The game asks once whether to
