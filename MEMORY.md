@@ -17,7 +17,7 @@ append an entry when it makes a non-trivial change.
 ## Log
 
 ## 2026-11-12 — look-load card on the world kit
-- Owner: "Yes, restyle it". The PIXEL / REAL 3D preparing card (`#load` outside boot and dock) is the kit plate at the text floors (20 / 16 px words, outlined 10 px bar, no wordmark); reduced motion drops the first load's fades. loadbar.test pins it.
+- Owner: "Yes, restyle it". The PIXEL / REAL 3D preparing card (`#load` outside boot and dock) is the kit plate at the text floors (20 / 16 px words, outlined 10 px bar, no wordmark); reduced motion drops the first load's fades. loadbar.test pins it. Then ("yes, raise the chip too"): the docked chip's words at 20 / 16 px, max-content up to --chip-w, slow note on its own line.
 
 ## 2026-11-12 — Task 9.9: the first load is the title lighting up (lane-9.9-first-load)
 - Owner "Build B, RICH": index.html `#loadst` draws the title's stage, floor, plate and logo B at the title's real rects (pinned by tests/firstload.test.mjs; the mock's numbers were off by draw2d's EDGE), the fuse is the progress; the title starts settled after it (`__load.lit`). Open: owner's look on a real phone and a slow link.

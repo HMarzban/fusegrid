@@ -213,20 +213,21 @@
   #load[data-boot]~#wrap{visibility:hidden}
   #load b{display:none;font:700 18px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:0}
   /* the chip (v202): a look's job after boot, only while its RENDER row is off screen and never in live PLAY.
-     One line, a 3 px bar along its bottom, no wordmark, no pointer, no keys. shellview hands the drawn stage's
+     Its words at the card's size (20 px desk / 16 px touch, the cap floors; a long note wraps, never cut), a 3 px bar along its bottom, no wordmark, no pointer, no keys. shellview hands the drawn stage's
      top-centre (--chip-x/-y/-w): inside the stage, so never over the PAUSE pill or the touch pad. data-note: the
      0.8 s READY at the swap, or a failure's 4 s pointer to SETTINGS › ART STYLE. A look's old failure card keeps its
      docked form (data-act). */
   #load[data-dock]{top:calc(10px + env(safe-area-inset-top,0px));translate:-50% 0;padding:9px 14px 10px 18px;gap:7px;width:min(380px,calc(100vw - 32px))}
   #load[data-dock]:not([data-act]){top:max(var(--chip-y,0px),calc(6px + env(safe-area-inset-top,0px)));left:var(--chip-x,50%);
-    flex-direction:row;align-items:center;gap:0;box-sizing:border-box;height:28px;width:auto;max-width:min(380px,var(--chip-w,calc(100vw - 32px)));padding:0 14px 3px 17px;overflow:hidden}
-  #load[data-dock]:not([data-act]) #loadmsg{font-size:11px;line-height:25px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    flex-direction:row;align-items:center;gap:0;box-sizing:border-box;min-height:40px;width:max-content;max-width:min(460px,var(--chip-w,calc(100vw - 32px)));padding:7px 14px 10px 17px;overflow:hidden}
+  #load[data-dock][data-t]:not([data-act]){min-height:34px;padding:6px 12px 9px 15px}
+  #load[data-dock]:not([data-act]) #loadmsg{line-height:1.2}
   #load[data-dock]:not([data-act]) #loadbar{position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:0;box-shadow:none}
   #load[data-note=bad]{box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 var(--k-cor)}
   #load[data-note=bad] #loadmsg{color:var(--k-cor)}
   #load[data-dock] b,#load[data-boot] b{display:none}
   #load[data-act]{pointer-events:auto}
-  #loadmsg{font:900 var(--fs)/1.25 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--k-ink);letter-spacing:0}
+  #loadmsg{font:900 var(--fs)/1.25 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--k-ink);letter-spacing:0;white-space:pre-line}
   #loadbar{position:relative;height:10px;overflow:hidden;background:var(--k-well);border-radius:3px;box-shadow:inset 0 0 0 2px var(--k-ol)}
   #loadbar[hidden]{display:none}
   #loadfill{position:absolute;inset:0;background:var(--k-lit);transform:scaleX(0);transform-origin:0 50%;transition:transform .18s linear;will-change:transform}
@@ -368,7 +369,7 @@
     var ind=j.ind||(!j.ph&&!j.n),all=j.n>=j.files,c=Math.min(j.n,j.files)+" / "+j.files+" FILES";
     var t=j.k==="boot"?(ind?"LOADING":all?"STARTING":"LOADING · "+c):j.ph?(j.st?j.label+" · "+j.st:"PREPARING "+j.label):ind?"LOADING "+j.label:j.label+" · "+c;
     /* the boot status box keeps one line (the count stays in the fuse); a stalled boot's card carries the count under it */
-    if(j.slow)t=jobs.boot?(E.setAttribute("data-slow",""),"SLOW CONNECTION · STILL TRYING"):t+" · SLOW CONNECTION, STILL TRYING";
+    if(j.slow)t=jobs.boot?(E.setAttribute("data-slow",""),"SLOW CONNECTION · STILL TRYING"):t+"\nSLOW CONNECTION, STILL TRYING";
     msg.textContent=t;
     /* only a stalled FIRST load offers RETRY: reloading under a look's bar could end a run */
     var ask=j.stall&&j.k==="boot";

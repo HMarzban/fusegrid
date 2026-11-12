@@ -126,7 +126,10 @@ check("prefers-reduced-motion stops the glint and the fill's glide", /prefers-re
 }
 {
   const chip = rule("#load\\[data-dock\\]:not\\(\\[data-act\\]\\)");
-  check("chip: one slim line (28 px) placed by --chip-x/-y, sized inside the stage", /height:28px/.test(chip) && /flex-direction:row/.test(chip) && /var\(--chip-y/.test(chip) && /var\(--chip-x/.test(chip) && /var\(--chip-w/.test(chip), chip);
+  check("chip: a slim strip (40 px desk, 34 touch) placed by --chip-x/-y, sized inside the stage", /min-height:40px/.test(chip) && /min-height:34px/.test(rule("#load\\[data-dock\\]\\[data-t\\]:not\\(\\[data-act\\]\\)")) && /flex-direction:row/.test(chip) && /var\(--chip-y/.test(chip) && /var\(--chip-x/.test(chip) && /var\(--chip-w/.test(chip), chip);
+check("chip: its words keep the card's size (no smaller font-size of its own) and wrap rather than cut (no ellipsis, no nowrap)", !/font-size|nowrap|ellipsis/.test(rule("#load\\[data-dock\\]:not\\(\\[data-act\\]\\) #loadmsg")) && /font:900 var\(--fs\)/.test(rule("#loadmsg")));
+check("a slow look load puts SLOW CONNECTION, STILL TRYING on its own line (pre-line), never splitting the phrase", /white-space:pre-line/.test(rule("#loadmsg")) && html.includes('t+"\\nSLOW CONNECTION, STILL TRYING"'));
+check("chip: max-content up to --chip-w (a fixed box at left 50% would shrink to half the viewport and wrap a phone's words early)", /width:max-content/.test(chip) && /max-width:min\(460px,var\(--chip-w/.test(chip));
   check("chip: its bar is 3 px along the bottom", /height:3px/.test(rule("#load\\[data-dock\\]:not\\(\\[data-act\\]\\) #loadbar")) && /bottom:0/.test(rule("#load\\[data-dock\\]:not\\(\\[data-act\\]\\) #loadbar")));
   check("chip: the failure note is the danger colour plus words", /var\(--k-cor\)/.test(rule("#load\\[data-note=bad\\] #loadmsg")));
   check("chip: no pointer (no data-act rule reaches it)", /pointer-events:none/.test(rule("#load")) && !/pointer-events/.test(chip));
