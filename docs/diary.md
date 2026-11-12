@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v213 on 2026-11-12.
+shell v214 on 2026-11-12.
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -919,7 +919,9 @@ one of three, "C, three looks": the same moment in CLASSIC 2D, PIXEL and REAL 3D
 shows REAL 3D instead of only naming it (shell v212). Seeing it on the page, the owner said "I do not like the cards at all,
 let's create more creative and fancy one". Round 2 started from nothing: five directions, all still real captures, and
 the owner picked "D4, eight worlds", eight stripes of real boards from JUNGLE to CROWN with the logo on a gold plate in
-the middle (shell v213).
+the middle (shell v213). One more turn: "another D4 version with pixlated world and design and with custom art design".
+The eight boards came back as real PIXEL captures on one crisp grid, framed in a hand-pixelled cabinet with the logo hung
+as a sign, and the owner took it ("yes p2", shell v214). Every other card went to the marketing kit.
 
 ---
 

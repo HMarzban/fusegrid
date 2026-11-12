@@ -15,7 +15,7 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
-## shell v213 · 2026-11-12
+## shell v214 · 2026-11-12
 
 The menus centre, CONTROLS joins the world, the first load builds the title, and every overlay is sharp.
 
@@ -27,8 +27,8 @@ The menus centre, CONTROLS joins the world, the first load builds the title, and
 
 ### Changed
 
-- **A new share card.** Links to Fusegrid now preview all eight worlds as stripes of real boards, JUNGLE to CROWN, with the
-  lit-fuse logo on a gold plate in the middle and the difficulty names the game uses.
+- **A new share card in pixel art.** Links to Fusegrid now preview all eight worlds as stripes of real PIXEL boards, JUNGLE
+  to CROWN, in a hand-pixelled cabinet with the PIXEL logo on a hanging sign and the difficulty names the game uses.
 - **Search and link previews use the game's own words:** the three art styles, NORMAL / HARD / EXPERT, eight levels and
   keyboard, touch or controller, in place of the old Heat CORE / PLUS / MAX and rooms.
 - **A lighter first visit:** LEVEL SELECT now downloads after the title, in the same quiet moment as SETTINGS, GUIDE and RECORDS, so the first load is about 60 KB smaller (21 KB compressed). If you open it before it has arrived you see a short LOADING plate; the arrow keys and START already work.

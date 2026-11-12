@@ -50,7 +50,7 @@ START) beside the same card. On a phone both become one column, and on a
 landscape phone a grid of tiles. Any teaser built from your record (a top
 score, a best time) reads only runs you played, never placeholders.
 
-The build you're running is named on the main menu (`v213` today): at the end
+The build you're running is named on the main menu (`v214` today): at the end
 of the desktop foot, or on the SOURCE row's teaser on a phone. SETTINGS shows
 it as its `BUILD` kicker and the NEW VERSION READY card says which build you're on.
 There is one source for it: `shellview.js` and `update.js` both derive it

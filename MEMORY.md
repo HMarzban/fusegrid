@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — v214: share card P2, the pixel cabinet
+- Owner asked for "another D4 version with pixlated world and design and with custom art design", saw P1 / P2 / P3 and said "yes p2, also let's save those other in order to hand them over to the marketing team". og.png = P2 (real PIXEL world boards, custom pixel frame / sign / keys / type in the PIXEL palette); alt text updated; cache v214. Every card of the day saved in git-ignored `.superpowers/sdd/marketing/share-cards-2026-11-12/` with a README; the marketing kit's About text, topics and og checklist updated, its copy blocks flagged stale.
+
 ## 2026-11-12 — v213: share card D4, eight worlds
 - Owner rejected every card so far ("I do not like the cards at all, let's create more creative and fancy one"); round 2 made five fresh directions from real captures (`.superpowers/sdd/2026-11-12-share-card/round2/`); owner: "D4, eight worlds". og.png = D4 as shown (eight CLASSIC 2D world stripes, CROWN plate with logo B and the kit keys); it shows no PIXEL / REAL 3D, which the owner saw. Alt text updated; cache v213. Open: owner re-uploads og.png to Social preview after the push.
 

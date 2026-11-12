@@ -11,7 +11,7 @@ bricks, foes and chiptune.
 [![License: MIT](https://img.shields.io/badge/license-MIT-c39cff.svg)](LICENSE)
 [![Play in the browser](https://img.shields.io/badge/play-in%20the%20browser-ffd447.svg)](https://hmarzban.github.io/fusegrid/)
 
-[![FUSE/GRID, a browser arcade bomber: real boards from all eight worlds, JUNGLE, ICE, FACTORY, WATER, ARENA, SAND, VOID and CROWN, side by side as stripes, with the lit-fuse FUSE/GRID logo on a gold plate in the middle and the keys NORMAL, HARD, EXPERT and PLAY IN THE BROWSER.](og.png)](https://hmarzban.github.io/fusegrid/)
+[![FUSE/GRID, a browser arcade bomber, in pixel art: real PIXEL boards from all eight worlds, JUNGLE to CROWN, side by side inside a hand-pixelled cabinet frame, with the PIXEL FUSE/GRID logo on a sign hung from two chains, the keys NORMAL, HARD, EXPERT and PLAY IN THE BROWSER, and the world names on coloured bricks along the foot.](og.png)](https://hmarzban.github.io/fusegrid/)
 
 ### ▶ PRESS START: [hmarzban.github.io/fusegrid/](https://hmarzban.github.io/fusegrid/)
 
@@ -203,7 +203,7 @@ NORMAL ×1, HARD ×2, EXPERT ×3.
   never in the middle of one. LATER hides it until your next run ends or
   the next time you open the game.
 - **Know your build.** The main menu shows which version you're running
-  (for example `v213`), so you can tell when an update has landed.
+  (for example `v214`), so you can tell when an update has landed.
 
 Everything the game remembers lives in your browser's local storage. There is
 no account, no server and no global ranking. The game asks once whether to
