@@ -49,9 +49,9 @@ export const isShellScreen = (s) => SHELL_ON.has(s);
    WIN, INTRO, ATTRACT). */
 export const shellMode = (s, world) => (SHELL_ON.has(s) ? 1 : s === SCREEN.GAME && isRunEnd(world) ? 2 : 0);
 /* The screens whose page paints the room look opaque over its whole canvas every frame it is up (v202 Task 3.1: MENU; Task 3.3: LEVEL
-   SELECT; Task 3.4: SETTINGS and GRAPHICS, their LOADING plate included; Task 3.5: the GUIDE pages; Tasks 4.1 / 4.2: RECORDS' SCORES, STATS and MEDALS; each page task adds its screen): main passes
+   SELECT; Task 3.4: SETTINGS and GRAPHICS, their LOADING plate included; Task 3.5: the GUIDE pages; Tasks 4.1 / 4.2: RECORDS' SCORES, STATS and MEDALS; Task 6.3: CONTROLS; each page task adds its screen): main passes
    {covered: true} to the renderer while one holds, so no look rasters a board nobody sees. PAUSE's views sit over the board and never cover it. */
-const COVERS = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.SETTINGS, SCREEN.GRAPHICS, SCREEN.GUIDE, SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR, SCREEN.SCORES, SCREEN.STATS, SCREEN.TROPHIES]);
+const COVERS = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.SETTINGS, SCREEN.GRAPHICS, SCREEN.GUIDE, SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR, SCREEN.SCORES, SCREEN.STATS, SCREEN.TROPHIES, SCREEN.CONTROLS]);
 /* the GUIDE pages (v202 Task 3.5) are lazy (pages/lazy.js): menudraw's ask (every 3 s after a failure) and MENU's first idle bring them in */
 const GUIDE_ON = new Set([SCREEN.GUIDE, SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR]);
 const guideO = (app, tap) => ({ level: app.level | 0 || 1, foe: app.foeRow | 0, tip: !!app.foeTip, pg: app.infoPg | 0, rev: REV, tap }); // rev: MENU's foot reserve, so the room dpr (and key) is MENU's
@@ -148,50 +148,36 @@ const gfxUi = (app, canvas, kicker) => ({
   tap: tapOf(app, canvas),
 });
 
-/* CONTROLS draws and taps through one set of arguments, so a tap lands where
-   the plate is drawn. The row floor is 44 CSS px, so it needs this box's real
-   CSS scale; with no usable rect geoFor takes its worst case. paused = the
+/* CONTROLS draws and taps through one frame (pages/controls.js controlsGeom), so a tap lands where the plate is drawn: the box dims hands (#sh's
+   shell box, or #c), its CSS scale on a touch layout (the 44 CSS px floors), cue while a controller drives (the phone's cue line); paused = the
    inline pauseView 3, measured against overlayBox like the other PAUSE pages. */
 function cssScale(cv) {
   const r = cv && cv.width > 0 && cv.getBoundingClientRect ? cv.getBoundingClientRect().width / cv.width : 0;
   return r > 0 && Number.isFinite(r) ? r : undefined;
 }
-const ctlLayout = (canvas, kind, paused) => {
-  if (paused) { const B = overlayBox(kind); return menudraw.layout(B.w, B.h); }
-  const { cw, ch, lg } = dims(canvas, kind);
-  return menudraw.layout(cw, ch, lg);
-};
-const HUD_BOT = 40, STRIP = "#0a0e18"; // the HUD strip's floor; the plate's ground, opaque
-const ctlUi = (canvas, L) => ({ touch: layOf(canvas) !== "d", narrow: L.narrow, scale: cssScale(canvas) });
-/* The CONTROLS paint (controlsdraw, controlsgeo, padart) is not in the boot
-   graph (v202): it loads when CONTROLS opens or in idle after the title
-   (controlswire asks through main). Until it lands the page is one plate that
-   says LOADING, and a tap on the canvas finds nothing. */
+function ctlFrame(canvas, kind, paused) {
+  const d = dims(canvas, kind), touch = layOf(canvas) !== "d", cue = hints().dev === "pad";
+  if (paused) { const B = overlayBox(kind); return { W: B.w, H: B.h, touch, shell: false, css: d.css, paused: true, cue }; }
+  return { W: d.cw, H: d.ch, touch, shell: typeof d.lg === "number", css: d.css, play: d.play, cue }; // play: the room behind at play scale (fit.js shellGeo)
+}
+/* The CONTROLS page (pages/controls.js, with controlsgeo and padart) is not in the boot graph (v202): it loads when CONTROLS opens or in idle after
+   the title (controlswire asks through main). Until it lands the kit's one LOADING plate stands in (DID NOT LOAD once the load failed), and a tap
+   on the canvas finds nothing (null: the wire backs out only from a failed load). */
 let art = null, artP = null;
-/** Loads the CONTROLS paint once; resolves when it is in. A failed load is retried on the next call. */
+/** Loads the CONTROLS page once; resolves when it is in. A failed load is retried on the next call. */
 export function loadControlsArt() {
-  return artP || (artP = Promise.all([import("./controlsdraw.js"), import("./controlsgeo.js")]).then(([d, g]) => { art = { draw: d.drawControls, geoFor: g.geoFor, hitPage: g.hitPage }; }, (e) => { artP = null; throw e; }));
+  return artP || (artP = import("./pages/controls.js").then((m) => { art = m; }, (e) => { artP = null; throw e; }));
 }
-/** The CONTROLS page's geometry for this box, the same one it paints with; null until the paint is in. */
-export function controlsGeo(canvas, kind, paused) {
-  if (!art) return null;
-  const L = ctlLayout(canvas, kind, paused), u = ctlUi(canvas, L);
-  return art.geoFor(L, u.touch, u.narrow, u.scale);
+/** The CONTROLS page's geometry for this box (view: the reducer's, whose tab sets the rows), the same one it paints with; null until the page is in. */
+export function controlsGeo(canvas, kind, paused, view) {
+  return art ? art.controlsGeom(ctlFrame(canvas, kind, paused), view || {}) : null;
 }
-/** A tap on the CONTROLS page: controlsgeo's hitPage on the painted geometry; null (inert) until the paint is in. */
-export const controlsHit = (view, x, y, canvas, kind, paused) => (art ? art.hitPage(view, x, y, controlsGeo(canvas, kind, paused)) : null);
-const paintControls = (c, app, canvas, kind, paused, world) => {
-  const L = ctlLayout(canvas, kind, paused), u = ctlUi(canvas, L);
-  if (!art || app.controls.loading) {
-    const S = menudraw.pageBox(L, 360, 0, u.touch), failed = !!app.controls.failed;
-    menudraw.plate(c, S.x, S.y, S.w, S.h);
-    menudraw.head(c, S, "CONTROLS", failed ? "DID NOT LOAD" : "LOADING");
-    if (failed) menudraw.foot(c, S, "OPEN IT AGAIN TO RETRY");
-    return;
-  }
-  /* A phone's plate climbs over the HUD strip and stops short of its ends, which would leave a heart cut to a sliver: cover the whole strip. */
-  if (paused && art.geoFor(L, u.touch, u.narrow, u.scale).y < HUD_BOT) { c.fillStyle = STRIP; c.fillRect(4, 10, L.cx * 2 - 8, 30); } // a 2D heart overhangs the strip's own x 10
-  art.draw(c, L, app.controls.view(app.ctlT), { ...u, words: hints(), level: paused && world ? world.level : app.level, reduced: !!(app.settings && app.settings.flx) }); // the drawing wears the menus' room, or the one being played
+/** A tap on the CONTROLS page: the page's controlsHit on the painted geometry; null (inert) until the page is in. */
+export const controlsHit = (view, x, y, canvas, kind, paused) => (art ? art.controlsHit(view, x, y, controlsGeo(canvas, kind, paused, view)) : null);
+const paintControls = (c, app, canvas, kind, paused, world, kicker) => {
+  const F = { ...ctlFrame(canvas, kind, paused), tap: tapOf(app, canvas) }, level = (paused && world ? world.level : app.level) | 0 || 1;
+  if (!art || app.controls.loading) return menudraw.loadingPage(c, F, "CONTROLS", { level, rev: REV, paused, failed: !!app.controls.failed }, "controls");
+  art.drawControlsPage(c, F, app.controls.view(app.ctlT), { level, kicker, paused, rev: REV, tap: F.tap, reduced: !!(app.settings && app.settings.flx) }); // the room the menus show, or the one being played
 };
 
 /* SCORES / plaques memo: nothing writes either store while SCORES is open
@@ -285,16 +271,11 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
        box the pause list uses — never dims(canvas, kind), so list and page
        never disagree by a pixel. */
     if (world.state === "PAUSE" && app.pauseView >= 1) {
-      // no second dim: drawOverlay's 0.72 PAUSE veil is the one wash, so the
-      // HUD stays lit as run context on every pause view but CONTROLS, whose
-      // plate would cut it at the top corners: there the veil puts it behind
+      // no second dim: the PAUSE veil is the one wash, so the HUD stays lit as
+      // run context on every pause view; every page keeps the HUD strip clear
       const B = overlayBox(kind),
         kicker = "PAUSED · " + LABEL.LEVEL + " " + (world.level | 0);
-      if (app.pauseView === 3) {
-        if (!app.controls) return;
-        menudraw.drawDim(c, 0.72, B.w, B.h);
-        return paintControls(c, app, canvas, kind, true, world);
-      }
+      if (app.pauseView === 3) return app.controls ? paintControls(c, app, canvas, kind, true, world, kicker) : undefined;
       /* the same box the pointer maps a PAUSE tap through: overlayBox at #c's CSS scale (the touch floors), paused (the HUD band kept clear), the
          focused row (its page is on screen); the room being played dresses the plate (world.level, never the menu's app.level) */
       const g2 = app.pauseView === 2, PL = { ...menudraw.layout(B.w, B.h, undefined, dims(canvas, kind).css), paused: true, focus: g2 ? app.gfxRow : app.optRow }, lv = world.level | 0 || 1;
@@ -332,8 +313,5 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     const t = touchLay(canvas);
     menudraw.drawLevelSelect(c, app.level, menudraw.layout(cw, chh, logoY, css, play), app.subT, app.heat, app.pact, app.pactUnlocked, app.pace, app.timeAttack, t,
       { ...infoOf(app, getCab), tap, enterT: app.subT, rev: REV }); // rev: MENU's foot reserve, so the room dpr (and key) is MENU's
-  } else if (s === SCREEN.CONTROLS) {
-    menudraw.drawDim(c, 0.72, cw, chh);
-    if (app.controls) paintControls(c, app, canvas, kind, false);
-  }
+  } else if (s === SCREEN.CONTROLS && app.controls) paintControls(c, app, canvas, kind, false); // opaque on the world kit (pages/controls.js, Task 6.3)
 }

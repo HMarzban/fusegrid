@@ -7,9 +7,10 @@ import "../src/core/board3.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { SCREEN } from "../src/app/menuapp.js";
 import { mountControls, preloadControls } from "../src/app/controlswire.js";
-import { ACCENT, DANGER, MUTED, TEXT, WARM, layout, lockGlyph } from "../src/render/menudraw.js";
-import { DEF_KEY, DEF_PAD, geoFor, geomOf, rowsOf } from "../src/render/controlsgeo.js";
-import { drawCapture, drawControls, drawRow } from "../src/render/controlsdraw.js";
+import { DEF_KEY, DEF_PAD } from "../src/render/controlsgeo.js";
+import { drawControlsPage, _dbg as pageDbg } from "../src/render/pages/controls.js";
+import { worldTokens, CONST } from "../src/render/kit/tokens.js";
+import { rec } from "./lib/textrec.mjs";
 import { dE, rgbOf, simRGB } from "../tools/tileart/gatefns.mjs";
 await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
 
@@ -142,97 +143,55 @@ const openPage = (g) => { g.app._push(SCREEN.SETTINGS); g.app.optRow = g.app.opt
   c.dispose();
 }
 
-// ---- the colour gate: the page's real palette ----
+// ---- the colour gate: the page's real palette (the world kit, Task 6.3: every world's tokens) ----
 const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
 const lum = (c) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
 const cr = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
-const over = (f, a, b) => f.map((v, i) => v * a + b[i] * (1 - a));
-const R = rgbOf, PLATE = R("#0a0e18"), WARM_BAND = 0.12;
-const KIT = { nominal: R("#0a0e18"), worst: R("#191c26") };
-const BANDS = { "swap band": over(R(WARM), WARM_BAND, PLATE) };
-for (const [k, b] of Object.entries(KIT)) { BANDS["accent band, " + k] = over(R(ACCENT), 0.12, b); BANDS["danger band, " + k] = over(R(DANGER), 0.12, b); }
-{
-  for (const [n, b] of Object.entries(BANDS)) {
-    const t = cr(R(TEXT), b), o = cr(R(MUTED), b);
-    check("#dfe7f5 on " + n + " >= 4.5", t >= 4.5, t.toFixed(2));
-    check("#7385ad outline on " + n + " >= 3", o >= 3, o.toFixed(2));
-  }
-  const op = cr(R(MUTED), PLATE);
-  check("#7385ad outline on the plate >= 3", op >= 3, op.toFixed(2));
-  const d = cr(R("#0a0e18"), R(DANGER));
-  check("danger-chip ink #0a0e18 on #ff5d73 >= 6", d >= 6, d.toFixed(2));
-  for (const [n, f] of [["text", TEXT], ["warm", WARM], ["accent", ACCENT]]) {
-    for (const [m, b] of [["plate", PLATE], ["swap band", BANDS["swap band"]]]) {
-      const v = cr(R(f), b);
-      check("page text " + n + " on " + m + " >= 4.5", v >= 4.5, v.toFixed(2));
-    }
-  }
-  for (const [n, f] of [["notch", ACCENT], ["danger notch", DANGER]]) { const v = cr(R(f), PLATE); check(n + " on the plate >= 3", v >= 3, v.toFixed(2)); }
-  for (const k of ["protan", "deutan"]) {
-    const v = dE(simRGB(R(ACCENT), k), simRGB(R(DANGER), k));
-    check("solid accent vs danger, " + k + ": Lab dE >= 30", v >= 30, v.toFixed(1));
-  }
-  const cvd = readFileSync(new URL("../tools/tileart/cvdsets.mjs", import.meta.url), "utf8");
-  check("the highlight stays out of cvdsets.mjs", !cvd.includes(ACCENT) && !/highlight/i.test(cvd));
+const R = rgbOf;
+for (let lv = 1; lv <= 8; lv++) {
+  const t = worldTokens(lv), nm = " (world " + lv + ")";
+  for (const [n, f, b, floor] of [["row label ink on the bed", CONST.ink, t.bedA, 4.5], ["row label ink on the focus band", CONST.ink, t.band, 4.5], ["a value word t2 on the bed", CONST.t2, t.bedA, 4.5],
+    ["RESET coral on the bed", CONST.cor, t.bedA, 4.5], ["a key legend ink on its key", CONST.ink, t.key, 4.5], ["the open tab's dark ink on the brick", CONST.dk, t.lit, 4.5], ["a closed tab's t2 in its well", CONST.t2, t.well, 4.5],
+    ["the FIXED plaque's off ink on its dark outline", CONST.off, CONST.ol, 3]]) { const v = cr(R(f), R(b)); check(n + nm + " >= " + floor, v >= floor, v.toFixed(2)); }
+}
+for (const k of ["protan", "deutan"]) {
+  const v = dE(simRGB(R(CONST.cor), k), simRGB(R(CONST.ink), k));
+  check("coral (RESET) vs cream (a row), " + k + ": Lab dE >= 30", v >= 30, v.toFixed(1));
 }
 
-// ---- every state has a shape and a word ----
-function recCtx() {
-  const log = [], texts = [];
-  const c = {
-    fillStyle: "#000", strokeStyle: "#000", font: "10px monospace", globalAlpha: 1, textAlign: "left", textBaseline: "alphabetic", lineWidth: 1, lineCap: "butt", lineJoin: "miter",
-    save() { log.push("save"); }, restore() { log.push("restore"); }, translate() {}, scale() {},
-    beginPath() { log.push("bp"); }, closePath() { log.push("cp"); },
-    moveTo(x, y) { log.push("m" + x + "," + y); }, lineTo(x, y) { log.push("l" + x + "," + y); },
-    arc(...a) { log.push("a" + a.join()); }, arcTo(...a) { log.push("at" + a.join()); },
-    bezierCurveTo(...a) { log.push("bz" + a.join()); }, quadraticCurveTo(...a) { log.push("q" + a.join()); },
-    fill() { log.push("f" + c.fillStyle); }, stroke() { log.push("k" + c.strokeStyle); },
-    fillRect(...a) { log.push("fr" + a.join() + "," + c.fillStyle); }, strokeRect() {},
-    measureText(s) { return { width: String(s).length * 6 }; },
-    fillText(s) { texts.push({ s: String(s), alpha: c.globalAlpha, fill: c.fillStyle }); },
-  };
-  return { c, log, texts };
-}
-const L600 = layout(600, 520), G = geoFor(L600, false, false);
+// ---- every state has a shape and a word (the world kit page, Task 6.3) ----
 const keyV = (o) => ({ tab: "key", device: "key", row: 1, pad: { state: "none" }, key: DEF_KEY, binds: DEF_PAD, stick: "L", dead: 25, vib: 0, stickVal: [0, 0], armed: false, swap: null, status: "", capture: null, echo: null, ...o });
-const padV = (o) => keyV({ tab: "pad", device: "pad", pad: { state: "ready", name: "CONTROLLER 1" }, ...o });
+const padV = (o) => keyV({ tab: "pad", device: "pad", pad: { state: "ready", name: "CONTROLLER 1", rumble: true }, ...o });
+const DESK = { W: 1366, H: 768 };
+const paint = (v, F = DESK) => { const r = rec(); drawControlsPage(r.ctx, F, v, { level: 1, tap: false }); return r; };
 const has = (r, s) => r.texts.some((t) => t.s === s);
-const strokes = (r, col) => r.log.filter((l) => l === "k" + col).length;
-const rects = (r, col, w) => r.log.filter((l) => l.startsWith("fr") && l.endsWith(col) && (w == null || l.split(",")[2] === String(w))).length;
+const words = (r) => r.texts.map((t) => t.s).join(" ");
 {
-  const row = (s, sel, i) => { const r = recCtx(), rows = rowsOf(s); drawRow(r.c, rows[i], geomOf(i, G), sel, s, false); return r; };
-  const k = keyV(), on = row(k, true, 2), off = row(k, false, 2);
-  check("Selected: a notch and a band, and the label brightens", rects(on, ACCENT, 3) === 1 && rects(off, ACCENT, 3) === 0 && on.texts.some((t) => t.s === "THROW" && t.fill === TEXT));
+  const tok = worldTokens(1), on = paint(keyV({ row: 2 })), G = pageDbg.last.G, g = G.rows.THROW;
+  check("Selected: the band on the focused row, the bare bomb, the label in ink", on.paints.some((q) => q.style === tok.band && q.box && Math.abs(q.box.y - g.y) < 1 && Math.abs(q.box.h - g.h) < 1) && on.texts.some((t) => t.s === "THROW" && t.fill === CONST.ink));
 
-  const cap = (o) => { const r = recCtx(); drawCapture(r.c, { action: "THROW", prompt: "PRESS A KEY", sub: "NOW E", foot: "ESC CANCELS", ...o }, G); return r; };
+  const cap = (o, v = keyV) => paint(v({ row: 2, capture: { action: "THROW", prompt: "PRESS A KEY", sub: "NOW E", foot: "ESC CANCELS", ...o } }));
   const lis = cap({});
-  check("Listening: a dashed slot, and the words", strokes(lis, TEXT) >= 8 && has(lis, "PRESS A KEY") && has(lis, "ESC CANCELS"));
-  const src = readFileSync(new URL("../src/render/controlsdraw.js", import.meta.url), "utf8");
-  check("Listening is static: the paint reads no clock", !/performance\.now|Date\b|setTimeout|setInterval/.test(src) && !/\bt\b\s*[%*]/.test(src.slice(src.indexOf("function drawCapture"), src.indexOf("function drawControls"))));
-  check("Refused: the why in words", has(cap({ sub: "R IS THE CAMERA · PICK ANOTHER", warn: 1 }), "R IS THE CAMERA · PICK ANOTHER"));
+  check("Listening: the prompt for the action in the pane, the prompt on its row, the cancel words label first", has(lis, "PRESS A KEY FOR THROW") && has(lis, "PRESS A KEY") && has(lis, "CANCELS") && has(lis, "ESC") && has(lis, "NO TIME LIMIT"));
+  const src = readFileSync(new URL("../src/render/pages/controls.js", import.meta.url), "utf8");
+  check("Listening is static: the paint reads no clock", !/performance\.now|Date\b|setTimeout|setInterval/.test(src));
+  check("Refused: the why in words", words(cap({ sub: "R IS THE CAMERA · PICK ANOTHER", warn: 1 })).includes("R IS THE CAMERA · PICK ANOTHER"));
 
-  const sw = padV({ swap: { row: "REMOTE" }, status: "EAST WAS REMOTE · REMOTE NOW SOUTH" }), a = row(sw, false, 3), b = row(padV(), false, 3);
-  check("Conflict: a swap mark and the word", strokes(a, WARM) === 1 && strokes(b, WARM) === 0 && has(a, "SWAPPED"));
-  check("Conflict: the band's text is the kit's bright ink, never muted", a.texts.every((t) => t.fill !== MUTED));
+  const a = paint(padV({ row: 1, swap: { row: "REMOTE" }, status: "EAST WAS REMOTE · REMOTE NOW SOUTH" })), b = paint(padV({ row: 1 }));
+  check("Conflict: SWAPPED on the row and the line that says where it went", has(a, "SWAPPED") && !has(b, "SWAPPED") && words(a).includes("EAST WAS REMOTE · REMOTE NOW SOUTH"));
 
-  const gc = geomOf(5, G), fx = row(keyV({ row: 5 }), false, 5), lock = recCtx();
-  lockGlyph(lock.c, gc.x + gc.w - 18, gc.y + gc.h / 2, 12, MUTED);
-  check("Fixed: the padlock is painted", lock.log.length > 0 && fx.log.join(";").includes(lock.log.join(";")));
-  check("Fixed: never dimmed", fx.texts.every((t) => t.alpha === 1));
+  const fx = paint(keyV({ row: 5 }));
+  check("Fixed: the FIXED plaque on CONFIRM and BACK, the rows never dimmed (their labels in ink)", fx.texts.filter((t) => t.s === "FIXED").length >= 2 && ["CONFIRM", "BACK"].every((s) => fx.texts.some((t) => t.s === s && t.fill === CONST.ink)));
 
-  const ch = recCtx();
-  drawControls(ch.c, L600, keyV({ row: 2, key: { ...DEF_KEY, THROW: "KeyZ" } }), {});
-  check("Changed: a dot, and the word", ch.log.some((l) => l.startsWith("f" + ACCENT)) && has(ch, "CHANGED"));
-  const un = recCtx();
-  drawControls(un.c, L600, keyV({ row: 2 }), {});
-  check("Unchanged: neither", !has(un, "CHANGED"));
+  const ch = paint(keyV({ row: 2, key: { ...DEF_KEY, THROW: "KeyZ" } }));
+  check("Changed: a dot by the label, and the word", ch.paints.some((q) => q.op === "fill" && q.style === CONST.ink) && words(ch).includes("CHANGED"));
+  check("Unchanged: neither word", !words(paint(keyV({ row: 2 }))).includes("CHANGED"));
 
-  const na = recCtx();
-  drawControls(na.c, L600, padV({ row: 6, pad: { state: "ready", name: "x", rumble: false } }), {});
-  check("Not available: NONE, and the words", has(na, "NONE") && na.texts.map((t) => t.s).join(" ").includes("NO VIBRATION ON THIS CONTROLLER OR BROWSER"));
+  const na = paint(padV({ row: 6, pad: { state: "ready", name: "x", rumble: false } }));
+  check("Not available: NONE, and the words", has(na, "NONE") && words(na).includes("NO VIBRATION ON THIS CONTROLLER OR BROWSER"));
 
-  const ar = row(keyV({ row: 7, armed: true }), true, 7);
-  check("Armed reset: a danger notch, and PRESS AGAIN", rects(ar, DANGER, 3) === 1 && has(ar, "PRESS AGAIN"));
+  const ar = paint(keyV({ row: 7, armed: true }));
+  check("Armed reset: PRESS AGAIN in coral, and the line", ar.texts.some((t) => t.s === "PRESS AGAIN" && t.fill === CONST.cor) && words(ar).includes("PRESS AGAIN TO RESET THIS TAB"));
 }
 
 console.log("\n  CONTROLS A11Y RESULT: " + pass + " PASS / " + fail + " FAIL");

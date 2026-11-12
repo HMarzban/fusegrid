@@ -759,3 +759,5 @@ export function drawGraphicsPage(c, F, ui = {}, t = 0) {
   if (fk > 0) rows.forEach((l, i) => { if ((chg >> i) & 1) fks[l] = fk; });
   frame(c, F, ui, t, "graphics", rows, specs, rows[cur], fks, vr[cur] || null);
 }
+/* the parts the CONTROLS page (pages/controls.js, Task 6.3) paints with the same hand: the meter cell, the floor slab, the page marks, the wall course */
+export {cell as meterCell, slab, mark, course};

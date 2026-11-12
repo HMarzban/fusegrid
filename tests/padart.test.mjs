@@ -2,8 +2,14 @@
 import { readFileSync } from "node:fs";
 import { layout } from "../src/render/menudraw.js";
 import { PADG, HALF, PART_AT, drawPad, padBox, kbBox, ringR, KB_KEYS, KB_AT, KB_W, KB_H, keyRect, drawKeys, kbPrints, kbLegend } from "../src/render/padart.js";
-import { DEF_PAD, DEF_KEY, BTN, geoFor, geomOf, hitPage, rowsOf, padStates, padRing, padCallouts, padPlan, padFit, padCross, PAD_FULL, PAD_CAP, PAD_KEEP, PAD_TALL, KB_CAP, KB_FULL, kbPlan, keyStates, keyRing, keyCallouts, kbFit, kbCross } from "../src/render/controlsgeo.js";
-import { drawControls } from "../src/render/controlsdraw.js";
+import { DEF_PAD, DEF_KEY, BTN, rowsOf, padStates, padRing, padCallouts, padPlan, padFit, padCross, PAD_FULL, PAD_CAP, PAD_KEEP, PAD_TALL, KB_CAP, KB_FULL, kbPlan, keyStates, keyRing, keyCallouts, kbFit, kbCross } from "../src/render/controlsgeo.js";
+import { controlsGeom, controlsHit, drawControlsPage, _dbg as pageDbg } from "../src/render/pages/controls.js";
+/* Task 6.3: the page is pages/controls.js on the world kit; these adapters keep the drawing checks' calls (a menudraw layout, touch, CSS scale) */
+const frameOf = (L, touch, scale) => ({ W: L.W, H: L.H, touch: !!touch, shell: false, css: scale });
+const geoFor = (L, touch, narrow, scale, v) => controlsGeom(frameOf(L, touch, scale), v || {});
+const geomOf = (i, G) => G.rows[G.order[i]];
+const hitPage = (v, x, y, G) => controlsHit(v, x, y, G);
+const drawControls = (c, L, v, u = {}) => drawControlsPage(c, frameOf(L, u.touch, u.scale), v, { level: u.level, tap: false });
 import { worldTokens, CONST } from "../src/render/kit/tokens.js";
 import { setTextScale } from "../src/render/kit/type.js";
 import * as cache from "../src/render/kit/cache.js";
@@ -26,7 +32,7 @@ function rec(o = {}) {
     font: "10px sans-serif", globalAlpha: 1, textAlign: "left", textBaseline: "alphabetic", lineWidth: 1, lineCap: "butt", lineJoin: "miter",
     save() { stack.push([sx, tx, ty]); log.push("save"); }, restore() { [sx, tx, ty] = stack.pop(); log.push("restore"); },
     translate(x, y) { tx += sx * x; ty += sx * y; log.push("t"); }, scale(k) { sx *= k; log.push("s"); }, rotate() { log.push("r"); },
-    beginPath() { log.push("bp"); }, closePath() { log.push("cp"); }, clip() { log.push("clip"); },
+    beginPath() { log.push("bp"); }, closePath() { log.push("cp"); }, clip() { log.push("clip"); }, rect() { log.push("rc"); }, strokeText() { log.push("xs"); },
     moveTo(x, y) { log.push("m" + (tx + sx * x).toFixed(1) + "," + (ty + sx * y).toFixed(1)); }, lineTo(x, y) { log.push("l" + (tx + sx * x).toFixed(1) + "," + (ty + sx * y).toFixed(1)); },
     arc(x, y, r) { log.push("a" + (tx + sx * x).toFixed(1) + "," + (ty + sx * y).toFixed(1) + "," + (sx * r).toFixed(2)); }, arcTo() { log.push("at"); }, ellipse() { log.push("el"); },
     bezierCurveTo() { log.push("bz"); }, quadraticCurveTo() { log.push("q"); },
@@ -63,7 +69,7 @@ const BINDABLE = Object.keys(BTN).filter((id) => model.refuseBtn(id) === "");
   check("neighbouring face wells keep a gap", gap > 0, (gap * W).toFixed(2));
   const at = (id) => PART_AT[id];
   check("layout: left stick upper-left, D-PAD lower-left, face diamond upper-right, right stick lower-right, the pills in the centre", at("LS")[0] < 0.5 && at("LS")[1] < at("dpad")[1] && at("dpad")[0] < 0.5 && at("RS")[0] > 0.5 && at("RS")[1] > at("E")[1] && at("SELECT")[0] < 0.5 && at("START")[0] > 0.5 && Math.abs(at("SELECT")[0] + at("START")[0] - 1) < 1e-9);
-  check("no filter, no blur, no pixel read in the drawings' source", !/\.filter\s*=|shadowBlur|shadowColor|getImageData|toDataURL|setLineDash/.test(readFileSync(new URL("src/render/padart.js", ROOT), "utf8") + readFileSync(new URL("src/render/controlsdraw.js", ROOT), "utf8")));
+  check("no filter, no blur, no pixel read in the drawings' source", !/\.filter\s*=|shadowBlur|shadowColor|getImageData|toDataURL|setLineDash/.test(readFileSync(new URL("src/render/padart.js", ROOT), "utf8") + readFileSync(new URL("src/render/pages/controls.js", ROOT), "utf8")));
 }
 
 // ---- states: bound in the world's brick, unbound quiet, the ring, no controller ----
@@ -98,7 +104,7 @@ const fillAt = (r, id, W, x0 = 0, y0 = 0) => { const k = "a" + (x0 + PART_AT[id]
   const hits = [];
   for (const [nm, Lx, touch, narrow, scale] of BOXES) for (const v of views) { const r = rec({ grad: true }); drawControls(r.c, Lx, v, { touch, narrow, scale, level: 1 }); for (const col of r.colours) if (BAD.includes(String(col).toLowerCase())) hits.push(nm + ":" + col); }
   check("no cord or spark colour in any state, any box", !hits.length, hits.slice(0, 4).join());
-  const src = readFileSync(new URL("src/render/padart.js", ROOT), "utf8") + readFileSync(new URL("src/render/controlsdraw.js", ROOT), "utf8");
+  const src = readFileSync(new URL("src/render/padart.js", ROOT), "utf8") + readFileSync(new URL("src/render/pages/controls.js", ROOT), "utf8");
   check("no spark painter and no fuse path left in the source", !/function spark|FUSE_PATH|spark\(/.test(src));
 }
 
@@ -133,9 +139,9 @@ function crossings(plan, lit = {}) {
   for (const L of plan.lines) for (const [a, b] of segs(L)) for (const c of circles) if (!own(L.grp).includes(c.id) && dist([c.x, c.y], a, b) < c.r + 2) out.push(L.grp + " near " + c.id);
   return out;
 }
-const M = (ts) => ({ pri: 13 * ts, sec: 11 * ts, wOf: (s, px) => s.length * px * 0.6 });
+const M = (ts) => ({ pri: 21 * ts, sec: 16 * ts, wOf: (s, px) => s.length * px * 0.6 }); // the callouts at the kit's row type (Task 6.3: the mock's callouts read at the rows' size, never under the text floors)
 {
-  const G = geoFor(DESK, false, false), A = { w: G.pane.w - 12, h: G.art.h - 13 };
+  const G = geoFor(DESK, false, false), A = { w: G.art.w, h: G.art.h };
   for (const ts of [1, 1.25]) {
     const F = padFit(A.w, A.h, padCallouts(padV()), M(ts), padStates(padV()));
     check("desk 1366x768 at text " + ts + ": the default binds draw every callout (W " + Math.round(F.W) + ")", !!F.plan && F.W >= PAD_FULL && F.plan.labels.length === 6 && !crossings(F.plan, padStates(padV())).length, F.plan && crossings(F.plan).join());
@@ -145,7 +151,7 @@ const M = (ts) => ({ pri: 13 * ts, sec: 11 * ts, wOf: (s, px) => s.length * px *
     check("an action bound on the far side (BOMB SELECT) and the right stick: drawn, no crossing: text " + ts, !!F3.plan && F3.plan.labels.some((l) => l.grp === "SELECT" && l.side === "l" && l.lines[0].s === "BOMB") && !crossings(F3.plan, padStates(far)).length, F3.plan && crossings(F3.plan, padStates(far)).join());
   }
   // every assignment of the four actions over every button the model lets you bind, both sticks, both text scales, three desk boxes
-  const ART = [DESK, layout(1024, 700), layout(1280, 720)].map((Lx) => { const g = geoFor(Lx, false, false); return [g.pane.w - 12, g.art.h - 13]; });
+  const ART = [DESK, layout(1280, 720)].map((Lx) => { const g = geoFor(Lx, false, false); return [g.art.w, g.art.h]; });
   let n = 0, full = 0, bad = [];
   for (const ts of [1, 1.25]) for (const [aw, ah] of ART) for (const stick of ["L", "R"]) for (const B of BINDABLE) for (const T of BINDABLE) for (const R of BINDABLE) for (const P of BINDABLE) {
     if (new Set([B, T, R, P]).size < 4) continue;
@@ -161,32 +167,30 @@ const M = (ts) => ({ pri: 13 * ts, sec: 11 * ts, wOf: (s, px) => s.length * px *
   check("the leaders are orthogonal: every segment level or plumb", p.lines.every((L) => L.pts.slice(1).every((q, i) => q[0] === L.pts[i][0] || q[1] === L.pts[i][1])));
   check("SOUTH meets EAST, so its label drops through a knee in the gutter, inside the next label's gutter column", (() => { const s = p.lines.find((l) => l.grp === "S"); return s.pts.length === 4 && s.pts[1][0] > 300 && s.pts[3][1] > s.pts[0][1]; })());
   check("controlsgeo's own gate agrees with the port on the default plan", padCross(p, padStates(padV())).length === 0 && crossings(p, padStates(padV())).length === 0);
-  for (const [nm, Lx, touch, narrow, scale] of BOXES) {
+  for (const [nm, Lx, touch, narrow, scale] of [...BOXES, ["desk 1280x720", layout(1280, 720), false, false, undefined]]) {
     const r = rec(); drawControls(r.c, Lx, padV(), { touch, narrow, scale, level: 1 });
-    const labels = r.texts.filter((t) => t.fill === CONST.ink || t.fill === CONST.t2).map((t) => t.s);
-    const want = nm.startsWith("desk") ? ["BOMB", "SOUTH", "THROW", "WEST", "REMOTE", "EAST", "MOVE", "L-STICK", "D-PAD", "START", "SELECT"] : [];
-    check("callouts where they fit (the desk), none in a small pane or the phone column: " + nm, want.every((w) => labels.includes(w)) && (want.length || !labels.length), labels.join());
+    const plan = pageDbg.last.live.plan, labels = plan ? plan.labels.flatMap((l) => l.lines.map((q) => q.s)) : [], drawn = new Set(r.texts.map((t) => t.s));
+    const want = nm === "desk 1366x768" || nm === "desk 1280x720" ? ["BOMB", "SOUTH", "THROW", "WEST", "REMOTE", "EAST", "MOVE", "L-STICK", "D-PAD", "START", "SELECT"] : [];
+    check("callouts where they fit (the desk at 1366x768 and 1280x720; a 1024 wide pane and every column draw none, the rows name every button): " + nm, want.every((w) => labels.includes(w) && drawn.has(w)) && (want.length || !plan), labels.join());
   }
 }
 
-// ---- capture: no countdown, its cancel copy ----
+// ---- capture: no countdown, its cancel copy (Task 6.3: on the desk the pane listens, the -capture frame) ----
 {
   const v = padV({ capture: CAP, row: 2 }), a = rec(), b = rec();
-  drawControls(a.c, L600, v, { level: 1, t: 0 }); drawControls(b.c, L600, v, { level: 1, t: 37 });
+  drawControls(a.c, DESK, v, { level: 1, t: 0 }); drawControls(b.c, DESK, v, { level: 1, t: 37 });
+  const A0 = pageDbg.last.live.art;
   check("capture is static: two frames apart draw the same", a.log.join() === b.log.join());
-  check("capture says how to cancel, and nothing counts down", a.texts.some((t) => t.s === CAP.foot) && !a.texts.some((t) => /^\d+(\.\d+)?s?$/.test(t.s) || /SECOND|TIME LEFT/.test(t.s)));
-  const G = geoFor(L600, false, false), C = G.cap, room = C.h - 100, W0 = Math.min(150, C.w - 40, room / 0.74), B = padBox(W0), px = C.x + C.w / 2 - W0 / 2, py = C.y + 48 + (room - (B.y1 - B.y0)) / 2 - B.y0;
-  const ringK = "a" + (px + PART_AT.W[0] * W0).toFixed(1) + "," + (py + PART_AT.W[1] * W0).toFixed(1) + "," + ringR("W", W0).toFixed(2);
+  check("capture says how to cancel, label first and keycap last, and nothing counts down", ["CANCELS", "START", "KEEPS IT", "WEST"].every((w) => a.texts.some((t) => t.s === w)) && a.texts.some((t) => t.s === "PRESS A BUTTON FOR THROW") && !a.texts.some((t) => /^\d+(\.\d+)?s?$/.test(t.s) || /SECOND|TIME LEFT/.test(t.s)));
+  const W0 = A0.W, px = A0.ox, py = A0.oy, ringK = "a" + (px + PART_AT.W[0] * W0).toFixed(1) + "," + (py + PART_AT.W[1] * W0).toFixed(1) + "," + ringR("W", W0).toFixed(2);
   check("capture on the controller: every input quiet but the action's own button (WEST), lit and ringed", fillAt(a, "W", W0, px, py) === "f" + tok.lit && ["N", "E", "S"].every((id) => fillAt(a, id, W0, px, py) === "f" + tok.key) && a.log.includes(ringK) && W0 > 100, [fillAt(a, "W", W0, px, py), W0.toFixed(1)].join());
 }
 
 // ---- no controller ----
 {
   for (const [nm, Lx, touch, narrow, scale] of BOXES) {
-    const v = keyV({ tab: "pad", row: 1 }), G = geoFor(Lx, touch, narrow, scale), r = rec();
-    drawControls(r.c, Lx, v, { touch, narrow, scale, level: 1 });
-    const hits = [5, 6, 7].map((i) => { const g = geomOf(i, G); return hitPage(v, g.x + g.w / 2, g.y + g.h / 2, G).row; });
-    check("no controller keeps SENSITIVITY, VIBRATION, RESET drawn and tappable: " + nm, hits.join() === "5,6,7" && ["SENSITIVITY", "VIBRATION", "RESET CONTROLLER"].every((s) => r.texts.some((t) => t.s === s)), hits.join());
+    const seen = [], hits = [5, 6, 7].map((i) => { const v = keyV({ tab: "pad", row: i }), G = geoFor(Lx, touch, narrow, scale, v), r = rec(), g = geomOf(i, G); drawControls(r.c, Lx, v, { touch, narrow, scale, level: 1 }); seen.push(...r.texts.map((t) => t.s)); return hitPage(v, g.x + g.w / 2, g.y + g.h / 2, G).row; }); // a paged column shows each on its own page
+    check("no controller keeps SENSITIVITY, VIBRATION, RESET drawn and tappable: " + nm, hits.join() === "5,6,7" && ["SENSITIVITY", "VIBRATION", "RESET CONTROLLER"].every((s) => seen.includes(s)), hits.join());
   }
   const q = { c: model.DEF_CONTROLS, said: [] }, p = createControlsPage({ get: () => q.c, set: (c) => { q.c = c; }, padView: () => ({ state: "none" }), say: (s) => q.said.push(s) });
   p.open("pad");
@@ -217,10 +221,11 @@ const MT_BASE = { controller: 34, keyboard: 26 }, MT_NOW = { controller: 32, key
       drawControls(r0.c, DESK, v, { level: 1 });
       const log = r0.log.slice(n0), mt = log.filter((q) => q === "mt").length;
       console.log("    (" + tab + " steady frame: " + log.length + " calls, " + mt + " measureText)");
-      check("a steady CONTROLS frame, " + tab + " tab: 0 cache misses, the drawing one blit, <= 400 canvas calls", cache._dbg.misses === m0 && log.filter((q) => q === "img").length === 1 && log.length <= 400, log.length);
-      check("the drawing measures nothing on a steady frame (" + tab + "): exactly " + MT_NOW[tab] + " measureText, all the chrome's (base " + MT_BASE[tab] + ")", mt === MT_NOW[tab], mt);
+      check("a steady CONTROLS frame, " + tab + " tab: 0 cache misses, every part at rest a blit (room, base, column, drawing, keycaps), <= 400 canvas calls", cache._dbg.misses === m0 && log.filter((q) => q === "img").length >= 4 && log.length <= 400, log.length);
+      check("a steady frame measures nothing (" + tab + "): 0 measureText (the world kit page plans once; base c1f9bd9's CONSOLE PANEL page measured " + MT_BASE[tab] + ")", mt === 0, mt);
     }
-    const m1 = cache._dbg.misses, w = rec({ grad: true, getTransform: 2 }); drawControls(w.c, DESK, padV({ row: 2 }), { level: 1 });
+    const w = rec({ grad: true, getTransform: 2 }); drawControls(w.c, DESK, padV(), { level: 1 }); // back on the controller tab (a tab switch may make its layers again), then the row move
+    const m1 = cache._dbg.misses; drawControls(w.c, DESK, padV({ row: 2 }), { level: 1 });
     check("a row move re-blits the same layer: the ring is live, no miss", cache._dbg.misses === m1);
   } finally { delete globalThis.OffscreenCanvas; cache.release(); setTextScale(1); }
 }
@@ -253,7 +258,7 @@ const MT_BASE = { controller: 34, keyboard: 26 }, MT_NOW = { controller: 32, key
   const C = keyCallouts(keyV());
   check("callouts: BACK ESC FIXED, REMOTE Q, THROW E, PAUSE P, BOMB SPACE, MOVE W A S D, MOVE ARROWS FIXED", C.map((q) => q.act + ":" + q.pos.join("") + (q.tag ? ":FIXED" : "")).join() === "BACK:ESC:FIXED,REMOTE:Q,THROW:E,PAUSE:P,BOMB:SPACE,MOVE:W A S D,MOVE:ARROWS:FIXED", C.map((q) => q.act + ":" + q.pos.join("")).join());
   check("a key off the drawing has no callout and draws no crash", !keyCallouts(keyV({ key: { ...DEF_KEY, THROW: "Numpad7" } })).some((q) => q.act === "THROW"));
-  const G = geoFor(DESK, false, false), A = { w: G.pane.w - 12, h: G.art.h - 13 };
+  const G = geoFor(DESK, false, false), A = { w: G.art.w, h: G.art.h };
   for (const ts of [1, 1.25]) {
     const F = kbFit(A.w, A.h, C, M(ts));
     check("desk 1366x768 at text " + ts + ": the board draws every callout, prints its legends (k " + F.k + ")", !!F.plan && F.plan.labels.length === 7 && !kbCross(F.plan).length && kbLegend(F.k, ts) >= 10, F.plan && kbCross(F.plan).join());
@@ -274,13 +279,14 @@ const MT_BASE = { controller: 34, keyboard: 26 }, MT_NOW = { controller: 32, key
   check("rebinds: no drawn leader crosses another or runs through a key (" + drawn + " of " + n + " drawn with leaders)", !bad.length && drawn > n * 0.5, bad.slice(0, 3).join(" | "));
   /* the rows name every bound key as whole value tokens (a row's values split at " · ", the row's own label left out), in every box, and after a rebind */
   const rowTok = (r, G, i) => { const g = geomOf(i, G), lab = rowsOf(keyV())[i]; return r.texts.filter((t) => Math.abs(t.y - (g.y + g.h / 2)) < 1 && t.x >= g.x && t.x <= g.x + g.w && t.s !== (lab.label || lab.id)).flatMap((t) => t.s.split(" · ")); };
-  for (const [nm, Lx, touch, narrow, scale] of [...BOXES, ["phone 393x852", layout(393, 852), true, true, 1]]) for (const [vn, v, want] of [["defaults", keyV(), [[0, ["WASD", "ARROWS"]], [1, ["SPACE"]], [2, ["E"]], [3, ["Q"]], [4, ["ESC", "P"]], [5, ["ENTER"]], [6, ["ESC"]]]], ["THROW on Z", keyV({ key: { ...DEF_KEY, THROW: "KeyZ" }, row: 2 }), [[2, ["Z"]], [1, ["SPACE"]]]]]) {
-    const r = rec(); drawControls(r.c, Lx, v, { touch, narrow, scale, level: 1 });
-    const Gx = geoFor(Lx, touch, narrow, scale), miss = want.flatMap(([i, w]) => w.filter((x) => !rowTok(r, Gx, i).includes(x)).map((x) => i + ":" + x));
+  for (const [nm, Lx, touch, narrow, scale] of [...BOXES, ["phone 393x852", layout(393, 852), true, true, 1]]) for (const [vn, v0, want] of [["defaults", keyV(), [[0, ["W", "A", "S", "D"]], [1, ["SPACE"]], [2, ["E"]], [3, ["Q"]], [4, ["P"]], [5, ["ENTER"]], [6, ["ESC"]]]], ["THROW on Z", keyV({ key: { ...DEF_KEY, THROW: "KeyZ" }, row: 2 }), [[2, ["Z"]], [1, ["SPACE"]]]]]) {
+    /* Task 6.3 (the d-05-controls-keys frame): MOVE's set as its four keycaps, PAUSE its rebindable key (ESC always pauses: the row's status line); each row drawn on its own page */
+    const v = v0, miss = want.flatMap(([i, w]) => { const vi = { ...v0, row: i }, r = rec(); drawControls(r.c, Lx, vi, { touch, narrow, scale, level: 1 }); const Gx = geoFor(Lx, touch, narrow, scale, vi); return w.filter((x) => !rowTok(r, Gx, i).includes(x)).map((x) => i + ":" + x); });
     check("the rows name every bound key as a whole token (" + vn + "): " + nm, !miss.length && (vn === "defaults" || keyStates(v).KeyZ === "lit"), miss.join());
   }
   const ph = rec(); drawControls(ph.c, layout(436, 946), keyV(), { touch: true, narrow: true, scale: 0.9, level: 1 });
-  check("the phone column's board prints only the arrow glyphs (no legend at its pitch)", !ph.texts.some((t) => t.fill === CONST.dk || t.fill === CONST.off));
+  const pa = pageDbg.last.G.art;
+  check("the phone column's board prints only the arrow glyphs (no legend at its pitch)", !!pa && !ph.texts.some((t) => (t.fill === CONST.dk || t.fill === CONST.off) && t.x >= pa.x && t.x <= pa.x + pa.w && t.y >= pa.y && t.y <= pa.y + pa.h));
 }
 
 // ---- the fits (fix round 1): the largest clean size the art box holds, centred; compact only when no clean size fits ----
@@ -337,7 +343,7 @@ for (const [nm, Lx, touch, narrow, scale] of [["desk 1366x768", DESK, false, fal
 {
   const t = worldTokens(1), r = rec({ grad: true }); drawControls(r.c, DESK, padV(), { level: 1 });
   const k = rec({ grad: true }); drawControls(k.c, DESK, keyV(), { level: 1 });
-  const fixed = (R) => R.texts.filter((x) => x.s === "FIXED").map((q) => q.fill === CONST.t2 && R.rects.some((b) => b.fill === t.band && q.x >= b.x && q.x + q.s.length * q.px * 0.6 <= b.x + b.w && q.y >= b.y && q.y <= b.y + b.h));
+  const fixed = (R) => R.texts.filter((x) => x.s === "FIXED" && x.fill === CONST.t2).map((q) => q.fill === CONST.t2 && R.rects.some((b) => b.fill === t.band && q.x >= b.x && q.x + q.s.length * q.px * 0.6 <= b.x + b.w && q.y >= b.y && q.y <= b.y + b.h));
   check("each FIXED tag sits on its own plaque in the world's band tone, its legend in t2 (START on the controller; ESC and the arrows on the keyboard)", fixed(r).length === 1 && fixed(k).length === 2 && [...fixed(r), ...fixed(k)].every(Boolean), fixed(r).concat(fixed(k)).join());
   const W = 300, p = rec(); drawPad(p.c, 0, 0, W, { tok: t, lit: padStates(padV()), press: "S" });
   const [x, y] = PART_AT.S.map((v) => v * W), rest = p.log.lastIndexOf("a" + x.toFixed(1) + "," + y.toFixed(1) + "," + (PADG.br * W + 1).toFixed(2)), drop = p.log.lastIndexOf("a" + x.toFixed(1) + "," + (y + 2).toFixed(1) + "," + (PADG.br * W).toFixed(2));

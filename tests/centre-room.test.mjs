@@ -20,6 +20,9 @@ cache.setFactory((w, h) => new Cv(w, h));
 const MP = await import("../src/render/pages/menu.js");
 const LP = await import("../src/render/pages/level.js");
 const SP = await import("../src/render/pages/settings.js");
+const CP = await import("../src/render/pages/controls.js"); // Task 6.3: CONTROLS on the world kit, the same rules
+const { DEF_KEY: CK, DEF_PAD: CPAD } = await import("../src/render/controlsgeo.js");
+const CV = { tab: "pad", device: "pad", row: 1, pad: { state: "ready", name: "CONTROLLER 1 · STANDARD", rumble: true }, key: CK, binds: CPAD, stick: "L", dead: 25, vib: 2 };
 const GP = await import("../src/render/pages/guide.js");
 const RP = await import("../src/render/pages/records.js");
 const md = await import("../src/render/menudraw.js");
@@ -47,6 +50,7 @@ const geoms = (F) => {
   const out = { MENU: MP.menuGeom(F, ITEMS), "LEVEL SELECT": LP.levelGeom(F, { unlocked: true }), "LEVEL SELECT 1-5": LP.levelGeom(F, { unlocked: false }), SETTINGS: SP.settingsGeom(F, R10), GRAPHICS: SP.graphicsGeom(F) };
   for (const p of GUIDE_PAGES) out[p] = GP.guideGeom(F, p);
   out.RECORDS = RP.recordsGeom(F);
+  out.CONTROLS = CP.controlsGeom(F, CV);
   out.LOADING = { plate: (({ x, y, w, h }) => ({ x, y, w, h }))(room.loadBox(F)), foot: null, u: 1 };
   return out;
 };
@@ -154,6 +158,7 @@ for (const [W, H] of SIZES) {
     SETTINGS: () => SP.drawSettingsPage(t.ctx, F, { rows: R10, row: "ART STYLE", vals: VALS, r3d: false, px: false, togT: -1, rev: "v201", door: "AUTO ›", ctlDoor: "KEYBOARD ›", padVib: "", ana: true, anaNote: "", level: 1 }, 0),
     GUIDE: () => GP.drawGuidePage(t.ctx, F, { page: "GUIDE", focus: "ENEMIES", tip: false, level: 1, look: "2d", rev: "v201" }, 0),
     RECORDS: () => RP.drawRecordsPage(t.ctx, F, { page: "scores", level: 1, focus: "tabs", heat: 0, scores: [], plaques: 0, rows: medalRows(0), rev: "v201" }, 0),
+    CONTROLS: () => CP.drawControlsPage(t.ctx, F, CV, { level: 1, rev: "v201", tap: false }),
     LOADING: () => room.loadingPlate(t.ctx, F, { level: 1, title: "GUIDE", line: "LOADING", rev: "v201", dpr: 2 }),
   };
   /* MENU -> page -> MENU, as the hops a player makes: the page reuses MENU's room (no new room canvas) and MENU finds it again */
@@ -211,7 +216,7 @@ for (const [W, H] of SIZES) {
     for (const m of s.matchAll(/roomLayer\(([^;]*?)\)\s*[;)]/g)) { n++; if (!/\bplay:/.test(m[1])) bad.push(f + ": " + m[0].slice(0, 80)); }
     if (/keyOf\(\{\s*layer:\s*"room/.test(s)) bad.push(f + ": a hand-built room key");
   }
-  check(`every page's roomLayer call passes play (${n} calls: MENU, LEVEL SELECT, SETTINGS, GUIDE, RECORDS) and no page builds its own room key (kit room.js roomKey)`, n >= 5 && bad.length === 0, J([n, bad]));
+  check(`every page's roomLayer call passes play (${n} calls: MENU, LEVEL SELECT, SETTINGS, GUIDE, RECORDS, CONTROLS) and no page builds its own room key (kit room.js roomKey)`, n >= 6 && bad.length === 0, J([n, bad]));
 }
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

@@ -207,15 +207,12 @@ params are byte-identical, identifiers keep the old names (`heat`, `pace`,
 word (R9, UI upgrade Task 8.2; `words.js` `HUD_CHIPS`). Medal proper names stay (IRON CROWN).
 The paragraphs below use the internal names (heat, pace, pact, room) for code.
 
-Menu look (owner pick 2026-10-19, direction A "CONSOLE PANEL"): CONTROLS
-(every other plated page is on the world kit: MENU, LEVEL SELECT, SETTINGS / GRAPHICS, GUIDE's pages, RECORDS and the PAUSE list; values,
-tags and hints there are sans, keycaps mono) shares ONE kit in `menudraw.js` — `plate`
-(one 0.94 fill, one `#2a3550` border, radius 6, even-px snapped), `head`
-(sans title, muted spaced kicker), `foot`, and `paintRow` (selected = 0.12
-band + 3px notch + caret; `danger` rows select red). Labels are system-ui
-sans (OS-dependent, owner-accepted), values / tags / hints mono. Lists go
-through `listGeom` / `listHit` (pitches are caps that scale down in a short
-box). MENU is on the world kit since UI upgrade Task 3.1 (MENU page, below). Build tag (owner 2026-10-21: "a game version in some where in
+Menu look (owner pick 2026-10-19, direction A "CONSOLE PANEL", since replaced page by page): every plated page is on the world kit (MENU,
+LEVEL SELECT, SETTINGS / GRAPHICS, GUIDE's pages, RECORDS, the PAUSE list and, since Task 6.3, CONTROLS: the owner's "I think you forgot to work on
+the cntroller side ha?" reversed the 2026-11-02 ruling that kept it a CONSOLE PANEL page); values, tags and hints are sans, keycaps mono. The
+CONSOLE PANEL kit in `menudraw.js` (`plate`, `head`, `foot`, `paintRow`, `listGeom` / `listHit`, `pageBox`, `segs`, the ellipsis `clip` / `wrap`)
+is gone with its last page; menudraw keeps only the fonts and colours the controller drawings' glyphs read (`TEXT`, `MUTED`, `sans`). MENU is on
+the world kit since UI upgrade Task 3.1 (MENU page, below). Build tag (owner 2026-10-21: "a game version in some where in
 the display or menue"): `v206` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
 as `rev`) and `update.js` (the card's "You are on v206", the running build,
@@ -288,11 +285,8 @@ silent; `[ ]` pace keys cue too.
 Menu pages (owner pick 2026-10-19 round 2, direction B "ATLAS", over the
 CONSOLE PANEL skin; owner: "why all buttons are soo fat", "make the select
 lever more intractive", "put hooks … to see what we deliver"): pick on the
-left, see it on the right. Centred (Task 9.6, owner: "the menu is not in center of screen"): every plated page on `#sh` (MENU, LEVEL SELECT, SETTINGS / GRAPHICS, GUIDE and its pages, RECORDS, the LOADING plate) centres its plate + foot block in a box taller than it needs; each old top margin is the minimum, the short-window give-way order unchanged; a phone column that fills the height stays anchored (`tests/centre-room.test.mjs`). Every CONSOLE PANEL plate HUGS its content through `pageBox` (GUIDE's pages: `pages/guide.js` `guideGeom`)
-(band keyboard 73..492 / touch 8..512; pitches are caps, scale only in the
-iso 608x352 guard; `shellBox` is gone, no page divides its band by a row
-count). Pitches: list 26 keyboard / 52 touch (SETTINGS and GRAPHICS: their page's own, see SETTINGS page below), hero
-40 / 70. LEVEL SELECT: see the LEVEL SELECT page below (UI upgrade v202 Task 3.3, on the world kit). No start-on-miss: a tap starts only on
+left, see it on the right. Centred (Task 9.6, owner: "the menu is not in center of screen"): every plated page on `#sh` (MENU, LEVEL SELECT, SETTINGS / GRAPHICS, GUIDE and its pages, RECORDS, the LOADING plate) centres its plate + foot block in a box taller than it needs; each old top margin is the minimum, the short-window give-way order unchanged; a phone column that fills the height stays anchored (`tests/centre-room.test.mjs`). Every plate HUGS its content through its page's own geometry (`pages/*.js` `*Geom`; the menudraw `pageBox` / `bandOf` / `listGeom` band and
+its list 26 / 52 pitches went with the CONSOLE PANEL kit in Task 6.3; `shellBox` is gone, no page divides its band by a row count). LEVEL SELECT: see the LEVEL SELECT page below (UI upgrade v202 Task 3.3, on the world kit). No start-on-miss: a tap starts only on
 START (keys and controller: LEVEL SELECT rows, below). MENU: see MENU page below; ↑↓ stays the linear walk. One vocabulary: MODIFIERS
 (never MODES or PACT) on screens and in copy; pact.js and `nb.pact.v1` keep their
 names. Hooks never lie: a score teaser reads only played runs
@@ -585,7 +579,7 @@ not shell screens. Do not add them as `SCREEN` values.
   (`mountRenderers`: per-kind renderer cache, lazy/eager three, release),
   `src/app/audiopower.js` (`mountAudioPower`), `src/app/renderkind.js`
   (`bootRender` / `kindOf` / `renderVal` / `renderBits`),
-  `src/app/controlswire.js` (`mountControls`, v201: binds `gamepad.js`, `padroute.js`, `capture.js`, `controlspage.js`, `controls.js`, `hints.js`, `rumble.js` and render's `controlsgeo.js`, `controlsdraw.js`, `padart.js`, `hintcopy.js` to main, frameloop and unlock; see the CONTROLS paragraph), `src/app/debughook.js`
+  `src/app/controlswire.js` (`mountControls`, v201: binds `gamepad.js`, `padroute.js`, `capture.js`, `controlspage.js`, `controls.js`, `hints.js`, `rumble.js` and render's `controlsgeo.js`, `pages/controls.js`, `padart.js`, `hintcopy.js` to main, frameloop and unlock; see the CONTROLS paragraph), `src/app/debughook.js`
   (`window.__GAME__`), `src/app/pointer.js` (`mountPointer`: the ONE tap handler, bound on `#c` and `#sh`; `main.js` hands it the hit functions as `hit` because `src/app` never imports `src/render`, and `kind` / `ctl` as getters), `src/app/endkeys.js` (WIN/LOSE keys: Enter =
   Space through `Input.pulse()`, one fire tick and never a latch; C/B copy; Esc → MENU at a run end, R19.
   Every copy reports COPIED / COPY FAILED through the ONE `app.toast` — on
@@ -1053,12 +1047,38 @@ not shell screens. Do not add them as `SCREEN` values.
   swallow rule), `capture.js` (all input up, then 200 ms; later MOVE steps and a retry need only the release;
   no timeout), `controlspage.js` (reducer), `controls.js` (model, rules, store), `hints.js` (device tracker,
   0.75 s dwell, `wordsOf`, `helpOf`), `rumble.js` (one-way from the event drain; player word VIBRATION, internal names stay `rumble`; stored `vib` OFF / LOW / MEDIUM / HIGH, default MEDIUM, owner's call, `rumble` still written for older cached pages; scale 0.4 / 0.75 / 1 gives x, played as x from 0.5 up and as `0.35 + 0.3x` below (`LIMITS.knee`), LOW never past 0.40; independent of REDUCE FLASH; `PATTERNS` lose, hurt, win, shield, chain, close, near, plant, test, and the menu feels launch, enter, hello, deny, confirm, back, move (2026-11-03, owner: "subtle vibration when menu changes"; shell call sites write one ranked slot `app.feel` (`menuapp.js` `FEELS`), `controlswire.js` arms it around the pad poll's routing and plays one feel per press, launch > enter > deny > back > confirm > move; deny only where a refusal is shown; hello on connect off GAME PLAY; weak motor except back, strong .3; none over 250 ms or 0.7; menu cap 900 ms per 10 s on cursor ticks, page feels (enter, back, deny) always play but count, launch and hello outside it; a late frame plays a menu step late, never skips it; gameplay preempts; record's Menu feels section); `LIMITS`: a pattern at most 500 ms and 3 pulses, a pulse at most 300 ms, gaps at least 80 ms, 4 pulses a second or 2 at LOW, about 50 % on-time, hurt and lose exempt, near + plant 900 ms per 10 s; LOW drops plant, near and menu ticks; OFF is zero calls through the one `fire`; a run and menu ticks only while `app.lastDev` is the pad, the row's test pulse is the one exception; menu feels have no separate off, MEDIUM and HIGH only, never a hold repeat or a clamped edge, move and confirm at least 100 ms apart; no actuator shows `NONE` and `NO VIBRATION ON THIS CONTROLLER OR BROWSER`); a held menu direction (`app.repDir`) runs its frame at up to `HELD_FPS` 60 under the FRAME RATE cap, keys too; render side `controlsgeo.js`
-  (the one geometry for draw and tap), `controlsdraw.js`, `padart.js`,
+  (the model: rows, rules, foot items, lit parts, callout planners), `pages/controls.js` (the page), `padart.js`,
   `hintcopy.js` (the setter that keeps `menudraw.js` free of `src/app/`). The page's paint is lazy since v202:
-  `controlspage.js`, `capture.js`, `rumble.js`, `controlsdraw.js`, `controlsgeo.js` and `padart.js` load through `shellview.loadControlsArt` / the
+  `controlspage.js`, `capture.js`, `rumble.js`, `pages/controls.js` (it imports `pages/settings.js`' meter cell, slab, marks and course, a module
+  SETTINGS has always loaded first), `controlsgeo.js` and `padart.js` load through `shellview.loadControlsArt` / the
   wire's preload, never in the boot graph (`tests/loadbar.test.mjs` LAZY); the rest of the wire is boot. `SCREEN.CONTROLS = 16`; from PAUSE `pauseView 3`. The door
   sits between GRAPHICS and RESET DEFAULTS; SETTINGS is twelve rows in REAL 3D and ten otherwise, at its page's pitches (v202 Task 3.4: see SETTINGS page).
-  **CONTROLS is in the CONSOLE PANEL kit like every other menu (lead ruling 2026-11-02, on the owner's ask for one cohesive menu): list on the left, preview pane on the right, HEAT-style tabs, kit band, notch and caret; ↑↓ rows, ←→ tab, ←→ on SENSITIVITY or VIBRATION adjusts.** The other menus do not change, and the all-menus restyle is not planned for this release. MENU carries the note `CONTROLLER READY · SETTINGS › CONTROLS`, naming the VIBRATION level where it fits, and the SETTINGS door reads `VIBRATION MEDIUM ›` the same way (the `›` is the door's chevron glyph; on a narrow touch row the words take the row's second line, whole); no SETTINGS or PAUSE row of its own. Tap rule exception: on CONTROLS a tap off the
+  CONTROLS page (UI upgrade v202 Task 6.3, `src/render/pages/controls.js`; the round 7 C7-controls frames): on the world kit, opaque (`shellCovers`), the
+  room of `app.level` behind it (MENU's own room layer at play scale, `roomKey` / `play`), PAUSE view 3 over the board in the played room's tokens inside
+  the pause band. `controlsGeom(F, view)` is the one geometry for draw and tap (rows by id; `controlsHit` answers `{tab}`, `{row}`, the kit pager's
+  `{k: "page", d, to}`, `{off: 1}`, `{}`; while a rebind listens, the plate (or, with no drawing, the capture plate) is inert and off it cancels; the wire
+  takes the page key as a focus on the page's first row, nothing confirmed). Top to bottom: kicker SETTINGS (PAUSE: `PAUSED · LEVEL n`) over the display
+  title, KEYBOARD | CONTROLLER as kit tab bricks in a wall trough, the rows (MOVE BOMB THROW REMOTE PAUSE, a course, CONFIRM BACK or SENSITIVITY VIBRATION,
+  a course, RESET coral with the reset glyph): bound inputs as kit keys (a position glyph and its word; a key's legend; MOVE's four keys; PAUSE's rebindable
+  input `+ START` and a FIXED wall plaque; CONFIRM / BACK FIXED), stepping down whole (the words beside glyph keys, then PAUSE's fixed partner, then MOVE's
+  set as one key); SENSITIVITY and VIBRATION steppers (◀ a well window with the word and a meter of bricks ▶; a door on the phone); a changed row a cream
+  dot and `CHANGED` on its status line; a swap `SWAPPED`; armed RESET `PRESS AGAIN`; focus the band and the bare bomb, the drawing ringing the focused
+  row's button (tap mode: none). Desk (any keyboard box, or a touch shell box, holding u >= 0.8): head, tabs, rows and the row's status line in the left
+  column (440, 500 at 125 %), the pane the plate's full inner height on the right (a floor slab: the device's name and `PRESS ANY BUTTON TO TEST IT` /
+  `ALWAYS ON, ALONGSIDE A CONTROLLER`, the drawing LARGE with its callouts at the kit's row type, the rule `In menus SOUTH or START confirms and EAST goes back.
+  Those never change.` / `ENTER confirms and ESC goes back in every menu. Those never change.`, the foot plaque `ROW ▲▼ · TAB ◀▶ · CHANGE ENTER · BACK ESC`,
+  label first, keycap last, whole items stepping down); the plate centred in a tall box (the top margin a minimum). Callouts show at 1366 x 768 and
+  1280 x 720 at 1 and 1.25; a 1024 wide pane draws the drawing without leaders (the rows name every input). Col (a keyboard #c, PAUSE on keys): the list
+  alone with a compact drawing (no callouts) at the head's right, the status line and the foot, scaled as one piece. Phone (a touch-portrait shell box,
+  every touch #c and touch PAUSE view): the column in CSS px, BACK and the title, the tabs, the name line, the drawing over the rows where both fit,
+  rows 44 CSS px 8 apart, paged with the kit pager where they do not (a tight page closes the margins, drops the name line and puts the tabs in the
+  head row beside a chevron BACK), the status line, a controller's cue line. A rebind listens in place where the page draws its drawing (the prompt
+  `PRESS A BUTTON FOR THROW` and `NO TIME LIMIT` over the drawing, only the action's button lit and ringed, the cancel words label first), else on a
+  capture plate. Cached: the room, a base layer at 1 device px a box unit (plate and slab), the column layer at full dpr (head, tabs, courses, rows at
+  rest), the drawing's own layers (its VIBRATION twin made with the page) and one small layer per foot keycap, all made with the page so a cursor move
+  never misses; a steady frame is about 280 canvas calls and 0 measureText. Probe page `controls`; `tools/ui/lib/screens.mjs` exempts band on phone
+  captures (tap mode) and ring / locked only where none is drawn (`exemptIfNo`). ↑↓ rows, ←→ tab (`[` `]` from any row), ←→ on SENSITIVITY or VIBRATION
+  adjusts. MENU carries the note `CONTROLLER READY · SETTINGS › CONTROLS`, naming the VIBRATION level where it fits, and the SETTINGS door reads `VIBRATION MEDIUM ›` the same way (the `›` is the door's chevron glyph; on a narrow touch row the words take the row's second line, whole); no SETTINGS or PAUSE row of its own. Tap rule exception: on CONTROLS a tap off the
   plate backs out anywhere in the viewport, not only on the canvas.
   The controller drawing (UI upgrade Task 6.1, appendix 9.1/9.2, the round 7 C7-controls frames) is `padart.js` `drawPad`: the generic twin-grip body
   (`HALF` / `BUMP` / `PADG`, sizes in body width W, face buttons 0.104 W), top-lit gradient FILLS (the approved exception) and hard offset drops, no
@@ -1478,7 +1498,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   capture run in a watchdog (kill it by PID past 10 minutes, or when its `--out` dir stops growing for 3 minutes; a REAL 3D run once
   hung 1.5 h).
   CONTROLS has four captures: `controls` (the KEYBOARD tab), `controlsnone`, `controlspad` and `controlscapture` (THROW listening); a recipe's
-  `pad` puts a standard controller in slot 0 through `navigator.getGamepads` (headless Chrome has none) and `ctl` calls the page reducer by name. The four rows exempt every probe gate (lead ruling b: a CONSOLE PANEL page records no probe data), and `gatelib.mjs` judges a row that exempts every probe gate, with no probe data, on its record alone (the rest n/a), so `--strict` passes.
+  `pad` puts a standard controller in slot 0 through `navigator.getGamepads` (headless Chrome has none) and `ctl` calls the page reducer by name. Since Task 6.3 the page records the probe like every page: the four rows need every gate but band on a phone capture (tap mode) and ring / locked where none is drawn (`exemptIfNo`). `gatelib.mjs` still judges a row that exempts every probe gate, with no probe data, on its record alone.
 - Blender is driven through the blender-mcp add-on socket `127.0.0.1:9876`
   with a small Python client (`.superpowers/sdd/2026-10-11-bible/blender/bl.py`,
   local only); the session `mcp__Blender__` tools time out.

@@ -89,7 +89,12 @@ export const MENU_WORDS = Object.freeze({
   PAD_READY: "CONTROLLER READY", PAD_BACK: "CONTROLLER BACK", // the app's pad notes (controlswire), read back to make the signpost
 });
 /* CONTROLS (v202 Task 6.1, appendix 9.2): the no-controller plaque and its line, the appendix's own sentence. */
-export const CONTROLS_WORDS = Object.freeze({ NONE: "NO CONTROLLER", CONNECT: "Connect one and press a button." });
+export const CONTROLS_WORDS = Object.freeze({ NONE: "NO CONTROLLER", CONNECT: "Connect one and press a button.",
+  /* the CONTROLS page on the world kit (v202 Task 6.3, the round 7 C7-controls frames): head, tabs, the pane's head and rule, the row parts, the foot's verbs */
+  TITLE: "CONTROLS", KEYBOARD: "KEYBOARD", CONTROLLER: "CONTROLLER", LOST: "CONTROLLER LOST", ALSO: "ALWAYS ON, ALONGSIDE A CONTROLLER", TEST: "PRESS ANY BUTTON TO TEST IT",
+  RULE_PAD: "In menus SOUTH or START confirms and EAST goes back. Those never change.", RULE_KEY: "ENTER confirms and ESC goes back in every menu. Those never change.",
+  FIXED: "FIXED", SWAPPED: "SWAPPED", AGAIN: Object.freeze(["PRESS AGAIN", "AGAIN"]), PLUS: "+ ", NO_DRAWING: "NO DRAWING FOR THIS CONTROLLER", LISTEN: "REBIND", NO_LIMIT: "NO TIME LIMIT", CHANGED: "CHANGED", FOR: " FOR ", DRIFT: "DRIFT ", READS: "READS ", NOTHING: "NOTHING",
+  ROW, TAB: "TAB", CHANGE, ADJUST: "ADJUST", RESET: "RESET", BACK, CANCELS: " CANCELS", KEEPS: " KEEPS IT" });
 /* The next-run card (v202 Task 3.2, MENU; LEVEL SELECT reuses it): its kicker, the level's mark (level 1, a finale, the last one), its
    section labels and its stat cells. ENEMIES counts the kinds when their names do not fit (the GUIDE page's word). */
 export const CARD_WORDS = Object.freeze({

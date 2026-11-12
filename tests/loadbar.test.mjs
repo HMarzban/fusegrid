@@ -98,7 +98,7 @@ check("three's weight is its real share of the REAL 3D bytes, within 5 points (b
 check("loadbar.js is precached and in the boot graph (rcache reads it)", PRECACHE.includes("./src/app/loadbar.js") && boot.includes("src/app/loadbar.js"));
 {
   /* v202: the CONTROLS page and its paint load when CONTROLS opens (or in idle), rumble on the first pad; the first pad press still leaves the title from boot code. */
-  const LAZY = ["src/app/controlspage.js", "src/app/capture.js", "src/app/rumble.js", "src/render/controlsdraw.js", "src/render/controlsgeo.js", "src/render/padart.js"];
+  const LAZY = ["src/app/controlspage.js", "src/app/capture.js", "src/app/rumble.js", "src/render/pages/controls.js", "src/render/controlsgeo.js", "src/render/padart.js"];
   const KEEP = ["src/app/controls.js", "src/app/hints.js", "src/render/hintcopy.js", "src/app/gamepad.js", "src/app/padroute.js", "src/app/controlswire.js"];
   const lazyIn = LAZY.filter((f) => boot.includes(f)), keepOut = KEEP.filter((f) => !boot.includes(f)), off = LAZY.filter((f) => !PRECACHE.includes("./" + f));
   check("CONTROLS: the page, its paint and rumble are not in the boot graph", lazyIn.length === 0, lazyIn.join());

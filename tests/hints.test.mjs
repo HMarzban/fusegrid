@@ -450,11 +450,11 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   a.screen = SCREEN.CONTROLS;
   a.controls = { view: () => ({ tab: "key", device: "key", row: 1, pad: { state: "none", name: "" }, key: DEF_CONTROLS.key, binds: DEF_CONTROLS.pad, stick: "L", dead: 25, vib: 0, stickVal: [0, 0], armed: false, swap: null, status: "", capture: null, echo: null }) };
   const shot = () => paint((c) => drawShell(c, a, { state: "PLAY", time: 0 }, null, "2d", () => [], () => 0));
-  check("CONTROLS foot reads the default words", shot().has("↑↓ ROW · ←→ TAB · ENTER REBIND · ESC BACK"), shot().strs().join("|"));
+  check("CONTROLS foot reads the default words, label first and keycap last (600x520: the TAB item steps down whole)", shot().strs().join("|").includes("ROW|·|CHANGE|ENTER|·|BACK|ESC"), shot().strs().join("|"));
   setHints({ ...hints(), ok: "RETURN", back: "BKSP" });
   const r = shot();
   setHints(null);
-  check("shellview passes the hint words to the CONTROLS page", r.has("↑↓ ROW · ←→ TAB · RETURN REBIND · BKSP BACK"), r.strs().join("|"));
+  check("shellview passes the hint words to the CONTROLS page", r.strs().join("|").includes("ROW|·|CHANGE|RETURN|·|BACK|BKSP"), r.strs().join("|"));
 }
 
 /* ---- T12: every prompt composes from live binds ---- */

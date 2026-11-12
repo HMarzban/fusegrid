@@ -190,7 +190,8 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     on(W, "blur", blurAll),
     on(D, "visibilitychange", () => { blurAll(); if (D.hidden) stopRumble(); }),
   ];
-  /* A tap resolved by controlsHit: a row is Enter on it; off the plate cancels a capture, else backs out. */
+  /* A tap resolved by controlsHit: a row is Enter on it; a page key (the kit pager, a paged touch column) focuses the first row of the page it
+     opens, nothing confirmed; off the plate cancels a capture, else backs out. */
   function tap(h) {
     if (!h) { if (face.failed) tap({ off: 1 }); return; } // the paint is not in: the canvas is inert, unless the load failed
     if (h.off) {
@@ -202,6 +203,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     if (app.capturing || !page) return;
     if (h.tab) face.tab(h.tab);
     else if (h.row != null) { page.pick(h.row); app.confirm(); }
+    else if (h.k === "page" && h.to != null) page.pick(h.to);
   }
   const syncWords = () => {
     const d = hintDev.device(app.ctlT);

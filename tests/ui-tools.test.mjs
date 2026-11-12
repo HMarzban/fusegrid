@@ -632,14 +632,17 @@ test("compare: the mock beside the capture by absolute file URL, 'no reference' 
   } finally { rmSync(d, { recursive: true, force: true }); rmSync(ref, { recursive: true, force: true }); }
 });
 
-test("CONTROLS (lead ruling b): its four rows exempt every probe gate with the reason; with no probe data such a row is judged on its record alone", () => {
+test("CONTROLS (Task 6.3, on the world kit): its four rows need every gate but band on a phone capture, ring and locked only where drawn; with no probe data every needed gate is skipped", () => {
   for (const n of ["controls", "controlsnone", "controlspad", "controlscapture"]) {
-    assert.equal(SCREENS[n].need.length, 0, n);
-    assert.ok(EXEMPTABLE.every((g) => /CONSOLE PANEL/.test(SCREENS[n].exempt[g])), n);
+    const r = SCREENS[n];
+    assert.deepEqual([...r.need].sort(), [...EXEMPTABLE].sort(), n);
+    assert.ok(!r.exempt || !Object.keys(r.exempt).length, n + ": no blanket exemption");
+    assert.ok(/tap mode/.test(r.exemptPhone.band), n);
+    assert.equal(r.exemptIfNo.ring.rect, "^ring ", n);
+    assert.equal(r.exemptIfNo.locked.rect, "^locked ", n);
   }
   const img = createRGBA(80, 40, [10, 10, 10]), none = evaluate(dump(null, { screen: "controls" }), img, null, SCREENS.controls.need);
-  assert.equal(none.record.status, "pass");
-  assert.ok(GATES.filter((g) => g !== "record").every((g) => none[g].status === "n/a"));
+  assert.ok(GATES.filter((g) => g !== "record" && SCREENS.controls.need.includes(g)).every((g) => none[g].status === "skipped"), "no probe data: skipped, never a pass");
   const bad = evaluate(dump(null, { screen: "controls", dpr: -1 }), img, null, SCREENS.controls.need);
   assert.equal(bad.record.status, "fail", "a broken capture still fails its record");
   const menu = evaluate(dump(null), img, null, SCREENS.menu.need);

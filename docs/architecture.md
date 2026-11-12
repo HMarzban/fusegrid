@@ -256,8 +256,9 @@ its own held axes and latches, OR-merged with keys. A held key beats the pad on 
   preempts them, cursor ticks share 900 ms of motor per 10 s while page feels always play but count (launch and hello outside it) and they never fire alone, without a change on screen.
 - A held menu direction runs its frame at up to 60 Hz ([`frameloop.js`](../src/app/frameloop.js) `HELD_FPS`, under the FRAME RATE
   cap), so a repeat no longer lands on a 20-30 FPS idle frame. The 350 then 110 ms repeat itself did not change.
-- The CONTROLS page draws with the same menu kit as every other page: list on the left, preview pane on the right,
-  HEAT-style tabs, band, notch and caret. One look to maintain, no second skin.
+- The CONTROLS page is on the world kit like every other page (Task 6.3, [`pages/controls.js`](../src/render/pages/controls.js)):
+  brick tabs, the rows as kit keys and steppers, and beside them a floor slab with the drawing large and its callouts. One look to
+  maintain, no second skin: the old CONSOLE PANEL kit is gone.
 - [`controlswire.js`](../src/app/controlswire.js) binds all of it to `main`, the frame loop and the audio unlock.
 
 Trade-offs: the page paints from the static boot graph (the twelve modules are 111,107 bytes raw at `ee2a34e`, +137,052 on the whole boot graph since the feature began), because lazy paint risks a blank

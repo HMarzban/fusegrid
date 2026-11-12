@@ -20,8 +20,7 @@ lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page, 
 import { POWER, FOES } from "../src/core/entities.js";
 import { TILE_NAME } from "../src/core/feat.js";
 import { rec as textrec } from "./lib/textrec.mjs";
-import { _dbg as ctlDbg } from "../src/render/controlsdraw.js";
-import { geoFor, geomOf, hitPage } from "../src/render/controlsgeo.js";
+import { _dbg as ctlDbg, controlsGeom, controlsHit as pageHit } from "../src/render/pages/controls.js";
 import { createGame } from "../src/main.js";
 import "../src/core/board3.js"; // an ordinary run deals gen 3; with the seam empty the start holds
 import { _set as setLazyPage } from "../src/render/pages/lazy.js";
@@ -266,12 +265,12 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
   const shot = (nm, box, cur) => {
     const a = mkApp(SCREEN[nm]); if (cur != null) a.cursor = cur; const R = rec(); drawShell(R.c, a, { state: "PLAY", time: 1 }, box, "2d", () => [], () => 0, () => ({}));
     if (nm === "CONTROLS") { // Tasks 6.1 / 6.2: the drawing's callouts and key legends show where the pane holds them (a desk box), so they leave the 600x520 comparison, held here: each drawn whole, inside the CONTROLS pane. Both paint after the rows: the last of each string is the drawing's. A desk box (d, 800 wide and up) must draw the plan for the default binds
-      const lay = box.ownerDocument.body.getAttribute("data-lay"), Pn = controlsGeo(box, "2d", false).pane;
-      if (lay === "d" && box.width >= 800 && !ctlDbg.plan) calloutBad.push(box.width + "x" + box.height + ": no callout plan");
-      if (!ctlDbg.plan && !ctlDbg.legends.length) return R.texts;
-      const left = R.texts.slice(), Wb = box.width, Hb = box.height, FX = ctlDbg.plan ? ctlDbg.plan.labels.flatMap((l) => l.lines.filter((x) => x.tag).map(() => "FIXED")) : [];
+      const lay = box.ownerDocument.body.getAttribute("data-lay"), Pn = controlsGeo(box, "2d", false).pane, plan = ctlDbg.last.live.plan; // Task 6.3: the page's live plan (pages/controls.js)
+      if (lay === "d" && box.width >= 1280 && box.height >= 720 && !plan) calloutBad.push(box.width + "x" + box.height + ": no callout plan"); // the desk's kit-size callouts: 1280 x 720 and up (a 1024 wide pane draws none)
+      if (!plan) return R.texts;
+      const left = R.texts.slice(), Wb = box.width, Hb = box.height, FX = plan.labels.flatMap((l) => l.lines.filter((x) => x.tag).map(() => "FIXED")), ctlDbgL = { plan, legends: [] };
       const inPane = (q) => !!Pn && q.x >= Pn.x - 0.5 && q.x + q.w <= Pn.x + Pn.w + 0.5 && q.y >= Pn.y - 0.5 && q.y <= Pn.y + Pn.h + 0.5;
-      for (const s of [...(ctlDbg.plan ? ctlDbg.plan.labels.flatMap((l) => l.lines.map((x) => x.s)) : []), ...FX, ...ctlDbg.legends]) { const i = left.findLastIndex((q) => q.s === s); if (i < 0 || /…/.test(s) || !inPane(left[i])) calloutBad.push(Wb + "x" + Hb + ":" + s); else left.splice(i, 1); }
+      for (const s of [...ctlDbgL.plan.labels.flatMap((l) => l.lines.map((x) => x.s)), ...FX]) { const i = left.findLastIndex((q) => q.s === s); if (i < 0 || /…/.test(s) || !inPane(left[i])) calloutBad.push(Wb + "x" + Hb + ":" + s); else left.splice(i, 1); }
       return left;
     }
     if (nm === "SETTINGS" || nm === "GRAPHICS") R.texts.plan = planWords();
@@ -326,6 +325,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     each((nm, cur) => {
       const T = shotAll(nm, box, cur), cmp = tab && nm === "MENU" ? words : nm === "LEVEL" ? stream : exact, desk = tab && TAB_BASE.has(nm), B = base[desk ? "lDesk" + nm + cur : lay + nm + cur];
       if (T.some((q) => q.x < -0.5 || q.x + q.w > g.w + 0.5 || q.y < 0 || q.y > g.h)) out.push(nm + cur);
+      if (nm === "CONTROLS") { const D0 = ctlDbg.last, want = [...(D0.G.d.mode === "phone" && !D0.Pl.head.title ? [] : ["CONTROLS"]), "KEYBOARD", "CONTROLLER", ...D0.G.pages[D0.pg].map((id) => D0.Pl.rows[id].label.s)], s0 = T.map((q) => q.s); let k = 0; for (const q of s0) if (q === want[k]) k++; if (k < want.length || s0.some((q) => /…/.test(q))) same.push(nm + cur); return; } // Task 6.3: the page arranges by box (the desk pane, the column); its title, tabs and every row label print whole, in order, never elided (tests/page-controls holds the rest)
       if (GUIDE_PAGES[nm]) { if (!guideWhole(nm, T)) same.push(nm + cur); return; } // v202 Task 3.5: a GUIDE page wraps to its box (tests/page-guide holds every string whole)
       if (nm === "SETTINGS" || nm === "GRAPHICS" ? !planOk(T, B) : cmp(T) !== cmp(B)) same.push(nm + cur);
     });
@@ -380,8 +380,8 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
       [0, 1, 2].every((p) => sc.tabs.every((r, i) => inPlate(r, sc.plate) && md.recTabHit(...ctr(r), Lr, p, touch) === i)));
     const cg = controlsGeo(box, "2d", false);
     check(`CONTROLS: the painted geometry is the tapped one, every row taps to itself, a window corner is off the plate (${tg})`,
-      J(cg) === J(geoFor(L, touch, L.narrow, g.s)) && cg.x >= 0 && cg.y >= 0 && cg.x + cg.w <= g.w && cg.y + cg.h <= g.h &&
-        Array.from({ length: 8 }, (_, i) => geomOf(i, cg)).every((r, i) => hitPage({}, ...ctr(r), cg).row === i) && hitPage({}, 1, 1, cg).off === 1 && hitPage({}, g.w - 1, g.h - 1, cg).off === 1);
+      J(cg) === J(controlsGeom({ W: g.w, H: g.h, touch, shell: true, css: touch ? g.s : undefined, cue: false }, {})) && cg.plate.x >= 0 && cg.plate.y >= 0 && cg.plate.x + cg.plate.w <= g.w && cg.plate.y + cg.plate.h <= g.h &&
+        cg.order.every((id, i) => { const v = { row: i }, G2 = controlsGeo(box, "2d", false, v), r = G2.rows[id]; return pageHit(v, ...ctr(r), G2).row === i; }) && pageHit({}, 1, 1, cg).off === 1 && pageHit({}, g.w - 1, g.h - 1, cg).off === 1);
   }
 }
 
@@ -391,7 +391,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
   try {
     const cv = mkCv(), fit = mountFit(cv), sh = fit.shell(1), app = mkApp(SCREEN.CONTROLS), taps = [];
     mountPointer({ canvas: cv, fit, input: { _intent: { fire: true }, onUiKey() {} }, app, world: { state: "PLAY" }, kind: () => "2d", ctl: () => ({ tap: (v) => taps.push(v) }), hit: HIT });
-    const G = controlsGeo(sh.box, "2d", false), r2 = geomOf(2, G);
+    const G = controlsGeo(sh.box, "2d", false), r2 = G.rows[G.order[2]];
     for (const [x, y] of [[2, 2], [1364, 766], [2, 766], [1364, 2]]) D.sh.fire("pointerdown", { clientX: x, clientY: y, pointerType: "mouse" });
     D.sh.fire("pointerdown", { clientX: r2.x + r2.w / 2, clientY: r2.y + r2.h / 2, pointerType: "mouse" });
     check("CONTROLS on a desktop #sh: each window corner taps off the plate ({off:1}), a row taps itself", taps.length === 5 && taps.slice(0, 4).every((t) => t && t.off === 1) && taps[4] && taps[4].row === 2, J(taps));

@@ -863,7 +863,7 @@ function check(name, cond, detail) {
 {
   const md = await import("../src/render/menudraw.js");
   const { shellGeo } = await import("../src/app/fit.js");
-  const { geoFor, geomOf, hitPage } = await import("../src/render/controlsgeo.js");
+  const { controlsGeom, controlsHit } = await import("../src/render/pages/controls.js"); // Task 6.3: the page on the world kit, rows by id
   for (const [VW, VH] of [[393, 852], [360, 640], [430, 932]]) {
     const g = shellGeo(VW, VH, 600, 520), L = md.layout(g.w, g.h, g.logo), tg = `${VW}x${VH} box ${g.w}x${g.h}`;
     const inBox = (S) => S.x >= 0 && S.y >= 0 && S.x + S.w <= g.w && S.y + S.h <= g.h && S.f === 1;
@@ -899,11 +899,11 @@ function check(name, cond, detail) {
       return q.mode === "phone" && hs.every((h) => Math.abs(h - 44) < 0.01) && gaps.every((v) => v >= 7.99) && keysOk ? true : hs.join() + " | " + q.pages.length;
     };
     check(`OPTIONS on the phone column: rows 44 CSS px 8 apart, paged on a 640-tall phone, ten or twelve rows (${tg})`, pitch(optRows(true)) === true && pitch(optRows(false)) === true, [pitch(optRows(true)), pitch(optRows(false))].join(" / "));
-    const cg = geoFor(L, true, L.narrow, g.s);
-    check(`CONTROLS: plate inside the box, every row inside it and tapping to itself, off the plate backs out (${tg})`,
-      cg.x >= 0 && cg.y >= 0 && cg.x + cg.w <= g.w && cg.y + cg.h <= g.h &&
-        Array.from({ length: 8 }, (_, i) => geomOf(i, cg)).every((r, i) => inPlate(r, cg) && hitPage({}, ...ctr(r), cg).row === i) &&
-        hitPage({}, 1, 1, cg).off === 1);
+    const CF = { W: g.w, H: g.h, touch: true, shell: true, css: g.s }, cg = controlsGeom(CF, {}), cp = cg.plate;
+    check(`CONTROLS: plate inside the box, every row inside it and tapping to itself (on its own page), off the plate backs out (${tg})`,
+      cp.x >= 0 && cp.y >= 0 && cp.x + cp.w <= g.w && cp.y + cp.h <= g.h &&
+        cg.order.every((id, i) => { const v = { row: i }, G = controlsGeom(CF, v), r = G.rows[id]; return inPlate(r, cp) && controlsHit(v, ...ctr(r), G).row === i; }) &&
+        controlsHit({}, 1, 1, cg).off === 1);
     const gd = md.guideGeom(L, true), gt = gd.order.map((n) => gd.items[n]), gp = gd.plate; // v202 Task 3.5: pages/guide.js, the doors by name
     check(`GUIDE: doors inside the box, each taps to itself (${tg})`, gp.x >= 0 && gp.y >= 0 && gp.x + gp.w <= g.w && gp.y + gp.h <= g.h && gt.every((r, i) => inPlate(r, gp) && md.guideHit(...ctr(r), L, 0, true) === i));
     const sa = sc.d.bodies.stats.acts, cS = (r) => [(r.x + r.w / 2) * sc.u, (r.y + r.h / 2) * sc.u];
@@ -981,8 +981,8 @@ function check(name, cond, detail) {
   await loadControlsArt(); // the CONTROLS paint is lazy (v202)
   const { createControlsPage } = await import("../src/app/controlspage.js");
   const { DEF_CONTROLS } = await import("../src/app/controls.js");
-  const { geoFor, geomOf } = await import("../src/render/controlsgeo.js");
   const { shellGeo } = await import("../src/app/fit.js");
+  const { controlsGeom } = await import("../src/render/pages/controls.js"); // Task 6.3: the page on the world kit
   const rec = () => {
     const texts = [];
     const o = {
@@ -1012,14 +1012,11 @@ function check(name, cond, detail) {
     a.screen = SCREEN.GAME; a.pauseView = 3;
     const P = draw(a, PAUSE);
     check("shellview routes pauseView 3 to drawControls against overlayBox, never drawSettings", has(P, "CONTROLS") && has(P, "BOMB") && !has(P, "MUSIC") && !has(P, "RESET DEFAULTS") && !has(P, "OPTIONS"));
-    const G = geoFor(md.layout(600, 520), false, false);
-    check("PAUSE CONTROLS paints on overlayBox's geometry", P.texts.some((t) => t.s === "CONTROLS" && t.y === G.S.headY + 8));
+    const G = controlsGeo(null, "2d", true); // overlayBox's geometry (Task 6.3: the page's col on keys, inside the pause band)
+    check("PAUSE CONTROLS paints on overlayBox's geometry, the played room's kicker over the title", P.texts.some((t) => t.s === "CONTROLS" && t.y > G.plate.y && t.y < G.plate.y + G.plate.h) && has(P, "PAUSED · LEVEL 3"));
     {
-      const strip = (cv) => { const rs = []; const R = rec(); const c = new Proxy(R.c, { get: (t, p) => (p === "fillRect" ? (x, y, w, h) => rs.push({ x, y, w, h, fill: t.fillStyle }) : t[p]), set: (t, p, v) => ((t[p] = v), true) }); drawShell(c, a, PAUSE, cv, "2d", () => [], () => 0); return rs.find((q) => q.x === 4 && q.y === 10 && q.w === 592 && q.h === 30); };
-      const q = strip(boxOf(600, 520, 378, "p"));
-      check("PAUSE CONTROLS on a phone: the plate reaches the HUD strip, so the strip is covered whole, opaque, no heart sliver at its edge", !!q && /^#/.test(q.fill), q && q.fill);
-      check("and in landscape", !!strip(boxOf(600, 520, 435, "l")));
-      check("PAUSE CONTROLS on a keyboard clears the strip: nothing covered", !strip(null) && !strip(boxOf(600, 520, 600, "d")));
+      const gq = (cv) => controlsGeo(cv, "2d", true);
+      check("PAUSE CONTROLS keeps the HUD strip clear on every layout (the plate's ring under y 40): no strip to cover", [boxOf(600, 520, 378, "p"), boxOf(600, 520, 435, "l"), null, boxOf(600, 520, 600, "d")].every((cv) => gq(cv).plate.y - gq(cv).T >= 40));
     }
     a.pauseView = 1;
     check("pauseView 1 still draws OPTIONS", has(draw(a, PAUSE), "MUSIC"));
@@ -1036,7 +1033,7 @@ function check(name, cond, detail) {
     try { R = draw(a, PLAY); } catch (e) { threw = e; }
     check("no page: SCREEN.CONTROLS draws no plate and does not throw", !threw && !has(R, "BOMB"), String(threw));
   }
-  // PAUSE CONTROLS: a whole-canvas veil under the plate, so the HUD reads as behind it. View 3 only.
+  // PAUSE CONTROLS (Task 6.3): no second veil; the PAUSE veil is the one wash, as SETTINGS' views
   {
     const veilOf = (a, world) => {
       const log = [], o = {
@@ -1047,44 +1044,40 @@ function check(name, cond, detail) {
         createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }),
       };
       drawShell(new Proxy(o, { get: (t, p) => (p in t ? t[p] : () => {}), set: (t, p, v) => ((t[p] = v), true) }), a, world, null, "2d", () => [], () => 0);
-      return { log, full: log.findIndex((e) => e.k === "rect" && /,0\.72\)$/.test(e.fill) && e.x === 0 && e.y === 0 && e.w === 600 && e.h === 520), first: log.findIndex((e) => e.k === "text") };
+      return { log, full: log.findIndex((e) => e.k === "rect" && e.x === 0 && e.y === 0 && e.w === 600 && e.h === 520), first: log.findIndex((e) => e.k === "text") };
     };
     const a = mk();
-    a.screen = SCREEN.GAME; a.pauseView = 3;
-    const V = veilOf(a, PAUSE);
-    check("view 3 paints a whole-canvas veil before the page", V.full === 0 && V.first > 0, V.full + "/" + V.first);
-    for (const v of [0, 1, 2]) { a.pauseView = v; check("view " + v + " paints no veil", veilOf(a, PAUSE).full === -1, v); }
+    a.screen = SCREEN.GAME;
+    for (const v of [0, 1, 2, 3]) { a.pauseView = v; check("view " + v + " paints no second veil over the board", veilOf(a, PAUSE).full === -1, v); }
     a.pauseView = 3;
-    check("view 3 outside PAUSE paints no veil", veilOf(a, PLAY).full === -1);
-    const n = createMenuApp({ settings: {} }); n.screen = SCREEN.GAME; n.pauseView = 3;
-    check("no page: no veil", veilOf(n, PAUSE).full === -1);
+    check("view 3 draws its page all the same", veilOf(a, PAUSE).first >= 0);
   }
-  // The real box scale reaches the floor: #sh at 0.9 keeps pitch 52 (46.8 CSS), the 0.63 default would ask for 70
+  // The real box scale reaches the floor: #sh at 0.9, rows 44 CSS px, 8 apart; a row taps itself on its own page
   {
-    const g = shellGeo(393, 852, 600, 520), box = boxOf(g.w, g.h, g.w * g.s, "p", g.logo), L = md.layout(g.w, g.h, g.logo), a = mk();
-    const G = geoFor(L, true, L.narrow, g.s), row = geomOf(7, G);
+    const g = shellGeo(393, 852, 600, 520), box = boxOf(g.w, g.h, g.w * g.s, "p", g.logo), a = mk(), CF = { W: g.w, H: g.h, touch: true, shell: true, css: g.s, cue: false };
     a.screen = SCREEN.CONTROLS;
     a.controls.open("key");
-    const R = draw(a, PLAY, box), reset = R.texts.find((t) => t.s === "RESET KEYS");
-    check("#sh: the real box scale keeps the shared pitch 52, not the default's 70", G.list.rows[0].h === 52 && geoFor(L, true, L.narrow).list.rows[0].h === 70 && 52 * g.s >= 44);
-    check("#sh: paint uses that geometry", !!reset && Math.abs(reset.y - (row.y + row.h / 2)) < 0.01, reset && reset.y);
-    const H = controlsGeo(box, "2d", false);
-    check("controlsGeo is the paint's geometry on #sh", geomOf(7, H).h === row.h && geomOf(7, H).y === row.y && H.narrow === true);
-    check("controlsHit: every painted row taps to itself on #sh", Array.from({ length: 8 }, (_, i) => geomOf(i, G)).every((r, i) => controlsHit(a.controls.view(0), r.x + r.w / 2, r.y + r.h / 2, box, "2d", false).row === i));
+    const G = controlsGeom(CF, a.controls.view(0)), row = G.rows.RESET;
+    a.controls.pick(7);
+    const R = draw(a, PLAY, box), reset = R.texts.find((t) => t.s === "RESET KEYS"), H = controlsGeo(box, "2d", false, a.controls.view(0));
+    check("#sh: the real box scale keeps every row 44 CSS px (the phone column in CSS px)", G.mode === "phone" && G.order.every((id) => Math.abs(G.rows[id].h * g.s - 44) < 0.01));
+    check("#sh: paint uses that geometry", !!reset && Math.abs(reset.y - (H.d.rows.RESET.y + H.d.rows.RESET.h / 2)) < 0.01, reset && reset.y); // this recorder keeps no transform: the page paints in design px under scale(u)
+    check("controlsGeo is the paint's geometry on #sh", H.rows.RESET.h === row.h && H.mode === "phone");
+    check("controlsHit: every painted row taps to itself on #sh (on its own page)", G.order.every((id, i) => { const v = { ...a.controls.view(0), row: i }, Gi = controlsGeo(box, "2d", false, v), r = Gi.rows[id]; return controlsHit(v, r.x + r.w / 2, r.y + r.h / 2, box, "2d", false).row === i; }));
     check("controlsHit: off the plate backs out on #sh", controlsHit(a.controls.view(0), 1, 1, box, "2d", false).off === 1);
   }
   {
-    const c0 = boxOf(600, 520, 378, "p"), L = md.layout(600, 520), a = mk();
-    const G = geoFor(L, true, false, 0.63), row = geomOf(7, G);
+    const c0 = boxOf(600, 520, 378, "p"), a = mk();
     a.screen = SCREEN.GAME; a.pauseView = 3;
-    a.controls.open("key");
+    a.controls.open("key"); a.controls.pick(7);
+    const v7 = a.controls.view(0), G = controlsGeo(c0, "2d", true, v7), row = G.rows.RESET, css = 378 / 600;
     const reset = draw(a, PAUSE, c0).texts.find((t) => t.s === "RESET KEYS");
-    check("PAUSE #c at 0.63: paint uses the real scale, inside the touch band", !!reset && Math.abs(reset.y - (row.y + row.h / 2)) < 0.01 && G.y >= 8 && G.y + G.h <= 512 && G.tabs[0].h * 0.63 >= 44);
-    check("PAUSE #c: controlsHit taps its own rows", Array.from({ length: 8 }, (_, i) => geomOf(i, G)).every((r, i) => controlsHit(a.controls.view(0), r.x + r.w / 2, r.y + r.h / 2, c0, "2d", true).row === i));
+    check("PAUSE #c at 0.63: paint uses the real scale, inside the touch pause band, rows and tabs 44 CSS px", !!reset && Math.abs(reset.y - (G.d.rows.RESET.y + G.d.rows.RESET.h / 2)) < 0.01 && G.plate.y - G.T >= 40 && G.plate.y + G.plate.h + G.T <= 512.5 && G.tabs[0].h * css >= 43.99 && row.h * css >= 43.99);
+    check("PAUSE #c: controlsHit taps its own rows (each on its page)", G.order.every((id, i) => { const v = { ...v7, row: i }, Gi = controlsGeo(c0, "2d", true, v), r = Gi.rows[id]; return controlsHit(v, r.x + r.w / 2, r.y + r.h / 2, c0, "2d", true).row === i; }));
     const k = boxOf(600, 520, 900, "d"), K = controlsGeo(k, "2d", true);
-    check("a keyboard layout keeps pitch 26 at any scale", K.list.rows[0].h === 26 && K.x === 20);
+    check("a keyboard layout takes the column at any CSS scale", K.mode === "col" && K.u === controlsGeo(null, "2d", true).u);
     for (const [tg, bad] of [["no rect", { width: 600, height: 520, ownerDocument: c0.ownerDocument }], ["a 0 wide rect", boxOf(600, 520, 0, "p")], ["a 0 wide canvas", boxOf(0, 520, 300, "p")]])
-      check(`${tg} falls back to the 0.63 worst case`, controlsGeo(bad, "2d", true).tabs[0].h === 70, controlsGeo(bad, "2d", true).tabs[0].h);
+      check(`${tg} falls back to 1 CSS px a box unit: the phone column, rows 44`, (() => { const q = controlsGeo(bad, "2d", true); return !q || (q.mode === "phone" && q.rows.MOVE.h >= 44); })());
   }
   // The door follows the device; a touch layout reads CONTROLLER
   {

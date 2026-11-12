@@ -1,8 +1,8 @@
 // CONTROLS page geometry and copy, shared by draw, tap and the page reducer. Pure. BTN, DEF_KEY, DEF_PAD, VIB_LEVELS, SENS_LEVELS, keyName, moveLabel and softAliasesOf are local copies of src/app/controls.js (render never reads src/app), pinned equal in tests/controlsdraw.test.mjs.
-import { FOOT_TAP, VIB_LEVELS, bandOf, listGeom, listHit, pageBox, vibWord } from "./menudraw.js";
+import { VIB_LEVELS, vibWord } from "./menudraw.js";
 import { KB_AT, KB_KEYS, KB_W, KB_H, PART_AT, PART_R, BUMP, padBox, keyRect, kbBox } from "./padart.js";
-import { textScale } from "./kit/type.js";
 import { CONTROLS_WORDS } from "./words.js";
+const CW = CONTROLS_WORDS;
 
 const dpad = { g: "dpad", v: "all", w: "D-PAD" };
 export const BTN = Object.freeze({
@@ -115,19 +115,29 @@ export function statusOf(s, row) {
   if (row.id === "PAUSE") return "START ALWAYS PAUSES · " + ok + " REBINDS THE SECOND BUTTON";
   return RULE[row.id] || "";
 }
-/** The kit foot line, composed from the live words; a pad's CONFIRM and BACK are fixed. short = a plate too narrow for the tab words on a value row. */
-export function footOf(s, row, words, short) {
+/** The foot's items, label first and keycap last: [{t, caps}], a cap a word or ["up"] / ["dn"] / ["lf"] / ["rt"] (an arrow glyph); null on a touch
+    device (the page reads the tap words). A pad's CONFIRM and BACK are fixed. short = a plate too narrow for the tab item on a value row. */
+export function footItems(s, row, words, short) {
   const w = words || {}, padTab = s.tab === "pad", gone = padOff(s), nonstd = padTab && s.pad && s.pad.state === "nonstd";
-  if (s.device === "touch") return FOOT_TAP;
+  if (s.device === "touch") return null;
   const adjusts = padTab && !gone && (row.id === "SENSITIVITY" || (row.id === "VIBRATION" && !noBuzz(s)));
-  const verb = gone || row.fixed || (padTab && row.id === "VIBRATION" && noBuzz(s)) ? null : row.reset ? "RESET" : adjusts ? "CYCLE" : padTab && row.id === "MOVE" ? "STICK" : "REBIND";
+  const verb = gone || row.fixed || (padTab && row.id === "VIBRATION" && noBuzz(s)) ? null : row.reset ? CW.RESET : CW.CHANGE;
   const onPad = (s.device || s.tab) === "pad" && !gone;
   /* ←→ is taken on a value row, so the line names the other way to the tab; on SENSITIVITY the stick is under test, so a pad's line names the D-PAD. */
-  const side = "↑↓ ROW · " + (adjusts && row.id === "SENSITIVITY" && onPad && !nonstd ? "D-PAD " : "←→ ") + (adjusts ? "ADJUST" + (short ? "" : " · " + (!onPad ? "[ ]" : nonstd ? "BUTTON 4 5" : "L R") + " TAB") : "TAB");
+  const lr = [["lf"], ["rt"]], it = [{ t: CW.ROW, caps: [["up"], ["dn"]] }];
+  if (adjusts) {
+    it.push({ t: CW.ADJUST, caps: row.id === "SENSITIVITY" && onPad && !nonstd ? ["D-PAD"] : lr });
+    if (!short) it.push({ t: CW.TAB, caps: !onPad ? ["[", "]"] : nonstd ? ["BUTTON 4", "BUTTON 5"] : ["L", "R"] });
+  } else it.push({ t: CW.TAB, caps: lr });
   let ok = w.ok || "ENTER", back = w.back || "ESC";
   if (onPad) { ok = nonstd ? "BUTTON 0" : "SOUTH"; back = nonstd ? "BUTTON 1" : "EAST"; }
-  return side + (verb ? " · " + ok + " " + verb : "") + " · " + back + " BACK";
+  if (verb) it.push({ t: verb, caps: [ok] });
+  it.push({ t: CW.BACK, caps: [back] });
+  return it;
 }
+const ARROW = { up: "↑", dn: "↓", lf: "←", rt: "→" };
+/** The items as one line of words (tests, the live region): label first, keycap last. */
+export const footText = (it) => it.map((q) => q.t + " " + q.caps.map((c) => (Array.isArray(c) ? ARROW[c[0]] : c)).join(Array.isArray(q.caps[0]) ? "" : " ")).join(" · ");
 /** Which controller inputs wear the brick: every bound one (the D-PAD, the live stick, START, and each action's button), whatever the row. */
 export function padStates(s) {
   const st = {};
@@ -336,55 +346,4 @@ export function kbFit(aw, ah, it, m) {
   }
   const k = Math.max(4, Math.min(KB_CAP, (aw - 8) / (KB_W + 0.8), (ah - 8) / (KB_H + 1.1))), e = kbBox(k);
   return { k, plan: null, ox: (aw - (e.x1 - e.x0)) / 2 - e.x0, oy: (ah - (e.y1 - e.y0)) / 2 - e.y0 };
-}
-
-const CHROME = 88, PITCH = 26, PITCH_T = 52, GAP = 6, TAB_H = 30, TAB_T = 52, RULE_H = 30, HEAD_H = 26, PANE_MIN = 140, CAP_W = 400, CAP_H = 200, K_MAX = 1.25, WIDE = 800, WIDE_W = 1000;
-/* The pane a w-wide drawing box wants: head, rule (one spare line) and the default controller with all its callouts, at the text scale. */
-const EST = (s, px) => s.length * px * 0.66;
-const tallMemo = new Map();
-function paneTall(w) {
-  const ts = textScale(), key = w + "|" + ts;
-  if (tallMemo.has(key)) return tallMemo.get(key);
-  const m = { pri: 13 * ts, sec: 11 * ts, wOf: EST }, it = padCallouts({ binds: DEF_PAD, stick: "L" });
-  let h = 0;
-  for (let W = Math.floor(Math.min(PAD_CAP, w - 120)); W >= PAD_FULL && !h; W -= 4) { const p = padPlan(W, it, m); if (p.ok) h = Math.ceil(HEAD_H + RULE_H + 13 + p.ext.y1 - p.ext.y0 + 4); }
-  const kit = keyCallouts({ key: DEF_KEY }); // and the default keyboard with its callouts, at the largest pitch its width allows
-  for (let k = KB_CAP, kh = 0; k >= KB_FULL && !kh; k -= 0.5) { const p = kbPlan(k, kit, m); if (p.ok && p.ext.x1 - p.ext.x0 <= w) h = Math.max(h, (kh = Math.ceil(HEAD_H + RULE_H + 13 + p.ext.y1 - p.ext.y0 + 4))); }
-  tallMemo.set(key, h);
-  return h;
-}
-const SHAPE = [0, 0, 0, 0, 0, 1, 0, 1].map((g) => ({ gapBefore: !!g }));
-const LIST_W = 272; // MENU's list column
-/** The page's one geometry: a pageBox plate, HEAT | PACE height tabs, a listGeom list, and MENU's pane beside it (above it under 560 wide). scale = CSS px per logical px on a touch layout (default the worst real stage, PAUSE on a phone's #c). The tabs hold 44 CSS. Rows ask for it, but pitches are caps, as everywhere: a box too short for eight rows scales them, so they are 31 CSS in phone landscape and 26 in PAUSE on a phone, in line with PAUSE OPTIONS (lead ruling), and a pane too small to read goes. */
-export function geoFor(L, touch, narrow, scale) {
-  const T = !!touch, nar = !!narrow, floor = T ? Math.ceil(44 / (scale || 0.63)) : 0, B = bandOf(L, T), room = B.bot - B.top - CHROME;
-  const tabH = Math.max(T ? TAB_T : TAB_H, floor), pitch = Math.max(T ? PITCH_T : PITCH, floor), listH = pitch * 8 + GAP * 2;
-  const paneRoom = nar ? room - tabH - GAP * 2 - listH : Math.min(room - tabH - GAP, listH);
-  const hasPane = paneRoom >= PANE_MIN, wPane = nar ? L.cx * 2 - 56 : 0;
-  const paneNat = nar && hasPane ? Math.min(paneRoom, HEAD_H + RULE_H + Math.ceil(196 * Math.min(K_MAX, (wPane - 12) / 300))) : 0;
-  /* A desk-sized box (800 wide and up) widens the plate and lets the pane grow past the list, so the drawings have room for their callouts. */
-  const wide = hasPane && !nar && L.cx * 2 >= WIDE, maxW = wide ? Math.min(L.cx * 2 - 80, WIDE_W) : 560, paneH = wide ? Math.max(listH, Math.min(room - tabH - GAP, paneTall(maxW - LIST_W - 24))) : 0;
-  const body = tabH + GAP + (nar && hasPane ? paneNat + GAP : 0) + Math.max(listH, paneH) + (hasPane ? 0 : RULE_H);
-  const S = pageBox(L, maxW, body, T), bot = S.y + S.h - 34, tw = Math.min(T ? 130 : 100, S.iw / 3); // HIGH SCORES' tab size, centred
-  const tabs = [0, 1].map((i) => ({ x: S.mid - tw + i * tw, y: S.by, w: tw, h: tabH }));
-  const top = S.by + tabH + GAP + (nar && hasPane ? paneNat + GAP : 0);
-  const list = listGeom(L, SHAPE, { top, bot: wide ? Math.min(bot, top + listH) : bot - (hasPane ? 0 : RULE_H), x: S.x, w: nar ? S.w : LIST_W, pitch, gap: GAP, pad: 0 });
-  const paneBox = !hasPane ? null : nar ? { x: S.ix - 8, y: S.by + tabH + GAP, w: S.iw + 16, h: paneNat } : { x: S.x + LIST_W + 2, y: top, w: S.w - LIST_W - 12, h: bot - top };
-  const art = paneBox && { y: paneBox.y + HEAD_H, h: paneBox.h - HEAD_H - RULE_H }, cap = Math.min(CAP_W, S.w - 24);
-  return {
-    S, x: S.x, y: S.y, w: S.w, h: S.h, narrow: nar, touch: T, W: L.cx * 2, H: L.footY + 20, tabs, list, pane: paneBox, art, statusY: bot - RULE_H + 8,
-    cap: { x: L.cx - cap / 2, y: S.y + (S.h - CAP_H) / 2, w: cap, h: CAP_H },
-  };
-}
-/** Row i's painted band: the same insets as drawList. */
-export const geomOf = (i, G) => { const r = G.list.rows[i]; return { x: G.list.x + 8, y: r.y0 + 1, w: G.list.w - 16, h: r.h - 2 }; };
-const inR = (x, y, r) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
-/** A tap: {tab}, {row}, {off:1} off the plate, {} on it. While capturing only the capture plate counts. */
-export function hitPage(s, x, y, G) {
-  if (s && s.capture) return inR(x, y, G.cap) ? {} : { off: 1 };
-  for (let i = 0; i < 2; i++) if (inR(x, y, G.tabs[i])) return { tab: i ? "pad" : "key" };
-  const row = G.pane && inR(x, y, G.pane) ? -1 : listHit(x, y, G.list);
-  if (row >= 0) return { row };
-  if (x < G.x || y < G.y || x > G.x + G.w || y > G.y + G.h) return { off: 1 };
-  return {};
 }

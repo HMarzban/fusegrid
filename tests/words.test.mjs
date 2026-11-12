@@ -56,7 +56,7 @@ import { setHints } from "../src/render/hintcopy.js";
 import { setPixelArt } from "../src/render/hudart.js";
 import { createAtlas } from "../src/render/pixel/atlas.js";
 import { surfRGBA } from "../tools/pixel/rgba.mjs";
-import { drawControls } from "../src/render/controlsdraw.js";
+import { drawControlsPage } from "../src/render/pages/controls.js";
 import { DEF_KEY, DEF_PAD } from "../src/render/controlsgeo.js";
 import { heatToken } from "../src/core/heat.js";
 import { _set as setLazyPage } from "../src/render/pages/lazy.js";
@@ -287,7 +287,7 @@ setPixelArt(null);
   const keyV = (o) => ({ tab: "key", device: "key", row: 1, pad: { state: "none" }, key: DEF_KEY, binds: DEF_PAD, stick: "L", dead: 25, vib: 2, stickVal: [0, 0], reads: "", drift: 0.06, armed: false, swap: null, status: "", capture: null, echo: null, ...o });
   const PR = { state: "ready", name: "CONTROLLER 1", rumble: true };
   for (const o of [{ row: 2 }, { row: 3 }, { row: 7, armed: true }, ...[0, 1, 2, 3].map((vib) => ({ tab: "pad", device: "pad", pad: PR, row: 6, vib })), { tab: "pad", device: "pad", pad: PR, row: 2 }, { tab: "pad", device: "pad", pad: PR, row: 3 }, { tab: "pad", device: "pad", pad: PR, row: 5 }, { tab: "pad", device: "pad", pad: PR, row: 5, dead: 8 }])
-    for (const T of [false, true]) { const R = rec({ widthK: 0.648 }); drawControls(R.ctx, md.layout(600, 520), keyV(o), { touch: T, narrow: false }); note("CONTROLS " + J(o), R.texts, true); }
+    for (const T of [false, true]) { const R = rec({ widthK: 0.648 }); drawControlsPage(R.ctx, { W: 600, H: 520, touch: T, css: T ? 0.75 : undefined }, keyV(o), { level: 1, tap: false }); note("CONTROLS " + J(o), R.texts, true); }
   const hudOf = (w, lay, W, H) => { const R = rec({ widthK: 0.648 }), st = hudState(w, { time: { on: true, t: 12 } }); drawHud(R.ctx, hudGeom(R.ctx, hudGeo(W, H, 600, 520, lay, true), st, { w: W, h: H }), st, worldTokens(w.level || 1), {}); return R; };
   const hw = (heat) => ({ players: [{ bombs: 2, range: 3 }], lives: 3, level: 4, enemies: [1], heat, score: 1234, state: "PLAY" }), LAYS = [["d", 1366, 768], ["p", 393, 852], ["l", 844, 390]];
   const hudBad = [];
@@ -494,6 +494,7 @@ check("source grep (tripwire): no string literal in src/ carries an old word out
     ["BACK", /probe\.rect\("BACK"|name: "BACK"|\["BACK", /], ["PAGE UP", /"PAGE UP"/], ["PAGE DOWN", /"PAGE DOWN"/], // probe rect names (tools/ui/lib/screens.mjs)
     ...["BLOOM", "GLIDE", "BELT", "STREAM", "PLATE", "QUICK", "PORTAL", "GATE"].map((k) => [k, /^export const FLOOR_ROWS = /]), // TILE_NAME's keys (core/feat.js)
     ["ICE", /b\.name === "ICE"/], // a BIOMES name key (core/config.js)
+    ...["MOVE", "BOMB", "THROW", "REMOTE", "PAUSE", "CONFIRM", "SENSITIVITY", "VIBRATION", "RESET"].map((k) => [k, /^export const GROUP = |\.id === "/]), // the CONTROLS row ids (controlsgeo rowsOf; the labels come from it), Task 6.3
     ["LOSE", /w\.state === "LOSE"/], ["WIN", /w\.state === "WIN"/], // world.state values (core/sim.js), read by the run ends' mode (endgeom endMode)
   ]);
   const hits = [];

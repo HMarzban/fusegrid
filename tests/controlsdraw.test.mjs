@@ -1,17 +1,18 @@
-// CONTROLS page geometry and paint (T4): hit = paint, type floors, copy, states.
+// CONTROLS page model (T4; Task 6.3 moved the page to the world kit, tests/page-controls.test.mjs): rows, rules, foot items, lit and ringed parts, callout plans, the copies that mirror the model.
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { layout, bandOf, drawSettings, lockGlyph, ACCENT, TEXT, MUTED, DANGER, WARM, PLATE, LINE, plate as kitPlate, head as kitHead, paintRow as kitRow, pageBox } from "../src/render/menudraw.js";
+import { layout, drawSettings } from "../src/render/menudraw.js";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as settingsPage from "../src/render/pages/settings.js";
 lazyPages._set("settings", settingsPage); // the lazy SETTINGS page, in as if its import had landed (R20)
-import { CAPTION, geomOf, geoFor, hitPage, rowsOf, statusOf, footOf, padStates, padRing, keyStates, keyRing, keyCallouts, kbPlan, padLabels, keyName, moveLabel, softAliasesOf, BTN, DEF_KEY, DEF_PAD, DEF_VIB, VIB_LEVELS, SENS_LEVELS, sensIdx, vibWord, NO_VIB, FEEL_NOTHING, STATUS } from "../src/render/controlsgeo.js";
+import { CAPTION, rowsOf, statusOf, footItems, footText, padStates, padRing, keyStates, keyRing, keyCallouts, kbPlan, padLabels, keyName, moveLabel, softAliasesOf, BTN, DEF_KEY, DEF_PAD, DEF_VIB, VIB_LEVELS, SENS_LEVELS, sensIdx, vibWord, NO_VIB, FEEL_NOTHING, STATUS } from "../src/render/controlsgeo.js";
 import { PART_AT, BODY_PATH, KB_AT, keyRect, kbPrints, kbLegend, trace, glyph, drawPad, drawKeys } from "../src/render/padart.js";
 import { worldTokens, CONST } from "../src/render/kit/tokens.js";
-import { drawControls, _dbg as ctlDbg } from "../src/render/controlsdraw.js";
 import * as model from "../src/app/controls.js";
+import * as ctlPage from "../src/render/pages/controls.js";
 import { optRows } from "../src/app/menuapp.js";
+import { FOOT_TAP } from "../src/render/kit/copy.js";
 import { shellGeo, fitBox } from "../src/app/fit.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -50,7 +51,7 @@ function recCtx() {
   };
   return { c, log, texts, rects };
 }
-const DESK2 = layout(1366, 768), L600 = layout(600, 520), G2 = geoFor(L600, false, false), PR = { state: "ready", name: "CONTROLLER 1", rumble: true }, NON = { state: "nonstd", name: "CONTROLLER 1 · BUTTONS 0-16", rumble: false };
+const L600 = layout(600, 520), PR = { state: "ready", name: "CONTROLLER 1", rumble: true }, NON = { state: "nonstd", name: "CONTROLLER 1 · BUTTONS 0-16", rumble: false };
 const keyV = (o) => ({ tab: "key", device: "key", row: 1, pad: { state: "none" }, key: DEF_KEY, binds: DEF_PAD, stick: "L", dead: 25, vib: 2, stickVal: [0.06, -0.03], reads: "", drift: 0.06, armed: false, swap: null, status: "", capture: null, echo: null, ...o });
 const padV = (o) => keyV({ tab: "pad", device: "pad", pad: PR, ...o });
 const CAP = { action: "THROW", prompt: "PRESS A BUTTON", sub: "NOW WEST", foot: "START CANCELS · WEST KEEPS IT" };
@@ -68,66 +69,7 @@ const STATES = {
 };
 const BOXES = [["600x520", L600, false, false, undefined], ["608x352 guard", layout(608, 352), false, false, undefined], ["touch #c 0.63", L600, true, false, 0.63], ["touch #c 0.73", L600, true, false, 0.73], ["shell 436x946", layout(436, 946), true, true, 0.9], ["shell 400 wide", layout(400, 700), true, true, 0.76]];
 
-// geometry
-check("600x520 keyboard: MENU's split, the shared pitch, the kit's group gaps", G2.x === 20 && G2.w === 560 && G2.list.x === 20 && G2.list.w === 272 && G2.pane.x === 294 && G2.pane.w === 276 && G2.list.rows[0].h === 26 && G2.list.rows[5].y0 === G2.list.rows[4].y1 + 6 && G2.list.rows[7].y0 === G2.list.rows[6].y1 + 6, JSON.stringify([G2.x, G2.y, G2.w, G2.h]));
-check("the row band sits at drawList's insets", geomOf(0, G2).x === 28 && geomOf(0, G2).w === 256 && geomOf(0, G2).h === 24);
-check("the pane spans the list", G2.pane.y === G2.list.rows[0].y0 && G2.pane.h === G2.list.rows[7].y1 - G2.list.rows[0].y0, JSON.stringify(G2.pane));
-check("the pane leaves the drawings room: art box at least 160 tall at 600x520", G2.art.h >= 160 && G2.art.y === G2.pane.y + 26, G2.art.h);
-
-for (const [nm, Lx, touch, narrow, scale] of BOXES) {
-  const G = geoFor(Lx, touch, narrow, scale), v = padV();
-  let ok = true;
-  const rows = rowsOf(v);
-  for (let i = 0; i < 8; i++) {
-    const g = geomOf(i, G), h = hitPage(v, g.x + g.w / 2, g.y + g.h / 2, G);
-    if (h.row !== i) ok = false;
-  }
-  const { c, texts } = recCtx();
-  drawControls(c, Lx, v, { touch, narrow, scale, t: 0 });
-  rows.forEach((r, i) => {
-    const hit = texts.findLast((t) => t.s === (r.label || r.id) && t.y >= geomOf(i, G).y && t.y <= geomOf(i, G).y + geomOf(i, G).h && t.x >= geomOf(i, G).x && t.x <= geomOf(i, G).x + geomOf(i, G).w);
-    if (!hit || hitPage(v, hit.x, hit.y, G).row !== i) ok = false;
-  });
-  check("hit geometry equals paint geometry: " + nm, ok);
-  const [t0, t1] = G.tabs, ty = t0.y + t0.h / 2;
-  const tw = Math.min(touch ? 130 : 100, G.S.iw / 3);
-  check("tabs are HIGH SCORES' size, centred on the plate: " + nm, t0.w === tw && t1.w === tw && t0.x === G.S.mid - tw && t1.x === G.S.mid && t0.y === G.S.by && t0.h === t1.h, [t0.x, t0.w, G.S.mid].join());
-  check("tab words fit their tab: " + nm, ["KEYBOARD", "CONTROLLER"].every((s, i) => { const q = texts.find((t) => t.s === s); return q && q.left >= G.tabs[i].x && q.right <= G.tabs[i].x + G.tabs[i].w; }));
-  check("tabs abut, each taps to itself: " + nm, t0.x + t0.w === t1.x && hitPage(v, t1.x - 1, ty, G).tab === "key" && hitPage(v, t1.x + 1, ty, G).tab === "pad");
-  check("off the plate is {off:1}: " + nm, hitPage(v, G.x - 3, G.y + 40, G).off === 1 && hitPage(v, G.x + 40, G.y + G.h + 3, G).off === 1 && hitPage(v, G.x + 40, G.y - 3, G).off === 1);
-  check("a miss on the plate is inert: " + nm, Object.keys(hitPage(v, G.x + 6, G.y + 6, G)).length === 0 && (!G.pane || Object.keys(hitPage(v, G.pane.x + G.pane.w / 2, G.pane.y + G.pane.h / 2, G)).length === 0));
-  const B = bandOf(Lx, touch);
-  check("plate fits inside the pageBox band: " + nm, G.y >= B.top - 0.5 && G.y + G.h <= B.bot + 0.5 && G.x >= 0 && G.x + G.w <= Lx.cx * 2, [G.y, G.y + G.h, B.top, B.bot].join());
-  check("page content stays on the plate: " + nm, G.list.rows[7].y1 <= G.S.footY - 8 && (!G.pane || (G.pane.x >= G.x && G.pane.x + G.pane.w <= G.x + G.w && G.pane.y + G.pane.h <= G.S.footY)), G.list.rows[7].y1 + "/" + G.S.footY);
-  check("tabs, pane and rows never overlap: " + nm, G.tabs[0].y + G.tabs[0].h <= (G.pane ? G.pane.y : G.list.rows[0].y0) && (!G.pane || !narrow || G.pane.y + G.pane.h <= G.list.rows[0].y0) && (!G.pane || narrow || G.pane.x >= G.list.x + G.list.w));
-}
-{
-  const g = geoFor(layout(608, 352), false, false);
-  check("the guard box scales the pitch as every page does, the plate still fits", g.list.f < 1 && g.y + g.h <= 324.5 && g.list.rows[7].y1 <= g.S.footY, g.list.f);
-}
-const nar = geoFor(layout(436, 946), true, true, 0.9);
-check("narrow: the pane above the list, both full width", nar.pane.y + nar.pane.h <= nar.list.rows[0].y0 && nar.list.w === nar.w && nar.pane.w === nar.w - 16);
-check("narrow: the pane grows for the drawing", nar.art.h > 1.1 * 196, nar.art.h);
-
-// touch floors, with the real fit numbers. Eight rows at 44 CSS need 70 logical at 0.63, 560 of a 416 room: only #sh holds the floor for rows; every box holds it for tabs
-for (const s of [0.63, 0.73, 0.9]) {
-  const G = geoFor(L600, true, false, s);
-  check("touch tab height >= 44 CSS at " + s, G.tabs.every((g) => g.h * s >= 44), G.tabs[0].h * s);
-  check("#c touch rows stay above OPTIONS' pitch on the same stage at " + s, G.list.rows[0].h >= 37, G.list.rows[0].h);
-}
-{
-  const sh = shellGeo(393, 852), G = geoFor(layout(sh.w, sh.h, sh.logo), true, sh.w < 560, sh.s);
-  check("393x852 shell box: narrow, plate fits, pitch 52 clears the 44 CSS floor, pane stays", sh.w < 560 && G.y >= 8 && G.y + G.h <= sh.h - 8 && G.list.rows[0].h === 52 && 52 * sh.s >= 44 && G.tabs[0].h * sh.s >= 44 && !!G.pane, [sh.w, sh.h, sh.s, G.h].join());
-  const se = shellGeo(375, 667), GS = geoFor(layout(se.w, se.h, se.logo), true, se.w < 560, se.s);
-  check("375x667 shell box: rows still clear the floor", GS.list.rows[0].h * se.s >= 44 && GS.y + GS.h <= se.h - 8, GS.list.rows[0].h * se.s);
-  const land = fitBox(852, 393, true, 600, 520), GL = geoFor(L600, true, false, land.s);
-  check("852x393 landscape #c fits with the pane", GL.y >= 8 && GL.y + GL.h <= 512 && !!GL.pane, [land.s, GL.h].join());
-  const P = geoFor(L600, true, false, 0.63);
-  check("PAUSE on #c at 0.63 fits with the pane", P.y >= 8 && P.y + P.h <= 512 && !!P.pane, P.h);
-}
-const capV = padV({ capture: CAP }), r0 = geomOf(0, G2);
-check("while capturing, a tap off the capture plate is {off:1}", hitPage(capV, G2.cap.x - 3, G2.cap.y + 5, G2).off === 1 && hitPage(capV, r0.x + 5, r0.y + 5, G2).off === 1);
-check("while capturing, a tap on the capture plate is inert", Object.keys(hitPage(capV, G2.cap.x + 5, G2.cap.y + 5, G2)).length === 0);
+// geometry, hit = paint, touch floors and the paint in every state: tests/page-controls.test.mjs (Task 6.3, the page on the world kit)
 
 // rows and tables
 {
@@ -192,31 +134,19 @@ check("while capturing, a tap on the capture plate is inert", Object.keys(hitPag
     ["sensitivity rule at MEDIUM", padV({ row: 5, dead: 25 }), "HOW FAR THE STICK MOVES BEFORE IT COUNTS"],
   ];
   for (const [nm, v, want] of T) check("statusOf " + nm, say(v) === want, say(v));
-  const ft = (v, w) => footOf(v, rowsOf(v)[v.row], w);
-  check("foot, keys", ft(keyV()) === "↑↓ ROW · ←→ TAB · ENTER REBIND · ESC BACK", ft(keyV()));
-  check("foot, pad", ft(padV()) === "↑↓ ROW · ←→ TAB · SOUTH REBIND · EAST BACK", ft(padV()));
-  check("foot, a value row adjusts and still names the tab, on keys and on a pad; SENSITIVITY names the D-PAD on a pad", ft(padV({ row: 6 })) === "↑↓ ROW · ←→ ADJUST · L R TAB · SOUTH CYCLE · EAST BACK" && ft(padV({ row: 6, device: "key" })) === "↑↓ ROW · ←→ ADJUST · [ ] TAB · ENTER CYCLE · ESC BACK" && ft(padV({ row: 5 })) === "↑↓ ROW · D-PAD ADJUST · L R TAB · SOUTH CYCLE · EAST BACK" && ft(padV({ row: 5, pad: NON })) === "↑↓ ROW · ←→ ADJUST · BUTTON 4 5 TAB · BUTTON 0 CYCLE · BUTTON 1 BACK" && ft(padV({ row: 5, device: "key" })) === "↑↓ ROW · ←→ ADJUST · [ ] TAB · ENTER CYCLE · ESC BACK", ft(padV({ row: 5 })));
-  { const Gg = geoFor(layout(608, 352), false, false), all = [padV({ row: 5 }), padV({ row: 5, device: "key" }), padV({ row: 5, pad: NON }), padV({ row: 6 }), padV({ row: 6, device: "key" }), padV({ row: 6, pad: { ...NON, rumble: true } })];
-    const over = all.filter((v) => { const r = recCtx(); drawControls(r.c, layout(608, 352), v, {}); const q = r.texts.find((t) => t.s === ft(v)); return !q || q.left < Gg.x + 4 || q.right > Gg.x + Gg.w - 4; });
-    check("the value-row foot fits the 608x352 guard plate", !over.length, over.length); }
-  { const W = "SENSITIVE: A WORN STICK CAN KEEP WALKING";
-    check("the worn-stick line is no longer than the line it replaces", W.length <= "HOW FAR THE STICK MOVES BEFORE IT COUNTS".length);
-    for (const [nm, L] of [["608x352", layout(608, 352)], ["600x520", L600]]) {
-      const Gq = geoFor(L, false, false);
-      for (const dead of [15, 8]) {
-        const r = recCtx(); drawControls(r.c, L, padV({ row: 5, dead }), {});
-        const rule = r.texts.filter((t) => W.split(" ").some((w) => t.s.includes(w)) && t.s.includes("SENSITIVE") || t.s.includes("WORN") || t.s.includes("WALKING"));
-        check("the worn-stick rule draws and fits the plate: " + nm + " dead " + dead, rule.length >= 1 && rule.every((t) => t.left >= Gq.x && t.right <= Gq.x + Gq.w), rule.length);
-      }
-    } }
-  check("foot, a fixed row offers no verb", ft(keyV({ row: 5 })) === "↑↓ ROW · ←→ TAB · ESC BACK");
-  check("foot, a short form drops the tab words, never the verb", footOf(padV({ row: 6, pad: { ...NON, rumble: true } }), rowsOf(padV())[6], {}, true) === "↑↓ ROW · ←→ ADJUST · BUTTON 0 CYCLE · BUTTON 1 BACK");
-  check("foot, no pad: ←→ is the tab, even on SENSITIVITY", ft(keyV({ tab: "pad", row: 5 })) === "↑↓ ROW · ←→ TAB · ESC BACK");
-  check("foot, nonstd names buttons", ft(padV({ pad: NON })) === "↑↓ ROW · ←→ TAB · BUTTON 0 REBIND · BUTTON 1 BACK");
-  check("foot, pad rows", ft(padV({ row: 6 })).includes("SOUTH CYCLE") && ft(padV({ row: 0 })).includes("SOUTH STICK") && ft(padV({ row: 7 })).includes("SOUTH RESET"));
-  check("foot, no actuator offers no cycle", ft(padV({ row: 6, pad: { ...PR, rumble: false } })) === "↑↓ ROW · ←→ TAB · EAST BACK");
-  check("foot follows the words handed in", ft(keyV(), { dev: "key", ok: "RETURN", back: "BKSP" }) === "↑↓ ROW · ←→ TAB · RETURN REBIND · BKSP BACK");
+  const ft = (v, w) => { const it = footItems(v, rowsOf(v)[v.row], w); return it ? footText(it) : FOOT_TAP; };
+  check("foot, keys", ft(keyV()) === "ROW ↑↓ · TAB ←→ · CHANGE ENTER · BACK ESC", ft(keyV()));
+  check("foot, pad", ft(padV()) === "ROW ↑↓ · TAB ←→ · CHANGE SOUTH · BACK EAST", ft(padV()));
+  check("foot, a value row adjusts and still names the tab, on keys and on a pad; SENSITIVITY names the D-PAD on a pad", ft(padV({ row: 6 })) === "ROW ↑↓ · ADJUST ←→ · TAB L R · CHANGE SOUTH · BACK EAST" && ft(padV({ row: 6, device: "key" })) === "ROW ↑↓ · ADJUST ←→ · TAB [ ] · CHANGE ENTER · BACK ESC" && ft(padV({ row: 5 })) === "ROW ↑↓ · ADJUST D-PAD · TAB L R · CHANGE SOUTH · BACK EAST" && ft(padV({ row: 5, pad: NON })) === "ROW ↑↓ · ADJUST ←→ · TAB BUTTON 4 BUTTON 5 · CHANGE BUTTON 0 · BACK BUTTON 1" && ft(padV({ row: 5, device: "key" })) === "ROW ↑↓ · ADJUST ←→ · TAB [ ] · CHANGE ENTER · BACK ESC", ft(padV({ row: 5 })));
+  check("foot, a fixed row offers no verb", ft(keyV({ row: 5 })) === "ROW ↑↓ · TAB ←→ · BACK ESC");
+  check("foot, a short form drops the tab item, never the verb", footText(footItems(padV({ row: 6, pad: { ...NON, rumble: true } }), rowsOf(padV())[6], {}, true)) === "ROW ↑↓ · ADJUST ←→ · CHANGE BUTTON 0 · BACK BUTTON 1");
+  check("foot, no pad: ←→ is the tab, even on SENSITIVITY", ft(keyV({ tab: "pad", row: 5 })) === "ROW ↑↓ · TAB ←→ · BACK ESC");
+  check("foot, nonstd names buttons", ft(padV({ pad: NON })) === "ROW ↑↓ · TAB ←→ · CHANGE BUTTON 0 · BACK BUTTON 1");
+  check("foot, pad rows: CHANGE on a value row and on MOVE, RESET on RESET", ft(padV({ row: 6 })).includes("CHANGE SOUTH") && ft(padV({ row: 0 })).includes("CHANGE SOUTH") && ft(padV({ row: 7 })).includes("RESET SOUTH"));
+  check("foot, no actuator offers no change", ft(padV({ row: 6, pad: { ...PR, rumble: false } })) === "ROW ↑↓ · TAB ←→ · BACK EAST");
+  check("foot follows the words handed in", ft(keyV(), { dev: "key", ok: "RETURN", back: "BKSP" }) === "ROW ↑↓ · TAB ←→ · CHANGE RETURN · BACK BKSP");
   check("foot, touch never names a key", ft(padV({ device: "touch" })) === "TAP A ROW TO CHANGE IT · TAP OUTSIDE TO GO BACK");
+  check("foot items are label first, keycap last: every item a word then its caps", [keyV(), padV(), padV({ row: 5 }), keyV({ row: 7 })].every((v) => footItems(v, rowsOf(v)[v.row], {}).every((q) => typeof q.t === "string" && q.caps.length > 0)));
   check("padStates: every bound input lights, whatever the row: BOMB's bind included", padStates(padV()).S === "lit" && padStates(padV({ binds: { ...DEF_PAD, BOMB: "TRL" } })).TRL === "lit" && !padStates(padV({ binds: { ...DEF_PAD, BOMB: "TRL" } })).S);
   check("padStates: MOVE lights D-PAD and the live stick", padStates(padV({ stick: "R" })).dpad === "lit" && padStates(padV({ stick: "R" })).RS === "lit" && !padStates(padV({ stick: "R" })).LS);
   check("padStates: PAUSE lights START and its second button, the ring on the second", padStates(padV()).START === "lit" && padStates(padV()).SELECT === "lit" && padRing(padV(), "PAUSE") === "SELECT");
@@ -237,7 +167,7 @@ check("while capturing, a tap on the capture plate is inert", Object.keys(hitPag
     check("keyboard: an upper-row key (E) runs up through the key gaps", L("KeyE").pts[1][1] < 0 && L("KeyE").pts[1][0] === L("KeyE").pts[0][0]);
     check("keyboard: ESC runs straight left", L("Escape").pts.at(-1)[0] < 0 && L("Escape").pts.every((q) => q[1] === L("Escape").pts[0][1])); }
   check("keyCallouts: the action on its bound key", keyCallouts(keyV()).find((q) => q.grp === "KeyE").act === "THROW" && keyCallouts(keyV()).find((q) => q.grp === "Space").act === "BOMB" && keyCallouts(keyV()).filter((q) => q.act === "MOVE").map((q) => q.pos[0]).join() === "W A S D,ARROWS");
-  check("keyCallouts: a key off the drawing has none and draws no crash", !keyCallouts(keyV({ key: { ...DEF_KEY, THROW: "Numpad7" } })).some((q) => q.act === "THROW") && (() => { try { drawControls(recCtx().c, L600, keyV({ key: { ...DEF_KEY, THROW: "Numpad7" }, row: 2 }), {}); return true; } catch (e) { return false; } })());
+  check("keyCallouts: a key off the drawing has none and draws no crash", !keyCallouts(keyV({ key: { ...DEF_KEY, THROW: "Numpad7" } })).some((q) => q.act === "THROW") && (() => { try { ctlPage.drawControlsPage(recCtx().c, { W: 1366, H: 768 }, keyV({ key: { ...DEF_KEY, THROW: "Numpad7" }, row: 2 }), {}); return true; } catch (e) { return false; } })());
 }
 
 // the render-side copies stay equal to the model (menudraw.js's local-copy idiom)
@@ -251,202 +181,6 @@ check("while capturing, a tap on the capture plate is inert", Object.keys(hitPag
   check("moveLabel mirrors the model", moveLabel(DEF_KEY.MOVE) === "WASD" && moveLabel(["KeyI", "KeyL", "KeyK", "KeyJ"]) === model.moveLabel(["KeyI", "KeyL", "KeyK", "KeyJ"]));
   const cc = { key: { ...DEF_KEY, THROW: "KeyX" } };
   check("the alias rule mirrors softAliases", softAliasesOf(cc.key).join() === model.softAliases(cc).join() && softAliasesOf(DEF_KEY).join() === model.softAliases({ key: DEF_KEY }).join() && softAliasesOf({ ...DEF_KEY, BOMB: "KeyZ" }).length === 0);
-}
-
-// paint, every state in every box
-for (const [box, Lx, touch, narrow, scale] of BOXES) {
-  let threw = "", small = [], off = [], wide = [];
-  const G = geoFor(Lx, touch, narrow, scale), guard = box.includes("guard"), labels = new Set(["MOVE", "BOMB", "THROW", "REMOTE", "PAUSE", "CONFIRM", "BACK", "SENSITIVITY", "VIBRATION", "RESET KEYS", "RESET CONTROLLER"]);
-  for (const nm in STATES) {
-    const { c, texts } = recCtx();
-    try { drawControls(c, Lx, STATES[nm], { touch, narrow, scale, t: 1.5 }); }
-    catch (e) { threw = nm + ": " + e.message; continue; }
-    for (const t of texts) {
-      if (t.px < (!guard && labels.has(t.s) && !t.mono ? 13 : 10) - 1e-6) small.push(nm + ":" + t.s + "@" + t.px.toFixed(1));
-      if (t.left < G.x - 0.5 || t.right > G.x + G.w + 0.5) off.push(nm + ":" + t.s);
-      if (STATES[nm].capture) continue;
-      for (let i = 0; i < 8; i++) {
-        const g = geomOf(i, G);
-        if (t.x >= g.x && t.x <= g.x + g.w && t.y >= g.y && t.y <= g.y + g.h && (t.left < g.x - 0.5 || t.right > g.x + g.w + 0.5)) wide.push(nm + ":" + t.s);
-      }
-    }
-  }
-  check("drawControls runs in every state: " + box, !threw, threw);
-  check("type floors, the kit's kicker included: " + box, !small.length, [...new Set(small)].slice(0, 6).join(" "));
-  check("all text stays on the plate: " + box, !off.length, [...new Set(off)].slice(0, 6).join(" "));
-  check("row text fits its own row: " + box, !wide.length, [...new Set(wide)].slice(0, 6).join(" "));
-}
-const paint = (v, ui, Lx = L600) => { const r = recCtx(); drawControls(r.c, Lx, v, { t: 0, ...ui }); return r; };
-/* Row labels and values must not collide, in every state, in the two boxes a player reads most. */
-{
-  const clash = [];
-  for (const nm in STATES) if (!STATES[nm].capture) for (const [Lx, touch, narrow, scale] of [[L600, false, false], [layout(436, 946), true, true, 0.9]]) {
-    const G = geoFor(Lx, touch, narrow, scale), { c, texts } = recCtx();
-    drawControls(c, Lx, STATES[nm], { touch, narrow, scale });
-    for (let i = 0; i < 8; i++) {
-      const g = geomOf(i, G), T = texts.filter((t) => t.y >= g.y && t.y <= g.y + g.h && t.x >= g.x && t.x <= g.x + g.w).sort((a, b) => a.left - b.left);
-      for (let k = 1; k < T.length; k++) if (T[k].left < T[k - 1].right - 0.5) clash.push(nm + ":" + T[k - 1].s + "/" + T[k].s);
-    }
-  }
-  check("no two words in a row overlap", !clash.length, [...new Set(clash)].slice(0, 6).join(" "));
-}
-/* The page paints through the CONSOLE PANEL kit: the same plate and selected-row ops the kit's own plate / head / paintRow make (v202 Task 3.4:
-   SETTINGS, the old reference, moved to the world kit; CONTROLS moves in its own task), on one recorder. */
-{
-  const opts = recCtx(), S0 = pageBox(L600, 500, 10 * 27, false);
-  kitPlate(opts.c, S0.x, S0.y, S0.w, S0.h); kitHead(opts.c, S0, "SETTINGS", "BUILD v0"); kitRow(opts.c, S0.ix - 8, S0.by + 1, S0.iw + 16, 25, "MUSIC", "100", true, { vc: TEXT });
-  const ctl = paint(keyV({ row: 0 }));
-  const plateOps = (log) => log.filter((x) => x === "f" + PLATE || x === "k#2a3550" || x === "frgba(0,0,0,0.35)").slice(0, 3);
-  check("plate: the same shadow, fill and border as OPTIONS", ctl.log.includes("f" + PLATE) && ctl.log.includes("k#2a3550") && plateOps(ctl.log).join() === plateOps(opts.log).join(), plateOps(ctl.log).join());
-  const selOf = (r) => { const i = r.rects.findIndex((q, j) => q.fill === "rgba(55,240,208,0.12)" && r.rects[j + 1] && r.rects[j + 1].w === 3); return [r.rects[i], r.rects[i + 1]]; };
-  const [oB, oN] = selOf(opts), [cB, cN] = selOf(ctl), g0 = geomOf(0, G2);
-  check("selected band: alpha 0.12 accent, as OPTIONS", !!cB && !!oB && cB.fill === oB.fill);
-  check("notch: 3px, accent, the band's height, as OPTIONS", cN.fill === ACCENT && oN.fill === ACCENT && cN.w === 3 && oN.w === 3 && cN.h === cB.h && cN.x === cB.x);
-  check("the band is the row the tap reads", cB.x === g0.x && cB.y === g0.y && cB.w === g0.w && cB.h === g0.h);
-  check("a caret on the selected row, from the kit", ctl.log.some((x) => x === "f" + ACCENT));
-  const lab = (r, s) => r.texts.find((t) => t.s === s);
-  check("the label's font and colour are OPTIONS' own", lab(ctl, "MOVE").fill === lab(opts, "MUSIC").fill && lab(ctl, "BOMB").fill === MUTED && lab(ctl, "MOVE").px === lab(opts, "MUSIC").px && !lab(ctl, "MOVE").mono);
-  const head1 = lab(ctl, "CONTROLS"), head2 = lab(opts, "SETTINGS");
-  check("the title is head(): same size and colour", head1.px === head2.px && head1.fill === head2.fill && head1.x === head2.x);
-  const noRound = paint(padV());
-  const radii = (r) => r.log.filter((x) => x.startsWith("at")).map((x) => +x.slice(2).split(",")[4]);
-  const big = Object.keys(STATES).flatMap((nm) => radii(paint(STATES[nm])).filter((v) => v > 6).map((v) => nm + ":" + v));
-  check("no tile, pill or large radius: every corner on the page is at most the kit plate's 6", !big.length, big.slice(0, 5).join(" "));
-  check("values are mono on the right, no boxed cap", lab(ctl, "WASD · ARROWS").mono && noRound.texts.find((t) => t.s === "SOUTH").mono);
-}
-{
-  const has = (r, s) => r.texts.some((t) => t.s === s);
-  const selT = paint(keyV());
-  const swapP = paint(padV({ swap: { row: "REMOTE" } })), g3 = geomOf(3, G2);
-  check("swapped: a warm 0.12 band, a warm 3px notch, no caret, the word", swapP.rects.some((q) => q.fill === "rgba(255,212,71,0.12)" && q.x === g3.x && q.y === g3.y && q.w === g3.w) && swapP.rects.some((q) => q.fill === WARM && q.w === 3 && q.y === g3.y) && has(swapP, "SWAPPED") && swapP.texts.find((t) => t.s === "REMOTE" && t.y === g3.y + g3.h / 2).fill === TEXT);
-  check("swapped: the opposed arrows stroke in gold before the word", swapP.log.lastIndexOf("k" + WARM) < swapP.log.indexOf("xSWAPPED") && swapP.log.includes("k" + WARM));
-  const onSel = paint(padV({ row: 3, swap: { row: "REMOTE" } }));
-  check("a swapped row under the cursor keeps a caret, in gold", onSel.log.filter((x) => x === "f" + WARM).length > swapP.log.filter((x) => x === "f" + WARM).length);
-  const lock0 = recCtx(), g5 = geomOf(5, G2);
-  lockGlyph(lock0.c, g5.x + g5.w - 18, g5.y + g5.h / 2, 12, MUTED);
-  const fx = paint(keyV({ row: 5 }));
-  check("fixed: the existing padlock in muted, value at full alpha", fx.log.join(";").includes(lock0.log.join(";")) && lock0.rects.length > 0 && lock0.rects.every((q) => q.fill === MUTED) && fx.texts.find((t) => t.s === "ENTER" && t.mono && t.y === g5.y + g5.h / 2).alpha === 1);
-  const ch = paint(keyV({ key: { ...DEF_KEY, THROW: "KeyZ" }, row: 2 })), unch = paint(keyV({ row: 2 })), chOther = paint(keyV({ key: { ...DEF_KEY, THROW: "KeyZ" }, row: 1 }));
-  check("changed: a dot on the row, CHANGED in the pane on the selected row only", has(ch, "CHANGED") && !has(unch, "CHANGED") && !has(chOther, "CHANGED") && chOther.log.filter((x) => x === "f" + ACCENT).length > paint(keyV({ row: 1 })).log.filter((x) => x === "f" + ACCENT).length);
-  const armed = paint(keyV({ row: 7, armed: true })), g7 = geomOf(7, G2);
-  check("reset is a danger row: the red band and PRESS AGAIN when armed", armed.rects.some((q) => q.fill === "rgba(255,93,115,0.12)" && q.y === g7.y) && armed.rects.some((q) => q.fill === DANGER && q.w === 3) && has(armed, "PRESS AGAIN") && !has(paint(keyV({ row: 7 })), "PRESS AGAIN"));
-  const cap = paint(padV({ capture: CAP }));
-  check("capture: a kit plate, head, the words and the foot line", cap.log.filter((x) => x === "f" + PLATE).length === 2 && has(cap, "PRESS A BUTTON") && has(cap, "REBIND THROW") && has(cap, "NOW WEST") && has(cap, CAP.foot));
-  check("capture: no fuse; on the controller tab the drawing, its one button ringed", !cap.log.includes("f#ff8a3c") && cap.log.includes("k" + CONST.ink) && cap.log.some((x) => x.startsWith("bz")));
-  check("capture: the page veil over the box", cap.rects.some((q) => q.x === 0 && q.y === 0 && q.w === 600 && q.h === 520));
-  const a = paint(padV({ capture: CAP }), { t: 0 }).log.join(), b = paint(padV({ capture: CAP }), { t: 37.5 }).log.join();
-  check("no frame depends on the clock: listening is static", a === b);
-  check("the selected page is static too", paint(keyV(), { t: 0 }).log.join() === paint(keyV(), { t: 9 }).log.join());
-  const no = paint(keyV({ tab: "pad" }));
-  check("no pad: NO CONTROLLER YET and the pane line, no leader words, no lit fuse", has(no, "NO CONTROLLER YET") && has(no, CAPTION.none) && !no.log.includes("f#ff8a3c"));
-  check("touch, no pad: the same appendix line under the plaque", CAPTION.none === "Connect one and press a button." && has(paint(keyV({ tab: "pad", device: "touch" })), CAPTION.none) && has(paint(keyV({ tab: "pad", device: "touch" })), "NO CONTROLLER"));
-  const lost = paint(padV({ pad: { state: "lost" } }));
-  check("lost: CONTROLLER LOST kicker and the plug-in rule", has(lost, "CONTROLLER LOST") && lost.texts.some((t) => t.s.startsWith("PLUG IT BACK IN")));
-  check("connected: no fuse, the bound inputs in the world's brick", !paint(padV()).log.includes("f#ff8a3c") && paint(padV()).log.includes("f" + worldTokens(1).lit));
-  check("the pad name comes only from view.pad.name", has(paint(padV()), "CONNECTED · " + PR.name) && !paint(padV({ pad: { state: "ready", rumble: true } })).texts.some((t) => t.s.includes("USB")));
-  check("nonstd: NO DRAWING FOR THIS CONTROLLER", has(paint(padV({ pad: NON })), "NO DRAWING FOR THIS CONTROLLER"));
-  check("sensitivity: the live stick view reads the resolver's word, never its own sum", has(paint(padV({ row: 5, stickVal: [0.42, -0.1], reads: "RIGHT" })), "READS RIGHT") && has(paint(padV({ row: 5, stickVal: [0.42, -0.1] })), "READS NOTHING"));
-  const DESK = layout(1366, 768), lit = paint(padV(), {}, DESK), call = (r) => r.texts.filter((t) => t.fill === CONST.ink || t.fill === CONST.t2);
-  check("the controller's bound parts carry callouts in cream, ACTION over the position, sans", ["BOMB", "SOUTH", "THROW", "WEST", "REMOTE", "EAST", "PAUSE", "START", "SELECT", "MOVE"].every((w) => call(lit).some((t) => t.s === w && !t.mono)) && call(lit).find((t) => t.s === "BOMB").fill === CONST.ink && call(lit).find((t) => t.s === "SOUTH").fill === CONST.t2);
-  /* callouts all or none: the desk draws every bound action's callout from a plan; every other box draws none, and its rows name each button */
-  const rowVals = (r, G, i) => { const g = geomOf(i, G); return r.texts.filter((t) => t.mono && Math.abs(t.y - (g.y + g.h / 2)) < 1 && t.x >= g.x && t.x <= g.x + g.w).map((t) => t.s); };
-  for (const [box, Lx, touch, narrow, scale] of [["desk 1366x768", DESK, false, false, undefined], ...BOXES]) {
-    const desk = box.startsWith("desk"), r = recCtx(); drawControls(r.c, Lx, padV(), { touch, narrow, scale });
-    const words = call(r).map((t) => t.s), G = geoFor(Lx, touch, narrow, scale), plan = ctlDbg.plan;
-    const named = [[0, ["D-PAD", "L-STICK"]], [1, ["SOUTH"]], [2, ["WEST"]], [3, ["EAST"]], [4, ["START", "SELECT"]]].every(([i, w]) => w.every((x) => rowVals(r, G, i).includes(x)));
-    check("callouts all or none: " + (desk ? "the desk draws every bound action's callout" : "no callout, and the rows name every button") + ": " + box, desk ? !!plan && ["BOMB", "THROW", "REMOTE", "PAUSE", "MOVE"].every((w) => words.includes(w)) : !plan && !words.length && named, words.join());
-    const sw = recCtx(); drawControls(sw.c, Lx, padV({ binds: { ...DEF_PAD, BOMB: "E", REMOTE: "S" }, swap: { row: "REMOTE", part: "S" } }), { touch, narrow, scale });
-    const P2 = ctlDbg.plan, act = (g) => { const l = P2 && P2.labels.find((q) => q.grp === g); return l && l.lines[0].s; };
-    check("a swap: " + (desk ? "SOUTH's callout reads REMOTE, EAST's reads BOMB" : "the REMOTE row reads SOUTH, the BOMB row EAST, and SWAPPED") + ": " + box,
-      desk ? act("S") === "REMOTE" && act("E") === "BOMB" && call(sw).some((t) => t.s === "REMOTE") && call(sw).some((t) => t.s === "BOMB") : rowVals(sw, G, 3).includes("SOUTH") && rowVals(sw, G, 1).includes("EAST") && sw.texts.some((t) => t.s === "SWAPPED"), [act("S"), act("E"), rowVals(sw, G, 3), rowVals(sw, G, 1)].join("/"));
-  }
-  check("the pane's words read at game size", lit.texts.filter((t) => t.mono || t.fill === CONST.ink || t.fill === CONST.t2).every((t) => t.px >= 10 - 1e-6));
-  const kb = paint(keyV());
-  const kbD = paint(keyV(), {}, DESK);
-  check("the keyboard's callouts name the action, in cream, at the desk", kbD.texts.some((t) => t.s === "BOMB" && t.fill === CONST.ink && !t.mono) && kbD.texts.some((t) => t.s === "SPACE" && t.fill === CONST.t2));
-  check("tabs both read, the open one banded as HEAT | PACE", has(selT, "KEYBOARD") && has(selT, "CONTROLLER") && selT.rects.some((q) => q.fill === "rgba(55,240,208,0.12)" && q.y === G2.tabs[0].y && q.w === G2.tabs[0].w) && selT.texts.find((t) => t.s === "KEYBOARD").fill === ACCENT && selT.texts.find((t) => t.s === "CONTROLLER").fill === MUTED);
-  check("the kicker names the controller, never a mapping word", has(paint(padV()), "CONNECTED · CONTROLLER 1") && has(paint(padV({ pad: NON })), "CONNECTED · CONTROLLER 1 · BUTTONS 0-16"));
-  check("the foot is the kit's line", selT.texts.some((t) => t.s === "↑↓ ROW · ←→ TAB · ENTER REBIND · ESC BACK" && t.y === G2.S.footY && t.fill === MUTED));
-  const row = paint(padV({ row: 5 }));
-  const segs = (r, g, fill) => r.rects.filter((q) => q.fill === fill && q.w === 6 && q.h === 8 && q.y === g.y + g.h / 2 - 4);
-  check("the selected SENSITIVITY row draws five segments, three lit at MEDIUM", segs(row, geomOf(5, G2), ACCENT).length === 3 && segs(row, geomOf(5, G2), LINE).length === 2);
-  { const vr = paint(padV({ row: 6, vib: 1 })), g6 = geomOf(6, G2);
-    check("the selected VIBRATION row draws three segments, one lit at LOW; the other row none", segs(vr, g6, ACCENT).length === 1 && segs(vr, g6, LINE).length === 2 && !segs(vr, geomOf(5, G2), ACCENT).length);
-    check("OFF lights no segment", segs(paint(padV({ row: 6, vib: 0 })), g6, ACCENT).length === 0);
-    check("no actuator: no bar", !segs(paint(padV({ row: 6, pad: { ...PR, rumble: false } })), g6, LINE).length);
-    const barX = (d) => Math.min(...segs(paint(padV({ row: 5, dead: d })), geomOf(5, G2), LINE).concat(segs(paint(padV({ row: 5, dead: d })), geomOf(5, G2), ACCENT)).map((q) => q.x));
-    check("the bar never jumps with the word", barX(60) === barX(25) && barX(8) === barX(15)); }
-  { const sv = paint(padV({ row: 5, stickVal: [-0.42, -0.1], reads: "LEFT", drift: 0.07 }));
-    check("the stick pane names the direction and the held DRIFT", has(sv, "READS LEFT") && has(sv, "DRIFT 0.07") && !has(sv, "READS A MOVE"));
-    check("the stick pane at rest reads nothing", has(paint(padV({ row: 5 })), "READS NOTHING"));
-    const hd = sv.texts.find((t) => t.s === "SENSITIVITY" && t.y < G2.pane.y + 26);
-    check("the pane's head carries the level word", !!hd && sv.texts.some((t) => t.s === "MEDIUM" && t.y < G2.pane.y + 26 && t.fill === ACCENT)); }
-  { const T1 = worldTokens(1), grip = "k" + T1.lit, lit = (v) => { const r = recCtx(); r.c.ellipse = () => r.log.push("el"); drawControls(r.c, L600, v, {}); return r.log.filter((q) => q === grip).length; };
-    const col = (o) => { const d = recCtx(); d.c.ellipse = () => d.log.push("el"); drawPad(d.c, 0, 0, 300, { tok: T1, ...o }); return d.log.filter((q) => q === grip).length; };
-    check("drawPad's grips stroke in the brick only when lit", col({ grips: true }) === col({}) + 2);
-    const vp = paint(padV({ row: 6 }));
-    check("the VIBRATION pane has the level word and the rule", vp.texts.some((t) => t.s === "MEDIUM" && t.y < G2.pane.y + 26) && lit(padV({ row: 6 })) === lit(padV({ row: 1 })) + 2);
-    const stroke = lit;
-    check("both grips light at LOW and above, never at OFF or NONE", stroke(padV({ row: 6, vib: 1 })) === stroke(padV({ row: 6, vib: 0 })) + 2 && stroke(padV({ row: 6, pad: { ...PR, rumble: false } })) === stroke(padV({ row: 6, vib: 0 }))); 
-    const none = paint(padV({ row: 6, pad: { ...PR, rumble: false } }));
-    check("no actuator: NONE muted in the head, and the status says why", none.texts.some((t) => t.s === "NONE" && t.y < G2.pane.y + 26 && t.fill === MUTED) && none.texts.map((t) => t.s).join(" ").includes("NO VIBRATION ON THIS CONTROLLER OR BROWSER")); }
-  {
-    const v = keyV({ key: { ...DEF_KEY, THROW: "KeyZ" }, row: 1 }), r = paint(v), g2 = geomOf(2, G2), cy2 = g2.y + g2.h / 2, lab = r.texts.find((t) => t.s === "THROW" && t.y === cy2);
-    const end = g2.x + 26 + (lab.right - lab.left), dot = "a" + [end + 6, cy2 - 5, 2, 0, 7].join();
-    check("changed: the dot sits after the label, up a little", r.log.includes(dot), dot);
-    check("changed: no dot in the caret's column", !r.log.includes("a" + [g2.x + 21, cy2, 2, 0, 7].join()));
-    const sw = paint(padV({ binds: { ...DEF_PAD, BOMB: "E", REMOTE: "S" }, swap: { row: "REMOTE", part: "S" } })), g3 = geomOf(3, G2), cy3 = g3.y + g3.h / 2, l3 = sw.texts.find((t) => t.s === "REMOTE" && t.y === cy3 && !t.mono);
-    check("a swapped row shows SWAPPED, no dot", !sw.log.includes("a" + [g3.x + 26 + (l3.right - l3.left) + 6, cy3 - 5, 2, 0, 7].join()) && has(sw, "SWAPPED"));
-    const gb = geomOf(1, G2), cyb = gb.y + gb.h / 2, lb = sw.texts.find((t) => t.s === "BOMB" && t.y === cyb && !t.mono);
-    check("the other changed row keeps its dot", sw.log.includes("a" + [gb.x + 26 + (lb.right - lb.left) + 6, cyb - 5, 2, 0, 7].join()));
-  }
-  {
-    const off = paint(keyV({ tab: "pad", row: 1 })), g0 = geomOf(0, G2), g1 = geomOf(1, G2), lab = (r, s, g) => r.texts.find((t) => t.s === s && t.y === g.y + g.h / 2);
-    check("no pad: the whole row dims to 0.45, label and value, as OPTIONS", lab(off, "MOVE", g0).alpha === 0.45 && lab(off, "BOMB", g1).alpha === 0.45 && lab(off, "SOUTH", g1).alpha === 0.45);
-    check("and the band too", off.rects.some((q) => q.y === g1.y && q.w === 3 && q.alpha === 0.45));
-    check("nothing past the rows dims", off.texts.find((t) => t.s === "CONTROLS").alpha === 1 && off.texts.find((t) => t.s === CAPTION.none).alpha === 1 && off.texts.at(-1).alpha === 1);
-    const nb = paint(padV({ row: 1, pad: { ...PR, rumble: false } })), g6 = geomOf(6, G2);
-    check("NONE on a connected pad dims the row too", lab(nb, "VIBRATION", g6).alpha === 0.45 && lab(nb, "NONE", g6).alpha === 0.45 && lab(nb, "BOMB", g1).alpha === 1);
-    const on = paint(padV({ row: 1 }));
-    check("a live VIBRATION row stays at full alpha", lab(on, "VIBRATION", g6).alpha === 1 && lab(on, "MEDIUM", g6).alpha === 1);
-    const fx2 = paint(keyV({ row: 1 })), g5b = geomOf(5, G2), lock = fx2.rects.filter((q) => q.fill === MUTED && q.y >= g5b.y && q.y <= g5b.y + g5b.h);
-    check("fixed rows stay undimmed, padlock included", lab(fx2, "CONFIRM", g5b).alpha === 1 && lock.length > 0 && lock.every((q) => q.alpha === 1));
-  }
-  {
-    const r = paint(padV({ row: 0 })), g0 = geomOf(0, G2), cy = g0.y + g0.h / 2, a = r.texts.find((t) => t.s === "D-PAD" && t.y === cy), b = r.texts.find((t) => t.s === "L-STICK" && t.y === cy);
-    check("value tokens sit 12 apart, glyph between", Math.abs(b.left - a.right - (12 + 18 + 4)) < 1e-6, b.left - a.right);
-  }
-  {
-    const en = KB_AT.Enter, es = KB_AT.Escape;
-    check("ENTER is 2.25 u, 12.75..15 on the home row; ESC is 1.5 u", en.x === 12.75 && en.w === 2.25 && es.w === 1.5, [en.x, en.w, es.w].join("|"));
-    for (const k of [34, 30, 26]) {
-      const d = recCtx(), mw = (s, px) => s.length * px * 0.6, lit = keyStates(keyV()), pr = kbPrints(k, lit, mw);
-      drawKeys(d.c, 0, 0, k, { tok: worldTokens(1), lit, prints: pr, px: kbLegend(k) });
-      const fit = (s, q) => { const r = keyRect(q, k), t = d.texts.find((x) => x.s === s); return !pr[q.id] || (t && t.left >= r.x && t.right <= r.x + r.w); };
-      check("a printed ENTER and ESC fit their caps at k " + k + ", and a lit ESC always prints", fit("ENTER", en) && fit("ESC", es) && !!pr.Escape);
-    }
-  }
-  {
-    const W = 300, d = recCtx(); drawPad(d.c, 0, 0, W, { tok: worldTokens(1), lit: { N: "lit", E: "lit", S: "lit", W: "lit" } });
-    const R = Math.PI * 2, face = ["N", "E", "S", "W"].map((id) => PART_AT[id].map((v) => v * W)), br = 0.052 * W;
-    check("the face buttons are radius 0.052 W, spaced 0.088 W round (0.785, 0.245) W", face.every(([x, y]) => d.log.includes("a" + [x, y, br, 0, R].join())) && Math.abs(face[1][0] - face[3][0] - 2 * 0.088 * W) < 1e-9);
-    check("the face buttons clear the right stick's well", face.every(([x, y]) => Math.hypot(x - 0.64 * W, y - 0.39 * W) >= br + 0.009 * W + 0.078 * W), face.map(([x, y]) => (Math.hypot(x - 0.64 * W, y - 0.39 * W) - 0.139 * W).toFixed(1)).join());
-    const segDist = (px, py, ax, ay, bx, by) => { const t = Math.max(0, Math.min(1, ((px - ax) * (bx - ax) + (py - ay) * (by - ay)) / ((bx - ax) ** 2 + (by - ay) ** 2))); return Math.hypot(px - ax - t * (bx - ax), py - ay - t * (by - ay)); };
-    const r = paint(padV({ row: 2 }), {}, DESK2), wd = r.texts.find((t) => t.s === "THROW" && t.fill === CONST.ink), lead = r.log.filter((q) => q.startsWith("l"));
-    check("WEST's callout sits level with its leader's end", !!wd && lead.some((q) => Math.abs(+q.slice(1).split(",")[1] - wd.y) < 1e-6), wd && wd.y);
-  }
-  {
-    const P = G2.pane, v = padV({ row: 6 }), r = paint(v), L = r.texts.filter((t) => t.y > P.y + P.h - 40 && t.y < P.y + P.h && t.left >= P.x);
-    check("the VIBRATION rule keeps every word and stays in the pane", L.map((t) => t.s).join(" ") === "HITS, BLASTS, PLANTS AND MENUS LOW SKIPS MENUS" && L.every((t) => t.left >= P.x + 4 && t.right <= P.x + P.w - 4), L.map((t) => t.s).join("|"));
-    check("no word sits alone in the rule", L.length === 1 || L.every((t) => t.s.includes(" ")), L.map((t) => t.s).join("|"));
-    const u = paint(padV({ row: 6, pad: { ...PR, effects: null } })), U = u.texts.filter((t) => t.y > P.y + P.h - 70 && t.y < P.y + P.h && t.left >= P.x && t.fill === TEXT);
-    const lowest = (r, B) => Math.max(...r.log.filter((x) => /^a[\d-]/.test(x)).map((x) => x.slice(1).split(",").map(Number)).filter(([, y, rr]) => rr > 3 && y < B.y + B.h).map(([, y, rr]) => y + rr));
-    check("with effects unknown the rule keeps every word, inside the pane, under the drawing's lowest input", U.map((t) => t.s).join(" ") === "HITS, BLASTS, PLANTS AND MENUS LOW SKIPS MENUS · " + FEEL_NOTHING && U.every((t) => t.left >= P.x + 4 && t.right <= P.x + P.w - 4 && t.s.includes(" ")) && U[0].y - 6 >= lowest(u, P), U.map((t) => t.s + "@" + t.y).join("|") + " / " + lowest(u, P));
-    { const Lg = layout(608, 352), Gg = geoFor(Lg, false, false), q = paint(padV({ row: 6, pad: { ...PR, effects: null } }), {}, Lg), T0 = q.texts.filter((t) => t.y > Gg.pane.y + 40 && t.left >= Gg.pane.x && t.fill === TEXT && t.s !== "CONTROLS" && /^HITS, BLASTS/.test(t.s))[0], g = q.log.filter((x) => /^a[\d-]/.test(x)).map((x) => x.slice(1).split(",").map(Number)).filter(([, y, r]) => r > 3 && y < Gg.pane.y + Gg.pane.h), bot = Math.max(...g.map(([, y, r]) => y + r));
-      check("608x352, effects unknown: the four-line rule clears the drawing's lowest input", !!T0 && g.length > 0 && T0.y - 6 >= bot, T0 && [T0.y, bot].join()); }
-    const Ls = layout(400, 520), Gg = geoFor(Ls, true, true, 0.9), g = paint(padV({ row: 5, stickVal: [0.5, 0], reads: "RIGHT", drift: 0.04 }), { touch: true, narrow: true, scale: 0.9 }, Ls), R0 = g.texts.find((t) => t.s.includes("READS RIGHT"));
-    check("a box with no pane reads the stick in one line, inside the plate", !Gg.pane && !!R0 && R0.s.includes("DRIFT 0.04") && R0.left >= Gg.x + 4 && R0.right <= Gg.x + Gg.w - 4, g.texts.map((t) => t.s).join("|"));
-  }
 }
 
 // the OPTIONS door reads the level where it fits the row, at both pitches
@@ -475,7 +209,7 @@ for (const [nm, Lx, touch] of [["keyboard 27", L600, false], ["touch 37", L600, 
   check("every input has a place on the drawing", ["TRL", "TRR", "SHL", "SHR", "dpad", "LS", "RS", "SELECT", "START", "N", "E", "S", "W"].every((id) => Array.isArray(PART_AT[id]) && PART_AT[id].every(Number.isFinite)));
   const g = recCtx();
   let ok = true;
-  for (const [k, v] of [["face", "S"], ["dpad", "all"], ["dpad", "U"], ["shoulder", "R"], ["trigger", "L"], ["stick", "L"], ["centre", "START"]]) ok = glyph(g.c, k, 0, 0, 16, v, TEXT) > 0 && ok;
+  for (const [k, v] of [["face", "S"], ["dpad", "all"], ["dpad", "U"], ["shoulder", "R"], ["trigger", "L"], ["stick", "L"], ["centre", "START"]]) ok = glyph(g.c, k, 0, 0, 16, v, CONST.ink) > 0 && ok;
   check("each glyph kind paints and reports a width", ok && g.log.length > 20);
   const d = recCtx();
   drawPad(d.c, 0, 0, 200, { tok: worldTokens(1), lit: { S: "lit", dpad: "lit", LS: "lit", START: "lit", SELECT: "lit" }, ring: "S", press: "S" });
@@ -483,18 +217,9 @@ for (const [nm, Lx, touch] of [["keyboard 27", L600, false], ["touch 37", L600, 
   check("controller and keyboard drawings draw on the headless stand-in", d.log.filter((q) => q.startsWith("bz")).length >= 14 && d.texts.some((t) => t.s === "SPACE"));
 }
 
-// nothing of the old skin
-{
-  const lum = (h) => { const n = parseInt(h.slice(1), 16), f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(n >> 16) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255); };
-  const cr = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
-  check("#dfe7f5 on the plate's ground >= 4.5", TEXT === "#dfe7f5" && cr(TEXT, "#0a0e18") >= 4.5, cr(TEXT, "#0a0e18").toFixed(2));
-  check("muted #7385ad outlines read on the pad body >= 3", cr(MUTED, "#16203a") >= 3, cr(MUTED, "#16203a").toFixed(2));
-  check("accent on the plate >= 4.5", cr(ACCENT, "#0a0e18") >= 4.5);
-}
-
 // source rules
 {
-  const FILES = ["src/render/controlsgeo.js", "src/render/padart.js", "src/render/controlsdraw.js"], src = Object.fromEntries(FILES.map((f) => [f, readFileSync(join(ROOT, f), "utf8")]));
+  const FILES = ["src/render/controlsgeo.js", "src/render/padart.js", "src/render/pages/controls.js"], src = Object.fromEntries(FILES.map((f) => [f, readFileSync(join(ROOT, f), "utf8")]));
   const all = Object.values(src).join("\n"), lower = all.toLowerCase();
   const maker = ["bomber" + "man", "xb" + "ox", "play" + "station", "dual" + "shock", "dual" + "sense", "nin" + "tendo", "son" + "y", "micro" + "soft", "log" + "itech"];
   check("no maker names in the three files", maker.every((w) => !lower.includes(w)), maker.filter((w) => lower.includes(w)).join());
@@ -502,10 +227,10 @@ for (const [nm, Lx, touch] of [["keyboard 27", L600, false], ["touch 37", L600, 
   check("no src/app import in the three files", !/from\s+["'][^"']*\/app\//.test(all));
   check("no Path2D, roundRect or setLineDash: the headless stub has none", !/Path2D|roundRect|setLineDash/.test(all));
   check("no timers or clocks", !/performance\.now|Date\.now|new Date|Math\.random|setTimeout/.test(all));
-  check("every state keeps a shape and a word in the source", ["SWAPPED", "CHANGED", "PRESS AGAIN", "lockGlyph"].every((w) => all.includes(w)));
+  check("every state keeps a shape and a word in the source", ["CW.SWAPPED", "CW.AGAIN", "CW.FIXED", "CW.NONE"].every((w) => all.includes(w)));
   check("no selection ring function", !/function ring\b/.test(all));
   check("the old skin is gone", !/\b(drawTile|drawChip|pillTabs|drawPrompts|chipIcon|tileGeom|chipGeom|THEME|padHit|promptsOf|drawCapture2|drawPad2|drawKeys2)\b/.test(all), (all.match(/\b(drawTile|drawChip|pillTabs|drawPrompts|chipIcon|tileGeom|chipGeom|THEME|padHit|promptsOf|drawCapture2|drawPad2|drawKeys2)\b/) || [""])[0]);
-  check("the page's rows, plate and tabs come from the kit, never a copy", /paintRow\(/.test(src["src/render/controlsdraw.js"]) && /\bplate\(/.test(src["src/render/controlsdraw.js"]) && /\bsegs\(/.test(src["src/render/controlsdraw.js"]) && /listGeom\(/.test(src["src/render/controlsgeo.js"]) && /listHit\(/.test(src["src/render/controlsgeo.js"]) && !/function (plate|paintRow|segs|head|foot)\b/.test(all));
+  check("the page's rows, plate, tabs and band come from the kit (kit/paint.js), never a copy", /from "\.\.\/kit\/paint\.js"/.test(src["src/render/pages/controls.js"]) && ["plate(", "key(", "band(", "focusBomb("].every((w) => src["src/render/pages/controls.js"].includes(w)) && !/function (plate|key|band)/.test(src["src/render/pages/controls.js"]));
 }
 
 console.log(fail ? `CONTROLSDRAW FAIL (${pass} pass, ${fail} fail)` : `CONTROLSDRAW OK (${pass} pass)`);

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — Task 6.3: the CONTROLS page on the world kit (lane-6.3b-controls-page)
+- Owner: "I think you forgot to work on the cntroller side ha?" CONTROLS is `pages/controls.js` (desk with the pane and kit-size callouts at 1366x768 / 1280x720, col, phone column paged; capture in place), probed and gated; controlsdraw.js and menudraw's CONSOLE PANEL kit deleted. Open: 1024-wide desks draw no callouts; the owner may want the mock's capture callout and NORTH / shoulder copy.
+
 ## 2026-11-12 — Task 9.7: REAL 3D cabinet rim is a plain rectangle again
 - Owner: "and look when camera is in far, this is wrong and fix". The rim's near-corner taper (nearX / NEAR_Z, 3f36d02) bent the E / W outline ~7 deg at z 100, invisible at STANDARD, a flared tray at FAR / DIST_MAX; removed (scene.js shape, rimart.js corner bosses), S4.E pins the rectangle; near corners bleed ~7.5% at STANDARD as AGENTS documents. Draws unchanged.
 

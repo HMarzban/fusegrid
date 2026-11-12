@@ -307,8 +307,8 @@ function rrTop(c, x, y, w, h, r) {
   c.lineTo(x + w, y + h); c.closePath();
 }
 /** A position glyph, box h tall, top-left at x,y-h/2; returns its width. Always shown beside a word. */
-export function glyph(c, kind, x, y, h, v, col) {
-  const k = h / 16, on = col || TEXT, off = MUTED;
+export function glyph(c, kind, x, y, h, v, col, offCol) {
+  const k = h / 16, on = col || TEXT, off = offCol || MUTED;
   c.save(); c.translate(x, y - h / 2); c.scale(k, k); c.lineWidth = 1.2; c.lineJoin = "round";
   let w = 16;
   if (kind === "face") {

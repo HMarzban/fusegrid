@@ -3,7 +3,6 @@
    kit (plate, head, foot, paintRow, listGeom) that the PAUSE list and CONTROLS still wear: accent #37f0d0, text #dfe7f5, muted #7385ad, veils
    rgba(7,10,18,a). Easing helpers duplicated from the intro beat table (spec §3): this file must not import from src/app. */
 import { LABEL, runParts } from "./words.js";
-import { rr } from "./icons.js";
 import { hints, tapAt } from "./hintcopy.js";
 import { drawLogo2d, deviceScale, TITLE_RUNUP } from "./logo/draw2d.js";
 import * as menuPage from "./pages/menu.js";
@@ -34,244 +33,16 @@ export const SHOW_STEP = 0.137,
   SKIP_GUARD = 0.2,
   TITLE_IN = 0.9;
 const font = (size, weight) => (weight || "") + " " + size + "px " + MONO;
-/* CONSOLE PANEL (direction A): labels and titles in the system sans stack (no
-   font file; disclosed: system-ui varies by OS), values / tags / foot stay
-   mono. One plate, one border, one selection idiom (paintRow) everywhere. */
+/* Labels in the system sans stack (no font file; disclosed: system-ui varies
+   by OS), the meter and the attract hint mono. */
 const SANS = "system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
 const sans = (size, weight) => (weight || "") + " " + size + "px " + SANS;
-const DANGER = "#ff5d73";
-const LINE = "#26324a",
-  EDGE = "#2a3550",
-  WARM = "#ffd447";
-export const PLATE = "rgba(10,14,24,0.94)";
+const LINE = "#26324a";
+/* the controller drawings' quiet glyph (padart.js) read these three; every page is on the world kit since Task 6.3 */
+export { TEXT, MUTED, sans };
 export const VIB_LEVELS = Object.freeze(["OFF", "LOW", "MEDIUM", "HIGH"]);
 /** The OPTIONS door's VIBRATION word: a pad that is here, can buzz and has a stored level; "" otherwise. Boot-side, so the door never waits on the lazy CONTROLS paint. */
 export const vibWord = (s) => (s && s.pad && s.pad.state !== "none" && s.pad.state !== "lost" && s.pad.rumble === true && s.vib != null ? VIB_LEVELS[s.vib] || "" : "");
-const even = (v) => 2 * Math.round(v / 2); // even logical px: crisp at x0.5 / x1 / x1.5 and on PIXEL's 2px art grid
-export function plate(c, x, y, w, h) {
-  x = even(x);
-  y = even(y);
-  w = even(w);
-  h = even(h);
-  c.fillStyle = "rgba(0,0,0,0.35)";
-  rr(c, x, y + 4, w, h, 6);
-  c.fill();
-  c.fillStyle = PLATE;
-  rr(c, x, y, w, h, 6);
-  c.fill();
-  c.strokeStyle = EDGE;
-  c.lineWidth = 1;
-  rr(c, x + 0.5, y + 0.5, w - 1, h - 1, 6);
-  c.stroke();
-}
-const spaced = (c, on) => {
-  if ("letterSpacing" in c) c.letterSpacing = on ? "0.12em" : "0px";
-};
-export function head(c, S, title, kicker) {
-  c.textAlign = "center";
-  c.textBaseline = "middle";
-  if (kicker) {
-    c.fillStyle = MUTED;
-    c.font = sans(10, "600");
-    spaced(c, true);
-    c.fillText(kicker, S.mid, S.headY - 9);
-    spaced(c, false);
-  }
-  if (!title) return; // RECORDS' pages: the tab strip stands on the title's line
-  c.fillStyle = TEXT;
-  c.font = sans(18, "700");
-  c.fillText(title, S.mid, S.headY + 8);
-}
-export function foot(c, S, s, col) {
-  c.fillStyle = col || MUTED;
-  c.font = font(10);
-  c.textAlign = "center";
-  c.textBaseline = "middle";
-  c.fillText(s, S.mid, S.footY);
-}
-function caret(c, x, y, h, col) {
-  const hh = Math.max(5, Math.min(7, h * 0.22));
-  c.fillStyle = col || ACCENT;
-  c.beginPath();
-  c.moveTo(x, y - hh);
-  c.lineTo(x + hh * 1.1, y);
-  c.lineTo(x, y + hh);
-  c.closePath();
-  c.fill();
-}
-/* THE row: every list in the shell (MENU, PAUSE, OPTIONS, GRAPHICS, GUIDE)
-   paints its rows here, so the selected row is the same object on every
-   page. o = {hero, danger, warm, caret, door, ext, touch, vc, glow}. Selection = a
-   full-width 0.12 band, a 3px notch and the caret; label weight and size never
-   jitter. danger rows (RESTART / QUIT) select in red, keeping the shape. warm
-   (a CONTROLS row a swap just moved) is the same band and notch in gold, and has
-   a caret only with o.caret: the row is marked, the cursor may be elsewhere. */
-const rowSize = (h, p) => Math.max(10, Math.min(p.hero ? (p.touch ? 22 : 20) : p.touch ? 17 : 15, Math.round(h * (p.hero ? 0.5 : 0.62))));
-export function paintRow(c, x, y, w, h, label, val, sel, o) {
-  const p = o || {},
-    col = p.warm ? WARM : p.danger ? DANGER : ACCENT,
-    cy = y + h / 2;
-  if (sel) {
-    c.fillStyle = p.warm ? "rgba(255,212,71,0.12)" : p.danger ? "rgba(255,93,115,0.12)" : "rgba(55,240,208,0.12)";
-    c.fillRect(x, y, w, h);
-    c.fillStyle = col;
-    c.fillRect(x, y, 3, h);
-    if (!p.warm || p.caret) caret(c, x + 11, cy, h, col);
-  }
-  const size = rowSize(h, p);
-  c.textBaseline = "middle";
-  c.textAlign = "left";
-  c.font = sans(size, p.hero ? "800" : "600");
-  c.fillStyle = sel ? TEXT : MUTED;
-  c.fillText(label, x + 26, cy);
-  const mark = p.ext ? "↗" : p.door ? "›" : "",
-    v = val ? String(val) : "";
-  c.textAlign = "right";
-  if (mark) {
-    c.font = sans(p.ext ? 14 : 18, "600");
-    c.fillStyle = sel ? TEXT : MUTED;
-    c.fillText(mark, x + w - 12, cy);
-  }
-  if (v) {
-    const vx = x + w - 12 - (mark ? 18 : 0);
-    c.font = font(12);
-    c.fillStyle = p.vc || (sel ? TEXT : MUTED);
-    if (p.glow > 0) {
-      c.shadowColor = c.fillStyle;
-      c.shadowBlur = 14 * p.glow;
-    }
-    c.fillText(v, vx, cy);
-    if (p.glow > 0) c.shadowBlur = 0;
-  }
-}
-/* Pure list geometry. rows=[{hero,gapBefore}] (label etc. ignored); o =
-   {top, bot, w, pitch, hero, gap, pad, head, foot, body}. Pitches are CAPS: a band
-   too short for them scales pitch / hero / gap down together. body is a floor
-   for the rows' own height (MENU: its pane keeps its room); the rows stay at the
-   top and the floor's rest is plate under the last one. Hit bands are
-   contiguous: each row owns half of any group gap beside it. */
-export function listGeom(L, rows, o) {
-  const p = o || {},
-    n = rows.length,
-    pad = p.pad == null ? 10 : p.pad,
-    hd = p.head | 0,
-    ft = p.foot | 0;
-  let sum = 0,
-    gaps = 0;
-  for (let i = 0; i < n; i++) {
-    sum += rows[i].hero ? p.hero || p.pitch : p.pitch;
-    if (i && rows[i].gapBefore) gaps += p.gap | 0;
-  }
-  const body = Math.max(sum + gaps, p.body || 0);
-  const room = p.bot - p.top - pad * 2 - hd - ft;
-  const f = body > 0 ? Math.min(1, room / body) : 1;
-  const h = Math.round(pad * 2 + hd + ft + body * f);
-  const w = Math.min(L.cx * 2 - 40, p.w || 380);
-  const x = p.x != null ? p.x : Math.round(L.cx - w / 2),
-    y = Math.round(p.top + Math.max(0, (p.bot - p.top - h) / 2));
-  const out = [];
-  let yy = y + pad + hd;
-  for (let i = 0; i < n; i++) {
-    if (i && rows[i].gapBefore) yy += (p.gap | 0) * f;
-    const rh = (rows[i].hero ? p.hero || p.pitch : p.pitch) * f;
-    out.push({ y0: yy, y1: yy + rh, h: rh, cy: yy + rh / 2 });
-    yy += rh;
-  }
-  for (let i = 0; i < n; i++) {
-    out[i].a = i ? (out[i - 1].y1 + out[i].y0) / 2 : out[i].y0;
-    out[i].b = i < n - 1 ? (out[i].y1 + out[i + 1].y0) / 2 : out[i].y1;
-  }
-  return { x, y, w, h, f, pad, rows: out, mid: x + w / 2, headY: y + 26, footY: y + h - 16, ix: x + 16, iw: w - 32, span: p.pitch * f };
-}
-export function listHit(x, y, g, full) {
-  if (!full && (x < g.x || x > g.x + g.w)) return -1;
-  const r = g.rows;
-  for (let i = 0; i < r.length; i++) if (y >= r[i].a && (y < r[i].b || (i === r.length - 1 && y <= r[i].b))) return i;
-  return -1;
-}
-/* drawList: the plate's rows only (plate / head / foot are the caller's).
-   o.et (MENU only) staggers the entrance; PAUSE passes none and stays still. */
-export function drawList(c, g, rows, cur, t, o) {
-  const p = o || {},
-    et = typeof p.et === "number" ? p.et : null;
-  for (let i = 0; i < rows.length; i++) {
-    const r = rows[i],
-      G = g.rows[i],
-      k = et == null ? 1 : easeOutCubic(clamp01((et - i * 0.03) / 0.22));
-    c.globalAlpha = k * (p.alpha == null ? 1 : p.alpha);
-    paintRow(c, g.x + 8, G.y0 + 2 + 6 * (1 - k), g.w - 16, G.h - 4, r.label, r.val, i === cur, { ...r, touch: p.touch });
-  }
-  c.globalAlpha = 1;
-}
-
-/* ATLAS (r2 direction B): plates HUG their content, centred in bandOf —
-   keyboard L.top-10..L.footY-8, touch 8..H-8 (the foot hint lives inside the
-   plate). Pitches are caps: f < 1 only in a short box (the iso 608x352
-   guard), never at 600x520. pageBox is the one page measure; o.bottom pins a
-   plate to the band floor (STATS keeps its foot tap band where statsHit
-   expects it). */
-const PAD = 10, HEAD = 44, FOOT = 24, CHROME = PAD * 2 + HEAD + FOOT;
-export const bandOf = (L, touch) => (touch ? { top: 8, bot: L.footY + 12 } : { top: Math.max(12, L.top - 10), bot: L.footY - 8 });
-export function pageBox(L, maxW, body, touch, o) {
-  const p = o || {},
-    B = bandOf(L, touch),
-    f = body > 0 ? Math.min(1, (B.bot - B.top - CHROME) / body) : 1,
-    h = Math.round(CHROME + body * f),
-    w = Math.min(L.cx * 2 - 40, maxW),
-    x = Math.round(L.cx - w / 2),
-    y = Math.round(p.bottom ? B.bot - h : B.top + Math.max(0, (B.bot - B.top - h) / 2));
-  return { x, y, w, h, f, ix: x + 16, iw: w - 32, mid: x + w / 2, headY: y + 26, footY: y + h - 16, by: y + PAD + HEAD };
-}
-const mw = (c, s) => {
-  const m = c.measureText && c.measureText(s);
-  return m && typeof m.width === "number" ? m.width : String(s).length * 6;
-};
-export { ACCENT, TEXT, MUTED, DANGER, LINE, EDGE, WARM, font, sans, spaced, lockGlyph, mw, clip, wrap, cell, segs, paneHead, paneLine };
-function clip(c, s, w) {
-  s = String(s);
-  if (mw(c, s) <= w) return s;
-  let t = s;
-  while (t.length > 1 && mw(c, t + "…") > w) t = t.slice(0, -1);
-  return t + "…";
-}
-/* measureText wrap to n lines (the last one clipped), so no catalogue line
-   can run past its cell (C8: WALKER's ENEMIES help overflowed). */
-function wrap(c, s, w, n) {
-  const out = [];
-  let cur = "";
-  for (const wd of String(s).split(" ")) {
-    const t = cur ? cur + " " + wd : wd;
-    if (!cur || mw(c, t) <= w) cur = t;
-    else {
-      out.push(cur);
-      cur = wd;
-    }
-  }
-  if (cur) out.push(cur);
-  if (out.length > n) {
-    out.length = n;
-    out[n - 1] += " …";
-  }
-  return out.map((l) => clip(c, l, w));
-}
-function cell(c, r, a) {
-  c.fillStyle = "rgba(4,7,14," + (a == null ? 0.72 : a) + ")";
-  c.fillRect(r.x, r.y, r.w, r.h);
-  c.strokeStyle = LINE;
-  c.lineWidth = 1;
-  c.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
-}
-/* A tile's selection is paintRow's: the 0.12 band, the 3px notch, the caret. */
-function lockGlyph(c, x, y, s, col) {
-  c.strokeStyle = col;
-  c.fillStyle = col;
-  c.lineWidth = Math.max(1.5, s / 7);
-  const k = Math.max(1.5, s / 7);
-  c.fillRect(x - s * 0.26, y - s * 0.4, k, s * 0.3);
-  c.fillRect(x + s * 0.26 - k, y - s * 0.4, k, s * 0.3);
-  c.fillRect(x - s * 0.26, y - s * 0.4, s * 0.52, k);
-  c.fillRect(x - s * 0.38, y - s * 0.12, s * 0.76, s * 0.55);
-}
 /* heatRoster deduped to [{t, n}] in first-seen order: the next-run card's (pages/card.js), the one roster. */
 export { rosterOf };
 /* A run's setup for one value slot, longest first (the first that fits is kept): every setting named; the modifiers as a count; only what
@@ -281,25 +52,6 @@ export { rosterOf };
 export function setupVals(world, run) {
   const j = (a) => [world].concat(a).join(" · "), terse = runParts(run, { count: true, terse: true });
   return [j(runParts(run, { all: true })), j(runParts(run, { all: true, count: true })), j(runParts(run, { count: true })), j(terse), terse.join(" · ") || world];
-}
-/* Segmented control: one outer frame, abutting segments, the selected one
-   banded and stroked in its colour. */
-function segs(c, rs, labels, on, cols, touch, fs) {
-  for (let i = 0; i < rs.length; i++) {
-    const r = rs[i],
-      s = i === on,
-      col = (cols && cols[i]) || ACCENT;
-    c.fillStyle = s ? (col === DANGER ? "rgba(255,93,115,0.12)" : "rgba(55,240,208,0.12)") : "rgba(4,7,14,0.6)";
-    c.fillRect(r.x, r.y, r.w, r.h);
-    c.strokeStyle = s ? col : LINE;
-    c.lineWidth = s ? 2 : 1;
-    c.strokeRect(r.x + (s ? 1 : 0.5), r.y + (s ? 1 : 0.5), r.w - (s ? 2 : 1), r.h - (s ? 2 : 1));
-    c.fillStyle = s ? col : MUTED;
-    c.font = font(fs || (touch ? 14 : 11), s ? "900" : "700");
-    c.textAlign = "center";
-    c.textBaseline = "middle";
-    c.fillText(labels[i], r.x + r.w / 2, r.y + r.h / 2 + 1);
-  }
 }
 /* lg: the shell box's logo line (fit.js shellGeo, the board's own 0.27 in #sh
    units, on every layout that has a shell box); tall marks a box over 1.3x as
@@ -429,27 +181,6 @@ const frameOf = (L, touch, tap) => ({ W: L.W, H: L.H, touch: !!touch, shell: !!L
 export const menuGeom = (L, _n, touch) => menuPage.menuGeom(frameOf(L, touch));
 export const menuHit = (x, y, L, _n, touch) => menuPage.menuHit(x, y, frameOf(L, touch));
 export const drawMenu = (c, ui, L, t, touch) => menuPage.drawMenuPage(c, frameOf(L, touch, drawn((ui || {}).tap)), ui || {}, t);
-/* A pane's head line and a pane line (the CONTROLS page's preview pane). */
-function paneHead(c, P, title, right, rc) {
-  c.textBaseline = "middle";
-  c.textAlign = "left";
-  c.fillStyle = TEXT;
-  c.font = sans(15, "800");
-  c.fillText(title, P.x + 10, P.y + 14);
-  if (right) {
-    c.textAlign = "right";
-    c.font = font(10, "700");
-    c.fillStyle = rc || MUTED;
-    c.fillText(right, P.x + P.w - 10, P.y + 14);
-  }
-}
-function paneLine(c, P, y, s, col, size, align) {
-  c.textAlign = align || "left";
-  c.textBaseline = "middle";
-  c.fillStyle = col || MUTED;
-  c.font = font(size || 10, "700");
-  c.fillText(clip(c, s, P.w - 20), align === "center" ? P.x + P.w / 2 : P.x + 10, y);
-}
 
 /* LEVEL SELECT: the page is src/render/pages/level.js (UI upgrade v202 Task 3.3): one geometry for draw and tap, rects by name. These keep the
    entry names shellview, the pointer and the tests call; L is layout(W, H, lg, css) for the box the page draws on, touch body[data-lay] p / l, open
