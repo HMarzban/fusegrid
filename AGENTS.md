@@ -228,8 +228,8 @@ never a guessed next one) — never a second literal. The desk MENU's foot ends
 `| v206`; the phone column carries it as SOURCE's teaser (the round 7 frame);
 SETTINGS keeps its `BUILD v206` kicker. Never on the HUD.
 PAUSE is on the world kit since UI upgrade Task 5.1 (`src/render/pages/pause.js`, boot; `scenes.js` re-exports `PAUSE_ROWS`, `PAUSE_SHAPE`,
-`PAUSE_ROW_H` / `_D`, `pauseGeom`, `pauseHit`, `pauseKick`, `pauseKickers` / `pauseKicker`; the round 7 S7-pages 10-pause frame). It stays on `#c`
-over the frozen board in all three looks (on a portrait phone on `#sh`'s over box under the HUD plate, Task 9.8: see SHELL BOX), through the one painter `drawPause` that `drawOverlay`'s PAUSE branch calls (view 0 only; views 1-3
+`PAUSE_ROW_H` / `_D`, `pauseGeom`, `pauseHit`, `pauseKick`, `pauseKickers` / `pauseKicker`; the round 7 S7-pages 10-pause frame). It sits over
+`#c`'s frozen board in all three looks, drawn on the stage (`#sh` over `#c` at device px, Task 9.12; on a portrait phone on `#sh`'s over box under the HUD plate, Task 9.8: see SHELL BOX), through the one painter `drawPause` that `drawOverlay`'s PAUSE branch calls (view 0 only; views 1-3
 keep their own painters and the old 0.72 veil), in the tokens of the room being PLAYED (`world.level`), under the kit veil (`#0b0609` at .6).
 Top to bottom on the kit plate: a centred kicker `LEVEL n · WORLD` (` · DAILY` on a daily; a controller note replaces it, the look tail rides it
 through `pauseKick`), `PAUSED` (display 34 desk / 26 touch), a tag row from words.js `runParts` (only non-default rules, each naming its setting,
@@ -268,8 +268,15 @@ and a landscape tablet is the desktop form with touch pitches, lead ruling). `p`
 board stage is width-bound (~0.63 on a 393 px phone), so ~0.9 (`PORT_SHELL {s 0.9, w [400,600],
 logo 0.27}`; a tablet keeps 600 wide and only grows taller; < 520 box units
 tall = no shell box). INTRO, ATTRACT and PLAY stay on `#c`
-with `#sh` hidden; on `d` and `l` PAUSE stays there too and a run end (`isRunEnd`, `shellMode` 2) shows `#sh` click-through
-and drawing nothing, so WIN/LOSE keep `#c`, its overlay and its taps. On `p` (Task 9.8, lead ruling 2026-11-12) PAUSE (the list and
+with `#sh` hidden. On `d` and `l` (Task 9.12, owner: "why that menu … is blury?") PAUSE (the list and its views 1-3), every WIN and GAME OVER
+are `shellMode` 2, THE STAGE: `fit.shell(2)` lays `#sh` exactly on `#c`'s content box at device density (`pxBox` / `snapOff`, the `#px` rule:
+whole device px, origin on a whole 1/64 CSS px; every layout, a landscape phone with no shell box and a portrait phone with no over box
+included), click-through, cleared every frame, and hands back `{ctx, box: #c}` under a `#c` units -> device px transform; main hands the
+renderer `{over}` and `drawShell` draws the overlay there in `#c`'s own box, so the layout, the hits and the taps are `#c`'s as before
+while `deviceScale(c)` sizes the pages' cached layers at device px (they were drawn into `#c`'s 600 x 520 backing, which CSS upscales
+~2.3x at 1366 x 768 @2: soft in every look, glaring beside PIXEL's `#px` and REAL 3D's `#gl`). The run-end particles (CLASSIC `drawFx`,
+PIXEL's blocks) still land over the plate: each 2D renderer's non-enumerable `over(c, world)`, which main calls after `drawShell` on the
+canvas the overlay went to (`#c` on `p`, under the veil). `fit.box()` is null on the stage; a page or the over box puts the shell box back. On `p` (Task 9.8, lead ruling 2026-11-12) PAUSE (the list and
 its views 1-3), every WIN (LEVEL CLEAR and the finale) and GAME OVER are `shellMode` 3: `#sh` takes taps and draws them on its OVER BOX
 (`fit.over()`, fit.js `overGeo`): #sh's width and scale from `PORT_GAME.top` (the HUD plate's foot, the board's top in a run) to the
 viewport's bottom safe area (`env(safe-area-inset-bottom)` read as body's `scroll-padding-bottom`), box (0, 0) at #sh's (0, top), its rect
@@ -278,7 +285,7 @@ that band; main hands the renderer `{over}` so no look draws the overlay on `#c`
 `pauseBand`), the page's css the box's. The frozen board stays in its place under the veil; the HUD (under #sh) and its PAUSE / RESUME key
 (`#touchpad`, over #sh) stay live; a tap over the HUD band or the safe area is inert. `endHitAt` / `endPagesAt` take the box (main hands
 `fit.over()`), shellview `pauseLayout` is the PAUSE views' frame (view 3 through `ctlFrame`, the box handed to pages/controls.js), the probe records `el` "sh" with the band (`probe.place`: `oy`, `fw`,
-`fh`; gatelib's mapper offsets it). A phone with no shell box keeps the overlay on `#c` (drawn by the shell from `ro`).
+`fh`; gatelib's mapper offsets it). A phone with no shell box takes the stage (Task 9.12).
 `#c` / `#gl` / `#px` never see the box, so no renderer changes. `#sh` sits over `#c`, under `#touchpad` and the DOM cards.
 `fit.shell(on)` shows + clears `#sh` (device-density backing, cap 3 on `p` / 2 on `d` and `l`,
 smoothing off) and returns `{ctx, box}`; `box` is the logical canvas

@@ -11,7 +11,7 @@ import { clampPace } from "../core/pace.js";
 import { SCREEN, ITEMS, LEVEL_ROWS, GUIDE_ROWS } from "../app/menuapp.js";
 import { LABEL } from "./words.js";
 import { PROJ } from "./r3d/camera.js";
-import { overlayBox, touchLay, fmtTime, isRunEnd, drawOverlay, overRun } from "./scenes.js";
+import { overlayBox, touchLay, fmtTime, drawOverlay, overRun } from "./scenes.js";
 import * as probe from "./kit/probe.js";
 import * as menudraw from "./menudraw.js";
 import * as lazy from "./pages/lazy.js";
@@ -46,10 +46,11 @@ const SHELL_ON = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.HOWTO, SCREEN.SCORES
 export const isShellScreen = (s) => SHELL_ON.has(s);
 /* fit.shell's argument for this frame: 1 = a shell screen draws on #sh; 3 = on a portrait phone (lay p), PAUSE and every WIN / LOSE draw on
    #sh in the over box under the HUD plate (Task 9.8; fit.js fit.over: main hands the renderer {over}, which then draws no overlay on #c);
-   2 = elsewhere a run end (isRunEnd), #sh shown click-through and drawn on by nothing (the end overlay keeps #c); 0 = hidden (PLAY, and off p
-   PAUSE and a mid-run WIN, INTRO, ATTRACT). */
+   2 = elsewhere the same four, on the stage (Task 9.12: #sh laid on #c's content box at device density, click-through, in #c's own units, so
+   the board's layout and taps hold while the plate is as sharp as MENU's; #c's 600 x 520 backing is upscaled ~2.3x); 0 = hidden (PLAY, INTRO,
+   ATTRACT). */
 const OVER_ST = new Set(["PAUSE", "WIN", "LOSE"]);
-export const shellMode = (s, world, lay) => (SHELL_ON.has(s) ? 1 : s === SCREEN.GAME && lay === "p" && !!world && OVER_ST.has(world.state) ? 3 : s === SCREEN.GAME && isRunEnd(world) ? 2 : 0);
+export const shellMode = (s, world, lay) => (SHELL_ON.has(s) ? 1 : s === SCREEN.GAME && !!world && OVER_ST.has(world.state) ? (lay === "p" ? 3 : 2) : 0);
 /* The screens whose page paints the room look opaque over its whole canvas every frame it is up (v202 Task 3.1: MENU; Task 3.3: LEVEL
    SELECT; Task 3.4: SETTINGS and GRAPHICS, their LOADING plate included; Task 3.5: the GUIDE pages; Tasks 4.1 / 4.2: RECORDS' SCORES, STATS and MEDALS; Task 6.3: CONTROLS; each page task adds its screen): main passes
    {covered: true} to the renderer while one holds, so no look rasters a board nobody sees. PAUSE's views sit over the board and never cover it. */
@@ -255,8 +256,8 @@ export function recPagesOf(canvas, kind, screen, rows) {
   const { cw, ch, lg, css } = dims(canvas, kind);
   return menudraw.recPages(menudraw.layout(cw, ch, lg, css), touchLay(canvas), REC_PAGE[screen], rows);
 }
-/* ro: the renderer's options main built this frame; ro.over = the renderer drew no PAUSE / run-end overlay (a portrait phone, shellMode 3), so
-   it is drawn here, on #sh's over box (canvas.over) or, where the phone has no shell box, on #c's (the board's own box, as the renderer would) */
+/* ro: the renderer's options main built this frame; ro.over = the renderer drew no PAUSE / run-end overlay (shellMode 3 or 2), so it is drawn
+   here: on #sh's over box (canvas.over, a portrait phone) or on #c's own box (the stage on #sh, or #c itself with no #sh, as the renderer would) */
 export function drawShell(c, app, world, canvas, kind, getScores, getPlaques, getCab, ro) {
   const s = app.screen;
   stepLookNote(app);
@@ -282,7 +283,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab, r
   if (s === SCREEN.GAME) {
     if (ro && ro.over && world.state !== "PLAY") { // the overlay the renderer left to the shell: the over box's own css for the page and its taps
       const B = overlayBox(kind, canvas), ob = canvas && canvas.over ? canvas : null, pu = ro.pause || {};
-      drawOverlay(c, world, B.w, B.h, B.cx, B.cy, ob ? { ...pu, css: ob.css } : pu, ro.time, overRun(ro.run, ob), ro.toast, B);
+      drawOverlay(c, world, B.w, B.h, B.cx, B.cy, ob ? { ...pu, css: ob.css } : pu, ro.time, overRun(ro.run, ob), ro.toast, ob ? B : undefined);
     }
     /* All shell chrome routing stays in the one module whose job it is. The
        paused SETTINGS / GRAPHICS pages measure against overlayBox — the SAME

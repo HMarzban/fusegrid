@@ -60,10 +60,16 @@
    (MENU's touch floors) reads the same number for paint and tap and never
    measures a rect per frame: stageCss, the CONTENT box's scale (the stage
    minus #c's border, the tighter axis), so a 44 CSS px target measures 44
-   inside the border, never 43.77 (R1 landscape). on 2 (a run end) shows it click-through and hands back null, so the
-   end overlay keeps #c and its taps; nothing draws there, so it is cleared
-   once on entry (and again after a new backing, shM / shNew), and fit.box()
-   is null while it lasts. Off (or no shell box) hides #sh and returns null.
+   inside the border, never 43.77 (R1 landscape). on 2 (the stage, Task 9.12:
+   PAUSE, its views and every WIN / LOSE off p, and p with no over box) lays
+   #sh exactly on #c's content box at device density (pxBox / snapOff, the
+   #px rule: whole device px, origin on a whole 1/64 CSS px), on every layout
+   whether it has a shell box or not, click-through so taps stay #c's, clears
+   it every frame and hands back {ctx, box: #c} under a #c-units -> device px
+   transform: #c's 600 x 520 backing is upscaled ~2.3x by CSS, so an overlay
+   drawn there was soft beside PIXEL's #px and REAL 3D's #gl. fit.box() is
+   null while it lasts; a page or the over box puts the shell box back.
+   Off (or no shell box) hides #sh and returns null.
    HUD reserves (UI upgrade Task 8.1, round 5 09-hud; CSS px, never board units, so the HUD's type floors hold at any stage
    scale). d: the chip plate above the board (HUD_RES.d.top: 9 air + the plate's 10 px ring + its 74 px box + ring + its 3 px
    drop) and the power-ups bar below (bot: 8 gap + 42 bar + 7 air), so FIT_RES.d's height is exactly top + bot and the board
@@ -231,7 +237,7 @@ function snapPxOrigin(el) {
 }
 
 export function mountFit(canvas) {
-  let was, cap = Infinity, shG = null, shO = null, shM = 0, shNew = false, hG = null, hQ = 1, hGen = 0, hudOn = false, hBW = 1, hBH = 1;
+  let was, cap = Infinity, shG = null, shO = null, shM = 0, shLay = "d", stG = null, hG = null, hQ = 1, hGen = 0, hudOn = false, hBW = 1, hBH = 1;
   const shEl = () => (typeof document !== "undefined" && document.getElementById && document.getElementById("sh")) || null;
   const hudEl = () => (typeof document !== "undefined" && document.getElementById && document.getElementById("hud")) || null;
   const fit = () => {
@@ -255,12 +261,8 @@ export function mountFit(canvas) {
       body.setAttribute("data-lay", lay);
       const sh = shEl();
       shG = sh ? shellGeo(window.innerWidth, window.innerHeight, canvas.width, canvas.height, lay) : null;
-      if (shG) {
-        const q = Math.min(lay === "p" ? 3 : WIN_SHELL.dpr, shG.s * ((typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1)), bw = Math.round(shG.w * q), bh = Math.round(shG.h * q);
-        if (sh.width !== bw) { sh.width = bw; shNew = true; }
-        if (sh.height !== bh) { sh.height = bh; shNew = true; }
-        for (const [k, v] of [["left", shG.left], ["top", shG.top], ["width", shG.w * shG.s], ["height", shG.h * shG.s]]) sh.style[k] = v + "px";
-      } else if (sh && !sh.hidden) sh.hidden = true;
+      stG = null; shLay = lay;
+      if (shM !== 2) { if (shG) shPlace(sh, lay); else if (sh && !sh.hidden) sh.hidden = true; } // the stage re-lays itself next frame, over #c where this fit put it
       shO = shG ? overGeo(window.innerWidth, window.innerHeight, lay, shG.s, safeBot(body)) : null;
       const hud = hudEl();
       hG = hudGeo(window.innerWidth, window.innerHeight, canvas.width, canvas.height, lay, game);
@@ -286,6 +288,22 @@ export function mountFit(canvas) {
     }
     if (px && px.style) fitPx(px, canvas.width * s, canvas.height * s, cap);
   };
+  const put = (el, bw, bh, st) => {
+    if (el.width !== bw) el.width = bw;
+    if (el.height !== bh) el.height = bh;
+    for (const k in st) if (el.style[k] !== st[k] + "px") el.style[k] = st[k] + "px";
+  };
+  const shPlace = (sh, lay) => {
+    const q = Math.min(lay === "p" ? 3 : WIN_SHELL.dpr, shG.s * ((typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1));
+    put(sh, Math.round(shG.w * q), Math.round(shG.h * q), { left: shG.left, top: shG.top, width: shG.w * shG.s, height: shG.h * shG.s });
+  };
+  const stagePlace = (sh) => {
+    if (!stG) {
+      const dpr = (typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1, [bx, by] = bdr(canvas), r = canvas.getBoundingClientRect(), B = pxBox(r.width, r.height, dpr, bx, by), x = r.left + bx, y = r.top + by;
+      stG = { bw: B.bw, bh: B.bh, st: { left: x + snapOff(x, dpr), top: y + snapOff(y, dpr), width: B.w, height: B.h } };
+    }
+    put(sh, stG.bw, stG.bh, stG.st);
+  };
   fit.sh = shEl();
   fit.box = () => { const sh = shG && shEl(); return sh && !sh.hidden && shM !== 2 && shM !== 3 ? { width: shG.w, height: shG.h, logo: shG.logo, css: shG.s, play: shG.play, ownerDocument: sh.ownerDocument, getBoundingClientRect: () => sh.getBoundingClientRect() } : null; };
   /* the over box (Task 9.8): on p, PAUSE and the run ends draw on #sh in the space under the HUD plate (shO, box units), so the box's own
@@ -297,21 +315,35 @@ export function mountFit(canvas) {
       getBoundingClientRect: () => { const r = sh.getBoundingClientRect(), k = r.height / shG.h; return { left: r.left, top: r.top + shO.top * k, width: r.width, height: shO.h * k }; } };
   };
   fit.shell = (on) => {
-    const sh = shG && shEl();
-    if (!sh || (on === 3 && !shO)) { if (sh && !sh.hidden) sh.hidden = true; shM = 0; return null; }
-    if (!on) { if (!sh.hidden) sh.hidden = true; shM = 0; return null; }
+    if (on === 2 || (on === 3 && !shO)) {
+      const el = shEl();
+      if (!el || typeof canvas.getBoundingClientRect !== "function") { if (el && !el.hidden) el.hidden = true; shM = 0; return null; }
+      if (shM !== 2) stG = null;
+      stagePlace(el);
+      if (el.hidden) el.hidden = false;
+      if (el.style.pointerEvents !== "none") el.style.pointerEvents = "none";
+      shM = 2;
+      const ctx = el.getContext("2d");
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, el.width, el.height);
+      ctx.setTransform(el.width / canvas.width, 0, 0, el.height / canvas.height, 0, 0);
+      ctx.imageSmoothingEnabled = true; // as #c's: the pages' cached layers blit near 1:1 at a fractional offset
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; // one context for the stage and the pages: no state carries over
+      return { ctx, box: canvas, el };
+    }
+    const sh = shEl();
+    if (!sh || !shG || !on) { if (sh && !sh.hidden) sh.hidden = true; shM = 0; return null; }
+    if (shM === 2) shPlace(sh, shLay);
     if (sh.hidden) sh.hidden = false;
-    const end = on === 2, pe = end ? "none" : "", kept = end && shM === 2 && !shNew;
-    if (sh.style.pointerEvents !== pe) sh.style.pointerEvents = pe;
-    shM = end ? 2 : on === 3 ? 3 : 1;
-    shNew = false;
-    if (kept) return null;
+    if (sh.style.pointerEvents !== "") sh.style.pointerEvents = "";
+    shM = on === 3 ? 3 : 1;
     const ctx = sh.getContext("2d"), ky = sh.height / shG.h;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, sh.width, sh.height);
     ctx.setTransform(sh.width / shG.w, 0, 0, ky, 0, shM === 3 ? shO.top * ky : 0);
     ctx.imageSmoothingEnabled = false;
-    return end ? null : { ctx, box: shM === 3 ? fit.over() : fit.box(), el: sh };
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+    return { ctx, box: shM === 3 ? fit.over() : fit.box(), el: sh };
   };
   /* the HUD canvas: on shows it and hands back {ctx (CSS px transform), geo (hudGeo), w, h}; off (or no #hud, or no slots: p
      off GAME) hides it. Never clears: the HUD painter clears what it repaints, and only on a change. */

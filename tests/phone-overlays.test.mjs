@@ -109,11 +109,11 @@ const { createControlsPage } = await import("../src/app/controlspage.js");
 const { DEF_CONTROLS } = await import("../src/app/controls.js");
 const probe = await import("../src/render/kit/probe.js");
 
-/* ---- shellMode: on p, PAUSE and every WIN / LOSE draw on #sh (3); d and l keep 0 / 2 ---- */
+/* ---- shellMode: on p, PAUSE and every WIN / LOSE draw on #sh (3); d and l draw them on the stage (2, Task 9.12) ---- */
 {
   const W = (state, level = 1, o = {}) => ({ state, level, ...o });
   check("p: PAUSE, a mid-run WIN (LEVEL CLEAR), a finale WIN and LOSE -> 3; PLAY -> 0", ["PAUSE", "LOSE"].every((s) => shellMode(SCREEN.GAME, W(s), "p") === 3) && shellMode(SCREEN.GAME, W("WIN", 1), "p") === 3 && shellMode(SCREEN.GAME, W("WIN", 5), "p") === 3 && shellMode(SCREEN.GAME, W("PLAY"), "p") === 0);
-  check("d / l (and no lay): PAUSE 0, a mid-run WIN 0, a run end 2, as before", ["d", "l", undefined].every((l) => shellMode(SCREEN.GAME, W("PAUSE"), l) === 0 && shellMode(SCREEN.GAME, W("WIN", 1), l) === 0 && shellMode(SCREEN.GAME, W("LOSE"), l) === 2 && shellMode(SCREEN.GAME, W("WIN", 5), l) === 2));
+  check("d / l (and no lay): PAUSE 2, a mid-run WIN 2, a run end 2 (the stage over #c, Task 9.12); PLAY 0", ["d", "l", undefined].every((l) => shellMode(SCREEN.GAME, W("PAUSE"), l) === 2 && shellMode(SCREEN.GAME, W("WIN", 1), l) === 2 && shellMode(SCREEN.GAME, W("LOSE"), l) === 2 && shellMode(SCREEN.GAME, W("WIN", 5), l) === 2 && shellMode(SCREEN.GAME, W("PLAY"), l) === 0));
   check("p: the shell pages are still 1", shellMode(SCREEN.MENU, W("PAUSE"), "p") === 1);
 }
 
@@ -135,7 +135,7 @@ for (const [W, H] of PHONES) {
 }
 {
   const D = mkDom(400, 440, true, 3);
-  try { const fit = mountFit(mkCv()); check("p with no shell box (400x440): fit.shell(3) is null, #sh hidden (the overlay stays on #c)", fit.shell(3) === null && D.sh.hidden && fit.over() === null); } finally { undo(); }
+  try { const cv = mkCv(), fit = mountFit(cv), s3 = fit.shell(3); check("p with no shell box (400x440): fit.shell(3) is the stage (Task 9.12): #sh over #c, click-through, #c's own box, no over box", !!s3 && s3.box === cv && !D.sh.hidden && D.sh.style.pointerEvents === "none" && fit.over() === null); } finally { undo(); }
 }
 
 /* ---- the over box's pages: PAUSE one list page, GAME OVER and LEVEL CLEAR unpaged at text 1, every key holding its label, at 1 and 1.25 ---- */

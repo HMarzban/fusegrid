@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — Task 9.12: sharp PAUSE and run ends in every look (lane-9.12-sharp-ends)
+- Owner "why that menu (second pic) is blury?": `#c` is a 600 x 520 backing CSS-upscaled ~2.3x, so every overlay on it was soft (glaring beside PIXEL / 3D boards). Off p, PAUSE and every WIN / LOSE now draw on the STAGE: `#sh` laid on `#c`'s content box at device px, click-through, in `#c`'s units (fit.shell(2), shellMode 2); renderers' `over()` keeps run-end particles over the plate.
+
 ## 2026-11-12 — Task 9.11: the title centred on the board (lane-9.11-title-centre)
 - Owner: "the fuse grid must be in center of board not in top". `titleLogoBox` is a box centred on H / 2 with the prompt hanging 10 under the plate (`py`; contact sheet pick over prompt-at-foot); stacked cap 119.34 -> 103.69. index.html GL / GS re-pinned (+ the plate's foot), the stall / failure card lifts to fit the window (landscape phone: over the plate's foot).
 

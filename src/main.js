@@ -656,14 +656,14 @@ export function createGame(canvas, opts = {}) {
       const { cw, ch } = dims(canvas, curKind);
       camTransform(c, cw, ch, cam);
     }
-    const sm = shellMode(app.screen, world, layNow()); // 3: a portrait phone's PAUSE / run end, drawn by the shell on #sh's over box, never by the renderer
+    const sm = shellMode(app.screen, world, layNow()); // 3 / 2: PAUSE and a run end, drawn by the shell on #sh (a phone's over box / the stage over #c), never by the renderer
     let ro = attract
       ? { hud: false, amb: true }
       : app.screen === SCREEN.INTRO
         ? { intro: curKind === "3d" ? { stage: app.introStage, t: app.subT, pressT: app.pressT } : null, pop: app.introStage === 1 ? popOf(app.subT) : 0, hud: false }
         : app.screen === SCREEN.GAME
           ? {
-              hud: true, over: sm === 3, // S4 overlay HUD chips; over: the overlay is the shell's (shellview drawShell)
+              hud: true, over: sm >= 2, // S4 overlay HUD chips; over: the overlay is the shell's (shellview drawShell)
               // ghost coach: GAME screen (not ATTRACT, whose demo world is
               // state PLAY too) AND world.state==="PLAY" (not PAUSE/WIN/LOSE).
               // Fade alpha (not a bool) computed here from COACH_DUR so
@@ -687,6 +687,7 @@ export function createGame(canvas, opts = {}) {
     const sh = fit && fit.shell(sm); // MENU + plated pages on #sh's own box; a run end shows it click-through; a phone's PAUSE / run end on its over box (shellview shellMode)
     shBox = sh && !sh.box.over ? sh.box : null;
     drawShell(sh ? sh.ctx : c, app, world, sh ? sh.box : canvas, curKind, getScoresForHeat, getPlaquesFn, getCab, ro);
+    if (ro.over && renderer.over) renderer.over(sm === 2 && sh ? sh.ctx : c, world); // a run end's particles over its plate (on p, on #c under the veil)
     if (swapped || world.grid !== gPrev) { swapped = false; gPrev = world.grid; last = null; } // G5: a look swap, run start or room start drops this long frame from the next dt
   }
 

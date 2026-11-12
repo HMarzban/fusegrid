@@ -1,6 +1,6 @@
 // Full-window menu canvas (UI upgrade v202 Task 1.0, owner pick "Full window"): MENU and every
-// plated page draw on #sh on every layout that has a shell box (fit.js shellGeo), a run end
-// shows #sh click-through and drawing nothing, PLAY and PAUSE hide it. The cases drive the real
+// plated page draw on #sh on every layout that has a shell box (fit.js shellGeo), PAUSE and a run
+// end draw on #sh laid over #c, click-through (the stage, Task 9.12), PLAY hides it. The cases drive the real
 // seams together: shellGeo, mountFit's fit.shell / fit.box, shellview's shellMode and drawShell,
 // mountPointer with the real hit functions, and createGame's frame wiring.
 import { readFileSync } from "node:fs";
@@ -163,39 +163,37 @@ for (const [W, H, lay] of [[852, 393, "l"], [667, 375, "l"], [393, 852, "p"], [1
   } finally { undo(); delete globalThis.getComputedStyle; }
 }
 
-// ---- fit.shell modes: 1 draws, 2 (a run end) shows it click-through and hands back nothing, 0 hides ----
+// ---- fit.shell modes: 1 draws, 2 (the stage, Task 9.12: PAUSE and the run ends off p) draws over #c click-through in #c's units, 0 hides ----
 {
   const D = mkDom(1366, 768, false, 1);
   try {
-    const fit = mountFit(mkCv());
+    const cv = mkCv(), fit = mountFit(cv);
     D.log.length = 0;
     const e = fit.shell(2);
-    check("run end: #sh shown and cleared, click-through, nothing to draw on (null), so drawShell stays on #c",
-      e === null && !D.sh.hidden && D.sh.style.pointerEvents === "none" && D.log.some((x) => x[0] === "clearRect"));
+    check("stage: #sh shown and cleared, click-through, drawn on in #c's own box (box = #c, 600 x 520 at 1 device px per unit at dpr 1)",
+      !!e && e.ctx === D.ctx && e.box === cv && !D.sh.hidden && D.sh.style.pointerEvents === "none" && D.log.some((x) => x[0] === "clearRect") && D.sh.width === 600 && D.sh.height === 520 && J(D.log[D.log.length - 1]) === J(["setTransform", 1, 0, 0, 1, 0, 0]));
     const d = fit.shell(1);
-    check("run end -> a page: pointers back on #sh", !!d && D.sh.style.pointerEvents === "");
+    check("stage -> a page: pointers back on #sh, the window box again", !!d && D.sh.style.pointerEvents === "" && D.sh.width === 1366 && D.sh.style.width === "1366px");
     fit.shell(2); fit.shell(0);
-    check("run end -> hidden: #sh hidden", D.sh.hidden && fit.shell(0) === null);
+    check("stage -> hidden: #sh hidden", D.sh.hidden && fit.shell(0) === null);
     fit.shell(1);
-    check("hidden after a run end -> a page: pointers back", !D.sh.hidden && D.sh.style.pointerEvents === "");
+    check("hidden after the stage -> a page: pointers back", !D.sh.hidden && D.sh.style.pointerEvents === "");
     check("fit.shell(true) still draws, fit.shell(false) still hides", !!fit.shell(true) && D.sh.style.pointerEvents === "" && fit.shell(false) === null && D.sh.hidden);
     const clears = () => D.log.filter((x) => x[0] === "clearRect").length;
     fit.shell(1);
     check("fit.box(): the box while a page draws", !!fit.box() && fit.box().width === 1366);
     D.log.length = 0; fit.shell(2);
-    check("fit.box(): null at a run end (#sh shown but drawn on by nothing, click-through)", fit.box() === null && !D.sh.hidden);
+    check("fit.box(): null on the stage (#sh shown, its box is #c's, click-through)", fit.box() === null && !D.sh.hidden);
     const c0 = clears(); fit.shell(2); fit.shell(2);
-    check("run end: cleared once on entry; the next run-end frames clear nothing", c0 === 1 && clears() === 1, c0 + "/" + clears());
-    D.win.innerWidth = 1280; D.hs.resize.forEach((f) => f()); fit.shell(2);
-    check("run end: a new backing (a resize) clears it again, once", clears() === 2 && D.sh.width === 1280 && fit.box() === null, clears());
-    fit.shell(2);
-    check("run end: and then no more", clears() === 2);
+    check("stage: cleared on entry and on every frame after (the overlay paints live every frame, as it did on #c)", c0 === 1 && clears() === 3, c0 + "/" + clears());
+    D.win.innerWidth = 1280; D.hs.resize.forEach((f) => f()); const r = fit.shell(2);
+    check("stage: a resize re-lays it over #c (still #c's box, still 600 x 520 at dpr 1), not the window box", clears() === 4 && D.sh.width === 600 && r.box === cv && fit.box() === null, clears());
     fit.shell(0);
     check("fit.box(): null when hidden", fit.box() === null);
     fit.shell(2);
-    check("hidden -> run end clears on entry again", clears() === 3);
+    check("hidden -> the stage clears on entry again", clears() === 5);
     const n = clears(); fit.shell(1); fit.shell(1);
-    check("a page clears every frame (it redraws every frame) and has its box back", clears() === n + 2 && !!fit.box());
+    check("a page clears every frame (it redraws every frame) and has its box back", clears() === n + 2 && !!fit.box() && D.sh.width === 1280);
   } finally { undo(); }
 }
 
@@ -230,8 +228,8 @@ for (const [W, H, lay] of [[852, 393, "l"], [667, 375, "l"], [393, 852, "p"], [1
   check("every shell page draws on #sh (1)", SHELL_SCREENS.every((s) => shellMode(SCREEN[s], W("PLAY")) === 1 && isShellScreen(SCREEN[s])));
   check("BOOT, INTRO and ATTRACT: hidden (0)", [SCREEN.BOOT, SCREEN.INTRO, SCREEN.ATTRACT].every((s) => shellMode(s, W("PLAY")) === 0));
   check("GAME PLAY: hidden", shellMode(SCREEN.GAME, W("PLAY")) === 0);
-  check("GAME PAUSE: hidden, PAUSE stays on #c (each pause view is driven for real in the createGame case below)", shellMode(SCREEN.GAME, W("PAUSE")) === 0 && !isShellScreen(SCREEN.GAME));
-  check("a mid-run WIN (room 1): hidden", shellMode(SCREEN.GAME, W("WIN", 1)) === 0);
+  check("GAME PAUSE: 2, the stage on #sh over #c (Task 9.12; each pause view is driven for real in the createGame case below)", shellMode(SCREEN.GAME, W("PAUSE")) === 2 && !isShellScreen(SCREEN.GAME));
+  check("a mid-run WIN (room 1): 2, the stage", shellMode(SCREEN.GAME, W("WIN", 1)) === 2);
   check("a run end: LOSE, a finale WIN (room 5, room 8, world.finale) -> 2", shellMode(SCREEN.GAME, W("LOSE", 3)) === 2 && shellMode(SCREEN.GAME, W("WIN", 5)) === 2 && shellMode(SCREEN.GAME, W("WIN", 8)) === 2 && shellMode(SCREEN.GAME, W("WIN", 2, { finale: true })) === 2);
   check("no world outside GAME never throws", shellMode(SCREEN.MENU, null) === 1 && shellMode(SCREEN.INTRO, undefined) === 0);
 }
@@ -428,17 +426,18 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     g.app.confirm(); frame();
     check("GAME PLAY: #sh hidden", g.app.screen === SCREEN.GAME && g.world.state === "PLAY" && D.sh.hidden);
     g.input.onPause(); frame();
-    check("PAUSE: #sh hidden, the PAUSE list still on #c", g.world.state === "PAUSE" && D.sh.hidden && cText.includes("RESUME"), J(cText.slice(0, 12)));
+    check("PAUSE: #sh shown click-through (the stage, Task 9.12), the PAUSE list on #sh, none of it on #c", g.world.state === "PAUSE" && !D.sh.hidden && D.sh.style.pointerEvents === "none" && shText.includes("RESUME") && !cText.includes("RESUME"), J([shText.slice(0, 12), cText.slice(0, 12)]));
     for (const [v, word] of [[1, "MUSIC"], [2, "FRAME RATE"], [3, "CONTROLS"]]) {
       g.app.pauseView = v; frame();
       // view 3: the CONTROLS page's own head (its lazy page module is not opened by a bare pauseView write; BOMB here was the old in-board HUD's word)
-      check(`PAUSE view ${v}: #sh hidden, the inline page on #c (${word})`, g.world.state === "PAUSE" && D.sh.hidden && cText.includes(word) && !shText.length, J(cText.slice(0, 8)));
+      check(`PAUSE view ${v}: #sh shown click-through, the inline page on #sh (${word}), none of it on #c`, g.world.state === "PAUSE" && !D.sh.hidden && D.sh.style.pointerEvents === "none" && shText.includes(word) && !cText.includes(word), J([shText.slice(0, 8), cText.slice(0, 8)]));
     }
     g.app.pauseView = 0; g.input.onPause(); frame();
+    check("PLAY again: #sh hidden", g.world.state === "PLAY" && D.sh.hidden);
     g.world.state = "WIN"; frame();
-    check("a mid-run WIN (room 1): #sh hidden", g.world.level === 1 && g.world.state === "WIN" && D.sh.hidden);
+    check("a mid-run WIN (room 1): #sh shown click-through, the LEVEL CLEAR page on #sh, none of it on #c", g.world.level === 1 && g.world.state === "WIN" && !D.sh.hidden && D.sh.style.pointerEvents === "none" && shText.length > 0 && !cText.some((q) => shText.includes(q)), J([shText.slice(0, 8), cText.slice(0, 8)]));
     g.world.state = "LOSE"; frame();
-    check("LOSE (a run end): #sh shown, click-through, nothing drawn on it; the end overlay on #c", !D.sh.hidden && D.sh.style.pointerEvents === "none" && shText.length === 0 && cText.length > 0, J([D.sh.hidden, D.sh.style.pointerEvents, shText.length]));
+    check("LOSE (a run end): #sh shown, click-through, the end overlay on #sh, none of it on #c", !D.sh.hidden && D.sh.style.pointerEvents === "none" && shText.length > 0 && !cText.some((q) => shText.includes(q)), J([D.sh.hidden, D.sh.style.pointerEvents, shText.length, cText.slice(0, 8)]));
     let hx = 0, hy = 0; // v202 Task 5.4: a tap on TRY AGAIN (found through the hit main taps with), in client px over #c's 720 x 624 CSS box
     for (let y = 0; y < 520 && !hx; y += 4) for (let x = 0; x < 600; x += 4) if (endHitAt(x, y, "2d", g.world, g.ro.run, g.ro.time) === "main") { hx = 383 + (x + 6) * 1.2; hy = 24 + (y + 6) * 1.2; break; }
     cv.fire("pointerdown", { clientX: hx, clientY: hy, button: 0, pointerType: "mouse", preventDefault() {} });

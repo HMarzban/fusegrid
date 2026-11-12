@@ -657,7 +657,7 @@ const chainW = (n, px, py, blades) => {
   const src = (f) => readFileSync(new URL(f, import.meta.url), "utf8");
   const reads = {
     "2d": ["../src/render/renderer.js", /onEvent\(world, world\.events\[i\], world\.time, "2d"\)/, /drawFx\(ctx\)/],
-    px: ["../src/render/pixel/renderer.js", /onEvent\(world, ev, world\.time\)/, /drawPartsOver\(V\.parts\)/],
+    px: ["../src/render/pixel/renderer.js", /onEvent\(world, ev, world\.time\)/, /drawPartsOver\(c, V\.parts\)/],
     "3d": ["../src/render/three/wrapper.js", /onEvent\(world, world\.events\[i\], world\.time\)/, /fxp\.update\(getFx\(\)\)/],
   };
   for (const look of ["2d", "px", "3d"]) {

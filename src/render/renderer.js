@@ -171,8 +171,7 @@ export function createRenderer(canvas, opts={}){
     }
     if(world.state!=="PLAY"){
       const B=overlayBox(kind==="3d"?"iso":"2d");
-      if(!(o&&o.over)) drawOverlay(ctx, world, B.w, B.h, B.cx, B.cy, o&&o.pause, o&&o.time, o&&o.run, o&&o.toast); // over: a phone's, drawn by the shell on #sh
-      if(world.state==="WIN"||world.state==="LOSE") drawFx(ctx);
+      if(!(o&&o.over)){ drawOverlay(ctx, world, B.w, B.h, B.cx, B.cy, o&&o.pause, o&&o.time, o&&o.run, o&&o.toast); over(ctx, world); } // over: drawn by the shell on #sh, then over()
     }
     /* the in-run overlay ({hud:true} during GAME), drawn after restore so it never shakes with the camera; the HUD chips and the
        power-ups bar are off the board on #hud (hud.js, UI upgrade Task 8.2) */
@@ -184,10 +183,13 @@ export function createRenderer(canvas, opts={}){
     if(o&&o.hud===true) drawCoach(ctx, (o&&o.coach)||0);
     if(o&&o.hud===true) drawCoach2(ctx, boardTip(o&&o.coach2), (o&&o.coach2&&o.coach2.s)||"");
   }
+  /* the run-end particles over the overlay: here after it, or on the canvas the shell drew it on (main, o.over) */
+  function over(c, world){ if(world.state==="WIN"||world.state==="LOSE") drawFx(c); }
   const surface={canvas, ctx, render, consumeEvents, getShake};
   Object.defineProperties(surface,{
     setPerf:{enumerable:false,value:(K)=>{ if(K){ armed=true; inv=true; } }},
     invalidate:{enumerable:false,value:(re)=>{ inv=true; if(re) pzT=null; }},
+    over:{enumerable:false,value:over},
     _dbg:{enumerable:false,value:{get armed(){return armed;},get rasters(){return rasters;},get blits(){return blits;},get snaps(){return snaps;},get snap(){return snap;}}}});
   return surface;
 }

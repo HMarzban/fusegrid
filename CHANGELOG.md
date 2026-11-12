@@ -47,6 +47,9 @@ The HUD leaves the board and joins the world.
 
 ### Fixed
 
+- **PAUSE, LEVEL CLEAR, the finale and GAME OVER are sharp in every art style.** They were drawn at the board's own small size and
+  stretched to fit, so their plates and words looked blurry, most of all beside the crisp PIXEL and REAL 3D boards; they are now drawn at
+  your screen's full resolution, as sharp as the menus.
 - **REAL 3D: the cabinet stays a straight rampart when you pull the camera back.** Its near corners no longer lean in,
   so at WIDE, FAR or a full zoom-out the board's frame is a plain box, not a bent, flared tray.
 

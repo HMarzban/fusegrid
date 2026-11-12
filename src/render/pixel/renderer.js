@@ -212,11 +212,11 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
 
   /* CLASSIC parity: WIN/LOSE confetti also lands OVER the veil, as whole
      art px (even logical px), no alpha. */
-  function drawPartsOver(ps) {
+  function drawPartsOver(c, ps) {
     for (let i = 0; i < ps.length; i++) {
       const p = ps[i], s = Math.max(1, Math.round((p.size || 2) / 2));
-      ovCtx.fillStyle = p.color;
-      ovCtx.fillRect(2 * (Math.round(p.x / 2) - (s >> 1)), 2 * (Math.round(p.y / 2) - (s >> 1)), 2 * s, 2 * s);
+      c.fillStyle = p.color;
+      c.fillRect(2 * (Math.round(p.x / 2) - (s >> 1)), 2 * (Math.round(p.y / 2) - (s >> 1)), 2 * s, 2 * s);
     }
   }
 
@@ -264,8 +264,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     }
     if (world.state !== "PLAY") {
       const B = overlayBox("2d");
-      if (!(o && o.over)) drawOverlay(ovCtx, world, B.w, B.h, B.cx, B.cy, o && o.pause, o && o.time, o && o.run, o && o.toast); // over: a phone's, drawn by the shell on #sh
-      if (world.state === "WIN" || world.state === "LOSE") drawPartsOver(V.parts);
+      if (!(o && o.over)) { drawOverlay(ovCtx, world, B.w, B.h, B.cx, B.cy, o && o.pause, o && o.time, o && o.run, o && o.toast); over(ovCtx, world); } // over: drawn by the shell on #sh, then over()
     }
     if (o && o.hud === true && world.state === "PLAY") drawFxOverlay(ovCtx);
     if (o && o.hud === true && world.state === "PLAY") drawPickupFx(ovCtx, {coach: o.coach2, ico: hudIco});
@@ -274,7 +273,8 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   }
 
   if (opts.perf) setPerf(opts.perf);
-  const surface = {canvas: pxCanvas, overlay: overlayCanvas, ctx: ovCtx, render, consumeEvents, getShake, reset, setPerf, invalidate, sleep, prepare, activate};
+  function over(c, world) { if (world.state === "WIN" || world.state === "LOSE") drawPartsOver(c, V.parts); } // the run-end particles over the overlay, wherever it was drawn
+  const surface = {canvas: pxCanvas, overlay: overlayCanvas, ctx: ovCtx, render, consumeEvents, getShake, reset, setPerf, invalidate, sleep, prepare, activate, over};
   Object.defineProperty(surface, "_dbg", {enumerable: false, value: {
     get atlas() { return ensure(); }, get view() { return V; }, get clock() { return clock; },
     get stat() { return stat; }, get bakeMs() { ensure(); return bakeMs; }, get built() { return !!atlas; }, get active() { return active; }, get native() { return native; }, get hi() { return hi; },
