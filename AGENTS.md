@@ -59,7 +59,7 @@ cream `eye` build; drawn NEAREST at ceil(u x dpr) device px an art px, then scal
 smoothed, R20; at true scale, u = cap / A: its envelope is taller and wider than
 CLASSIC's, so the look's `grow` widens the layer round it, the title inside its plate's
 bed, MENU by the box's width, its taller envelope standing into the plate header above
-and below `G.lbox`), imported by `pixel/renderer.js`: 8,858 B inside its 9 KB
+and below `G.lbox`), imported by `pixel/renderer.js`: 9,148 B inside its 9 KB
 sub-budget of the px tree (lead ruling; `tests/logo-looks.test.mjs` holds it at 9,216 B),
 written dense (no spaces round operators, `three/wrapper.js`'s style). REAL 3D
 is `src/render/logo/draw3d.js` (Canvas 2D only: no `vendor/` or `render/three`
