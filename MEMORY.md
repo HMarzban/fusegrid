@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — Status sync: owner checks open, full check noted, release draft
+- AGENTS v210 release-state line now names the open owner items (device checks, three vetoes, the push) and the full capture check after R4 (0 fails). Release note draft for GitHub v2.5.0 (v201 -> v210) in the git-ignored ledger folder; Task 9.14 (LEVEL SELECT lazy, v211) and share-card candidates in flight.
+
 ## 2026-11-12 — Docs sync for v210
 - architecture.md (build tag v210, pages centred with the room at play scale, PAUSE / run ends on #sh at device px or the phone column, the controller toast, CONTROLS lazy paint and its LOADING rule, the cache-name rule, the worker fill, held deep links, first load B, the straight REAL 3D rim), README (first load, centred title and menus, toast, v210) and a diary entry for the v207-v210 round. Docs only, no cache bump.
 
