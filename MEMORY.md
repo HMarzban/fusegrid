@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — v202 squashed locally: delivery and loading
+- Owner: "do the squash and rebase locally". `feature/delivery` (the delivery steps after the v201 controls squash) is one commit on local `main` with `CACHE_NAME` / `REV` v202, CHANGELOG and sitemap dated 2026-11-12; `feature/ui-upgrade` rebased onto it. Nothing pushed.
+
 ## 2026-11-07 — v201 is LIVE
 - Pages CI green (test + deploy) on `334ea8b`; live `sw.js` and `CACHE_NAME` read v201, the live page boots in headless Chrome with zero exceptions, the new `og.png` is served. GitHub release v2.4.0 (shell v200 → v201) cut the same day. Open: M1-M7 on real controllers, the owner's Social preview re-upload.
 

@@ -190,7 +190,18 @@
   /* until the title paints, the unsized #c would draw an empty framed box behind the plate */
   #load[data-boot]~#wrap{visibility:hidden}
   #load b{font:700 18px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.14em}
+  /* the chip (v202): a look's job after boot, only while its RENDER row is off screen and never in live PLAY.
+     One line, a 3 px bar along its bottom, no wordmark, no pointer, no keys. shellview hands the drawn stage's
+     top-centre (--chip-x/-y/-w): inside the stage, so never over the PAUSE pill or the touch pad. data-note: the
+     0.8 s READY at the swap, or a failure's 4 s pointer to OPTIONS › RENDER. A look's old failure card keeps its
+     docked form (data-act). */
   #load[data-dock]{top:calc(10px + env(safe-area-inset-top,0px));translate:-50% 0;padding:9px 14px 10px 18px;gap:7px;width:min(380px,calc(100vw - 32px))}
+  #load[data-dock]:not([data-act]){top:max(var(--chip-y,0px),calc(6px + env(safe-area-inset-top,0px)));left:var(--chip-x,50%);
+    flex-direction:row;align-items:center;gap:0;box-sizing:border-box;height:28px;width:auto;max-width:min(380px,var(--chip-w,calc(100vw - 32px)));padding:0 14px 3px 17px;overflow:hidden}
+  #load[data-dock]:not([data-act]) #loadmsg{font-size:11px;line-height:25px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #load[data-dock]:not([data-act]) #loadbar{position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:0}
+  #load[data-note=bad]{box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 #ff5d73}
+  #load[data-note=bad] #loadmsg{color:#ff5d73}
   #load[data-dock] b{display:none}
   #load[data-act]{pointer-events:auto}
   #loadmsg{font:400 12px/1.45 ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:#7385ad;letter-spacing:.04em}
@@ -206,31 +217,55 @@
   #loadact button{flex:1;height:44px;padding:0 10px;border:1px solid #37f0d0;border-radius:4px;background:rgba(55,240,208,.14);color:#37f0d0;
     font:700 13px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.1em;cursor:pointer}
   #loadact button:hover{background:rgba(55,240,208,.22)}
+  #loadact button:focus-visible{outline:2px solid #dfe7f5;outline-offset:2px}
   #loadkeep[hidden]{display:none}
-  @media (prefers-reduced-motion:reduce){#loadrun{animation:none;opacity:0}#loadfill{transition:none}}
+  /* reduced motion: no glint and no glide; a wait with no number keeps a still striped track, never an empty one */
+  @media (prefers-reduced-motion:reduce){#loadrun{animation:none;opacity:0}#loadfill{transition:none}#loadbar[data-ind]{background:repeating-linear-gradient(-45deg,#141a2b 0 4px,#2a3550 4px 8px)}}
   .muted{opacity:.45}
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 </style>
 </head>
 <body>
 <div id="load" hidden data-boot><b>FUSE/GRID</b><div id="loadbar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" data-ind><div id="loadfill"></div><div id="loadrun"></div></div><span id="loadmsg">LOADING</span><div id="loadact" hidden><button id="loadretry" type="button">RETRY</button><button id="loadkeep" type="button" hidden>USE CLASSIC 2D</button></div></div>
+<div id="loadsay" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 <!-- The one loader. It runs before any module, so it is plain inline JS, and the
      first-load job counts finished files against data-files, which
      tests/loadbar.test.mjs pins to the real static graph of the entry below.
      Resource Timing only reports a file when it ends, so the count is true but
-     stepped; no entries (an unsupported browser) means no number, only LOADING. -->
-<script id="loadjs" data-files="114">
+     stepped; no entries (an unsupported browser) means no number, only LOADING.
+     #loadsay (outside #load, which hides) speaks stages only, never counts; a failure
+     card speaks through #loadmsg's alert. Enter answers a failure card with RETRY,
+     Escape with the other button, the keyboard twin of a pad's SOUTH and EAST. -->
+<script id="loadjs" data-files="101">
 (function(w,d){
   var $=function(i){return d.getElementById(i)},E=$("load"),bar=$("loadbar"),fill=$("loadfill"),msg=$("loadmsg"),act=$("loadact"),retry=$("loadretry"),keep=$("loadkeep");
-  var STALL=30000,jobs={},cur=null,failed=null,drop=null,again=null,shown=null,words=false,iv=0,base=new URL("./",d.baseURI).href;
+  var SLOW=10000,STALL=30000,say0=$("loadsay"),jobs={},cur=null,failed=null,drop=null,again=null,shown=null,words=false,iv=0,base=new URL("./",d.baseURI).href;
+  /* sp: where the game says the chip may show (shellview loaderSpot); cn: the chip's READY / DID NOT LOAD line */
+  var sp={row:false,off:false,x:null,y:null,w:null},cn=null;
+  var later=function(f,ms){if(w.setTimeout)w.setTimeout(f,ms)};
+  var css=function(k,v){var s=E.style;if(!s||!s.setProperty)return;if(v==null)s.removeProperty(k);else s.setProperty(k,Math.round(v)+"px")};
   var now=function(){return w.performance?performance.now():0};
+  /* a repeat gets a trailing no-break space, or a reader stays silent */
+  var say=function(s){if(say0)say0.textContent=say0.textContent===s?s+"\u00a0":s};
   var bootFiles=+$("loadjs").getAttribute("data-files");
-  jobs.boot={k:"boot",label:"",files:bootFiles,total:bootFiles,weigh:function(u){return u.indexOf(base+"src/")===0&&/\.js(\?|$)/.test(u)?1:0},seen:{},n:0,w:0,f:0,ph:0,t:0,last:now(),dock:false};
+  jobs.boot={k:"boot",label:"",files:bootFiles,total:bootFiles,weigh:function(u){return u.indexOf(base+"src/")===0&&/\.js(\?|$)/.test(u)?1:0},seen:{},n:0,w:0,f:0,fb:1,ph:0,t:0,last:now(),dock:false};
+  /* a look job's counted phases after its files (rcache hands app.lookJob): the RENDER row's own words (menudraw lookVal) */
+  var PH={bake:"ART",build:"BUILDING",shaders:"SHADERS"};
   function view(){return failed?jobs[failed]:(cur&&jobs[cur])||jobs.boot||null}
+  function chipNote(){
+    if(cn&&now()>=cn.until)cn=null;
+    if(!cn||sp.row||sp.off)return false;
+    E.hidden=false;E.setAttribute("data-dock","");E.setAttribute("data-note",cn.bad?"bad":"ok");E.removeAttribute("data-act");act.hidden=true;
+    msg.removeAttribute("role");msg.textContent=cn.t;bar.hidden=cn.bad;bar.removeAttribute("data-ind");
+    fill.style.transition="none";fill.style.transform="scaleX(1)";shown=null;return true
+  }
   function paint(){
     var j=view();
     if(!jobs.boot)E.removeAttribute("data-boot");
-    if(!j){E.hidden=true;shown=null;msg.removeAttribute("role");return}
+    E.removeAttribute("data-note");
+    if(!j){if(chipNote())return;E.hidden=true;shown=null;msg.removeAttribute("role");return}
+    /* a docked look job is the chip: down while its RENDER row says it, and in live PLAY */
+    if(j.dock&&!failed&&(sp.row||sp.off)){E.hidden=true;shown=null;return}
     if(j!==shown){fill.style.transition="none";fill.style.transform="scaleX("+j.f+")";fill.getBoundingClientRect();fill.style.transition="";shown=j}
     E.hidden=false;
     if(j.dock)E.setAttribute("data-dock","");else E.removeAttribute("data-dock");
@@ -241,8 +276,8 @@
     }
     bar.hidden=false;msg.removeAttribute("role");
     var ind=j.ind||(!j.ph&&!j.n),all=j.n>=j.files,c=Math.min(j.n,j.files)+" / "+j.files+" FILES";
-    var t=j.k==="boot"?(ind?"LOADING":all?"STARTING":"LOADING · "+c):j.ph?"PREPARING "+j.label:ind?"LOADING "+j.label:j.label+" · "+c;
-    if(j.stall)t+=" · SLOW CONNECTION, STILL TRYING";
+    var t=j.k==="boot"?(ind?"LOADING":all?"STARTING":"LOADING · "+c):j.ph?(j.st?j.label+" · "+j.st:"PREPARING "+j.label):ind?"LOADING "+j.label:j.label+" · "+c;
+    if(j.slow)t+=" · SLOW CONNECTION, STILL TRYING";
     msg.textContent=t;
     /* only a stalled FIRST load offers RETRY: reloading under a look's bar could end a run */
     var ask=j.stall&&j.k==="boot";
@@ -254,14 +289,17 @@
   function note(j,name,st){
     var u=j.weigh(name);
     if(!u||j.ph||j.seen[name]||st<j.t)return;
-    j.seen[name]=1;j.n++;j.w+=u;j.last=now();j.stall=false;
-    j.f=Math.max(j.f,Math.min(j.w,j.total)/(j.total+1));
+    j.seen[name]=1;j.n++;j.w+=u;j.last=now();j.slow=j.stall=false;
+    j.f=Math.max(j.f,j.fb*Math.min(j.w,j.total)/(j.total+1));
   }
   function watch(){
     if(iv)return;
     iv=setInterval(function(){
       var live=false,ch=false;
-      for(var k in jobs){live=true;var j=jobs[k];if(!j.ph&&!j.stall&&k!==failed&&!d.hidden&&now()-j.last>STALL){j.stall=true;ch=true}}
+      /* 10 s with no new file: the note; 30 s: a first load also offers RETRY */
+      for(var k in jobs){live=true;var j=jobs[k],q=now()-j.last;if(j.ph||k===failed||d.hidden)continue;
+        if(!j.slow&&q>SLOW){j.slow=ch=true;if(j===view())say("Slow connection, still trying.")}
+        if(!j.stall&&q>STALL){j.stall=ch=true}}
       if(ch)paint();
       if(!live){clearInterval(iv);iv=0}
     },1000);
@@ -275,12 +313,42 @@
   var L=w.__load={
     begin:function(k,plan,ready){
       if(failed===k){failed=null;drop=null;again=null}
-      jobs[k]={k:k,label:plan.label,files:plan.files,total:plan.total,weigh:plan.weigh,seen:{},n:0,w:0,f:0,ph:ready?1:0,ind:!!ready,t:now(),last:now(),dock:!jobs.boot};
-      cur=k;watch();paint();
+      /* plan.fb: the files' share of the look's bar (jobs.js BANDS), so the counted phases after them still move it; plan.ind: files began before this job (a quiet warm), no count */
+      jobs[k]={k:k,label:plan.label,files:plan.files,total:plan.total,weigh:plan.weigh,seen:{},n:0,w:0,f:0,fb:plan.fb>0&&plan.fb<1?plan.fb:1,ph:ready?1:0,ind:!!ready||!!plan.ind,t:now(),last:now(),dock:!jobs.boot&&!plan.plate};
+      cur=k;watch();paint();say((ready?"Preparing ":"Loading ")+plan.label+".");
     },
-    phase:function(k){var j=jobs[k];if(j&&!j.ph){j.ph=1;j.stall=false;j.f=Math.max(j.f,j.total/(j.total+1));paint()}},
+    phase:function(k){var j=jobs[k];if(j&&!j.ph){j.ph=1;j.slow=j.stall=false;j.f=Math.max(j.f,j.fb<1?j.fb:j.total/(j.total+1));paint();if(cur===k)say("Preparing "+j.label+".")}},
+    /* s = app.lookJob: ART 140 / 255, BUILDING 3 / 5, SHADERS 18 / 31, else PREPARING (RESTORING for a lost context); the fill is its band fill, never back. A count never reaches the live status; a repeat repaints nothing */
+    progress:function(k,s){
+      var j=jobs[k];if(!j||!s||s.state!=="preparing")return;
+      var c=s.total>0?Math.min(s.done|0,s.total)+" / "+s.total:"",W=PH[s.phase],t=s.restore?"RESTORING":W&&c?W+" "+c:"PREPARING",n=typeof s.fill==="number",f=n?Math.max(j.f,Math.min(1,Math.max(0,s.fill))):j.f,ind=n?false:j.ind;
+      if(j.ph&&t===j.st&&f===j.f&&ind===j.ind)return;
+      var was=j.ph,rs=s.restore&&j.st!=="RESTORING";j.ph=1;j.st=t;j.f=f;j.ind=ind;j.slow=j.stall=false;j.last=now();paint();
+      if(cur===k&&rs)say("Restoring "+j.label+".");else if(cur===k&&!was)say("Preparing "+j.label+".")
+    },
     focus:function(k){cur=k;if(failed&&failed!==k&&failed!=="boot"){delete jobs[failed];failed=null;drop=null;again=null}paint()},
-    end:function(k){if(failed===k)return;delete jobs[k];paint()},
+    /* ready only after phase(): the files are in (a failed fetch never reaches it), and only for the look on screen */
+    end:function(k){
+      if(failed===k)return;var j=jobs[k],chip=!!j&&j.dock&&j.ph&&shown===j&&!E.hidden;delete jobs[k];
+      if(chip&&cur===k){cn={t:j.label+" · READY",bad:false,until:now()+800};later(paint,820)}
+      paint();if(j&&k!=="boot"&&j.ph&&cur===k)say(j.label+" ready.")
+    },
+    /* a look that did not load while another keeps drawing: no card. The RENDER row says it in place; off it the
+       chip points there for 4 s. kept = the label of the look still on screen. */
+    miss:function(k,kept){
+      var j=jobs[k];if(!j||k==="boot")return;delete jobs[k];
+      if(failed===k){failed=null;drop=null;again=null;act.hidden=true;E.removeAttribute("data-act")}
+      cn={t:j.label+" DID NOT LOAD · OPTIONS › RENDER",bad:true,until:now()+4000};later(paint,4020);
+      paint();say(j.label+" did not load."+(kept?" "+kept+" stays.":""))
+    },
+    /* the game's frame hands where the chip may show (shellview loaderSpot); repaints only on a change */
+    spot:function(o){
+      o=o||{};var r=!!o.row,f=!!o.off,x=o.x==null?null:Math.round(o.x),y=o.y==null?null:Math.round(o.y),q=o.w==null?null:Math.round(o.w);
+      if(r===sp.row&&f===sp.off&&x===sp.x&&y===sp.y&&q===sp.w)return;
+      sp.row=r;sp.off=f;sp.x=x;sp.y=y;sp.w=q;css("--chip-x",x);css("--chip-y",y);css("--chip-w",q);paint()
+    },
+    /* true while a look job or a chip note could need placing: shellview reads the stage rect only then */
+    wants:function(){for(var k in jobs)if(k!=="boot")return true;return !!cn},
     fail:function(k,onDrop,onAgain){
       if(!jobs[k])return;
       failed=k;drop=onDrop||null;again=onAgain||null;paint();
@@ -290,16 +358,131 @@
     padLive:function(pad){var on=!!failed&&failed!=="boot";if(on&&words!==!!pad){words=!!pad;retry.textContent=(pad?"SOUTH ":"")+"RETRY";keep.textContent=(pad?"EAST ":"")+"USE CLASSIC 2D"}return on},
     padPress:function(id){if(!failed||failed==="boot")return;if(id==="S")retry.onclick();else if(id==="E"&&drop)keep.onclick()}
   };
+  /* the flag form of spot().row, for a reader or a writer that only knows the row */
+  if(Object.defineProperty)Object.defineProperty(L,"rowShown",{get:function(){return sp.row},set:function(v){L.spot({row:v,off:sp.off,x:sp.x,y:sp.y,w:sp.w})}});
   retry.onclick=function(){var f=again;if(f)f();else location.reload()};
   keep.onclick=function(){var f=drop,k=failed;failed=null;drop=null;again=null;delete jobs[k];act.hidden=true;E.removeAttribute("data-act");paint();if(f)f()};
   /* the buttons are the card's own: nothing here reaches the game's keys; the title's press skips the card in main.js's armUnlock */
   E.addEventListener("keydown",function(e){e.stopPropagation()});
   E.addEventListener("pointerdown",function(e){e.stopPropagation()});
+  /* keys on a failure card, ahead of every game listener (capture, registered first). A focused button keeps its own Enter; a held key's repeat never answers */
+  w.addEventListener("keydown",function(e){
+    if(!failed||e.repeat)return;
+    var on=e.target===retry||e.target===keep;
+    if(e.key==="Enter"&&!on)retry.onclick();else if(e.key==="Escape"&&drop)keep.onclick();else return;
+    e.preventDefault();e.stopImmediatePropagation();
+  },true);
   /* a throw while the boot job lives is a game that will never paint */
   w.addEventListener("error",function(e){if(jobs.boot&&e.filename&&e.filename.indexOf(location.origin)===0)L.fail("boot")});
-  watch();paint();
+  watch();paint();say("Loading.");
 })(window,document);
 </script>
+<!-- modulepreload: the static boot graph of the entry below, one round trip instead of
+     one per import wave. Written by `node tests/loadbar.test.mjs --write` from the walker
+     that pins data-files; the lazy looks (PIXEL, three) are never listed. -->
+<!-- preload:begin -->
+<link rel="modulepreload" href="./src/ai/enemies.js">
+<link rel="modulepreload" href="./src/app/analytics.js">
+<link rel="modulepreload" href="./src/app/attract.js">
+<link rel="modulepreload" href="./src/app/audiopower.js">
+<link rel="modulepreload" href="./src/app/bests.js">
+<link rel="modulepreload" href="./src/app/cabinetseen.js">
+<link rel="modulepreload" href="./src/app/coach.js">
+<link rel="modulepreload" href="./src/app/code.js">
+<link rel="modulepreload" href="./src/app/controls.js">
+<link rel="modulepreload" href="./src/app/controlswire.js">
+<link rel="modulepreload" href="./src/app/daily.js">
+<link rel="modulepreload" href="./src/app/debughook.js">
+<link rel="modulepreload" href="./src/app/endkeys.js">
+<link rel="modulepreload" href="./src/app/fit.js">
+<link rel="modulepreload" href="./src/app/flags.js">
+<link rel="modulepreload" href="./src/app/frameloop.js">
+<link rel="modulepreload" href="./src/app/gamepad.js">
+<link rel="modulepreload" href="./src/app/gfx.js">
+<link rel="modulepreload" href="./src/app/ghost.js">
+<link rel="modulepreload" href="./src/app/highscores.js">
+<link rel="modulepreload" href="./src/app/hints.js">
+<link rel="modulepreload" href="./src/app/intro.js">
+<link rel="modulepreload" href="./src/app/jobs.js">
+<link rel="modulepreload" href="./src/app/lazyload.js">
+<link rel="modulepreload" href="./src/app/loadbar.js">
+<link rel="modulepreload" href="./src/app/medals.js">
+<link rel="modulepreload" href="./src/app/menuapp.js">
+<link rel="modulepreload" href="./src/app/pacestore.js">
+<link rel="modulepreload" href="./src/app/pactstore.js">
+<link rel="modulepreload" href="./src/app/padroute.js">
+<link rel="modulepreload" href="./src/app/perf.js">
+<link rel="modulepreload" href="./src/app/plaques.js">
+<link rel="modulepreload" href="./src/app/rcache.js">
+<link rel="modulepreload" href="./src/app/renderkind.js">
+<link rel="modulepreload" href="./src/app/reset.js">
+<link rel="modulepreload" href="./src/app/settings.js">
+<link rel="modulepreload" href="./src/app/stats.js">
+<link rel="modulepreload" href="./src/app/store.js">
+<link rel="modulepreload" href="./src/app/times.js">
+<link rel="modulepreload" href="./src/app/unlock.js">
+<link rel="modulepreload" href="./src/app/update.js">
+<link rel="modulepreload" href="./src/audio.js">
+<link rel="modulepreload" href="./src/audio/boom.js">
+<link rel="modulepreload" href="./src/audio/foe.js">
+<link rel="modulepreload" href="./src/audio/item.js">
+<link rel="modulepreload" href="./src/audio/tracks.js">
+<link rel="modulepreload" href="./src/core/board.js">
+<link rel="modulepreload" href="./src/core/board2.js">
+<link rel="modulepreload" href="./src/core/config.js">
+<link rel="modulepreload" href="./src/core/entities.js">
+<link rel="modulepreload" href="./src/core/fair.js">
+<link rel="modulepreload" href="./src/core/feat.js">
+<link rel="modulepreload" href="./src/core/heat.js">
+<link rel="modulepreload" href="./src/core/pace.js">
+<link rel="modulepreload" href="./src/core/pact.js">
+<link rel="modulepreload" href="./src/core/rng.js">
+<link rel="modulepreload" href="./src/core/sim.js">
+<link rel="modulepreload" href="./src/core/tilegate.js">
+<link rel="modulepreload" href="./src/core/tileportal.js">
+<link rel="modulepreload" href="./src/core/tilequick.js">
+<link rel="modulepreload" href="./src/core/tiles2.js">
+<link rel="modulepreload" href="./src/core/tilestream.js">
+<link rel="modulepreload" href="./src/core/world.js">
+<link rel="modulepreload" href="./src/input.js">
+<link rel="modulepreload" href="./src/main.js">
+<link rel="modulepreload" href="./src/pwa/register.js">
+<link rel="modulepreload" href="./src/pwa/shell.js">
+<link rel="modulepreload" href="./src/render/ambient.js">
+<link rel="modulepreload" href="./src/render/ambient2d.js">
+<link rel="modulepreload" href="./src/render/cameraCtl.js">
+<link rel="modulepreload" href="./src/render/depth2d.js">
+<link rel="modulepreload" href="./src/render/enemybody.js">
+<link rel="modulepreload" href="./src/render/entityfx.js">
+<link rel="modulepreload" href="./src/render/featart/built.js">
+<link rel="modulepreload" href="./src/render/featart/geo.js">
+<link rel="modulepreload" href="./src/render/featart/kit.js">
+<link rel="modulepreload" href="./src/render/featart/living.js">
+<link rel="modulepreload" href="./src/render/featdraw.js">
+<link rel="modulepreload" href="./src/render/floorart.js">
+<link rel="modulepreload" href="./src/render/frame.js">
+<link rel="modulepreload" href="./src/render/frameart.js">
+<link rel="modulepreload" href="./src/render/fx.js">
+<link rel="modulepreload" href="./src/render/hintcopy.js">
+<link rel="modulepreload" href="./src/render/hudart.js">
+<link rel="modulepreload" href="./src/render/icons.js">
+<link rel="modulepreload" href="./src/render/itemdraw.js">
+<link rel="modulepreload" href="./src/render/lockon.js">
+<link rel="modulepreload" href="./src/render/menudraw.js">
+<link rel="modulepreload" href="./src/render/motion.js">
+<link rel="modulepreload" href="./src/render/pixel/load.js">
+<link rel="modulepreload" href="./src/render/r3d/camera.js">
+<link rel="modulepreload" href="./src/render/relaytell.js">
+<link rel="modulepreload" href="./src/render/renderer.js">
+<link rel="modulepreload" href="./src/render/scenes.js">
+<link rel="modulepreload" href="./src/render/shellview.js">
+<link rel="modulepreload" href="./src/render/sprites.js">
+<link rel="modulepreload" href="./src/render/three/camrig.js">
+<link rel="modulepreload" href="./src/render/three/load.js">
+<link rel="modulepreload" href="./src/render/wallart.js">
+<link rel="modulepreload" href="./src/render/wallvar.js">
+<link rel="modulepreload" href="./src/touch.js">
+<!-- preload:end -->
 <h1 class="sr-only">Fusegrid — bomb-grid arcade you play in the browser</h1>
 <p class="sr-only">Single-player bomb-grid arcade. Flip REAL 3D, classic 2D and PIXEL. Heat CORE, PLUS, and MAX. Eight rooms, eight chiptune themes, a DAILY board. Free — no install, no account, plays offline.</p>
 <noscript><p>Play Fusegrid in the browser — a single-player bomb-grid arcade. JavaScript is required.</p></noscript>
@@ -324,14 +507,17 @@
    /* A file that fails to load fires this element's error event; a throw reaches
       the loader's window listener; a rejected boot step lands in the second handler
       below. The boot job ends in the frame the loop first paints: frames.kick()
-      has already queued it. */
+      has already queued it. A deep link (?play=1, ?code=, ?render=iso, ?net=local)
+      loads what its first frame needs first (src/app/lazyload.js), still behind it. */
    import {createGame} from "./src/main.js";
    import {createAudio} from "./src/audio.js";
+   import {deepLoad} from "./src/app/lazyload.js";
+   import {loadIso} from "./src/render/renderer.js";
    const L=window.__load;
    const canvas=document.getElementById("c");
    const audio=createAudio();
    if(/[?&]debug=1/.test(location.search||""))window.__audio=audio;
-   Promise.resolve().then(()=>createGame(canvas,{audio, canvasEl:canvas})).then(()=>requestAnimationFrame(()=>L.end("boot")),(e)=>{console.error(e);L.fail("boot");});
+   Promise.resolve(deepLoad(location.search,{audio, canvasEl:canvas, loadIso})).then((o)=>createGame(canvas,o)).then(()=>requestAnimationFrame(()=>L.end("boot")),(e)=>{console.error(e);L.fail("boot");});
 </script>
 </body>
 </html>

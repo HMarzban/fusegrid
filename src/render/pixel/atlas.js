@@ -16,7 +16,7 @@ import {featPxCell} from "../featpx.js";
 import {PX_T} from "./timing.js";
 import {floorPxCell, SHADOW_CELLS, brickPal} from "../featpxcells.js";
 import {rim, ringCell, shine, passOf, squeeze, stretch, squash, silhouette, blinkOf, blob, scaled, wings, up1} from "./foegen.js";
-import {MAKO_FACES, MAKO_CYCLE, layoutOf, BOMB_MARKS, BLAST_PIECES, BLAST_AGES} from "./manifest.js";
+import {MAKO_FACES, MAKO_CYCLE, layoutOf, BOMB_MARKS, BLAST_PIECES, BLAST_AGES, MANIFEST} from "./manifest.js";
 
 /* foes that get a 1 px ink contour on the board (the brick floor competes with a 20 px sprite) */
 const RIM = {walker: 1, chaser: 1, knight: 1, burrow: 1, fast: 1};
@@ -34,7 +34,17 @@ function composeFace(top, face, fh) {
 const WALL_SRC = [["base"], ["v1"], ["v2"], ["acc"], ["h"], ["vl"], ["vr"], ["ctl"], ["ctr"], ["cbl"], ["cbr"]];
 const mirrorCell = (c) => ({...c, rows: c.rows.map((r) => [...r].reverse().join(""))});
 
+/* v202: the bake as a list of steps, so prepare() can slice it between yields.
+   createAtlas runs the core steps at once (today's order and output); the
+   builder's rest adds the other biomes' tiles and the KICK MAKO set. Each step carries n,
+   the MANIFEST cells it owns (sum = MANIFEST.length), for the bake report. */
 export function createAtlas(surf, art = ART) {
+  const b = atlasBuilder(surf, art);
+  for (const s of b.core) s.run();
+  return b.atlas;
+}
+const own = (f) => MANIFEST.filter(f).length;
+export function atlasBuilder(surf, art = ART) {
   const pending = new Set(), used = new Set();
   function cellOf(group, name) {
     used.add(group + "/" + name);
@@ -77,7 +87,7 @@ export function createAtlas(surf, art = ART) {
   const foe = {}, puff = {};
   const bake = (cl, fr, to) => { const f = fr(cl), b = blinkOf(cl, to); f.blink = b ? fr(b) : null; return f; };
   const lift = (f) => ({...f, ay: f.ay + 1, blink: f.blink && {...f.blink, ay: f.blink.ay + 1}});
-  for (const f of FOES) {
+  function bakeFoe(f) {
     const t = f.t, L = layoutOf(t), ctx = {body: f.col}, c = (n) => shine(cellOf("foes", t + "." + n)), fp = (cl) => frame(cl, ctx), fr = (cl) => fp(RIM[t] ? rim(cl) : cl), bk = (cl) => bake(cl, fr, t === "stationary" ? "m" : t === "chaser" ? "s" : "k");
     const st = c("stunned"), set = {layout: L, stun: fr(st), face: null, still: null, extra: null, walk: null, idle: null, flash: fp(silhouette(st, "w")), tint: fp(silhouette(st, "l")), squash: fr(squash(st)), mat: null};
     let base = null;
@@ -105,6 +115,7 @@ export function createAtlas(surf, art = ART) {
   }
 
   const B = (n) => cellOf("bomb", n), bctx = {};
+  function bakeBomb() {
   const fuses = [0, 1, 2, 3].map((i) => B("fuse" + i)), spark = B("spark");
   const bomb = {
     body: frame(B("body"), bctx), swell: [frame(B("swell0"), bctx), frame(B("swell1"), bctx)],
@@ -114,15 +125,20 @@ export function createAtlas(surf, art = ART) {
     roll: [frame(B("roll0"), bctx), frame(B("roll1"), bctx)],
   };
   bomb.swellSeq = [bomb.body, bomb.swell[0], bomb.swell[1]];
+  A.bomb = bomb;
+  }
 
   const blast = {};
+  function bakeBlast() {
   for (const p of BLAST_PIECES) {
     const ages = BLAST_AGES.map((a) => cellOf("blast", p + "." + a));
     ages.push(fadeOf(ages[2]));
     const rots = p === "cross" ? 1 : p === "straight" ? 2 : 4;
     blast[p] = Array.from({length: rots}, (_, r) => ages.map((c) => frame(rot90(c, r), bctx)));
   }
+  }
 
+  function bakeItems() {
   const items = {glyph: {}, ring: {}, well: frame(cellOf("items", "well"), {})};
   for (const p of POWER) {
     const ctx = {body: p.col}, fam = ITEM_FAMILY[p.t] || "cap";
@@ -131,11 +147,14 @@ export function createAtlas(surf, art = ART) {
     items.ring[p.t] = [frame(r0, ctx), frame(r1, ctx)];
   }
   for (const n of ["ring.cap", "ring.vit", "ring.utl", "ring.bls", "ring.utl1", "ring.bls1"]) cellOf("items", n);
+  A.items = items;
+  }
 
+  function bakeFx() {
   const X = (n) => frame(cellOf("fx", n), {body: HEX.spark});
-  const fx = {reveal: [X("reveal0"), X("reveal1")], glint: [X("glint0"), X("glint1"), X("glint2")], puff};
-
-  const shadow = Object.fromEntries(Object.entries(SHADOW_CELLS).map(([k, c]) => [k, frame(c, {})]));
+  A.fx = {reveal: [X("reveal0"), X("reveal1")], glint: [X("glint0"), X("glint1"), X("glint2")], puff};
+  A.shadow = Object.fromEntries(Object.entries(SHADOW_CELLS).map(([k, c]) => [k, frame(c, {})]));
+  }
 
   const tileSets = new Array(BIOMES.length).fill(null);
   function tiles(bi) {
@@ -167,9 +186,15 @@ export function createAtlas(surf, art = ART) {
     }
     return f;
   }
-  tiles(0);
-  mako(HEX.fin, false);
-
-  return {timing: PX_T, mako, foe, bomb, blast, items, fx, tiles, feat, shadow, pending, used,
+  const A = {timing: PX_T, mako, foe, bomb: null, blast, items: null, fx: null, tiles, feat, shadow: null, pending, used,
     bakeAll() { for (let i = 0; i < BIOMES.length; i++) tiles(i); mako(HEX.fin, true); return pending; }};
+  const step = (n, run) => ({n, run}), pre = (p) => (k) => k.startsWith(p);
+  const bi = (i) => { const b = BIOMES[i].name; return (k) => k.startsWith("walls/" + b + ".") || k.startsWith("tiles/motif." + b + ".") || (i === 0 && k.startsWith("tiles/") && !k.startsWith("tiles/motif.")); };
+  const core = [
+    ...FOES.map((f) => step(own(pre("foes/" + f.t + ".")), () => bakeFoe(f))),
+    step(own(pre("bomb/")), bakeBomb), step(own(pre("blast/")), bakeBlast), step(own(pre("items/")), bakeItems), step(own(pre("fx/")), bakeFx),
+    step(own(bi(0)), () => tiles(0)), step(own(pre("mako/")), () => mako(HEX.fin, false)),
+  ];
+  const rest = [...BIOMES.slice(1).map((_, j) => step(own(bi(j + 1)), () => tiles(j + 1))), step(0, () => mako(HEX.fin, true))];
+  return {atlas: A, core, rest, total: MANIFEST.length};
 }

@@ -175,3 +175,26 @@ export function createPad(o = {}) {
     snap: () => last,
   };
 }
+
+/* What can buzz a pad lives here, in the boot graph (v202): the door, the READY note and the page read it before rumble.js lands. */
+const safe = (f) => { try { return f(); } catch { return undefined; } };
+/* effects where the browser has it, else the older single .type, else null = it does not say. */
+const effectsOf = (a) => safe(() => (a.effects != null ? Array.from(a.effects) : typeof a.type === "string" ? [a.type] : null));
+/** What can buzz this gamepad, best first: dual-rumble, trigger-rumble only without it, then the older hapticActuators pulse. */
+export function routesOf(g) {
+  const out = [];
+  if (!g) return out;
+  const a = safe(() => g.vibrationActuator), h = safe(() => g.hapticActuators && g.hapticActuators[0]);
+  if (a && typeof a.playEffect === "function") {
+    const fx = effectsOf(a);
+    if (fx == null || fx.includes("dual-rumble")) out.push({ kind: "dual-rumble", a });
+    if (fx != null && fx.includes("trigger-rumble")) out.push({ kind: "trigger-rumble", a });
+  }
+  if (h && typeof h.pulse === "function") out.push({ kind: "pulse", a: h });
+  return out;
+}
+/** What a gamepad offers, for the debug hook. */
+export function padInfo(g) {
+  const a = g ? safe(() => g.vibrationActuator) : null, n = g ? safe(() => g.hapticActuators && g.hapticActuators.length) : 0, r = routesOf(g)[0];
+  return { id: g && typeof g.id === "string" ? g.id : null, mapping: g ? g.mapping : null, actuator: (a && safe(() => a.type)) || null, playEffect: !!a && typeof a.playEffect === "function", effects: a && safe(() => a.effects != null) ? effectsOf(a) : null, hapticActuators: n | 0, route: r ? r.kind : null };
+}

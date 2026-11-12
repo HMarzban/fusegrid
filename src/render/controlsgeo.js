@@ -1,5 +1,5 @@
 // CONTROLS page geometry and copy, shared by draw, tap and the page reducer. Pure. BTN, DEF_KEY, DEF_PAD, VIB_LEVELS, SENS_LEVELS, keyName, moveLabel and softAliasesOf are local copies of src/app/controls.js (render never reads src/app), pinned equal in tests/controlsdraw.test.mjs.
-import { FOOT_TAP, bandOf, listGeom, listHit, pageBox } from "./menudraw.js";
+import { FOOT_TAP, VIB_LEVELS, bandOf, listGeom, listHit, pageBox, vibWord } from "./menudraw.js";
 import { KB_ROWS } from "./padart.js";
 
 const dpad = { g: "dpad", v: "all", w: "D-PAD" };
@@ -12,7 +12,7 @@ export const BTN = Object.freeze({
 });
 export const DEF_KEY = Object.freeze({ BOMB: "Space", THROW: "KeyE", REMOTE: "KeyQ", PAUSE: "KeyP", MOVE: Object.freeze(["KeyW", "KeyD", "KeyS", "KeyA"]) });
 export const DEF_PAD = Object.freeze({ BOMB: "S", THROW: "W", REMOTE: "E", PAUSE: "SELECT" });
-export const VIB_LEVELS = Object.freeze(["OFF", "LOW", "MEDIUM", "HIGH"]);
+export { VIB_LEVELS, vibWord }; // in menudraw.js since v202: the OPTIONS door reads them before this file loads
 export const SENS_LEVELS = Object.freeze([Object.freeze({ name: "MIN", dead: 60 }), Object.freeze({ name: "LOW", dead: 40 }), Object.freeze({ name: "MEDIUM", dead: 25 }), Object.freeze({ name: "HIGH", dead: 15 }), Object.freeze({ name: "MAX", dead: 8 })]);
 export const DEF_VIB = 2;
 const DEF_DEAD = 25;
@@ -54,8 +54,6 @@ const IDX = { S: 0, E: 1, W: 2, N: 3, SHL: 4, SHR: 5, TRL: 6, TRR: 7, SELECT: 8,
 const padOff = (s) => s.tab === "pad" && (!s.pad || s.pad.state === "none" || s.pad.state === "lost");
 const noBuzz = (s) => padOff(s) || !s.pad || s.pad.rumble !== true; // the actuator decides, whatever the mapping
 const vibOf = (s) => (s.vib == null ? DEF_VIB : s.vib);
-/** The level word while a pad with an actuator is connected, else "": the OPTIONS door and the MENU note read it. */
-export const vibWord = (s) => (s && s.pad && s.pad.state !== "none" && s.pad.state !== "lost" && s.pad.rumble === true && s.vib != null ? VIB_LEVELS[s.vib] || "" : "");
 /** The eight rows of the current tab. */
 export function rowsOf(s) {
   const p = s.pad || { state: "none" }, k = s.key || DEF_KEY, b = s.binds || DEF_PAD, dead = s.dead == null ? DEF_DEAD : s.dead;

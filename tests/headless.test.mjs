@@ -14,6 +14,10 @@ import {loadStats} from "../src/app/stats.js";
 import {copyPayload, pauseGeom, overlayBox} from "../src/render/scenes.js";
 import {menuGeom, guideGeom as mdGuideGeom, levelGeom, scoresHit, settingsGeom, LEVEL_TAP, layout as menuLayout} from "../src/render/menudraw.js";
 import {fitBox} from "../src/app/fit.js";
+import "../src/core/board3.js";
+import "../src/app/demobot.js";
+import "../src/render/r3d/scene3d.js";
+import { createLocalPair } from "../src/net/localpair.js";
 // tab centres found through scoresHit itself (the one tap map), scanning the tab row band
 const mdScoreTabs=(L,t)=>{ for(let y=8;y<200;y++){ const xs=[]; for(let x=0;x<600;x++) if(scoresHit(x,y,L,t)>=0) xs.push([x,scoresHit(x,y,L,t)]); if(xs.length) return {y:y+12,x:(i)=>{const r=xs.filter(p=>p[1]===i).map(p=>p[0]);return (r[0]+r[r.length-1])/2;}}; } return null; };
 // MENU taps land on the painted row (an off-row MENU tap is a no-op since the menu redesign)
@@ -270,9 +274,10 @@ function mkCanvas(){
     check("O2 ?render=3d: boardReady true once the three load settles",g.app.boardReady===true);
   }finally{ if(loc0===undefined)delete globalThis.location; else globalThis.location=loc0; }
   const src=readFileSync(join(ROOT,"src/main.js"),"utf8"), rcs=readFileSync(join(ROOT,"src/app/rcache.js"),"utf8");
-  const settle=/ld\(\)\.then\(\(m\) => \{[^}]*\}\)\.catch\(\(e\) => \{[^}]*\}\)\.then\(\(\) => \{ if \(k === "3d" \|\| kind\(\) !== "3d"\) onReady\(\); \}\)/g;
+  // v202 swap on ready: the one import call (raw()) lives in load(); a failure settles through lookFailed (job) or load's own catch (no job), and settled() is the one onReady site
   check("O2 the one rcache load site (3D and PIXEL since #15) catches then settles (a 404 never strands the title)",
-    (rcs.match(/\bld\(\)/g)||[]).length===1&&(rcs.match(settle)||[]).length===1);
+    (rcs.match(/\braw\(\)/g)||[]).length===1&&(rcs.match(/onReady\(\)/g)||[]).length===1&&/function settled\(k, r, kept\) \{[\s\S]*?if \(k === "3d" \|\| kind\(\) !== "3d"\) onReady\(\);/.test(rcs)
+    &&/function lookFailed\(J, e\) \{[\s\S]*?settled\(J\.k, null[,)]/.test(rcs)&&/\(e\) => \{ if \(!job \|\| job\.k !== k\) \{[^}]*settled\(k, null\); \} \}/.test(rcs));
   check("O2 main.js settles boardReady through rcache's onReady and calls no loader itself",
     /onReady: \(\) => \{ app\.boardReady = true; \}/.test(src)&&!/loadRenderer3D\(\)/.test(src)&&!/loadRendererPx\(\)/.test(src)&&!/import\(/.test(src));
   const {drawShell}=await import("../src/render/shellview.js");
@@ -795,7 +800,7 @@ for(const mode of ["autoplay","code"]){
 
 // ---- ?net=local dual-peer lockstep harness (netcode v1 dev aid) ----
 {
-  const g=createGame(null,{autoplay:true,netLocal:true});
+  const g=createGame(null,{autoplay:true,netLocal:true,createLocalPair}); // index.html's deepLoad hands it in
   check("net=local builds dual-peer lockstep harness",
     !!g.net&&!!g.net.lsA&&!!g.net.lsB&&!!g.net.wB, String(!!g.net));
   let t=0; for(let i=0;i<80;i++){ t+=16; g.loop(t); }

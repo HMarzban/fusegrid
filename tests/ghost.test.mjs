@@ -16,6 +16,7 @@ import {
 import { createWorld, loadLevel } from "../src/core/sim.js";
 import { createRenderer } from "../src/render/renderer.js";
 import { GHOST_A, drawGhost } from "../src/render/sprites.js";
+import "../src/render/r3d/scene3d.js";
 
 let pass = 0,
   fail = 0;

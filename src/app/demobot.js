@@ -10,6 +10,7 @@
    do not. Reachable foes beat spawn-brick nibble. Hunger wander aims
    at a blocked foe. Fire is one rising edge per want episode. */
 import {CFG,T,key,DIRS4} from "../core/config.js";
+import {setDemobot} from "./attract.js";
 import {bfsNext} from "../core/board.js";
 import {createRng} from "../core/rng.js";
 
@@ -301,3 +302,6 @@ export function createDemobot(seed){
       hold=v.hold|0;pause=v.pause|0;esc=!!v.esc;
      }};
  }
+
+/* fills attract.js's seam (lazy since v202: src/app/lazyload.js in the browser, a plain import in Node) */
+setDemobot(createDemobot);

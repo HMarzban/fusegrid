@@ -146,8 +146,11 @@ unchanged("px art registered: it never leaks into another kind");
 {
   const r0 = rec();
   const ov = {width: 600, height: 520, getContext: () => r0.c};
+  setPixelArt(A);
   const R = createPixelRenderer(null, ov, {surf: surfRGBA});
-  check("createPixelRenderer registers its atlas for the GUIDE pages", pixelArt() === R._dbg.atlas);
+  check("createPixelRenderer leaves the GUIDE pages' art alone until activate (v202)", pixelArt() === A && !R._dbg.built);
+  R.activate();
+  check("activate() registers its atlas for the GUIDE pages", pixelArt() === R._dbg.atlas && pixelArt() !== A);
   const w = {players: [{bombs: 1, range: 2, x: 30, y: 30}], lives: 2, level: 1, enemies: [], heat: 0, score: 0, state: "PLAY", events: [], items: [], bombs: [], blades: [], time: 0, grid: {}};
   R.render(w, 1 / 60, {hud: true});
   const ims = draws(r0).map((o) => o[1][0]), G = R._dbg.atlas.items.glyph;

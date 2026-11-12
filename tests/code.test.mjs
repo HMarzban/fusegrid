@@ -5,6 +5,7 @@ import { readFlags } from "../src/app/flags.js";
 import { SCREEN, createMenuApp } from "../src/app/menuapp.js";
 import { createGame } from "../src/main.js";
 import { drawOverlay } from "../src/render/scenes.js";
+import "../src/core/board3.js";
 
 let pass = 0,
   fail = 0;

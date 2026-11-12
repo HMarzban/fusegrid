@@ -12,6 +12,7 @@ import { fmtTime, timeLine, drawHudChips, drawOverlay } from "../src/render/scen
 import { readFileSync } from "node:fs";
 import { createGame } from "../src/main.js";
 import { SCREEN } from "../src/app/menuapp.js";
+import "../src/core/board3.js";
 
 let pass = 0,
   fail = 0;

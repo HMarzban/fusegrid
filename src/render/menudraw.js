@@ -48,6 +48,9 @@ const LINE = "#26324a",
   EDGE = "#2a3550",
   WARM = "#ffd447";
 export const PLATE = "rgba(10,14,24,0.94)";
+export const VIB_LEVELS = Object.freeze(["OFF", "LOW", "MEDIUM", "HIGH"]);
+/** The OPTIONS door's VIBRATION word: a pad that is here, can buzz and has a stored level; "" otherwise. Boot-side, so the door never waits on the lazy CONTROLS paint. */
+export const vibWord = (s) => (s && s.pad && s.pad.state !== "none" && s.pad.state !== "lost" && s.pad.rumble === true && s.vib != null ? VIB_LEVELS[s.vib] || "" : "");
 const even = (v) => 2 * Math.round(v / 2); // even logical px: crisp at x0.5 / x1 / x1.5 and on PIXEL's 2px art grid
 export function plate(c, x, y, w, h) {
   x = even(x);
@@ -95,6 +98,15 @@ export function head(c, S, title, kicker) {
   c.font = sans(18, "700");
   c.fillText(title, S.mid, S.headY + 8);
 }
+/* The kicker's first candidate that fits room (head's own type), else the last: PAUSE's look tail (v202). */
+export function fitKicker(c, cands, room) {
+  c.font = sans(10, "600");
+  spaced(c, true);
+  let s = cands[cands.length - 1];
+  for (const t of cands) if (c.measureText(t).width <= room) { s = t; break; }
+  spaced(c, false);
+  return s;
+}
 export function foot(c, S, s, col) {
   c.fillStyle = col || MUTED;
   c.font = font(10);
@@ -119,6 +131,7 @@ function caret(c, x, y, h, col) {
    jitter. danger rows (RESTART / QUIT) select in red, keeping the shape. warm
    (a CONTROLS row a swap just moved) is the same band and notch in gold, and has
    a caret only with o.caret: the row is marked, the cursor may be elsewhere. */
+const rowSize = (h, p) => Math.max(10, Math.min(p.hero ? (p.touch ? 22 : 20) : p.touch ? 17 : 15, Math.round(h * (p.hero ? 0.5 : 0.62))));
 export function paintRow(c, x, y, w, h, label, val, sel, o) {
   const p = o || {},
     col = p.warm ? WARM : p.danger ? DANGER : ACCENT,
@@ -130,7 +143,7 @@ export function paintRow(c, x, y, w, h, label, val, sel, o) {
     c.fillRect(x, y, 3, h);
     if (!p.warm || p.caret) caret(c, x + 11, cy, h, col);
   }
-  const size = Math.max(10, Math.min(p.hero ? (p.touch ? 22 : 20) : p.touch ? 17 : 15, Math.round(h * (p.hero ? 0.5 : 0.62))));
+  const size = rowSize(h, p);
   c.textBaseline = "middle";
   c.textAlign = "left";
   c.font = sans(size, p.hero ? "800" : "600");
@@ -1924,6 +1937,72 @@ function rowsHit(x, y, g) {
 }
 export const settingsHit = (x, y, L, _n, touch) => rowsHit(x, y, settingsGeom(L, touch));
 export const graphicsHit = (x, y, L, _n, touch) => rowsHit(x, y, graphicsGeom(L, touch));
+/* RENDER row job states (v202 delivery, design 2026-11-06 "What the player
+   sees"). The value slot carries the job of the look being prepared and a 2 px
+   line along the band's bottom its honest fill; nothing reflows. app.lookJob =
+   {k, state:"loading"|"preparing"|"ready"|"failed", phase, done, total} (fill /
+   slow when jobs.js hands them); lookNote is the pure memo step shellview runs
+   every frame: a live wait shows nothing new for NOTE_HOLD, a finished one that
+   was shown reads READY for READY_T, a failure shows at once. */
+export const LOOK_NAME = Object.freeze({ px: "PIXEL", "3d": "REAL 3D" });
+export const NOTE_HOLD = 0.4, READY_T = 0.8;
+const PH_ORDER = ["bake", "build", "shaders", "warm"], PH_WORD = { bake: "ART", build: "BUILDING", shaders: "SHADERS" };
+/* 0..1, or -1 = no count (still stripes, never a made-up share). Without
+   job.fill: files own [0, .5), each prepare phase a fixed eighth after them. */
+export function jobFill(j) {
+  if (typeof j.fill === "number") return clamp01(j.fill);
+  const n = j.total > 0 ? clamp01((j.done | 0) / j.total) : -1;
+  if (j.state === "loading") return n < 0 ? -1 : 0.5 * n;
+  const i = PH_ORDER.indexOf(j.phase);
+  return i < 0 || n < 0 ? -1 : 0.5 + 0.125 * (i + n);
+}
+const lookOf = (j) => (j && LOOK_NAME[j.k] ? j : null);
+export function lookNote(m, job, now, pick) {
+  const j = lookOf(job);
+  if (j && j.state !== "ready") {
+    if (!m || m.k !== j.k || m.readyT != null) m = { k: j.k, t0: now, fill: 0, shown: false };
+    if (j.state === "failed") { m.shown = m.fail = true; return { m, n: { k: j.k, st: "fail", fill: -1 } }; }
+    m.fail = false;
+    const f = jobFill(j);
+    if (f >= 0) m.fill = Math.max(m.fill, f);
+    if (!m.shown && now - m.t0 < NOTE_HOLD) return { m, n: null };
+    m.shown = true;
+    return { m, n: { k: j.k, st: j.state, phase: j.phase, done: Math.min(j.done | 0, j.total | 0), total: j.total | 0, slow: !!j.slow, fill: f < 0 ? -1 : m.fill } };
+  }
+  if (m && m.shown && !m.fail && m.k === pick && (!j || j.k === m.k)) {
+    if (m.readyT == null) m.readyT = now;
+    if (now - m.readyT < READY_T) return { m, n: { k: m.k, st: "ready", fill: 1 } };
+  }
+  return { m: null, n: null };
+}
+/* The value's words, longest first; the row keeps the first that fits its slot. */
+export function lookVal(n, touch) {
+  const L = LOOK_NAME[n.k] || "";
+  if (n.st === "fail") { const r = tapMode(touch) ? "TAP TO RETRY" : hints().ok + " RETRY"; return [L + " · DID NOT LOAD · " + r, "DID NOT LOAD · " + r]; }
+  if (n.st === "ready") return [L + " · READY", "READY"];
+  const cnt = n.total > 0 ? n.done + " / " + n.total : "";
+  const s = n.st === "loading" ? (n.slow ? "SLOW, STILL TRYING" : cnt || "LOADING") : PH_WORD[n.phase] && cnt ? PH_WORD[n.phase] + " " + cnt : "PREPARING";
+  return [L + " · " + s, s];
+}
+/* The value slot beside a label: paintRow's own type, no door mark. */
+export function valueRoom(c, w, h, label, touch) {
+  c.font = sans(rowSize(h, { touch }), "600");
+  return w - 12 - 26 - mw(c, label) - 12;
+}
+export function fitVal(c, cands, room) {
+  c.font = font(12);
+  for (const s of cands) if (mw(c, s) <= room) return s;
+  return clip(c, cands[cands.length - 1], room);
+}
+/* 2 px along the band's bottom, past the notch: the fill, or still stripes. */
+function jobLine(c, x, y, w, f) {
+  c.fillStyle = LINE;
+  c.fillRect(x, y, w, 2);
+  c.fillStyle = ACCENT;
+  if (f < 0) for (let xx = x; xx < x + w; xx += 8) c.fillRect(xx, y, Math.min(4, x + w - xx), 2);
+  else if (f > 0) c.fillRect(x, y, Math.round(w * Math.min(1, f)), 2);
+}
+const RENDER_ROW = OPT_LABEL.indexOf("RENDER");
 export function drawSettings(c, L, t, ui) {
   const u = ui || {};
   const cur = u.row | 0,
@@ -1943,11 +2022,17 @@ export function drawSettings(c, L, t, ui) {
   }
   const fk =
     typeof u.togT === "number" && u.togT >= 0 ? 1 - clamp01((t - u.togT) / 0.12) : 0;
+  const n = u.job || null, rx = S.ix - 8, rw = S.iw + 16, rh = g.rowH - 2;
   for (let i = 0; i < OPT_N; i++) {
     const sel = i === cur,
-      dim = OPT_3D[i] && !r3d;
+      dim = OPT_3D[i] && !r3d,
+      ry = g.y0 + i * g.rowH + 1;
     c.globalAlpha = dim ? 0.45 : 1;
-    paintRow(c, S.ix - 8, g.y0 + i * g.rowH + 1, S.iw + 16, g.rowH - 2, OPT_LABEL[i], dim ? "—" : vals[i], sel, { touch: u.touch, vc: TEXT, glow: sel ? fk : 0 });
+    if (i === RENDER_ROW && n) {
+      const bad = n.st === "fail", v = fitVal(c, lookVal(n, u.touch), valueRoom(c, rw, rh, OPT_LABEL[i], u.touch));
+      paintRow(c, rx, ry, rw, rh, OPT_LABEL[i], v, sel, { touch: u.touch, danger: bad, vc: bad ? DANGER : TEXT, glow: sel ? fk : 0 });
+      if (!bad) jobLine(c, rx + 3, ry + rh - 2, rw - 3, n.fill);
+    } else paintRow(c, rx, ry, rw, rh, OPT_LABEL[i], dim ? "—" : vals[i], sel, { touch: u.touch, vc: TEXT, glow: sel ? fk : 0 });
     c.globalAlpha = 1;
   }
   foot(c, S, tapMode(u.touch) ? FOOT_TAP : footKeys());

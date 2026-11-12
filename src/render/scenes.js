@@ -6,7 +6,7 @@ import { PROJ } from "./r3d/camera.js";
 import { clampPact, pactLabel } from "../core/pact.js";
 import { clampPace, paceToken } from "../core/pace.js";
 import { abilityList, abilityText, abilityOrd, getStrip } from "./fx.js";
-import { layout, listGeom, listHit, drawList, plate, head as plateHead, foot as plateFoot } from "./menudraw.js";
+import { layout, listGeom, listHit, drawList, plate, fitKicker, head as plateHead, foot as plateFoot } from "./menudraw.js";
 import { hints } from "./hintcopy.js";
 
 /* Scene UI: menu logo, HUD, and the CLEARED / GAME OVER / PAUSED overlays.
@@ -233,6 +233,16 @@ export function pauseKicker(world, run) {
   return "ROOM " + (w.level | 0) + " · " + biomeOf(w.level | 0).name + " · " + HEAT_NAME[clampHeat(w.heat)] + " · " + paceToken(w.pace) +
     (p ? " · MODES " + pactLabel(p) : "") + (run && run.daily ? " · DAILY" : "");
 }
+/* v202 Q1: the look the player picked mid-run (app.lookNext: REAL 3D NEXT / READY /
+   · RESTORING) rides the kicker's end; run context drops from the end (DAILY,
+   MODES, pace, heat) until it fits. No tail = today's kicker, no measuring. */
+export function pauseKick(c, base, next, room) {
+  if (!next) return base;
+  const p = String(base).split(" · "), cands = [];
+  for (let n = p.length; n >= 1; n--) cands.push(p.slice(0, n).join(" · ") + " · " + next);
+  cands.push(next);
+  return fitKicker(c, cands, room);
+}
 /* body[data-lay] p / l (fit.js) = a touch layout: the one predicate the
    pause draw (through its ctx's canvas) and main's tap map both read. */
 export const touchLay = (el) => {
@@ -307,7 +317,7 @@ export function drawOverlay(
     const touch = u.touch == null ? touchOf(c) : !!u.touch,
       g = pauseGeom({ w, h }, touch);
     plate(c, g.x, g.y, g.w, g.h);
-    plateHead(c, g, "PAUSED", u.note || pauseKicker(world, run));
+    plateHead(c, g, "PAUSED", pauseKick(c, u.note || pauseKicker(world, run), u.next, g.w - 24));
     drawList(c, g, PAUSE_SHAPE, u.cursor | 0, 0, { touch });
     plateFoot(c, g, overlayCue(world, touch));
   }

@@ -22,6 +22,7 @@ import {
 } from "../src/render/scenes.js";
 import { readFileSync } from "node:fs";
 import { createGame } from "../src/main.js";
+import "../src/core/board3.js";
 
 let pass = 0,
   fail = 0;

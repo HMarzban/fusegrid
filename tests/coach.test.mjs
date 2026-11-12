@@ -20,6 +20,8 @@ import { SCREEN } from "../src/app/menuapp.js";
 import { POWER } from "../src/core/entities.js";
 import { loadStats, setStatsOn } from "../src/app/stats.js";
 import { readFileSync } from "node:fs";
+import "../src/core/board3.js";
+import "../src/app/demobot.js";
 
 function fakeCanvasTexts() {
   const texts = [];

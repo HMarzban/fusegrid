@@ -255,7 +255,7 @@ const STAT = `(()=>{const g=window.__GAME__,r=g.renderer,d=r&&r._dbg,G=g.G;const
 export function loadExpr(a, r) {
   const set = [a.seed != null ? "G.seed=" + a.seed + ">>>0;" : "", a.heat != null ? "G.heat=" + a.heat + ";" : "", a.pace != null ? "G.pace=" + a.pace + ";" : "",
     a.gen != null ? "if('gen' in G)G.gen=" + a.gen + ";else w.push('--gen " + a.gen + " ignored: this world has no gen field');" : ""].join("");
-  const pre = a.gen >= 3 ? "import('/src/core/board3.js').then(()=>" : "("; // the page's boot graph has it since v198; this keeps an older page working
+  const pre = a.gen >= 3 ? "import('/src/core/board3.js').then(()=>" : "("; // out of the page's boot graph again since v202 (src/app/lazyload.js loads it in the title's idle): make sure it is in
   return pre + `import('/src/core/sim.js').then(m=>{const G=window.__GAME__.G,w=[];${set}m.loadLevel(G,${r},true);G.state='PLAY';return w;}))`;
 }
 

@@ -1,10 +1,16 @@
 /* ATTRACT demo harness (spec §1): main owns nothing but the handle returned
    here — the shell machine only flips screens. Fixed seed, levels cycle
    1..3, 20s sim-time cap per cycle before rollover. Attract is ALWAYS CORE +
-   pact=0 no matter what heat/pact the shell has selected. */
+   pact=0 no matter what heat/pact the shell has selected. The bot (demobot.js)
+   is out of the boot graph (v202): it fills this seam on import (src/app/lazyload.js
+   in the title's first idle, a plain import in Node), MENU waits for it before
+   ATTRACT, and a demo asked for with the seam empty throws. */
 import { CFG } from "../core/config.js";
 import { createWorld, loadLevel, step } from "../core/sim.js";
-import { createDemobot } from "./demobot.js";
+
+let mkBot = null;
+export function setDemobot(fn) { mkBot = fn; }
+export const demoReady = () => !!mkBot;
 
 export const DEMO_SEED = 20260823,
   DEMO_CAP = 20;
@@ -19,6 +25,8 @@ export function newDemoWorld(lvl) {
 }
 
 export function createDemo() {
+  if (!mkBot) throw new Error("ATTRACT demo requested but src/app/demobot.js is not loaded");
+  const createDemobot = mkBot;
   return {
     world: newDemoWorld(1),
     bot: createDemobot(DEMO_SEED),

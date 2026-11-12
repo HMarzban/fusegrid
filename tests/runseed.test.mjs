@@ -13,6 +13,8 @@ import { CFG, T, key } from "../src/core/config.js";
 import { SCREEN, ITEMS, IDLE_T } from "../src/app/menuapp.js";
 import { dailySeed } from "../src/app/daily.js";
 import { encodeChallenge, decodeChallenge } from "../src/app/code.js";
+import "../src/core/board3.js";
+import "../src/app/demobot.js";
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {

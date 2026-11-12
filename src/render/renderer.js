@@ -6,7 +6,6 @@ import {
 } from "./sprites.js";
 import {onEvent, updateFx, drawFx, drawBursts, drawFxOverlay, drawPickupFx, feedFx, getShake, getFlash, getFx, getFxOpts, initFx, syncFx} from "./fx.js";
 import {drawOverlay, overlayBox, drawHudChips, drawAbilityBar, drawCoach, drawCoach2} from "./scenes.js";
-import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
 import {PROJ, project} from "./r3d/camera.js";
 import {wellBoard, hudPlate, stageGlow} from "./frame.js";
 import {drawDepth} from "./depth2d.js";
@@ -29,11 +28,19 @@ const eqM=(a,b)=>!!a&&!!b&&a.a===b.a&&a.b===b.b&&a.c===b.c&&a.d===b.d&&a.e===b.e
 /* Renderer: owns a 2D context + view. Reads world, never mutates sim state.
    consumeEvents(world,dt) flushes world.events into fx/audio, returns this so
    callers can chain. render(world) paints one frame. */
+/* ?render=iso's dimetric painters (r3d/scene3d.js) are out of the boot graph (v202):
+   scene3d.js fills this seam on import (loadIso, through lazyload.js deepLoad before createGame); a dimetric renderer asked
+   for with the seam empty throws, never a blank board. */
+let iso = null;
+export function setIso(kit){ iso = kit; }
+let isoP = null;
+export const loadIso = () => iso ? Promise.resolve() : (isoP ||= import("./r3d/scene3d.js").then(()=>{}, (e)=>{ isoP = null; throw e; }));
 export function createRenderer(canvas, opts={}){
   /* real3d §7: "iso" aliases into the legacy branch (dimetric kept as
      ?render=iso legacy path). Real kind "3d" never reaches this factory —
      main routes it to render/three/wrapper.js createRenderer3D. */
   const kind = opts.kind==="3d"||opts.kind==="iso" ? "3d" : "2d";
+  if(kind==="3d"&&!iso) throw new Error("?render=iso requested but src/render/r3d/scene3d.js is not loaded");
   bakeAtlas(); // idempotent (BAKED.ready); textured 3D tops need sources too
   const noop=()=>{};
   const ctx = canvas && canvas.getContext ? canvas.getContext("2d",{alpha:false})
@@ -109,9 +116,9 @@ export function createRenderer(canvas, opts={}){
     ctx.save();
     if(ctx.translate) ctx.translate(Math.round(shake.x),Math.round(shake.y));
     if(kind === "3d"){
-      draw3dBackground(ctx, world);
-      const ps=buildPainters(world);
-      ps.sort(byDepth);
+      iso.draw3dBackground(ctx, world);
+      const ps=iso.buildPainters(world);
+      ps.sort(iso.byDepth);
       for(const p of ps) p.draw(ctx);
     } else {
       drawBiomeBackground(ctx, world, armed);

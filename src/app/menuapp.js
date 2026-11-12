@@ -14,7 +14,8 @@ import { clampHeat } from "../core/heat.js";
 import { clampPact, PACT, togglePact } from "../core/pact.js";
 import { clampPace } from "../core/pace.js";
 import { clampSettings, DEFAULTS } from "./settings.js";
-import { renderBits, renderVal } from "./renderkind.js";
+import { RENDER_KINDS, renderBits, renderVal } from "./renderkind.js";
+import { LOOK_LABEL } from "./jobs.js";
 import { SHOW_DUR, SKIP_GUARD, TITLE_IN } from "./intro.js";
 import { GFX_ROWS, GFX_KEYS, VALUES, PRESET_NAMES, DEMO_T, presetOf, applyPreset, locked, gfxView } from "./gfx.js";
 export const SCREEN = Object.freeze({
@@ -80,6 +81,7 @@ export const SOURCE_URL = "https://github.com/HMarzban/fusegrid";
 const REP_FIRST = 0.35,
   REP_NEXT = 0.11;
 export const IDLE_T = 10; // MENU idle seconds before ATTRACT takes over
+export const WARM_T = 0.4; // s on the RENDER row before the next look warms
 const DEF_MOVE = Object.freeze(["KeyW", "KeyD", "KeyS", "KeyA"]); // UP RIGHT DOWN LEFT; no controls.js import, it is not in this file's boot graph
 const ANA_NOTE = "ANSWER THE CARD WITH Y OR N";
 
@@ -91,6 +93,7 @@ export function createMenuApp(opts = {}) {
   const onStats = o.onStats || null;
   const onSettings = o.onSettings || null;
   const onPauseCmd = o.onPauseCmd || null;
+  const onWarm = o.onWarm || null;
   const app = {
     screen: o.autoplay ? SCREEN.GAME : SCREEN.INTRO,
     cursor: 0,
@@ -147,6 +150,8 @@ export function createMenuApp(opts = {}) {
     fromShow: false,
     boardReady: true,
     readyT: 0,
+    warmT: 0, _warmA: null, _warmK: null, // v202 warm on intent: the rest on the RENDER row
+    lookJob: null, // v202: the RENDER row's look job, set by main from rcache: {k, state "loading"|"preparing"|"ready"|"failed", phase, done, total, f, ind, fails} or null
     _showPending: false,
     showBoom: false,
     /* Advance the shell by dt seconds. Reads held axes + confirmHeld only. */
@@ -158,6 +163,7 @@ export function createMenuApp(opts = {}) {
       this.prevConfirm = ch;
       this.subT += d;
       this.ctlT += d * 1000;
+      this._warmTick(d);
       if (this.boardReady) this.readyT += d;
       if (this.onControls()) {
         const h = (input && input.input) || {};
@@ -228,7 +234,7 @@ export function createMenuApp(opts = {}) {
       this._taps = {};
       if (this.screen === SCREEN.MENU && !this.parked && this.settings.dmo !== 0) {
         this.idleT += d;
-        if (this.idleT >= IDLE_T) this.enterAttract();
+        if (this.idleT >= IDLE_T && (!o.canAttract || o.canAttract())) this.enterAttract(); // MENU waits for the lazy bot (main's attract.js demoReady)
       } else this.idleT = 0;
     },
     /* Shared hold-to-repeat: first move at REP_FIRST, then REP_NEXT. The
@@ -642,6 +648,36 @@ export function createMenuApp(opts = {}) {
       if (onSettings) onSettings(this.settings, "render");
       return true;
     },
+    /* v202 Q4: a look that did not load leaves the pick on the look still on screen (on), never CLASSIC 2D by default */
+    lookFailed(k, on) {
+      if (RENDER_KINDS[renderVal(this)] === k) this._optRender(Math.max(0, RENDER_KINDS.indexOf(on)));
+    },
+    /* PAUSE kicker (Q1): a look picked mid-run waits for an idle state: "REAL 3D NEXT" while it builds, "REAL 3D READY" once parked for the swap */
+    get lookNext() {
+      const j = this.lookJob;
+      if (this.restoring) return LOOK_LABEL[j.k] + " · RESTORING";
+      if (!j || j.on || j.rebuild || j.state === "failed") return "";
+      return LOOK_LABEL[j.k] + (j.state === "ready" ? " READY" : " NEXT");
+    },
+    /* a lost REAL 3D context is being rebuilt: RESUME waits for it (blind play would never rebuild, the job parks in PLAY) */
+    get restoring() {
+      const j = this.lookJob;
+      return !!(j && j.restore && !j.on && j.state !== "failed");
+    },
+    /* warm on intent (Q3): the cursor resting WARM_T on the RENDER row (OPTIONS, or PAUSE's OPTIONS view) warms the next look of the cycle once per rest; live PLAY never */
+    _warmTick(d) {
+      const on = OPT_ROWS[this.optRow] === "RENDER" && (this.screen === SCREEN.SETTINGS || (this.screen === SCREEN.GAME && this.worldState === "PAUSE" && this.pauseView === 1));
+      if (!on) { this.warmT = 0; this._warmA = this._warmK = null; return; }
+      const nx = RENDER_KINDS[(renderVal(this) + 1) % RENDER_KINDS.length];
+      if (nx !== this._warmA) { this._warmA = nx; this.warmT = 0; }
+      this.warmT += d;
+      if (this.warmT >= WARM_T && this._warmK !== nx) { this._warmK = nx; if (onWarm) onWarm(nx); }
+    },
+    /* the 10 s look release waits while the player compares looks: OPTIONS, GRAPHICS, CONTROLS and PAUSE's views */
+    lookHold() {
+      const s = this.screen;
+      return s === SCREEN.SETTINGS || s === SCREEN.GRAPHICS || s === SCREEN.CONTROLS || (s === SCREEN.GAME && this.worldState === "PAUSE" && this.pauseView >= 1);
+    },
     _opt3dLocked(r) {
       return (r === "CAMERA" || r === "BRIGHTNESS") && !this.render3d;
     },
@@ -677,7 +713,7 @@ export function createMenuApp(opts = {}) {
         return this._optSet("bri", this.settings.bri >= 130 ? 70 : this.settings.bri + 10);
       if (r === "CAMERA") return this._optSet("cam", (this.settings.cam + 1) % 3);
       if (r === "SOUND") return this._optSound(this.settings.snd ? 0 : 1);
-      if (r === "RENDER") return this._optRender((renderVal(this) + 1) % 3);
+      if (r === "RENDER") return this._optRender(this.lookJob && this.lookJob.state === "failed" ? RENDER_KINDS.indexOf(this.lookJob.k) : (renderVal(this) + 1) % 3); // Enter on a look that did not load retries it
       if (r === "SCREEN SHAKE") return this._optSet("shk", this.settings.shk ? 0 : 1);
       if (r === "REDUCE FLASH") return this._optSet("flx", this.settings.flx ? 0 : 1);
       if (r === "ANALYTICS") return this._anaBlocked() ? false : this._optAna(!this.analytics);
@@ -841,6 +877,7 @@ export function createMenuApp(opts = {}) {
         this.togT = -1;
         return this._feel("enter");
       }
+      if (cmd === "RESUME" && this.restoring) return this._feel("deny"), false; // the kicker says REAL 3D · RESTORING
       this._feel(cmd === "RESTART" ? "launch" : "back");
       if (onPauseCmd) onPauseCmd(cmd);
       return true;

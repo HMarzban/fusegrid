@@ -2,12 +2,13 @@
    gate's pad poll, the same-game proofs D1 / D3 / D4, and the rumble and hint
    wiring. The full key and pad matrix lives in keys.test.mjs. */
 import { createGame } from "../src/main.js";
+import { loadControlsArt } from "../src/render/shellview.js";
 import "../src/core/board3.js";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { SCREEN } from "../src/app/menuapp.js";
 import { mountFrames } from "../src/app/frameloop.js";
-import { mountControls } from "../src/app/controlswire.js";
+import { mountControls, preloadControls } from "../src/app/controlswire.js";
 import { mountUpdate, updVisible } from "../src/app/update.js";
 import { ANALYTICS_KEY, GA_HOST, cardVisible, mountAnalytics } from "../src/app/analytics.js";
 import { CFG } from "../src/core/config.js";
@@ -17,6 +18,8 @@ import { createPad } from "../src/app/gamepad.js";
 import { createPadRouter } from "../src/app/padroute.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
 import { hints, setHints } from "../src/render/hintcopy.js";
+import { createLocalPair } from "../src/net/localpair.js";
+await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -1002,7 +1005,7 @@ function d1(gen, room, heat, n) {
 {
   for (const k in L) delete L[k];
   const fake = mkPad();
-  const g = createGame(null, { seed: 42, netLocal: true, createPixelRenderer, getGamepads: () => [fake] });
+  const g = createGame(null, { seed: 42, netLocal: true, createLocalPair, createPixelRenderer, getGamepads: () => [fake] });
   g.t = 0;
   g.pad = fake;
   g.tick = (n = 1) => { for (let i = 0; i < n; i++) { g.t += 1000 / 60; g.ctl.poll(g.t); g.loop(g.t); } };
@@ -1076,7 +1079,7 @@ function d1(gen, room, heat, n) {
   const reg = { waiting: { postMessage: () => { posts++; } } };
   const app = { screen: SCREEN.MENU, capturing: true };
   const u = mountUpdate(() => ({ app, world: { state: "PLAY" }, isRunEnd: () => false, SCREEN }), {
-    top: null, self: null, href: "http://127.0.0.1/index.html", location: { reload: noop },
+    idle: (f) => f(), top: null, self: null, href: "http://127.0.0.1/index.html", location: { reload: noop },
     navigator: { serviceWorker: { controller: {}, addEventListener: noop, register: () => Promise.resolve(reg) } } });
   await new Promise((r) => setImmediate(r));
   const key = () => (docL.keydown || []).forEach((f) => f({ code: "KeyU", repeat: false }));
@@ -1101,7 +1104,7 @@ function d1(gen, room, heat, n) {
   const reg = { waiting: { postMessage: () => { posts++; } } };
   const app = { screen: SCREEN.MENU, capturing: false, lastDev: "key" };
   const u = mountUpdate(() => ({ app, world: { state: "PLAY" }, isRunEnd: () => false, SCREEN }), {
-    top: null, self: null, href: "http://127.0.0.1/index.html", location: { reload: noop },
+    idle: (f) => f(), top: null, self: null, href: "http://127.0.0.1/index.html", location: { reload: noop },
     navigator: { serviceWorker: { controller: {}, addEventListener: noop, register: () => Promise.resolve(reg) } } });
   check("the card's pad entry is not live before an update", u.padCard.live() === false);
   await new Promise((r) => setImmediate(r));

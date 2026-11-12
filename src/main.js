@@ -10,14 +10,14 @@ import { createRenderer } from "./render/renderer.js";
 import { loadRendererPx } from "./render/pixel/load.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
-import { controlsHit, dims, drawShell, isShellScreen, kindSize } from "./render/shellview.js";
+import { controlsHit, dims, drawShell, isShellScreen, kindSize, loadControlsArt } from "./render/shellview.js";
 import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, levelHit, scoresHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
 import { hints, setHints } from "./render/hintcopy.js";
 import { ITEMS, SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
 import { clampHeat } from "./core/heat.js";
 import { clampPact } from "./core/pact.js";
-import { createDemo, stepDemo } from "./app/attract.js";
+import { createDemo, stepDemo, demoReady } from "./app/attract.js";
 import { readFlags, locationSearch } from "./app/flags.js";
 import { bootRender, kindOf } from "./app/renderkind.js";
 import { mountDebugHook } from "./app/debughook.js";
@@ -37,7 +37,6 @@ import { loadSettings, saveSettings } from "./app/settings.js";
 import { timeKey, loadTimes, saveTimes, bestOf, recordTime } from "./app/times.js";
 import { bestKey, loadBests, saveBests, bestOfRun, recordBest, newTally, feedTally } from "./app/bests.js";
 import { loadStats, setStatsOn, stat, statPlaques, statsRows, statsNotes, statsPayload } from "./app/stats.js";
-import "./core/board3.js"; // every ordinary run deals gen 3: registers genBoard3 with board2's seam
 import { DAILY_GEN, dailySeed, loadDaily, dailyTag, dailyStamp, finishDaily } from "./app/daily.js";
 import { decodeChallenge } from "./app/code.js";
 import { createToast, copyText, endKey, toastTick, toastOf } from "./app/endkeys.js";
@@ -67,10 +66,12 @@ import {
 } from "./render/cameraCtl.js";
 import { createRig, resetOrbit, mountOrbitCtl, camPreset } from "./render/three/camrig.js";
 import { loadRenderer3D } from "./render/three/load.js";
-import { createLocalPair } from "./net/localpair.js";
+import { hasGen3 } from "./core/board2.js";
+import { holdGen3, warmBoot } from "./app/lazyload.js";
 
 export function createGame(canvas, opts = {}) {
   const upd = mountUpdate(() => ({ app, world, isRunEnd, SCREEN })); // registers the SW; NEW VERSION READY card (src/app/update.js)
+  warmBoot(); // gen 3 and the ATTRACT bot, in the same first idle after the title (src/app/lazyload.js)
   /* flags parsed ONCE (src/app/flags.js): ?render=3d|px seed the boot kind,
      ?render=iso pins legacy dimetric, ?play=1 skips the shell, ?net=local
      arms the two-peer proof, ?orbit=1 opts into right-drag orbit (wheel /
@@ -186,23 +187,28 @@ export function createGame(canvas, opts = {}) {
       canvas,
       input,
       cam,
-      getActive: () => app.screen === SCREEN.GAME && effKind() !== "3d",
-      getKind: () => (effKind() === "iso" ? "3d" : "2d"),
+      getActive: () => app.screen === SCREEN.GAME && curKind !== "3d",
+      getKind: () => (curKind === "iso" ? "3d" : "2d"),
     });
     mountOrbitCtl({
       canvas,
       input,
       camrig: rig,
       getActive: () =>
-        app.screen === SCREEN.GAME && effKind() === "3d" && orbitEn,
-      getDolly: () => app.screen === SCREEN.GAME && effKind() === "3d",
+        app.screen === SCREEN.GAME && curKind === "3d" && orbitEn,
+      getDolly: () => app.screen === SCREEN.GAME && curKind === "3d",
     });
   }
 
-  const net = flags.netLocal ? createLocalPair(world, input) : null;
+  if (flags.netLocal && !opts.createLocalPair) throw new Error("?net=local needs opts.createLocalPair (src/app/lazyload.js deepLoad)");
+  const net = flags.netLocal ? opts.createLocalPair(world, input) : null;
 
-  /* run handoff (menu START / LEVEL select): fresh board, score reset */
+  /* run handoff (menu START / LEVEL select): fresh board, score reset. A gen-3 start before
+     board3.js is in (src/app/lazyload.js) holds, the world frozen, until it is; every later
+     path (PAUSE RESTART, the restart and room change inside step()) runs a world that passed here. */
+  let held = false;
   const onStart = (args) => {
+    if (!(args && args.seed != null && args.gen !== 3) && !hasGen3()) { held = true; holdGen3(() => { held = false; onStart(args); }); return; }
     world.gen = args && args.seed != null ? (args.gen === 3 ? 3 : args.gen === 2 ? 2 : 1) : 3; // ordinary runs deal the tile boards (owner 2026-11-02); a DAILY / ?code= run plays the generation it names (#13)
     world.heat = clampHeat(args && args.heat);
     world.pact = clampPact(args && args.pact);
@@ -242,7 +248,8 @@ export function createGame(canvas, opts = {}) {
   // SETTINGS (nb.settings.v1): loaded once at boot; applySettings is the seam S2's OPTIONS rows call again.
   let settings = loadSettings();
   if (settings.snd === 0 && audio && audio.toggle) audio.toggle();
-  const frames = mountFrames(loop, { running: () => running, idle: () => !(app.screen === SCREEN.GAME && world.state === "PLAY") && !(app.screen === SCREEN.INTRO && app.introStage === 1), kind: () => curKind, rc: () => rc, app: () => app, fit: () => fit, canvas, pre: (t) => ctl.poll(t) }); // GRAPHICS frame gate (src/app/frameloop.js): every getter is lazy
+  const idleNow = () => !(app.screen === SCREEN.GAME && world.state === "PLAY") && !(app.screen === SCREEN.INTRO && app.introStage === 1); // one idle predicate: the frame gate and the look jobs (rcache) share it
+  const frames = mountFrames(loop, { running: () => running, idle: idleNow, kind: () => curKind, rc: () => rc, app: () => app, fit: () => fit, canvas, pre: (t) => ctl.poll(t) }); // GRAPHICS frame gate (src/app/frameloop.js): every getter is lazy
   const applySettings = (S) => {
     if (audio && audio.setVols) audio.setVols({ mus: S.mus / 100, sfx: S.sfx / 100 });
     setFxOpts({ flashK: S.flx ? 0.25 : 1, shakeK: S.shk ? 1 : 0, partK: frames.apply(S).partK });
@@ -269,8 +276,8 @@ export function createGame(canvas, opts = {}) {
     },
     audio,
     autoplay,
-    onStart,
-    onSource,
+    onStart, canAttract: demoReady,
+    onSource, onWarm: (k) => rc.warm(k), // v202 warm on intent: the rest on the RENDER row
     onStats: () => { setStatsOn(); const sv = loadStats();
       app.stats = { rows: statsRows(sv, loadBests()), notes: statsNotes(sv, dailyRec, todayStr()), trophies: medalRows(loadMedals()) }; },
     onReset: () => { clearCabinet(); if (typeof location !== "undefined") location.reload(); },
@@ -429,7 +436,7 @@ export function createGame(canvas, opts = {}) {
     if (world.state === "PLAY") {
       world.state = "PAUSE";
       app.enterPause();
-    } else if (world.state === "PAUSE") { world.state = "PLAY"; app._feel("back"); }
+    } else if (world.state === "PAUSE" && !app.restoring) { world.state = "PLAY"; app._feel("back"); } // a lost REAL 3D context holds RESUME until it is rebuilt
   };
   input.onPause = onPause;
 
@@ -530,7 +537,7 @@ export function createGame(canvas, opts = {}) {
      rides it, and only the title's press gets it (deep links never do). */
   let padUnlock = null;
   if (typeof window !== "undefined") padUnlock = armUnlock(window, audio, () => { if (app.screen === SCREEN.INTRO) { fireJingle(); app.beginShow(); } }, (ev) => !!(ev && ev.target && ev.target.closest && ev.target.closest("#load"))).pad, mountAudioPower(window, typeof document !== "undefined" ? document : null, audio, () => settings.snd !== 0);
-  const ctl = mountControls({ input, app, SCREEN, world, onPause, getGamepads: opts.getGamepads, store: opts.store, audio, unlock: padUnlock, setHints }); // pad + rebinds + hints + rumble (src/app/controlswire.js)
+  const ctl = mountControls({ input, app, SCREEN, world, onPause, getGamepads: opts.getGamepads, store: opts.store, audio, unlock: padUnlock, setHints, art: loadControlsArt, idle: idleNow }); // pad + rebinds + hints + rumble; the page and rumble load lazily (src/app/controlswire.js)
   if (typeof window !== "undefined") window.addEventListener("pointerdown", () => { if (app.screen === SCREEN.INTRO) app.skipShow(); }); // bubble: an off-canvas tap skips too; the canvas handler runs first
 
   /* ATTRACT demo world handle (src/app/attract.js): the shell machine only
@@ -546,9 +553,9 @@ export function createGame(canvas, opts = {}) {
     return kindOf(urlKind, app);
   }
   let curKind = effKind();
-  const rc = mountRenderers({ canvas, opts, rig, make: { "2d": createRenderer }, size: kindSize, fit: () => fit, kind: effKind, perf: () => frames.knobs(), loadRenderer3D, loadRendererPx, bar: { afterFirstRender, lookPlan, paintYield }, eager: urlKind === "3d" || !!opts.render3d, eagerPx: urlKind === "px" || !!opts.pixel, onSwap: (r) => { renderer = r; }, onReady: () => { app.boardReady = true; }, onFail: (k) => { if (effKind() === k) app._optRender(0); } });
-  let renderer = rc.get(curKind);
-  app.boardReady = curKind === "3d" ? rc.has3d() : curKind === "px" ? rc.hasPx() : true;
+  const rc = mountRenderers({ canvas, opts, rig, make: { "2d": createRenderer }, size: kindSize, fit: () => fit, kind: effKind, perf: () => frames.knobs(), loadRenderer3D, loadRendererPx, bar: { afterFirstRender, lookPlan, paintYield }, eager: urlKind === "3d" || !!opts.render3d, eagerPx: urlKind === "px" || !!opts.pixel, idle: idleNow, poke: () => frames.poke(), debug: !!flags.debug, world: () => (app.screen === SCREEN.ATTRACT && demo ? demo.world : show ? show.world : world), hold: () => app.lookHold(), onJob: (j) => { app.lookJob = j; }, onSwap: (r, k) => { renderer = r; curKind = k; swapped = true; }, onReady: () => { app.boardReady = true; }, onFail: (k, on) => app.lookFailed(k, on), prefetch: true, onLost: () => { if (app.screen === SCREEN.GAME && world.state === "PLAY") onPause(); } });
+  let renderer = rc.get(curKind), pick = curKind, swapped = false, gPrev = world.grid; // pick = the RENDER choice, curKind = the look on screen (rcache swaps on ready)
+  app.boardReady = rc.shownKind() === curKind;
 
   // drawShell getters (plan 5): hoisted once so the RAF loop below allocates
   // no new closures per frame.
@@ -565,10 +572,11 @@ export function createGame(canvas, opts = {}) {
     last = t;
     dt = Math.min(dt, 0.25);
     const k = effKind();
-    if (k !== curKind) {
-      curKind = k;
-      renderer = rc.get(k); if (renderer.reset) renderer.reset();
-    } // live RENDER toggle: cache swap
+    if (k !== pick) {
+      const r0 = renderer;
+      pick = k; renderer = rc.get(k); curKind = rc.shownKind() || k;
+      if (renderer !== r0 && renderer.reset) renderer.reset();
+    } // live RENDER toggle: a cache hit swaps now, a lazy look keeps the one on screen until it is ready
     touch.update(app.screen === SCREEN.GAME, world.state === "PLAY", world.players[0]);
     // §4 ducking: frame-polled, idempotent, self-heals across transitions
     if (audio) {
@@ -582,7 +590,8 @@ export function createGame(canvas, opts = {}) {
       }
       audio.pump();
     }
-    if (app.screen === SCREEN.GAME) {
+    if (held) acc = 0; // a run start waiting for gen 3: nothing steps, nothing reads a key
+    else if (app.screen === SCREEN.GAME) {
       // §1 score-record edge, frame-polled (main latches prev world state) —
       // persistScore owns both the write AND the score_set edge (Minor-2)
       if (app.noteWorldEdge(prevSt, world.state)) persistScore();
@@ -670,8 +679,8 @@ export function createGame(canvas, opts = {}) {
     // ATTRACT: re-read the screen AFTER app.update (entered/exited mid-frame?); create/step or discard the demo
     const attract = app.screen === SCREEN.ATTRACT;
     if (attract) {
-      if (!demo) demo = createDemo();
-      stepDemo(demo, dt);
+      if (!demo && demoReady()) demo = createDemo();
+      if (demo) stepDemo(demo, dt);
     } else if (demo) demo = null;
     // a USER skip drops the show world (its bomb never blows behind MENU, the
     // skip's fade hides the swap); only the natural end keeps it as backdrop
@@ -723,7 +732,7 @@ export function createGame(canvas, opts = {}) {
                   ? Math.max(0, 1 - coachT / COACH_DUR)
                   : 0,
               coach2: world.state === "PLAY" ? { a: coachAlpha(coach2), s: coachTip(coach2.kind, undefined, world, hints()), k: coach2.kind } : { a: 0, s: "" },
-              pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0, note: app.padNote }, toast: toastOf(toast),
+              pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0, note: app.padNote, next: app.lookNext }, toast: toastOf(toast),
               time: { on: !!app.timeAttack, t: roomT, best: bestPrev }, ghost: ghostAt(ghost, world, roomT),
               run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn) },
             }
@@ -734,6 +743,7 @@ export function createGame(canvas, opts = {}) {
     c.restore();
     const sh = fit && fit.shell(isShellScreen(app.screen)); // touch portrait: MENU + plated pages on #sh's own box
     drawShell(sh ? sh.ctx : c, app, world, sh ? sh.box : canvas, curKind, getScoresForHeat, getPlaquesFn, getCab);
+    if (swapped || world.grid !== gPrev) { swapped = false; gPrev = world.grid; last = null; } // G5: a look swap, run start or room start drops this long frame from the next dt
   }
 
   // debug/test hook (browser only; opt-in via opts.debug or ?debug=1)

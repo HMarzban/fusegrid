@@ -54,9 +54,10 @@ export function mountFrames(loop, env = {}) {
     if (a && r && ll != null && K) {
       const onPage = a.screen === SCREEN.GRAPHICS || (a.screen === SCREEN.GAME && a.pauseView === 2);
       if (ll === K.aa && S) prevAA = S.aa;
-      if (!onPage && ll !== K.aa && aaEp !== epoch) {
+      const ls = typeof r.liveShadow === "function" ? r.liveShadow() : null, stale = ll !== K.aa || (ls != null && ls !== K.shadow); // v202: SHADOWS rebuilds through the same job as AA
+      if (!onPage && stale && aaEp !== epoch) {
         aaEp = epoch;
-        if (k === "3d") { if (r.rebuild3d && !r.rebuild3d(K) && a.setGfx) a.setGfx("aa", prevAA ?? (K.aa ? 0 : 1)); }
+        if (k === "3d") { const pv = prevAA ?? (K.aa ? 0 : 1), back = () => { if (a.setGfx) a.setGfx("aa", pv); }; if (r.rebuild3d && !r.rebuild3d(K, back)) back(); } // v202: the rebuild is a look job; a later failure reverts through back too
         else if (r.drop3d) r.drop3d();
         ll = typeof r.liveAA === "function" ? r.liveAA() : null;
       }

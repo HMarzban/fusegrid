@@ -14,8 +14,6 @@ import { PROJ } from "./r3d/camera.js";
 import { drawLogo, overlayBox, touchLay, fmtTime } from "./scenes.js";
 import * as menudraw from "./menudraw.js";
 import { CACHE_NAME } from "../pwa/shell.js";
-import { drawControls } from "./controlsdraw.js";
-import { geoFor, hitPage, vibWord } from "./controlsgeo.js";
 import { hints } from "./hintcopy.js";
 
 export function kindSize(kind) {
@@ -60,9 +58,42 @@ const doorOf = (app) => (app.gfxPreset ? app.gfxPreset() + " ›" : "");
 /* The door names the last-used device; a touch layout reads CONTROLLER. */
 const ctlDoorOf = (app, canvas) => (app.lastDev === "key" && layOf(canvas) === "d" ? "KEYBOARD ›" : "CONTROLLER ›");
 /* OPTIONS' ui, one literal for the screen and the inline PAUSE page. */
-const padVibOf = (app) => (app.controls ? vibWord(app.controls.view(app.ctlT)) : "");
+const padVibOf = (app) => (app.controls ? menudraw.vibWord(app.controls.view(app.ctlT)) : "");
+/* The RENDER row's job note (menudraw lookNote), stepped every frame on any
+   screen so a job's age is true when OPTIONS opens mid-load. app.lookJob is
+   rcache's job read through a getter (a function or a property); null = none. */
+let lookM = null, lookN = null;
+const nowS = () => (globalThis.performance && typeof performance.now === "function" ? performance.now() / 1000 : 0);
+const jobOf = (app) => { const j = typeof app.lookJob === "function" ? app.lookJob() : app.lookJob; return j || null; };
+export function stepLookNote(app, now = nowS()) {
+  const r = menudraw.lookNote(lookM, jobOf(app), now, app.render3d ? "3d" : app.pixel ? "px" : "2d");
+  lookM = r.m;
+  return (lookN = r.n);
+}
+/* index.html's loader (window.__load) paints the DOM chip. row: the RENDER row is
+   on screen, so the docked plate stays down; off: live PLAY or the INTRO show,
+   where no loading surface shows. The chip sits top-centre inside the drawn
+   stage (#c, or #sh's box), 4 css px under its top: clear of the MENU logo line
+   (its top is >= 37 logical px down on every box), and never over the PAUSE pill
+   or the touch pad, which live outside the stage. The rect is read only while the
+   loader has something docked to place. */
+export function loaderSpot(app, world, canvas, host = globalThis) {
+  const L = host.__load;
+  if (!L || typeof L.spot !== "function") return null;
+  const s = app.screen, game = s === SCREEN.GAME, st = world && world.state;
+  const o = {
+    row: s === SCREEN.SETTINGS || (game && st === "PAUSE" && (app.pauseView === 1 || (!app.pauseView && !!app.lookNext))), // PAUSE's kicker says it: one indicator
+    off: s === SCREEN.BOOT || (game && st === "PLAY") || (s === SCREEN.INTRO && app.introStage === 1),
+    x: null, y: null, w: null,
+  };
+  const r = (!L.wants || L.wants()) && canvas && typeof canvas.getBoundingClientRect === "function" ? canvas.getBoundingClientRect() : null;
+  if (r && r.width > 0) { o.x = r.left + r.width / 2; o.y = r.top + 4; o.w = r.width - 16; }
+  L.spot(o);
+  return o;
+}
 const optUi = (app, canvas, kicker) => ({
   kicker,
+  job: lookN,
   row: app.optRow,
   vals: app.settings,
   r3d: app.render3d,
@@ -100,18 +131,35 @@ const ctlLayout = (canvas, kind, paused) => {
 };
 const HUD_BOT = 40, STRIP = "#0a0e18"; // the HUD strip's floor; the plate's ground, opaque
 const ctlUi = (canvas, L) => ({ touch: layOf(canvas) !== "d", narrow: L.narrow, scale: cssScale(canvas) });
-/** The CONTROLS page's geometry for this box, the same one it paints with. */
-export function controlsGeo(canvas, kind, paused) {
-  const L = ctlLayout(canvas, kind, paused), u = ctlUi(canvas, L);
-  return geoFor(L, u.touch, u.narrow, u.scale);
+/* The CONTROLS paint (controlsdraw, controlsgeo, padart) is not in the boot
+   graph (v202): it loads when CONTROLS opens or in idle after the title
+   (controlswire asks through main). Until it lands the page is one plate that
+   says LOADING, and a tap on the canvas finds nothing. */
+let art = null, artP = null;
+/** Loads the CONTROLS paint once; resolves when it is in. A failed load is retried on the next call. */
+export function loadControlsArt() {
+  return artP || (artP = Promise.all([import("./controlsdraw.js"), import("./controlsgeo.js")]).then(([d, g]) => { art = { draw: d.drawControls, geoFor: g.geoFor, hitPage: g.hitPage }; }, (e) => { artP = null; throw e; }));
 }
-/** A tap on the CONTROLS page: controlsgeo's hitPage on the painted geometry. */
-export const controlsHit = (view, x, y, canvas, kind, paused) => hitPage(view, x, y, controlsGeo(canvas, kind, paused));
+/** The CONTROLS page's geometry for this box, the same one it paints with; null until the paint is in. */
+export function controlsGeo(canvas, kind, paused) {
+  if (!art) return null;
+  const L = ctlLayout(canvas, kind, paused), u = ctlUi(canvas, L);
+  return art.geoFor(L, u.touch, u.narrow, u.scale);
+}
+/** A tap on the CONTROLS page: controlsgeo's hitPage on the painted geometry; null (inert) until the paint is in. */
+export const controlsHit = (view, x, y, canvas, kind, paused) => (art ? art.hitPage(view, x, y, controlsGeo(canvas, kind, paused)) : null);
 const paintControls = (c, app, canvas, kind, paused) => {
   const L = ctlLayout(canvas, kind, paused), u = ctlUi(canvas, L);
+  if (!art || app.controls.loading) {
+    const S = menudraw.pageBox(L, 360, 0, u.touch), failed = !!app.controls.failed;
+    menudraw.plate(c, S.x, S.y, S.w, S.h);
+    menudraw.head(c, S, "CONTROLS", failed ? "DID NOT LOAD" : "LOADING");
+    if (failed) menudraw.foot(c, S, "OPEN IT AGAIN TO RETRY");
+    return;
+  }
   /* A phone's plate climbs over the HUD strip and stops short of its ends, which would leave a heart cut to a sliver: cover the whole strip. */
-  if (paused && geoFor(L, u.touch, u.narrow, u.scale).y < HUD_BOT) { c.fillStyle = STRIP; c.fillRect(4, 10, L.cx * 2 - 8, 30); } // a 2D heart overhangs the strip's own x 10
-  drawControls(c, L, app.controls.view(app.ctlT), { ...u, words: hints() });
+  if (paused && art.geoFor(L, u.touch, u.narrow, u.scale).y < HUD_BOT) { c.fillStyle = STRIP; c.fillRect(4, 10, L.cx * 2 - 8, 30); } // a 2D heart overhangs the strip's own x 10
+  art.draw(c, L, app.controls.view(app.ctlT), { ...u, words: hints() });
 };
 
 /* SCORES / plaques memo: nothing writes either store while SCORES is open
@@ -179,7 +227,9 @@ function infoOf(app, kind, getScores, getCab) {
    included, against the same box that screen measures with. */
 export function drawShell(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   const s = app.screen;
+  stepLookNote(app);
   shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab);
+  loaderSpot(app, world, canvas);
   prevScreen = s;
   if (s === SCREEN.BOOT || !app.settings || app.settings.fpm !== 1) return;
   const B = s === SCREEN.GAME ? overlayBox(kind) : null,

@@ -5,6 +5,8 @@
    before PAUSE's enter are the engine's own. Each feel() moves the poll clock
    past the rolling caps, so one feel never starves the next check. */
 import { createGame } from "../src/main.js";
+import { preloadControls } from "../src/app/controlswire.js";
+import { loadControlsArt } from "../src/render/shellview.js";
 import "../src/core/board3.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { SCREEN, PAUSE_ITEMS, OPT_ROWS, ITEMS } from "../src/app/menuapp.js";
@@ -12,6 +14,7 @@ import { GFX_KEYS } from "../src/app/gfx.js";
 import { LIMITS, PATTERNS, scaleMag } from "../src/app/rumble.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
 import { setHints } from "../src/render/hintcopy.js";
+await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {

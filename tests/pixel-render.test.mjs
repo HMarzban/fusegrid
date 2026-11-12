@@ -24,6 +24,7 @@ import { getFx } from "../src/render/fx.js";
 import { createRGBA, surfRGBA, nearest as nearestRGBA, bilinear as bilinearRGBA } from "../tools/pixel/rgba.mjs";
 import { stageWorld } from "../tools/pixel/board.mjs";
 import { classicHash } from "./lib/classichash.mjs";
+import "../src/core/board3.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 let pass = 0, fail = 0;
@@ -212,7 +213,9 @@ function recCanvas(w, h, log, tag) {
   const ov = recCanvas(600, 520, log, "ov");
   const fxBefore = getFx(); fxBefore.push({x: 0, y: 0});
   const r = createPixelRenderer(px, ov, {mkCanvas: mk, surf: surfRGBA});
-  check("construction resets the fx singleton (initFx, as the classic factory)", getFx() !== fxBefore && getFx().length === 0);
+  check("construction leaves the fx singleton alone (v202: shared side effects wait for activate)", getFx() === fxBefore && fxBefore.length === 1);
+  r.activate();
+  check("activate() resets the fx singleton (initFx, as the classic factory)", getFx() !== fxBefore && getFx().length === 0);
   check("surface mirrors the wrapper contract (+ reset)", ["canvas", "overlay", "ctx", "render", "consumeEvents", "getShake", "reset"].every((k) => k in r) && r.canvas === px && r.overlay === ov);
   const w = createWorld(4242, 1); loadLevel(w, 1); w.state = "PLAY";
   log.length = 0;

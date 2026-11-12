@@ -10,13 +10,26 @@ export const LOOK = Object.freeze({
   px: Object.freeze({ label: "PIXEL", files: 26, re: /\/render\/(pixel\/|featpx)/ }),
 });
 
-export function lookPlan(k) {
-  const L = LOOK[k];
+/* gen 3's tile code (src/app/lazyload.js): it loads in the title's first idle, so a run
+   start waits behind this plate only on a link slower than the show */
+export const TILES = Object.freeze({ label: "FLOOR TILES", files: 3, re: /\/core\/(board3|featplace|featchecks)\.js/, plate: true });
+
+/* The lazy trees' own files (root-relative, sorted), pinned with the counts by
+   `--write`: rcache fetches them first with plain fetch() (the HTTP / worker cache
+   warms, nothing evaluates), and imports only in an idle state (v202). */
+export const TREE = Object.freeze({
+  "3d": Object.freeze(["src/render/three/ambientfx.js","src/render/three/blast.js","src/render/three/burstfx.js","src/render/three/entities.js","src/render/three/entityanim.js","src/render/three/featmesh.js","src/render/three/flythrough.js","src/render/three/gatebars.js","src/render/three/groundfx.js","src/render/three/lights.js","src/render/three/materials.js","src/render/three/particles.js","src/render/three/progpin.js","src/render/three/rimart.js","src/render/three/scene.js","src/render/three/textures.js","src/render/three/upload.js","src/render/three/wellfx.js","src/render/three/wrapper.js","vendor/three.module.js"]),
+  px: Object.freeze(["src/render/featpx.js","src/render/featpxcells.js","src/render/pixel/ambient.js","src/render/pixel/anim.js","src/render/pixel/art/blast.js","src/render/pixel/art/bomb.js","src/render/pixel/art/feat.js","src/render/pixel/art/foes.js","src/render/pixel/art/fx.js","src/render/pixel/art/index.js","src/render/pixel/art/items.js","src/render/pixel/art/mako.js","src/render/pixel/art/tiles.js","src/render/pixel/art/walls.js","src/render/pixel/atlas.js","src/render/pixel/entities.js","src/render/pixel/fallback.js","src/render/pixel/foegen.js","src/render/pixel/grid.js","src/render/pixel/manifest.js","src/render/pixel/oneshot.js","src/render/pixel/palette.js","src/render/pixel/renderer.js","src/render/pixel/snap.js","src/render/pixel/timing.js","src/render/pixel/world.js"]),
+});
+
+export function lookPlan(k, L = LOOK[k]) {
   return {
     label: L.label,
     files: L.files,
+    urls: TREE[k],
     total: L.big ? L.files - 1 + L.bigW : L.files,
     weigh: (url) => (!L.re.test(url) ? 0 : L.big && L.big.test(url) ? L.bigW : 1),
+    plate: !!L.plate,
   };
 }
 

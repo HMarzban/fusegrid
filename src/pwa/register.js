@@ -113,3 +113,13 @@ export function applyUpdate(reg) {
   w.postMessage({ type: "SKIP_WAITING" });
   return true;
 }
+
+/* Registration is off the boot path: run fn in the first idle after the title
+   has painted (env.idle overrides; requestIdleCallback, else a timeout). */
+export function deferRegister(fn, env) {
+  if (env && typeof env.idle === "function") return env.idle(fn), true;
+  const g = globalThis;
+  if (typeof g.requestIdleCallback === "function") g.requestIdleCallback(fn, { timeout: 4000 });
+  else { const t = setTimeout(fn, 1200); if (t && typeof t.unref === "function") t.unref(); }
+  return true;
+}

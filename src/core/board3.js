@@ -1,7 +1,7 @@
 /* Gen 3 (every ordinary run and the DAILY since v198): the gen-2 board plus the
    world.feat tile layer, gated by the static tile checks. board2.js holds the seam and
-   this module registers genBoard3 on import (src/main.js in the browser, a plain import
-   in Node tests and tools), so the bare sim still imports without the checks. */
+   this module registers genBoard3 on import (src/app/lazyload.js in the browser, out of
+   the boot graph; a plain import in Node tests and tools), so the bare sim still imports without the checks. */
 import { CFG, T, key, biomeOf } from "./config.js";
 import { FEAT_PROFILE, HOME } from "./feat.js";
 import { placeFeat } from "./featplace.js";

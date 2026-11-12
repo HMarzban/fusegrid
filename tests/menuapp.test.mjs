@@ -1810,5 +1810,53 @@ check("menuapp's DEF_MOVE is controls.js DEF_KEY.MOVE", JSON.stringify(createMen
   check("the cursor never reaches startRun", !("modeCur" in (() => { let got = {}; const s = createMenuApp({ autoplay: false, pactUnlocked: true, onStart: (o) => { got = o; } }); s.skip(); s.cursor = ITEMS.indexOf("LEVEL SELECT"); s.confirm(); s.modeWalk(1); s.confirm(); return got; })()));
 }
 
+// v202 step 2 E: warm on intent (the rest on the RENDER row), a lost context holds RESUME
+{
+  const warms = [];
+  const s = createMenuApp({ autoplay: false, onWarm: (k) => warms.push(k) });
+  s.skip();
+  s.screen = SCREEN.SETTINGS;
+  s.optRow = OPT_ROWS.indexOf("RENDER");
+  s.update(0.2, mkInput({}, false));
+  check("warm: nothing before 0.4 s on the RENDER row", warms.length === 0);
+  s.update(0.25, mkInput({}, false));
+  check("warm: 0.4 s on RENDER warms the next look of the cycle (CLASSIC 2D -> PIXEL)", warms.join() === "px", warms.join());
+  for (let i = 0; i < 10; i++) s.update(0.1, mkInput({}, false));
+  check("once per rest", warms.length === 1);
+  s._optRender(1);
+  s.update(0.3, mkInput({}, false));
+  check("a new value restarts the rest", warms.length === 1);
+  s.update(0.15, mkInput({}, false));
+  check("then warms ITS next (PIXEL -> REAL 3D)", warms.join() === "px,3d", warms.join());
+  s.optRow = OPT_ROWS.indexOf("MUSIC");
+  s.update(1, mkInput({}, false));
+  check("off the RENDER row: no warm", warms.length === 2);
+  s.screen = SCREEN.GAME; s.worldState = "PLAY"; s.pauseView = 1; s.optRow = OPT_ROWS.indexOf("RENDER"); s._optRender(0);
+  s.update(1, mkInput({}, false));
+  check("live PLAY never warms", warms.length === 2);
+  s.worldState = "PAUSE";
+  s.update(0.5, mkInput({}, false));
+  check("PAUSE's OPTIONS view on RENDER warms too", warms.join() === "px,3d,px", warms.join());
+}
+{
+  const cmds = [];
+  const s = createMenuApp({ autoplay: false, onPauseCmd: (c) => cmds.push(c) });
+  s.screen = SCREEN.GAME; s.worldState = "PAUSE"; s.pauseView = 0; s.pauseCursor = 0;
+  s.lookJob = { k: "3d", state: "preparing", restore: true, rebuild: true, on: false };
+  check("a lost context: app.restoring, the kicker tail REAL 3D · RESTORING", s.restoring === true && s.lookNext === "REAL 3D · RESTORING");
+  check("RESUME waits for the rebuild (no blind play)", s.confirmPause() === false && cmds.length === 0);
+  s.lookJob = { k: "3d", state: "ready", restore: true, rebuild: true, on: true };
+  check("once swapped in: RESUME works, no tail", !s.restoring && s.lookNext === "" && s.confirmPause() === true && cmds.join() === "RESUME");
+  s.lookJob = { k: "3d", state: "failed", restore: true, rebuild: true, on: false };
+  check("a failed restore holds nothing", !s.restoring);
+  s.lookJob = { k: "3d", state: "preparing", rebuild: true };
+  check("an AA rebuild is no NEXT and no RESTORING", s.lookNext === "" && !s.restoring);
+}
+{
+  const msrc = readFileSync(new URL("../src/main.js", import.meta.url), "utf8");
+  check("main: P / Esc / START / the pill (onPause) never resume while restoring; onLost pauses live PLAY; the kicker gets app.lookNext; warm and prefetch are wired",
+    /\} else if \(world\.state === "PAUSE" && !app\.restoring\)/.test(msrc) && /onLost: \(\) => \{ if \(app\.screen === SCREEN\.GAME && world\.state === "PLAY"\) onPause\(\); \}/.test(msrc) && /next: app\.lookNext/.test(msrc) && /onWarm: \(k\) => rc\.warm\(k\)/.test(msrc) && /prefetch: true/.test(msrc));
+}
+
 console.log("\n  MENUAPP RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

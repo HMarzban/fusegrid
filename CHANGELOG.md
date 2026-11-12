@@ -15,6 +15,22 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v202 · 2026-11-12
+
+The game starts sooner, and a new look switches in only when it's ready.
+
+### Changed
+
+- **Faster start.** The files the title needs are fetched together up front, and parts you don't need yet (the floor-tile
+  board builder, the demo player, the CONTROLS page's drawing) load in the background once the title is up. If you start
+  a run before the floor tiles are in, a short FLOOR TILES plate holds the start until they are.
+- **Switching RENDER keeps playing.** PIXEL and REAL 3D are prepared in small steps while the old look stays on screen,
+  then swap in when they're ready. The RENDER row in OPTIONS shows how far along it is, and a look that fails to load leaves
+  the one you had.
+- **Offline copy fills in the background.** The game caches what it needs to start first, then the other looks while
+  you're in the menus.
+- **Loading screen.** It says when a load is slow, and its failure card answers Enter and Escape.
+
 ## shell v201 · 2026-11-07
 
 Plug in a controller and play. Set your own keys and buttons.

@@ -381,6 +381,7 @@ import { readFileSync } from "node:fs";
 }
 
 import { createGame } from "../src/main.js";
+import "../src/core/board3.js";
 
 // ---- 9. main.js: the seed reaches the world, and a retry is another TRY ----
 {

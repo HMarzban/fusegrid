@@ -1,6 +1,7 @@
 // One-way vibration from the event drain: reads events, never touches the world. Each call re-reads the live gamepad, because the browser replaces the objects between polls.
 // Note: .superpowers/sdd/notes/v201-controls-build/vibration-sensitivity-design.md; its Lead rulings win.
 import { CFG } from "../core/config.js";
+import { routesOf, padInfo } from "./gamepad.js";
 const NEAR = 3 * CFG.TILE, CLOSE = CFG.TILE, FAR = 0.7;
 /* patMs, pulses, pulseMs, gap, peak bound every pattern; onAdmit leaves onMs room for late rAFs stretching a running step. menuMs: the menu feels' own on-time in the same rolling budgetWin. lateMs: a menu step whose slot ended more than this long ago is dropped with the rest of its feel; a later one starts late and whole. */
 export const LIMITS = Object.freeze({ patMs: 500, pulses: 3, pulseMs: 300, gap: 80, callMs: 334, over: 34, peak: 0.7, floor: 0.35, knee: 0.5, onMs: 500, onAdmit: 460, perSec: Object.freeze([0, 2, 4, 4]), budgetMs: 900, budgetWin: 10000, menuMs: 900, lateMs: 250, chainWin: 250, chainN: 4, testMs: 250 });
@@ -65,26 +66,7 @@ export function scaleMag(m, level) {
 }
 const safe = (f) => { try { return f(); } catch { return undefined; } };
 const quiet = (p) => { if (p && typeof p.catch === "function") safe(() => p.catch(() => {})); };
-/* effects where the browser has it, else the older single .type, else null = it does not say. */
-const effectsOf = (a) => safe(() => (a.effects != null ? Array.from(a.effects) : typeof a.type === "string" ? [a.type] : null));
-/** What can buzz this gamepad, best first: dual-rumble, trigger-rumble only without it, then the older hapticActuators pulse. */
-export function routesOf(g) {
-  const out = [];
-  if (!g) return out;
-  const a = safe(() => g.vibrationActuator), h = safe(() => g.hapticActuators && g.hapticActuators[0]);
-  if (a && typeof a.playEffect === "function") {
-    const fx = effectsOf(a);
-    if (fx == null || fx.includes("dual-rumble")) out.push({ kind: "dual-rumble", a });
-    if (fx != null && fx.includes("trigger-rumble")) out.push({ kind: "trigger-rumble", a });
-  }
-  if (h && typeof h.pulse === "function") out.push({ kind: "pulse", a: h });
-  return out;
-}
-/** What a gamepad offers, for the debug hook. */
-export function padInfo(g) {
-  const a = g ? safe(() => g.vibrationActuator) : null, n = g ? safe(() => g.hapticActuators && g.hapticActuators.length) : 0, r = routesOf(g)[0];
-  return { id: g && typeof g.id === "string" ? g.id : null, mapping: g ? g.mapping : null, actuator: (a && safe(() => a.type)) || null, playEffect: !!a && typeof a.playEffect === "function", effects: a && safe(() => a.effects != null) ? effectsOf(a) : null, hapticActuators: n | 0, route: r ? r.kind : null };
-}
+export { routesOf, padInfo }; // in gamepad.js since v202, so the boot graph knows what can buzz without this file
 function play(rt, ms, weak, strong) {
   const m = Math.max(strong, weak), base = { startDelay: 0, duration: ms, strongMagnitude: strong, weakMagnitude: weak };
   if (rt.kind === "pulse") return rt.a.pulse(m, ms);

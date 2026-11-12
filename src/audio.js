@@ -1,6 +1,6 @@
 // Audio layer — WebAudio oscillator SFX + chiptune tracks. Graceful: no-op if
 // unavailable. createAudio() returns { play(name), toggle(), unlock(), duck(on),
-// pump(), unlocked(), sleep(), wake(), wantWake(), setVols(v), setTrack(id),
+// pump(ahead), preroll(), unlocked(), sleep(), wake(), wantWake(), setVols(v), setTrack(id),
 // cue(screen,level), track() } plus the pure
 // frozen MUSIC_PATTERN / MUSIC_PATTERN_B / MUSIC_SECTIONS / MUSIC_TRACKS /
 // musicCue / BOOM_DEFAULT / BOOM_TINTS / boomOf / ITEM_CUE / itemOf / sfxOf /
@@ -38,6 +38,7 @@ export {
 const MUS_BASE = 0.5,
   MUS_DUCK = 0.16,
   LOOKAHEAD = 0.12,
+  PREROLL = 0.4,
   MUS_FLOOR = 0.0001,
   MUS_PAN = Object.freeze({ bass: -0.32, lead: 0.32, hat: 0.1, pad: -0.06 });
 
@@ -352,7 +353,16 @@ export function createAudio(opts) {
     ducked = on;
     rampMusicGain(on ? musDuck() : musBase(), on ? 0.35 : 0.6);
   }
-  function pump() {
+  /* pump(ahead) (v202 G2): a caller about to block the main thread (a look's
+     import, PIXEL bake, REAL 3D build) schedules up to `ahead` s once, clamped to
+     LOOKAHEAD..PREROLL; anything else is LOOKAHEAD. nextT then sits past the
+     frame horizon, so later pump()s emit nothing until the clock catches up: no
+     note is scheduled twice. Mute / duck / volume ramp the one musicGain from now,
+     so they stay immediate; a track switch inside the window overlaps the old
+     track's queued notes for up to PREROLL s, and a block longer than that still
+     gaps. Accepted (delivery spec, Music and play time). */
+  function pump(ahead) {
+    const la = typeof ahead === "number" && isFinite(ahead) ? Math.max(LOOKAHEAD, Math.min(PREROLL, ahead)) : LOOKAHEAD;
     applyTrack();
     if (!unlocked() || muted) return; // a suspended ctx's frozen clock would chord-blob step 0
     try {
@@ -366,7 +376,7 @@ export function createAudio(opts) {
           while (nextT < ctx.currentTime) nextT += patOf(stepN++).STEP;
         else nextT = ctx.currentTime + 0.05;
       }
-      const horizon = ctx.currentTime + LOOKAHEAD;
+      const horizon = ctx.currentTime + la;
       while (nextT <= horizon) {
         const P = patOf(stepN);
         emitStep(P, stepN % P.LEN, nextT);
@@ -570,6 +580,7 @@ export function createAudio(opts) {
     wantWake,
     duck,
     pump,
+    preroll: () => pump(PREROLL),
     bounceTrack,
     setVols(v) {
       const c = (x) => (typeof x === "number" && isFinite(x) ? Math.max(0, Math.min(1, x)) : 1);

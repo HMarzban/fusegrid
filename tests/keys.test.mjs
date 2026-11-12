@@ -4,6 +4,8 @@
    Expectations come from README "How to play", AGENTS.md and the on-screen
    foot hints in menudraw.js — not from reading the handlers back. */
 import { createGame } from "../src/main.js";
+import { preloadControls } from "../src/app/controlswire.js";
+import { loadControlsArt } from "../src/render/shellview.js";
 import "../src/core/board3.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS, OPT_ROWS, IDLE_T } from "../src/app/menuapp.js";
@@ -16,6 +18,8 @@ import { dailySeed } from "../src/app/daily.js";
 import { getFlash, getShake } from "../src/render/fx.js";
 import { copyPayload, drawOverlay, overlayBox, overlayCue } from "../src/render/scenes.js";
 import { createToast, copyText, toastOf, toastTick, TOAST_T } from "../src/app/endkeys.js";
+import "../src/app/demobot.js";
+await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {

@@ -2,14 +2,16 @@
    the colour gate over the page's real palette, and a shape and a word for each state. */
 import { readFileSync } from "node:fs";
 import { createGame } from "../src/main.js";
+import { loadControlsArt } from "../src/render/shellview.js";
 import "../src/core/board3.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { SCREEN, OPT_ROWS } from "../src/app/menuapp.js";
-import { mountControls } from "../src/app/controlswire.js";
+import { mountControls, preloadControls } from "../src/app/controlswire.js";
 import { ACCENT, DANGER, MUTED, TEXT, WARM, layout, lockGlyph } from "../src/render/menudraw.js";
 import { DEF_KEY, DEF_PAD, geoFor, geomOf, rowsOf } from "../src/render/controlsgeo.js";
 import { drawCapture, drawControls, drawRow } from "../src/render/controlsdraw.js";
 import { dE, rgbOf, simRGB } from "../tools/tileart/gatefns.mjs";
+await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -22,7 +24,7 @@ const noop = () => {};
 {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const live = [...html.matchAll(/<[a-z]+\b[^>]*aria-live=[^>]*>/g)].map((m) => m[0]), tag = live.find((t) => /id="ctlsay"/.test(t));
-  check("one aria-live element in the markup", live.length === 1, live.join(" "));
+  check("two aria-live elements in the markup: the CONTROLS region and the loader's stage status", live.length === 2 && live.some((t) => /id="loadsay"/.test(t)), live.join(" "));
   check("the live region exists once", html.split('id="ctlsay"').length === 2);
   check("it is polite", !!tag && /aria-live="polite"/.test(tag), tag);
   check("it is read as one line", !!tag && /aria-atomic="true"/.test(tag));

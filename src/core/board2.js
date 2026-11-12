@@ -330,11 +330,12 @@ export function fill2(lay, seed, level, heat, attempt = 0) {
   return { grid: g, target, cap: fixed + elig };
 }
 
-/* gen 3 lives in board3.js, which src/main.js imports: importing it registers
-   genBoard3 here. Asking for a gen-3 board with the
-   seam empty throws, never a tile-free board under gen-3 rules. */
+/* gen 3 lives in board3.js, out of the boot graph (v202: src/app/lazyload.js loads it in
+   the title's first idle): importing it registers genBoard3 here. Asking for a gen-3 board
+   with the seam empty throws, never a tile-free board under gen-3 rules. */
 let gen3 = null;
 export function setGen3(fn) { gen3 = fn; }
+export const hasGen3 = () => !!gen3;
 /* the fair fallback (V11): the gen-1 grid with the fair-start stamp; gen-2 foe placement follows in loadLevel */
 export function fallback2(seed, level, heat) {
   return stampStart(genBoard(seed, level, heatProfile(heat).carve));

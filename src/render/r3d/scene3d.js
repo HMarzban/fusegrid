@@ -3,6 +3,7 @@ import {PROJ, project} from "./camera.js";
 import {drawItemBody, drawEnemyBody, drawPlayerBody, drawBombBody,
   drawBladeBody, bakedTile, canMakeCanvas} from "../sprites.js";
 import {getFx} from "../fx.js";
+import {setIso} from "../renderer.js";
 
 /* Painter list (spec §4.3): ONE depth-sorted draw list of floor + shadows +
    blocks + entities + fx together, so a tall block occludes an entity behind
@@ -192,3 +193,6 @@ export function buildPainters(world){
   }
   return ps;
 }
+
+/* fills renderer.js's iso seam (lazy since v202: src/app/lazyload.js for ?render=iso, a plain import in Node) */
+setIso({draw3dBackground, buildPainters, byDepth});

@@ -3231,5 +3231,61 @@ function installAC(ac) {
   check("headless: sleep/wake/wantWake and the silent edges never throw", !threw && h.wantWake() === false);
 }
 
+// ---- v202 G2: pre-roll (pump(ahead) / preroll()) before a synchronous load step ----
+{
+  const LA = 0.12, PRE = 0.4, eps = 1e-9;
+  const pair = () => {
+    const x = mkAC();
+    installAC(x);
+    const a = createAudio();
+    a.unlock();
+    return [x, a];
+  };
+  const [ax, a] = pair(), [bx, b] = pair();
+  const frame = () => { ax.currentTime += 0.1; bx.currentTime += 0.1; a.pump(); b.pump(); };
+  a.pump(); b.pump();
+  for (let i = 0; i < 10; i++) frame();
+  const T = ax.currentTime, n0 = ax.starts.length;
+  a.preroll();
+  const maxT = (st) => Math.max(...st.map((s) => s.t));
+  check("preroll schedules no further than currentTime + 0.4",
+    ax.starts.length > n0 && maxT(ax.starts) <= T + PRE + eps, (maxT(ax.starts) - T).toFixed(3));
+  check("preroll schedules past the frame LOOKAHEAD", maxT(ax.starts) > T + LA + eps, (maxT(ax.starts) - T).toFixed(3));
+  const n1 = ax.starts.length;
+  a.pump();
+  check("a frame pump right after preroll adds no note (nextT is past its horizon)", ax.starts.length === n1);
+  let lateOk = true;
+  for (let i = 0; i < 60; i++) {
+    frame();
+    if (ax.currentTime > T + PRE && maxT(ax.starts) > ax.currentTime + LA + eps) lateOk = false;
+  }
+  check("after the pre-roll window the horizon is LOOKAHEAD again", lateOk);
+  const key = (st) => st.map((s) => s.t.toFixed(9) + "/" + s.f + "/" + s.type).sort().join();
+  check("preroll never schedules a note twice: same note stream as plain frame pumps",
+    key(ax.starts) === key(bx.starts), ax.starts.length + " vs " + bx.starts.length);
+
+  const [cx, c] = pair();
+  c.pump();
+  for (let i = 0; i < 10; i++) { cx.currentTime += 0.1; c.pump(); }
+  c.pump(1e9);
+  check("pump(ahead) clamps a huge ahead to 0.4", maxT(cx.starts) <= cx.currentTime + PRE + eps);
+  const [dx, d] = pair();
+  d.pump(); d.pump(NaN); d.pump(-5); d.pump("1");
+  check("pump(non-number / below LOOKAHEAD) keeps LOOKAHEAD", maxT(dx.starts) <= dx.currentTime + LA + eps);
+
+  const [mx, m] = pair();
+  m.toggle();
+  m.preroll();
+  check("preroll while muted schedules nothing", mx.starts.length === 0, mx.starts.length);
+  const sx = mkAC();
+  sx.state = "suspended";
+  sx.resume = () => {};
+  installAC(sx);
+  const sa = createAudio();
+  sa.unlock();
+  sa.preroll();
+  check("preroll on a suspended ctx schedules nothing", sx.starts.length === 0, sx.starts.length);
+}
+
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

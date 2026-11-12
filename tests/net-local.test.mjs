@@ -37,7 +37,7 @@ function stateHash(w) {
 }
 function mk(o = {}) {
   for (const k in L) delete L[k];
-  const g = createGame(null, { seed: 42, netLocal: true, createPixelRenderer, ...o });
+  const g = createGame(null, { seed: 42, netLocal: true, createLocalPair, createPixelRenderer, ...o });
   g.t = 0;
   g.tick = (n = 1) => { for (let i = 0; i < n; i++) { g.t += 1000 / 60; g.loop(g.t); } };
   g.tick();

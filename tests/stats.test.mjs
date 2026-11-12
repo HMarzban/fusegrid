@@ -16,6 +16,7 @@ import { statsRows, statsNotes, statsPayload } from "../src/app/stats.js";
 import * as md from "../src/render/menudraw.js";
 import { createGame } from "../src/main.js";
 import { drawShell } from "../src/render/shellview.js";
+import "../src/core/board3.js";
 
 let pass = 0,
   fail = 0;

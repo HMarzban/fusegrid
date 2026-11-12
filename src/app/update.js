@@ -7,7 +7,7 @@
    controllerchange listener does the single reload. LATER snoozes until the
    next return to the menus from a run (or the next boot). No store. A pad
    answers through padCard: SOUTH RELOAD, EAST LATER (padroute.js owns the guard). */
-import { registerSW, applyUpdate } from "../pwa/register.js";
+import { registerSW, applyUpdate, deferRegister } from "../pwa/register.js";
 import { CACHE_NAME } from "../pwa/shell.js";
 
 /* The running build, as MENU and OPTIONS print it. The waiting worker's
@@ -76,8 +76,11 @@ export function mountUpdate(get, env) {
     }
     if (card.hidden === show) card.hidden = bg.hidden = !show;
   };
-  const ok = registerSW({ ...(env || {}), onUpdate: (r) => { reg = r; if (doc && !card) build(); tick(); } });
-  if (ok && doc) setInterval(tick, 250);
+  /* never during boot: register in the first idle after the title has painted */
+  deferRegister(() => {
+    const ok = registerSW({ ...(env || {}), onUpdate: (r) => { reg = r; if (doc && !card) build(); tick(); } });
+    if (ok && doc) setInterval(tick, 250);
+  }, env);
   const padCard = {
     live: () => !!card && !card.hidden,
     press: (id) => { if (!card || card.hidden) return; if (id === "S") go(); else if (id === "E") later(); },

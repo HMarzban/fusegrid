@@ -17,6 +17,7 @@ import { DEMO_SEED, newDemoWorld } from "../src/app/attract.js";
 import { SHOW_SEED, createShow } from "../src/app/intro.js";
 import { createGame } from "../src/main.js";
 import { ITEMS, SCREEN } from "../src/app/menuapp.js";
+import "../src/core/board3.js";
 
 const C = CFG.COLS, R = CFG.ROWS;
 const fmix = (h) => { h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; return (h ^ (h >>> 16)) >>> 0; };

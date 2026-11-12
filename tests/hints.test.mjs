@@ -4,7 +4,8 @@ import { DEF_CONTROLS, bindBtn, bindKey, bindMoveSet, resetDevice } from "../src
 import { createHintDev, keyPress, pointerPress, wordsOf } from "../src/app/hints.js";
 import { hints, setHints, tapMode } from "../src/render/hintcopy.js";
 import * as md from "../src/render/menudraw.js";
-import { drawShell } from "../src/render/shellview.js";
+import { drawShell, loadControlsArt } from "../src/render/shellview.js";
+await loadControlsArt(); // the CONTROLS paint is lazy (v202): in before any CONTROLS draw
 import { SCREEN, createMenuApp } from "../src/app/menuapp.js";
 import { helpOf } from "../src/app/hints.js";
 import { POWER } from "../src/core/entities.js";

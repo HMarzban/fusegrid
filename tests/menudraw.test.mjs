@@ -1705,7 +1705,8 @@ function check(name, cond, detail) {
 {
   const md = await import("../src/render/menudraw.js");
   const { SCREEN, OPT_ROWS, ITEMS, createMenuApp } = await import("../src/app/menuapp.js");
-  const { drawShell, isShellScreen, controlsGeo, controlsHit } = await import("../src/render/shellview.js");
+  const { drawShell, isShellScreen, controlsGeo, controlsHit, loadControlsArt } = await import("../src/render/shellview.js");
+  await loadControlsArt(); // the CONTROLS paint is lazy (v202)
   const { createControlsPage } = await import("../src/app/controlspage.js");
   const { DEF_CONTROLS } = await import("../src/app/controls.js");
   const { geoFor, geomOf } = await import("../src/render/controlsgeo.js");

@@ -17,7 +17,7 @@ import {createRig, applyOrbit, CAM_FOV} from "./camrig.js";
 import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
 import {ambientClock} from "../ambient.js";
-import {buildSpriteAtlas, buildWorldAtlas} from "./textures.js";
+import {buildSpriteAtlas, buildWorldAtlas, spriteSteps, worldSteps, wrapTex} from "./textures.js";
 import {stageGlow, stageBack, hudPlate3} from "../frame.js";
 import {drawHudChips, drawAbilityBar, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
 import {onEvent, updateFx, getFxOpts, getShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
@@ -35,6 +35,10 @@ export const ATTR0=Object.freeze({alpha:true,antialias:true,stencil:false,depth:
   premultipliedAlpha:true,preserveDrawingBuffer:false,powerPreference:"default",
   failIfMajorPerformanceCaveat:false});
 export const NET_MS=500, DEAD_MS=3000;
+/* v202 staged build: compile buckets (a fixed count, so the build total is
+   known up front), the KHR poll and its cap (past it the warm frame links) */
+export const COMPILE_K=6, SPLIT=8, KHR_POLL=10, KHR_MAX=2000;
+const wait=(ms)=>new Promise(r=>setTimeout(r,ms));
 const STILL=Object.freeze({x:0,y:0});
 const clock=()=>typeof performance!=="undefined"&&performance.now?performance.now():0;
 /* Board px (bx,by) at world height h -> overlay px through the LIVE camera,
@@ -92,6 +96,9 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
            annihilated low channels — JUNGLE floor0 came out with NO red at
            all. That was the "murky, no punch" complaint. */
         gl.toneMapping=THREE.NoToneMapping;
+        /* v202: the info-log reads are a sync wait per program on first use;
+           diagnostics only when the page asked for them (?debug=1) */
+        if(gl.debug)gl.debug.checkShaderErrors=opts.debug===true;
        }
      }
    }catch(e){ gl=null; }
@@ -151,11 +158,14 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     gl.shadowMap.enabled=shadow!=="off";
     gl.shadowMap.type=shadow==="sharp"?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;
    }
-  let sc=null, brightK=1, twinDone=false, repin=false;
+  let sc=null, brightK=1, twinDone=false, repin=false, active=false, disposed=false, path=null;
   const pins=createPins();
   const pinNow=()=>{ const l=gl&&gl.info&&gl.info.programs; if(l)pins.scan(l); };
   const unpin=()=>{ const l=gl&&gl.info&&gl.info.programs; if(l)pins.release(l); };
   const aclock=ambientClock();
+  /* the shared side of a scene: the stage's CSS background and glow (#gl,
+     #c), only once activated (v202 swap on ready) */
+  function stage(){ if(sc){ stageBack(glCanvas,sc.level); stageGlow(overlayCanvas,sc.level); } }
   function rebuild(world){
     if(sc){ scene3.remove(sc.group); disposeGroup(sc.group); }
     if(repin){ repin=false; unpin(); }
@@ -163,7 +173,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     setShadow(); shadowNeed=inv=true;
     const biome=biomeOf(world.level);
     scene3.background=gl?null:new THREE.Color(biome.bg1);
-    stageBack(glCanvas,world.level); stageGlow(overlayCanvas,world.level);
+    if(active)stage();
     /* No distance fog. On the rig of the 2026-09-04 pass the far board
        corners sat at d 963, and Fog(bg1,700,1600) was replacing 43% of them
        with the darkest colour in the biome — 89% out at the DIST_MAX dolly
@@ -172,6 +182,149 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
        fog over it. */
     scene3.fog=null;
     scene3.add(sc.group);
+   }
+
+  /* the warm scene: every pooled mesh shown (an empty instanced pool at one
+     instance), lights untouched; returns the undo list */
+  function showAll(){ const undo=[];
+    sc.group.traverse(m=>{ if(!m.visible&&!m.isLight){ undo.push([m,"visible",false]); m.visible=true; }
+      if(m.isInstancedMesh&&m.count===0){ undo.push([m,"count",0]); m.count=1; } });
+    return undo; }
+  function addTwin(){ const twin=twinDone?null:rimTwin(sc.rim,sc.biome); twinDone=true;
+    if(twin)sc.group.add(twin); return twin; }
+  /* pinNow() first: the twin's program lives only through its material */
+  function dropTwin(twin){ if(!twin)return; pinNow(); if(twin.parent)twin.parent.remove(twin); twin.material.dispose(); }
+
+  /* Shared side effects, once, at the swap (v202): the stage background and
+     glow, one overlay clear. render() calls it itself when nobody did. */
+  function activate(){
+    if(active||disposed)return;
+    active=true; stage(); ovCtx.clearRect(0,0,W,H);
+   }
+
+  /* v202 staged build (swap on ready). job = {world, report(phase,done,total),
+     step()}; step() resolves when the slice may go on and rejects with
+     {cancelled:true} when the job is dropped (rcache then disposes). Heavy
+     work only, on this renderer's own canvas, nothing shared: no fx store,
+     no events, no #c. Phases: build (paint one texture per unit, upload one
+     per unit, the scene, COMPILE_K compile buckets), shaders (unique
+     programs ready: KHR polled, else one warm draw per bucket), warm (the
+     one full warm frame: shadow depth programs, binds). A renderer already
+     on screen only compiles: a draw there would be seen. */
+  async function prepare(job){
+    try{ await stagedBuild(job); }
+    catch(e){ if(e&&e.stale)return; throw e; }
+   }
+  async function stagedBuild(job){
+    const world=job&&job.world;
+    if(!world||disposed)return;
+    const live0=active, sc0=sc;
+    const rep=(p,d,t)=>{ if(job.report)job.report(p,d,t); };
+    const step=async()=>{ await job.step(); if(disposed)throw {cancelled:true};
+      if(active!==live0||(live0&&sc!==sc0))throw {stale:true}; };
+    const lvl=world.level, key=biomeOf(lvl).name, units=[], ups=[];
+    let so=null, wPart=false, undo=[], twin=null, au, nu;
+    try{
+      if(!spritesReady){
+        if(opts.buildSprites){ units.push(()=>{ try{ sprites=opts.buildSprites(); }catch(e){ sprites=null; } spritesReady=true; });
+          ups.push(()=>texOf(sprites)); }
+        else { let bad=false; so={}; sprites=so;
+          const st=spriteSteps();
+          st.forEach(([k,f],i)=>{ units.push(()=>{ if(!bad)try{ const tx=wrapTex(k,f()); if(tx)so[k]=tx; }catch(e){ bad=true; }
+            if(i===st.length-1){ if(bad)for(const tx of texOf(so))tx.dispose();
+              sprites=!bad&&texOf(so).length?so:null; spritesReady=true; so=null; } });
+            ups.push(()=>sprites&&sprites[k]?[sprites[k]]:[]); }); }
+       }
+      if(!worlds.has(key)&&!live0){
+        if(opts.buildWorld){ units.push(()=>{ let w; try{ w=opts.buildWorld(undefined,lvl); }catch(e){ w=null; } worlds.set(key,w); });
+          ups.push(()=>texOf(worlds.get(key))); }
+        else { const cv={}, wo={}; let bad=false; wPart=true; worlds.set(key,wo);
+          /* a throw keeps the steps painted before it, as worldSources does */
+          for(const [k,f] of worldSteps(undefined,lvl)){
+            units.push(()=>{ if(!bad)try{ const c=f(cv); if(k){ cv[k]=c; const tx=wrapTex(k,c); if(tx)wo[k]=tx; } }catch(e){ bad=true; } });
+            if(k)ups.push(()=>{ const w=worlds.get(key); return w&&w[k]?[w[k]]:[]; }); }
+          units.push(()=>{ if(!texOf(wo).length)worlds.set(key,null); wPart=false; }); }
+       }
+      if(gl&&gl.initTexture)for(const u of ups)units.push(()=>{ if(gl&&!lost)for(const tx of u())gl.initTexture(tx); });
+      units.push(()=>{ if(!live0&&(!sc||sc.update(world)))rebuild(world); else getAtlas(world); });
+      const total=units.length+COMPILE_K;
+      let done=0;
+      rep("build",0,total);
+      for(const u of units){ u(); rep("build",++done,total); await step(); }
+      const canC=!!(gl&&!lost&&gl.compile&&gl.properties&&sc), draws=canC&&!live0&&!sc.warm;
+      let buckets=[];
+      /* a renderer on screen keeps its scene as drawn: no warm overrides, and
+         the rim twin compiles detached (compile needs no parent) */
+      if(canC){ applyOrbit(camera,rig,STILL);
+        if(live0){ twin=twinDone?null:rimTwin(sc.rim,sc.biome); twinDone=true; buckets=bucketsOf(twin); }
+        else { undo=showAll(); twin=addTwin(); buckets=bucketsOf(); } }
+      const progs=[], all=new Set();
+      for(let b=0;b<COMPILE_K;b++){
+        const ps=new Set();
+        if(canC)for(const n of buckets[b])for(const m of gl.compile(n,camera,scene3)){
+          const p=gl.properties.get(m).currentProgram; if(p){ ps.add(p); all.add(p); } }
+        progs.push(ps); rep("build",++done,total); await step();
+       }
+      if(canC)pinNow();
+      const n=all.size, khr=canC&&!!(gl.extensions&&gl.extensions.has&&gl.extensions.has("KHR_parallel_shader_compile"));
+      path=!canC?"none":khr?"khr":draws?"sliced":"issued";
+      rep("shaders",0,n);
+      if(khr){ const t0=now(); let k=0;
+        for(;;){ let r=0; for(const p of all)if(p.isReady())r++;
+          if(r>k){ k=r; rep("shaders",r,n); }
+          if(r>=n||now()-t0>KHR_MAX)break;
+          await wait(KHR_POLL); await step(); }
+        if(k<n)rep("shaders",n,n); }
+      else if(path==="sliced"){
+        /* no KHR: a link waits on its first use, so draw one bucket per slice
+           (the others hidden, lights kept), shadow map held */
+        au=gl.shadowMap.autoUpdate; nu=gl.shadowMap.needsUpdate;
+        gl.shadowMap.autoUpdate=false; gl.shadowMap.needsUpdate=false;
+        const seen=new Set();
+        for(let b=0;b<COMPILE_K;b++){ if(!buckets[b].length)continue;
+          const vis=[];
+          buckets.forEach((bk,j)=>{ if(j!==b)for(const x of bk){ vis.push([x,x.visible]); x.visible=false; } });
+          try{ gl.render(scene3,camera); }finally{ for(const [x,v] of vis)x.visible=v; }
+          for(const p of progs[b])seen.add(p);
+          rep("shaders",seen.size,n); await step(); }
+        gl.shadowMap.autoUpdate=au; gl.shadowMap.needsUpdate=nu; au=undefined;
+        if(seen.size<n)rep("shaders",n,n); }
+      else if(n)rep("shaders",n,n);
+      /* the one warm frame: everything shown, the shadow pass on (its depth
+         programs are made inside it), then thrown away by the first real
+         frame. Never on a canvas already on screen. */
+      if(draws){
+        rep("warm",0,1);
+        sc.warm=true; if(armed)gl.shadowMap.needsUpdate=true;
+        gl.render(scene3,camera);
+        pinNow();
+       }
+      rep("warm",1,1);
+      inv=true; shadowNeed=true;
+     }finally{
+      if(au!==undefined&&gl){ gl.shadowMap.autoUpdate=au; gl.shadowMap.needsUpdate=nu; }
+      for(const [m,k,v] of undo)m[k]=v;
+      if(twin){ if(gl)dropTwin(twin); else{ if(twin.parent)twin.parent.remove(twin); twin.material.dispose(); } }
+      /* a dropped job leaves no half atlas behind for a later sync build */
+      if(so){ for(const tx of texOf(so))tx.dispose(); if(sprites===so)sprites=null; }
+      if(wPart){ for(const tx of texOf(worlds.get(key)))tx.dispose(); worlds.delete(key); }
+     }
+   }
+  /* the compile units: every subtree without a light (lights keep their
+     state through compile's targetScene), split down to its children when
+     it holds more than SPLIT meshes, dealt into COMPILE_K buckets in order */
+  function bucketsOf(extra){
+    const out=[];
+    const split=(n)=>{ if(n.isLight)return; let l=0, k=0;
+      n.traverse(o=>{ if(o.isLight)l++; if(o.material)k++; });
+      if(!k)return;
+      if(!l&&(k<=SPLIT||!n.children.length))out.push(n);
+      else{ if(n.material&&!l)out.push(n); else for(const c of n.children)split(c); } };
+    for(const c of scene3.children)split(c);
+    if(extra)out.push(extra);
+    const B=[]; for(let b=0;b<COMPILE_K;b++)B.push([]);
+    out.forEach((n,i)=>B[Math.floor(i*COMPILE_K/out.length)].push(n));
+    return B;
    }
 
   function consumeEvents(world, dt, playSfx=true){
@@ -193,6 +346,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
 
   function render(world, dt, o){
     if(!world)return;
+    if(!active)activate();
     const paused=world.state==="PAUSE", ev=world.events.length>0;
     if(world!==lastW||world.time<wT-1e-9){ skew=0; pzT=null; }
     wT=world.time;
@@ -244,14 +398,11 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
        here, not on the show's pop and reveal frames. Lights keep their state
        so no program is compiled for a light count the game never uses. */
     const live=gl&&!lost;
-    if(live&&draw&&sc&&!sc.warm){ sc.warm=true; shadowNeed=true; if(armed)gl.shadowMap.needsUpdate=true; const undo=[];
-      sc.group.traverse(m=>{ if(!m.visible&&!m.isLight){ undo.push([m,"visible",false]); m.visible=true; }
-        if(m.isInstancedMesh&&m.count===0){ undo.push([m,"count",0]); m.count=1; } });
-      const twin=twinDone?null:rimTwin(sc.rim,sc.biome); twinDone=true;
-      if(twin)sc.group.add(twin);
+    if(live&&draw&&sc&&!sc.warm){ sc.warm=true; shadowNeed=true; if(armed)gl.shadowMap.needsUpdate=true;
+      const undo=showAll(), twin=addTwin();
       gl.render(scene3,camera); for(const [m,k,v] of undo)m[k]=v;
       pinNow();
-      if(twin){ sc.group.remove(twin); twin.material.dispose(); } }
+      dropTwin(twin); }
     if(draw)fxp.update(getFx());
     if(live&&draw){
       const wantW=Math.floor(W*dprUsed), wantH=Math.floor(H*dprUsed);
@@ -316,6 +467,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   if(hasEv){ glCanvas.addEventListener("webglcontextlost",onLost,false);
     glCanvas.addEventListener("webglcontextrestored",onRestored,false); }
   function dispose(){
+    disposed=true;
     if(hasEv){ glCanvas.removeEventListener("webglcontextlost",onLost,false);
       glCanvas.removeEventListener("webglcontextrestored",onRestored,false); }
     if(sc){ scene3.remove(sc.group); disposeGroup(sc.group); sc=null; }
@@ -335,6 +487,8 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
      DPR, GL render / shadow-map update counters and the context attributes. */
   Object.defineProperties(surface,{
     setPerf:{enumerable:false,value:setPerf},
+    prepare:{enumerable:false,value:prepare},
+    activate:{enumerable:false,value:activate},
     invalidate:{enumerable:false,value:(re)=>{ inv=true; if(re)pzT=null; }},
     dispose:{enumerable:false,value:dispose},
     liveAA:{enumerable:false,get:()=>gl?ATTR.antialias:null},
@@ -344,6 +498,6 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
       get particles(){return fxp;},get dpr(){return dprUsed;},
       get glRenders(){return glRenders;},get shadowUpdates(){return shadowUpdates;},
       get attr(){return ATTR;},get armed(){return armed;},get shadow(){return shadow;},
-      get gl(){return gl;}}}});
+      get gl(){return gl;},get active(){return active;},get path(){return path;}}}});
   return surface;
 }

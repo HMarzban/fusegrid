@@ -1,4 +1,4 @@
-export const CACHE_NAME = "fusegrid-shell-v201";
+export const CACHE_NAME = "fusegrid-shell-v202";
 
 const SRC = Object.freeze([
   "src/ai/enemies.js",
@@ -26,6 +26,8 @@ const SRC = Object.freeze([
   "src/app/highscores.js",
   "src/app/hints.js",
   "src/app/intro.js",
+  "src/app/jobs.js",
+  "src/app/lazyload.js",
   "src/app/loadbar.js",
   "src/app/medals.js",
   "src/app/menuapp.js",
@@ -162,7 +164,7 @@ const SRC = Object.freeze([
   "src/touch.js",
 ]);
 
-export const PRECACHE = Object.freeze([
+const FILES = Object.freeze([
   "./",
   "./index.html",
   "./manifest.webmanifest",
@@ -173,6 +175,32 @@ export const PRECACHE = Object.freeze([
   "./vendor/three.module.js",
   ...SRC.map((p) => "./" + p),
 ]);
+
+/* Two stages (v202). Install caches BOOT only; the worker fetches the looks
+   itself in an idle stage after activation, PIXEL first, REAL 3D last.
+   PRECACHE stays the one full list: BOOT + PIXEL + R3D. */
+const isPixel = (p) =>
+  (p.startsWith("./src/render/pixel/") && p !== "./src/render/pixel/load.js") ||
+  p === "./src/render/featpx.js" ||
+  p === "./src/render/featpxcells.js";
+const is3d = (p) =>
+  p === "./vendor/three.module.js" ||
+  (p.startsWith("./src/render/three/") &&
+    p !== "./src/render/three/camrig.js" &&
+    p !== "./src/render/three/load.js");
+/* Off the boot graph since v202 but needed soon (gen 3, the ATTRACT bot, the CONTROLS page, rumble) or on a flag
+   (net, iso): the page fetches them after the title, so install caching them would download them in full; they lead the idle stage. */
+const LATER = new Set(["./src/core/board3.js", "./src/core/featplace.js", "./src/core/featchecks.js", "./src/app/demobot.js",
+  "./src/app/controlspage.js", "./src/app/capture.js", "./src/app/rumble.js", "./src/render/controlsdraw.js",
+  "./src/render/controlsgeo.js", "./src/render/padart.js", "./src/net/localpair.js", "./src/net/lockstep.js",
+  "./src/net/protocol.js", "./src/net/transport.js", "./src/render/r3d/scene3d.js"]);
+const isLater = (p) => LATER.has(p);
+export const LOOK_LATER = Object.freeze(FILES.filter(isLater));
+export const LOOK_PIXEL = Object.freeze(FILES.filter(isPixel));
+export const LOOK_3D = Object.freeze(FILES.filter(is3d));
+export const LOOKS = Object.freeze([LOOK_LATER, LOOK_PIXEL, LOOK_3D]);
+export const BOOT = Object.freeze(FILES.filter((p) => !isLater(p) && !isPixel(p) && !is3d(p)));
+export const PRECACHE = Object.freeze([...BOOT, ...LOOK_LATER, ...LOOK_PIXEL, ...LOOK_3D]);
 
 export function isBypassPath(pathname) {
   const p = String(pathname || "");

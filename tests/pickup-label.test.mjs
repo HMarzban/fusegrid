@@ -11,6 +11,7 @@ import { createRig, applyOrbit, CAM_PRESET } from "../src/render/three/camrig.js
 import { createWorld, loadLevel } from "../src/core/sim.js";
 import { PROJ, project } from "../src/render/r3d/camera.js";
 import { readFileSync } from "node:fs";
+import "../src/render/r3d/scene3d.js";
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {

@@ -4,8 +4,11 @@ import { fileURLToPath } from "node:url";
 import {
   CACHE_NAME,
   PRECACHE,
+  BOOT,
+  LOOKS,
   fetchPolicy,
 } from "../src/pwa/shell.js";
+import { mountUpdate } from "../src/app/update.js";
 import { registerSW, isEmbedded } from "../src/pwa/register.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -442,7 +445,17 @@ check(
     /SKIP_WAITING/.test(sw2) && /PROMPT_FROM = 179/.test(sw2) && !/\.then\(\(\) => self\.skipWaiting\(\)\)/.test(sw2));
   check("sw.js activate deletes only this game's old shells (fusegrid-shell- prefix)",
     /k\.startsWith\(PREFIX\) && k !== CACHE_NAME/.test(sw2.slice(sw2.indexOf('"activate"'))));
-  check("sw.js precaches with cache: reload", /cache: "reload"/.test(sw2));
+  check("sw.js precaches with cache: no-cache", /cache: "no-cache"/.test(sw2) && !/cache: "reload"/.test(sw2));
+{
+  const upd = readFileSync(new URL("../src/app/update.js", import.meta.url), "utf8");
+  let ran = 0, later = null;
+  const q = [];
+  mountUpdate(() => ({}), { idle: (f) => q.push(f), navigator: { serviceWorker: { register() { ran++; return Promise.resolve(); }, addEventListener() {} } }, href: "https://x.test/", top: 1, self: 1 });
+  check("registration not called synchronously in mountUpdate", ran === 0 && q.length === 1, ran);
+  q[0]();
+  check("registration runs when idle fires", ran === 1, ran);
+  check("update.js has no direct sync registerSW call", !/^\s*const ok = registerSW/m.test(upd.replace(/deferRegister\([\s\S]*?\}, env\);/, "")));
+}
   check("register.js update check bypasses the HTTP cache", /updateViaCache: "none"/.test(readFileSync(join(ROOT, "src/pwa/register.js"), "utf8")));
 }
 
@@ -472,3 +485,16 @@ check(
 
 console.log(fail ? "PWA FAIL" : "PWA OK");
 process.exit(fail ? 1 : 0);
+
+{
+  const sw3 = readFileSync(join(ROOT, "sw.js"), "utf8");
+  const L = LOOKS.flat();
+  check("two-stage: BOOT + looks == PRECACHE, disjoint", BOOT.length + L.length === PRECACHE.length && new Set([...BOOT, ...L]).size === PRECACHE.length && [...BOOT, ...L].every((p) => PRECACHE.includes(p)));
+  check("two-stage: three and all of pixel/** are in the looks", L.includes("./vendor/three.module.js") && PRECACHE.filter((p) => p.startsWith("./src/render/pixel/") && !p.endsWith("/load.js")).every((p) => L.includes(p)));
+  check("two-stage: the off-boot files first, then PIXEL, then REAL 3D with three", LOOKS.length === 3 && LOOKS[0].length === 15 && LOOKS[0].includes("./src/core/board3.js") && LOOKS[1].every((p) => !p.includes("three")) && LOOKS[2].includes("./vendor/three.module.js"));
+  check("two-stage: boot keeps shell, loader and the lazy seams", ["./index.html", "./src/main.js", "./src/render/pixel/load.js", "./src/render/three/load.js"].every((p) => BOOT.includes(p)));
+  check("install caches BOOT only", /addAll\(BOOT\.map/.test(sw3) && !/addAll\(PRECACHE/.test(sw3));
+  check("looks fill is not awaited by activate and resumes on navigate", /setTimeout\(\(\) => fillLooks/.test(sw3) && /cache-first-navigate"\) event\.waitUntil/.test(sw3));
+  check("a look miss goes through getLook (cached on the way)", /getLook\(req\.url/.test(sw3) && /cache\.put\(url/.test(sw3));
+  check("activate deletes only fusegrid-shell-v* keys", /k\.startsWith\(PREFIX\) && k !== CACHE_NAME/.test(sw3));
+}

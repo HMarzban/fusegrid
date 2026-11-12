@@ -834,6 +834,13 @@ SENSITIVITY levels. Before the push the tests ran again (578 pass) and the brows
 a fake controller once more. The honest bit hasn't changed: a person has played it on a real controller and felt
 the test buzz, but the seven hands-on checks are still open, so the changelog promises nothing about feel.
 
+## 2026-11-12: the cabinet boots lighter (shell v202)
+
+The loading work that sat on its own branch since 2026-11-06 became one commit. The title asks for the files it
+needs all at once, and the floor-tile builder, the demo player and the CONTROLS page's drawing load once the title
+is up. A new RENDER look no longer freezes the game while it builds: PIXEL and REAL 3D get ready in small slices behind
+the look you already have and swap in when they're done.
+
 ---
 
 **CONTINUE?** See what each release changed in the

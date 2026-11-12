@@ -112,37 +112,46 @@ function paintFace(c){
 export function atlasSources(mk, level=1){
   return {...spriteSources(mk),...worldSources(mk,level)};
 }
-/* what no world changes: painted once per renderer since #36 */
+/* what no world changes: painted once per renderer since #36. Steps are
+   [key, paint] in the one-shot order, so a staged build (wrapper prepare)
+   paints one canvas per slice and the sync path runs the same list. */
+export function spriteSteps(mk){
+  const fake={time:0}, st=[];
+  st.push(["player",()=>src(mk,(c)=>drawPlayerBody(c,fake,{face:{x:0,y:0},iFrames:0,
+    walk:0,shield:false,kick:false,passing:false}))]);
+  for(const t of ENEMY_TYPES)
+    st.push(["enemy_"+t,()=>src(mk,(c)=>drawEnemyBody(c,fake,{type:t,r:14,
+      color:ENEMY_COLORS[t],invuln:false,home:{x:1,y:1}}))]);
+  st.push(["bomb",()=>src(mk,(c)=>drawBombBody(c,fake,{timer:CFG.FUSE,variant:"normal"}))]);
+  for(const pd of POWER)
+    st.push(["item_"+pd.t,()=>captureSprite(S,S,(c)=>paintItemFace(c,pd.t,pd.col),mk)]);
+  for(const t of ENEMY_TYPES)
+    st.push(["eye_"+t,()=>captureSprite(64,32,(c)=>t==="stationary"?paintSlit(c):
+      paintEyes(c,t),mk)]);
+  st.push(["face",()=>captureSprite(128,128,paintFace,mk)]);
+  return st;
+}
 export function spriteSources(mk){
   const o={};
-  const fake={time:0};
-  o.player=src(mk,(c)=>drawPlayerBody(c,fake,{face:{x:0,y:0},iFrames:0,
-    walk:0,shield:false,kick:false,passing:false}));
-  for(const t of ENEMY_TYPES)
-    o["enemy_"+t]=src(mk,(c)=>drawEnemyBody(c,fake,{type:t,r:14,
-      color:ENEMY_COLORS[t],invuln:false,home:{x:1,y:1}}));
-  o.bomb=src(mk,(c)=>drawBombBody(c,fake,{timer:CFG.FUSE,variant:"normal"}));
-  for(const pd of POWER)
-    o["item_"+pd.t]=captureSprite(S,S,(c)=>paintItemFace(c,pd.t,pd.col),mk);
-  for(const t of ENEMY_TYPES)
-    o["eye_"+t]=captureSprite(64,32,(c)=>t==="stationary"?paintSlit(c):
-      paintEyes(c,t),mk);
-  o.face=captureSprite(128,128,paintFace,mk);
+  for(const [k,f] of spriteSteps(mk))o[k]=f();
   return o;
 }
-/* what one world changes: its walls, rim, brick and floor (about 9 MB of canvas, the rim most of it) */
-export function worldSources(mk, level=1){
-  const o={};
-  if(typeof document!=="undefined"){
-    try{
+/* what one world changes: its walls, rim, brick and floor (about 9 MB of
+   canvas, the rim most of it). Steps take the canvases painted so far; a
+   null key is a scratch canvas a later step reads (the gloss strip). No DOM
+   => no steps. */
+export function worldSteps(mk, level=1){
+  if(typeof document==="undefined")return [];
+  let bi, B, C, strip, gls;
+  return [
+    ["wall",()=>{
       bakeAtlas();
-      const bi=BIOMES.indexOf(biomeOf(level));
-      o.wall=bakedTile(bi,"wall");
+      bi=BIOMES.indexOf(biomeOf(level));
+      B=BIOMES[bi]; const TL=CFG.TILE, WS=2; C=TL*WS;
       /* wall strip painted from the shared shape lists at WS x (detail
          pass 2026-10-23): the micro-texture stays crisp under the
          NearestFilter instead of resampling the 40 px bakes */
-      const B=BIOMES[bi], TL=CFG.TILE, WS=2, C=TL*WS;
-      const strip=(bg,res)=>captureSprite(WV_N*C,C*2,(c)=>{
+      strip=(bg,res)=>captureSprite(WV_N*C,C*2,(c)=>{
         c.fillStyle=bg; c.fillRect(0,0,WV_N*C,C*2);
         const cell=(k,code,a,b,row)=>{ c.save(); c.beginPath(); c.rect(k*C,row*C,C,C); c.clip();
           c.translate(k*C,row*C); c.scale(WS,C/(b-a)); c.translate(0,-a);
@@ -150,23 +159,28 @@ export function worldSources(mk, level=1){
         for(let k=0;k<WV_N;k++){ const [a,b]=topRows(B,k), [s0,s1]=sideRows(B);
           cell(k,k,a,b,0); cell(k,b-a===TL?0:k,s0,s1,1); }
        },mk);
-      o.wallStrip=strip(B.wall);
-      /* round 3: the surface strip the ONE wall material samples beside its
-         colour strip, same layout: R = relief (the colour strip's own local
-         contrast, so a carved groove sits low and a raised mark high, then
-         softened so the bump never aliases at play distance), G = gloss,
-         B = highlight tightness, both painted from the same shape lists */
-      const gl=strip("#000",(b,s)=>{ const g=glossOf(b,s); return "rgb("+g+","+g+","+g+")"; });
-      o.wallSurf=surfStrip(o.wallStrip,gl,C,shinOf(B),mk);
-      /* frame A: the rim's own strip (ring picture + side face), one canvas */
-      { const [rw,rh]=rimSize(); o.rim=captureSprite(rw,rh,(c)=>paintRim(c,B,(b,sl)=>slot2d(b,sl)),mk); }
-      o.brick=bakedTile(bi,"brick");
-      /* base floor (integration 2026-10-25): a 2x2 atlas of four slab variants painted at 2x from the
-         shared floor painter (groundfx.js picks one per cell by hash), floor0 bed (the instance colour carries the
-         parity); the map is minified ~2x at rig C, so it gets mipmaps */
-      o.floor=captureSprite(CFG.TILE*4,CFG.TILE*4,(c)=>{ for(let v=0;v<4;v++){ c.save(); c.translate((v&1)*CFG.TILE*2,(v>>1)*CFG.TILE*2); c.scale(2,2); paintFloor(c,B,0,v,2); c.restore(); } },mk);
-     }catch(_){ /* stay asset-free */ }
-   }
+      return bakedTile(bi,"wall"); }],
+    ["wallStrip",()=>strip(B.wall)],
+    /* round 3: the surface strip the ONE wall material samples beside its
+       colour strip, same layout: R = relief (the colour strip's own local
+       contrast, so a carved groove sits low and a raised mark high, then
+       softened so the bump never aliases at play distance), G = gloss,
+       B = highlight tightness, both painted from the same shape lists */
+    [null,()=>{ gls=strip("#000",(b,s)=>{ const g=glossOf(b,s); return "rgb("+g+","+g+","+g+")"; }); return null; }],
+    ["wallSurf",(o)=>surfStrip(o.wallStrip,gls,C,shinOf(B),mk)],
+    /* frame A: the rim's own strip (ring picture + side face), one canvas */
+    ["rim",()=>{ const [rw,rh]=rimSize(); return captureSprite(rw,rh,(c)=>paintRim(c,B,(b,sl)=>slot2d(b,sl)),mk); }],
+    ["brick",()=>bakedTile(bi,"brick")],
+    /* base floor (integration 2026-10-25): a 2x2 atlas of four slab variants painted at 2x from the
+       shared floor painter (groundfx.js picks one per cell by hash), floor0 bed (the instance colour carries the
+       parity); the map is minified ~2x at rig C, so it gets mipmaps */
+    ["floor",()=>captureSprite(CFG.TILE*4,CFG.TILE*4,(c)=>{ for(let v=0;v<4;v++){ c.save(); c.translate((v&1)*CFG.TILE*2,(v>>1)*CFG.TILE*2); c.scale(2,2); paintFloor(c,B,0,v,2); c.restore(); } },mk)],
+  ];
+}
+export function worldSources(mk, level=1){
+  const o={};
+  try{ for(const [k,f] of worldSteps(mk,level)){ const v=f(o); if(k)o[k]=v; } }
+  catch(_){ /* stay asset-free */ }
   return o;
 }
 
@@ -216,19 +230,21 @@ export function buildWorldAtlas(mk, level=1){
 function wrapSources(s){
   if(!s)return null;
   const atlas={}; let n=0;
-  for(const k in s){
-    const cv=s[k]; if(!cv)continue;
-    let tx;
-    try{ tx=new THREE.CanvasTexture(cv); }catch(_){ continue; }
-    tx.magFilter=THREE.NearestFilter; tx.minFilter=THREE.NearestFilter;
-    tx.generateMipmaps=false; tx.colorSpace=THREE.SRGBColorSpace;
-    /* the surface strip is data (relief / gloss), never colour: linear, and
-       filtered so its slopes stay smooth under the bump derivatives */
-    if(k==="wallSurf"){ tx.colorSpace=THREE.NoColorSpace; tx.magFilter=THREE.LinearFilter; tx.minFilter=THREE.LinearFilter; }
-    if(k.startsWith("item_")){ tx.magFilter=THREE.LinearFilter; tx.minFilter=THREE.LinearFilter; }   // the pickup badge face is read at ~half its 64px, so no nearest shimmer
-    if(k==="floor"){ tx.magFilter=THREE.LinearFilter; tx.minFilter=THREE.LinearMipmapLinearFilter; tx.generateMipmaps=true; }
-    tx._shared=true;
-    atlas[k]=tx; n++;
-   }
+  for(const k in s){ const tx=wrapTex(k,s[k]); if(tx){ atlas[k]=tx; n++; } }
   return n?atlas:null;
+}
+/* one canvas -> its CanvasTexture with the atlas filters, or null */
+export function wrapTex(k,cv){
+  if(!cv)return null;
+  let tx;
+  try{ tx=new THREE.CanvasTexture(cv); }catch(_){ return null; }
+  tx.magFilter=THREE.NearestFilter; tx.minFilter=THREE.NearestFilter;
+  tx.generateMipmaps=false; tx.colorSpace=THREE.SRGBColorSpace;
+  /* the surface strip is data (relief / gloss), never colour: linear, and
+     filtered so its slopes stay smooth under the bump derivatives */
+  if(k==="wallSurf"){ tx.colorSpace=THREE.NoColorSpace; tx.magFilter=THREE.LinearFilter; tx.minFilter=THREE.LinearFilter; }
+  if(k.startsWith("item_")){ tx.magFilter=THREE.LinearFilter; tx.minFilter=THREE.LinearFilter; }   // the pickup badge face is read at ~half its 64px, so no nearest shimmer
+  if(k==="floor"){ tx.magFilter=THREE.LinearFilter; tx.minFilter=THREE.LinearMipmapLinearFilter; tx.generateMipmaps=true; }
+  tx._shared=true;
+  return tx;
 }

@@ -27,8 +27,12 @@
    clock, events, live particles, the even shake, the overlay matrix, the
    backing, pop, ghost, K.epoch), forced every FORCE_MS; events and the
    overlay still run every frame. sleep() drops hi and #px to 1x1 (atlas
-   kept); the next raster regrows them. Construction calls
-   initFx(), as the classic factory does. PAUSE freezes the whole board (R16):
+   kept); the next raster regrows them. v202 (swap on ready): construction
+   touches no shared state; prepare(job) bakes the atlas in steps (await
+   job.step() between them, report "bake" cells / MANIFEST, then "warm": the
+   world's fin sets, spawn rings and a dry draw, so its first frame bakes
+   nothing); activate() is the shared part (initFx() once, setPixelArt).
+   render / consumeEvents without them build at once and activate themselves. PAUSE freezes the whole board (R16):
    the anim clock stops, updateFx is skipped so particles hold still, and the
    shake and the flash wash read as zero until PLAY resumes them; a new grid
    straight out of PAUSE (RESTART, QUIT) drops that held shake and flash.
@@ -40,7 +44,7 @@ import {CFG, biomeOf} from "../../core/config.js";
 import {sfxOf} from "../../audio/item.js";
 import {drawHudChips, drawAbilityBar, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
 import {onEvent, updateFx, getShake as fxShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
-import {createAtlas} from "./atlas.js";
+import {createAtlas, atlasBuilder} from "./atlas.js";
 import {setPixelArt, hudIcon} from "../hudart.js";
 import {createView, resetView, drawPixelWorld, trackGrid} from "./world.js";
 import {createOneShots, feedShot} from "./oneshot.js";
@@ -82,19 +86,41 @@ function canvasSurf(mk) {
 export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   const ovCtx = makeOverlayCtx(overlayCanvas);
   const audio = opts.audio || null;
-  initFx();
   const getShake = opts.getShake || fxShake;
   const mk = opts.mkCanvas || defaultMk;
   const probe = pxCanvas && typeof pxCanvas.getContext === "function" ? mk(1, 1) : null;
   const live = !!(probe && probe.getContext);
   const surf = opts.surf || (live ? canvasSurf(mk) : (w, h, rgba) => ({width: w, height: h, data: rgba}));
-  const t0 = typeof performance !== "undefined" ? performance.now() : 0;
-  const atlas = createAtlas(surf);
-  setPixelArt(atlas);
-  const hudIco = hudIcon(atlas);
-  const bakeMs = (typeof performance !== "undefined" ? performance.now() : 0) - t0;
-  const V = createView(atlas);
+  const pnow = () => (typeof performance !== "undefined" ? performance.now() : 0);
+  let atlas = null, hudIco = null, bakeMs = 0, active = false;
+  const V = createView(null);
   V.shots = createOneShots();
+  function adopt(a, ms) { atlas = a; bakeMs = ms; hudIco = hudIcon(a); V.A = a; }
+  function ensure() { if (!atlas) { const t0 = pnow(), a = createAtlas(surf); adopt(a, pnow() - t0); } return atlas; }
+  function activate() { ensure(); if (!active) { active = true; initFx(); } setPixelArt(atlas); }
+  const dry = new Proxy({}, {get: (o, k) => (k in o ? o[k] : noop), set: (o, k, v) => { o[k] = v; return true; }});
+  function warmDraw(A, world) { const W2 = createView(A); W2.shots = createOneShots(); W2.parts = []; drawPixelWorld(dry, world, W2); }
+  async function prepare(job) {
+    const world = job && job.world, rep = (job && job.report) || noop, step = () => (job && job.step ? job.step() : undefined);
+    if (!atlas) {
+      const b = atlasBuilder(surf), units = b.core.concat(b.rest), total = b.total;
+      let done = 0, ms = 0;
+      rep("bake", 0, total);
+      for (const u of units) { await step(); const t = pnow(); u.run(); ms += pnow() - t; done = Math.min(total, done + u.n); rep("bake", done, total); }
+      if (!atlas) adopt(b.atlas, ms);
+    }
+    await step();
+    /* warm: the world's MAKO fin sets (KICK too, so a pickup mid-run bakes nothing), every foe's spawn ring (r 3..11 =
+       motion.js spawn ring 6..22 / 2), then a dry draw for the floor variants and tile states its first frame uses */
+    const A = atlas;
+    const ps = (world && world.players) || [];
+    for (const p of ps) { A.mako(p.color, false); A.mako(p.color, true); }
+    await step();
+    for (const t in A.foe) for (let r = 3; r <= 11; r++) A.foe[t].ring(r);
+    await step();
+    if (world && world.grid) warmDraw(A, world);
+    rep("warm", 1, 1);
+  }
   const clock = newClock();
   const native = live ? mk(NATIVE_W, NATIVE_H) : null;
   const nctx = native ? native.getContext("2d") : null;
@@ -127,6 +153,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   }
 
   function consumeEvents(world, dt, playSfx = true) {
+    if (!active) activate();
     syncFx(world);
     feedFx(world, dt || CFG.STEP);
     fxOf(world, "px").feed(world.events, clock.t);
@@ -191,6 +218,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
 
   function render(world, dt, o) {
     if (!world) return;
+    if (!active) activate();
     const paused = world.state === "PAUSE", ev = world.events.length > 0;
     if (world !== lastWorld || world.grid !== lastGrid) { V.shots.reset(); if (world === lastWorld) fxOf(world, "px").clear(); resetView(V); if (wasPaused) initFx(); lastWorld = world; lastGrid = world.grid; }
     wasPaused = paused;
@@ -244,10 +272,10 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   }
 
   if (opts.perf) setPerf(opts.perf);
-  const surface = {canvas: pxCanvas, overlay: overlayCanvas, ctx: ovCtx, render, consumeEvents, getShake, reset, setPerf, invalidate, sleep};
+  const surface = {canvas: pxCanvas, overlay: overlayCanvas, ctx: ovCtx, render, consumeEvents, getShake, reset, setPerf, invalidate, sleep, prepare, activate};
   Object.defineProperty(surface, "_dbg", {enumerable: false, value: {
-    get atlas() { return atlas; }, get view() { return V; }, get clock() { return clock; },
-    get stat() { return stat; }, get bakeMs() { return bakeMs; }, get native() { return native; }, get hi() { return hi; },
+    get atlas() { return ensure(); }, get view() { return V; }, get clock() { return clock; },
+    get stat() { return stat; }, get bakeMs() { ensure(); return bakeMs; }, get built() { return !!atlas; }, get active() { return active; }, get native() { return native; }, get hi() { return hi; },
     get hiCap() { return hiCap; }, get armed() { return armed; }, get perf() { return perf; }}});
   return surface;
 }
