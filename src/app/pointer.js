@@ -20,25 +20,30 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
   /* THE page-key branch (R1 cohesion): every page answers a ▲ / ▼ tap with the kit's {k: "page", d, to}; one app.pageKey step, one sound and feel */
   const pageKey = (h) => !!h && typeof h === "object" && h.k === "page" && (app.pageKey(h.d, h.to), true);
   let endK = null; // the run-end key under the pointerdown, acted on its pointerup
-  const at = (ev) => {
-    const r = canvas.getBoundingClientRect(), k = canvas.width / (r.width || canvas.width);
+  /* a portrait phone's PAUSE and run ends are drawn (and so tapped) on #sh's over box under the HUD plate (fit.over, Task 9.8), else on #c */
+  const over = () => (fit && fit.over ? fit.over() : null);
+  const at = (ev, cv = over() || canvas) => {
+    const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width);
     return [(ev.clientX - r.left) * k, (ev.clientY - r.top) * k];
   };
+  const offBox = (cv, x, y) => !!cv.over && (y < 0 || y > cv.height); // over #sh's HUD band or its safe area: no part of the over box, inert
   const ended = () => app.screen === SCREEN.GAME && (world.state === "WIN" || world.state === "LOSE");
   const onDown = (ev) => {
     if (app.screen === SCREEN.GAME) {
-      if (ended()) { input._intent.fire = false; endK = endHit ? endHit(...at(ev)) : null; return; }
+      const cv = over() || canvas;
+      if (ended()) { input._intent.fire = false; const [ex, ey] = at(ev, cv); endK = endHit && !offBox(cv, ex, ey) ? endHit(ex, ey) : null; return; }
       if (world.state !== "PAUSE") return;
       input._intent.fire = false;
       /* Client px times k (buffer px per CSS px) of the OVERLAY canvas —
          never #gl's Retina drawing buffer, which the wrapper owns. */
-      const [px, py] = at(ev);
-      const B = overlayBox(kind());
-      if (app.pauseView === 3) return void ctl().tap(controlsHit(app.controls.view(app.ctlT), px, py, canvas, kind(), true));
+      const [px, py] = at(ev, cv);
+      if (offBox(cv, px, py)) return;
+      const B = overlayBox(kind(), cv);
+      if (app.pauseView === 3) return void ctl().tap(controlsHit(app.controls.view(app.ctlT), px, py, cv, kind(), true));
       if (app.pauseView) {
-        /* the PAUSE view's box: overlayBox at #c's CSS scale (the touch floors), paused (the HUD band kept clear) and the focused row (its page is the one on screen) */
-        const g2 = app.pauseView === 2, PL = { ...menuLayout(B.w, B.h, undefined, dims(canvas, kind()).css), paused: true, focus: g2 ? app.gfxRow : app.optRow };
-        const row = g2 ? graphicsHit(px, py, PL, 0, touchLay(canvas)) : settingsHit(px, py, PL, app.optRows(), touchLay(canvas)); // an index into the visible rows, what optRow is (R11)
+        /* the PAUSE view's box: overlayBox at the box's CSS scale (the touch floors; #c's, or the over box's free of the HUD band), paused and the focused row (its page is the one on screen) */
+        const g2 = app.pauseView === 2, PL = { ...menuLayout(B.w, B.h, undefined, cv.over ? cv.css : dims(canvas, kind()).css), paused: true, ...(B.free ? { free: true } : {}), focus: g2 ? app.gfxRow : app.optRow };
+        const row = g2 ? graphicsHit(px, py, PL, 0, touchLay(cv)) : settingsHit(px, py, PL, app.optRows(), touchLay(cv)); // an index into the visible rows, what optRow is (R11)
         if (pageKey(row)) return; // a page key: the first row of the page it opens
         if (row < 0) { if (row === -1) app.pauseBack(); } // -2: on the plate, off the rows (inert)
         else {
@@ -47,7 +52,7 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
         }
         return;
       }
-      const row = pauseHit(px, py, B, touchLay(canvas), { css: canvas.css, world, time: !!app.timeAttack }); // the paint's own inputs: #c's stage scale, and whether a tag row shows
+      const row = pauseHit(px, py, B, touchLay(cv), { css: cv.css, world, time: !!app.timeAttack }); // the paint's own inputs: the box's CSS scale, and whether a tag row shows
       if (row >= 0) {
         app.pauseCursor = row;
         app.confirm();
@@ -126,7 +131,7 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       if (statsC && app.screen === SCREEN.STATS) input.onUiKey("KeyC");
       statsC = false;
       const k = endK; endK = null;
-      if (k && ended() && el === canvas && endHit(...at(ev)) === k) input.onUiKey(END_KEY[k]);
+      if (k && ended() && el === (over() ? fit.sh : canvas) && endHit(...at(ev)) === k) input.onUiKey(END_KEY[k]); // the canvas the run end is drawn on
     });
     for (const t of ["pointercancel", "pointerleave"]) el.addEventListener(t, () => { statsC = false; endK = null; }); // a cancelled C touch never copies on a later pointerup
     if (el !== canvas) el.addEventListener("contextmenu", (e) => e.preventDefault()); // #c's camera controls swallow it there; on #sh a right-click confirms a row as it did on #c, with no browser menu

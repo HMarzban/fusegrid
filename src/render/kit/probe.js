@@ -9,6 +9,9 @@
    begin(page, box)            once per frame, first: clears the last frame and names the page; box = {w, h, dpr, el}, the logical box the page measured
                                against, its backing dpr and the id of the canvas it drew on ("sh" or "c"), which gates.mjs needs to find it in a capture;
                                gates.mjs maps the box onto that canvas's whole CSS content box (true of #sh's shell box and of #c's 600 x 520).
+   place(o)                    where the next pages' boxes sit (Task 9.8), until place(null): o = {el, oy, fw, fh}, a box that is a band of a canvas
+                               (a phone's over box on #sh: its top oy and the canvas's whole box fw x fh, box units); begin then records el, oy, fw
+                               and fh, and gates.mjs maps the box onto that band.
    rect(name, x, y, w, h, o)   a drawn part. o.touch a touch target (o.set its target set, o.kind list|tab|bank|step: same-kind members of a set are exempt
                                from the gap floor), o.focus the focused part, o.fill its face colour (#ffd447 parts are counted), o.plate its ring width T in
                                box px (true: the appendix T, 16 desktop / 10 phone CSS px).
@@ -25,7 +28,7 @@
 export const PAIR_KINDS = Object.freeze(["chosen", "band", "ring", "info", "locked"]);
 export const ROLES = Object.freeze(["primary", "secondary", "hud", "body"]);
 export const CAP_N = 2048;
-export const probe = { on: false, page: "", box: null, rects: [], texts: [], pairs: [], frames: 0, overflow: false, fault: null };
+export const probe = { on: false, page: "", box: null, rects: [], texts: [], pairs: [], frames: 0, overflow: false, fault: null, at: null };
 
 /* every throw is a fault the record keeps (the first one, until setOn) */
 const bad = (what) => { const m = "kit probe: " + what; if (!probe.fault) probe.fault = m; throw new Error(m); };
@@ -52,14 +55,15 @@ export function setOn(b) {
   probe.on = !!b;
   if (!probe.on) { clear(); probe.frames = 0; probe.fault = null; }
 }
+export function place(o) { probe.at = o ? { el: String(o.el), oy: num(o.oy, "place oy"), fw: pos(o.fw, "place fw"), fh: pos(o.fh, "place fh") } : null; }
 export function begin(page, box) {
   if (!probe.on) return;
   clear();
   probe.frames++;
   probe.page = String(page);
   if (!box) return;
-  const w = pos(box.w, "box w"), h = pos(box.h, "box h"), dpr = box.dpr === undefined ? 1 : pos(box.dpr, "box dpr");
-  probe.box = { w, h, dpr, el: box.el ? String(box.el) : null };
+  const w = pos(box.w, "box w"), h = pos(box.h, "box h"), dpr = box.dpr === undefined ? 1 : pos(box.dpr, "box dpr"), at = probe.at;
+  probe.box = at ? { w, h, dpr, el: at.el, oy: at.oy, fw: at.fw, fh: at.fh } : { w, h, dpr, el: box.el ? String(box.el) : null };
 }
 export function rect(name, x, y, w, h, o) {
   if (!probe.on) return;

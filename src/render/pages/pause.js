@@ -1,5 +1,5 @@
 /* PAUSE PAGE (UI upgrade v202 Task 5.1; design record §4 PAUSE; appendix 7.3 PAUSE title block, rows and tags; the round 7 S7-pages 10-pause frames).
-   PAUSE stays on #c over the frozen board (R1, R16), in the tokens of the room being PLAYED (world.level), drawn by drawOverlay for all three looks.
+   PAUSE stays on #c over the frozen board (R1, R16; a portrait phone: #sh's over box under the HUD plate, Task 9.8, B.free), in the tokens of the room being PLAYED (world.level), drawn by drawOverlay for all three looks.
    Top to bottom on the kit plate: a centred kicker LEVEL n · WORLD (· DAILY), PAUSED, a tag row of the run's non-default rules (words.js runParts:
    each names its setting, at most 3 and +N; none for a default run), clear space, RESUME (the yellow key, the back key's cap at its end on a keyboard
    layout), SETTINGS (a door), the wall-course divider, RESTART and QUIT TO MENU (danger; M's cap at its end on a keyboard layout), the foot hint.
@@ -57,7 +57,7 @@ const R = (x, y, w, h) => ({x, y, w, h});
 const sc = (r, u) => ({x: r.x * u, y: r.y * u, w: r.w * u, h: r.h * u});
 
 function solve(B, touchy, css, ts, tags) {
-  const dev = touchy ? "p" : "d", P = PZ[dev], dv = DEV[dev], t125 = ts > 1.1, Tt = dv.T, top = CLEAR.top, bot = B.h >= 480 ? B.h - CLEAR.bot : B.h - CLEAR.short;
+  const dev = touchy ? "p" : "d", P = PZ[dev], dv = DEV[dev], t125 = ts > 1.1, Tt = dv.T, top = B.free ? 0 : CLEAR.top, bot = B.free ? B.h : B.h >= 480 ? B.h - CLEAR.bot : B.h - CLEAR.short; // B.free: the over box (Task 9.8), nothing of the HUD's to clear
   const kL = dv.pri * ts * 1.2, tL = P.title * ts * 1.2, tagH = Math.max(dv.tg, dv.sec * ts + 10), footL = dv.sec * ts * 1.2, below = t125 ? P.below125 : P.below, reachY = 2 * Tt + 5;
   const head = (k) => P.pad[0] + P.top + kL + P.gap + tL + (tags && !k.fold ? P.gap + tagH : 0) + (k.tight ? TIGHT.below : below), dv0 = (k) => (k.tight ? TIGHT.div : P.div);
   const rowsH = (k, hero, row) => (k.mode === "grid" ? hero + dv0(k) + row : hero + P.heroGap + row + dv0(k) + row + P.rowGap + row);
@@ -99,7 +99,7 @@ let gm = null;
 /** The one PAUSE geometry for draw and tap (box units; d: design px). */
 export function pauseGeom(B, touch, o) {
   const p = o || {}, touchy = !!touch, css = touchy && p.css > 0 && Number.isFinite(p.css) ? p.css : 1, ts = textScale(), tags = tagsOf(p.world, p.time).length > 0;
-  if (gm && gm.w === B.w && gm.h === B.h && gm.touch === touchy && gm.css === css && gm.ts === ts && gm.tags === tags) return gm.G;
+  if (gm && gm.w === B.w && gm.h === B.h && gm.free === !!B.free && gm.touch === touchy && gm.css === css && gm.ts === ts && gm.tags === tags) return gm.G;
   const d = solve(B, touchy, css, ts, tags), u = d.u, n = PAUSE_ROWS.length, b = d.rows.map((r) => sc(r, u)), out = [];
   for (let i = 0; i < n; i++) {
     const r = b[i], grid = d.mode === "grid", col = grid ? i & 1 : 0, mate = grid ? (i < 2 ? [0, 1] : [2, 3]) : [i];
@@ -111,7 +111,7 @@ export function pauseGeom(B, touch, o) {
   const pl = sc(d.plate, u);
   const G = deep({mode: d.mode, dev: d.dev, u, css, t125: d.t125, touch: touchy, tags: d.tagRow, fold: d.fold, foot: d.foot, floored: d.floored, x: pl.x, y: pl.y, w: pl.w, h: pl.h,
     T: d.T * u, mid: d.cx * u, rows: out, div: RULE_AT > 0 ? d.div * u : null, d});
-  gm = {w: B.w, h: B.h, touch: touchy, css, ts, tags, G};
+  gm = {w: B.w, h: B.h, free: !!B.free, touch: touchy, css, ts, tags, G};
   return G;
 }
 /** The PAUSE row under (x, y) in box units, -1 off the rows; o as pauseGeom's. A row owns [a, b]; a y on the seam with the row above it (a list

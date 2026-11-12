@@ -160,6 +160,12 @@ export function hudReach(g) {
   return { right, bottom };
 }
 
+/* The over box (Task 9.8): on p, PAUSE (its list and inline views), LEVEL CLEAR, the finale and GAME OVER take the whole space under the HUD
+   plate (PORT_GAME.top, the board's top in a run) down to the viewport's bottom safe area, on #sh at its scale s: {top, h} in #sh's box units.
+   d and l have none (their overlays keep #c's box). safeBot reads env(safe-area-inset-bottom) as body's scroll-padding-bottom (index.html). */
+export const overGeo = (W, H, lay, s, sab = 0) => (lay === "p" && s > 0 ? { top: PORT_GAME.top / s, h: Math.max(0, H - Math.max(0, sab) - PORT_GAME.top) / s } : null);
+const safeBot = (body) => { try { const v = typeof getComputedStyle === "function" && body ? parseFloat(getComputedStyle(body).scrollPaddingBottom) : 0; return Number.isFinite(v) ? v : 0; } catch (e) { return 0; } };
+
 export const PORT_SHELL = Object.freeze({ s: 0.9, w: [400, 600], logo: 0.27 });
 export const WIN_SHELL = Object.freeze({ min: [600, 520], dpr: 2 });
 
@@ -225,7 +231,7 @@ function snapPxOrigin(el) {
 }
 
 export function mountFit(canvas) {
-  let was, cap = Infinity, shG = null, shM = 0, shNew = false, hG = null, hQ = 1, hGen = 0, hudOn = false, hBW = 1, hBH = 1;
+  let was, cap = Infinity, shG = null, shO = null, shM = 0, shNew = false, hG = null, hQ = 1, hGen = 0, hudOn = false, hBW = 1, hBH = 1;
   const shEl = () => (typeof document !== "undefined" && document.getElementById && document.getElementById("sh")) || null;
   const hudEl = () => (typeof document !== "undefined" && document.getElementById && document.getElementById("hud")) || null;
   const fit = () => {
@@ -255,6 +261,7 @@ export function mountFit(canvas) {
         if (sh.height !== bh) { sh.height = bh; shNew = true; }
         for (const [k, v] of [["left", shG.left], ["top", shG.top], ["width", shG.w * shG.s], ["height", shG.h * shG.s]]) sh.style[k] = v + "px";
       } else if (sh && !sh.hidden) sh.hidden = true;
+      shO = shG ? overGeo(window.innerWidth, window.innerHeight, lay, shG.s, safeBot(body)) : null;
       const hud = hudEl();
       hG = hudGeo(window.innerWidth, window.innerHeight, canvas.width, canvas.height, lay, game);
       const st = body.style;
@@ -280,23 +287,31 @@ export function mountFit(canvas) {
     if (px && px.style) fitPx(px, canvas.width * s, canvas.height * s, cap);
   };
   fit.sh = shEl();
-  fit.box = () => { const sh = shG && shEl(); return sh && !sh.hidden && shM !== 2 ? { width: shG.w, height: shG.h, logo: shG.logo, css: shG.s, play: shG.play, ownerDocument: sh.ownerDocument, getBoundingClientRect: () => sh.getBoundingClientRect() } : null; };
+  fit.box = () => { const sh = shG && shEl(); return sh && !sh.hidden && shM !== 2 && shM !== 3 ? { width: shG.w, height: shG.h, logo: shG.logo, css: shG.s, play: shG.play, ownerDocument: sh.ownerDocument, getBoundingClientRect: () => sh.getBoundingClientRect() } : null; };
+  /* the over box (Task 9.8): on p, PAUSE and the run ends draw on #sh in the space under the HUD plate (shO, box units), so the box's own
+     (0, 0) is #sh's (0, top); its rect is that band, so a tap maps through it as a page's does through fit.box() */
+  fit.over = () => {
+    const sh = shO && shM === 3 && shEl();
+    if (!sh || sh.hidden) return null;
+    return { width: shG.w, height: shO.h, top: shO.top, full: [shG.w, shG.h], over: true, css: shG.s, ownerDocument: sh.ownerDocument,
+      getBoundingClientRect: () => { const r = sh.getBoundingClientRect(), k = r.height / shG.h; return { left: r.left, top: r.top + shO.top * k, width: r.width, height: shO.h * k }; } };
+  };
   fit.shell = (on) => {
     const sh = shG && shEl();
-    if (!sh) { shM = 0; return null; }
+    if (!sh || (on === 3 && !shO)) { if (sh && !sh.hidden) sh.hidden = true; shM = 0; return null; }
     if (!on) { if (!sh.hidden) sh.hidden = true; shM = 0; return null; }
     if (sh.hidden) sh.hidden = false;
     const end = on === 2, pe = end ? "none" : "", kept = end && shM === 2 && !shNew;
     if (sh.style.pointerEvents !== pe) sh.style.pointerEvents = pe;
-    shM = end ? 2 : 1;
+    shM = end ? 2 : on === 3 ? 3 : 1;
     shNew = false;
     if (kept) return null;
-    const ctx = sh.getContext("2d");
+    const ctx = sh.getContext("2d"), ky = sh.height / shG.h;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, sh.width, sh.height);
-    ctx.setTransform(sh.width / shG.w, 0, 0, sh.height / shG.h, 0, 0);
+    ctx.setTransform(sh.width / shG.w, 0, 0, ky, 0, shM === 3 ? shO.top * ky : 0);
     ctx.imageSmoothingEnabled = false;
-    return end ? null : { ctx, box: fit.box(), el: sh };
+    return end ? null : { ctx, box: shM === 3 ? fit.over() : fit.box(), el: sh };
   };
   /* the HUD canvas: on shows it and hands back {ctx (CSS px transform), geo (hudGeo), w, h}; off (or no #hud, or no slots: p
      off GAME) hides it. Never clears: the HUD painter clears what it repaints, and only on a change. */

@@ -11,7 +11,8 @@ import { clampPace } from "../core/pace.js";
 import { SCREEN, ITEMS, LEVEL_ROWS, GUIDE_ROWS } from "../app/menuapp.js";
 import { LABEL } from "./words.js";
 import { PROJ } from "./r3d/camera.js";
-import { overlayBox, touchLay, fmtTime, isRunEnd } from "./scenes.js";
+import { overlayBox, touchLay, fmtTime, isRunEnd, drawOverlay, overRun } from "./scenes.js";
+import * as probe from "./kit/probe.js";
 import * as menudraw from "./menudraw.js";
 import * as lazy from "./pages/lazy.js";
 import { CACHE_NAME } from "../pwa/shell.js";
@@ -43,11 +44,12 @@ const layOf = (cv) => {
    WIN/LOSE included) stay on the board canvas and its box. */
 const SHELL_ON = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.HOWTO, SCREEN.SCORES, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.SETTINGS, SCREEN.GUIDE, SCREEN.STATS, SCREEN.TROPHIES, SCREEN.GRAPHICS, SCREEN.FLOOR, SCREEN.CONTROLS]);
 export const isShellScreen = (s) => SHELL_ON.has(s);
-/* fit.shell's argument for this frame: 1 = a shell screen draws on #sh; 2 = a
-   run end (isRunEnd), #sh shown click-through and drawn on by nothing (the end
-   overlay keeps #c until its own redesign); 0 = hidden (PLAY, PAUSE, a mid-run
-   WIN, INTRO, ATTRACT). */
-export const shellMode = (s, world) => (SHELL_ON.has(s) ? 1 : s === SCREEN.GAME && isRunEnd(world) ? 2 : 0);
+/* fit.shell's argument for this frame: 1 = a shell screen draws on #sh; 3 = on a portrait phone (lay p), PAUSE and every WIN / LOSE draw on
+   #sh in the over box under the HUD plate (Task 9.8; fit.js fit.over: main hands the renderer {over}, which then draws no overlay on #c);
+   2 = elsewhere a run end (isRunEnd), #sh shown click-through and drawn on by nothing (the end overlay keeps #c); 0 = hidden (PLAY, and off p
+   PAUSE and a mid-run WIN, INTRO, ATTRACT). */
+const OVER_ST = new Set(["PAUSE", "WIN", "LOSE"]);
+export const shellMode = (s, world, lay) => (SHELL_ON.has(s) ? 1 : s === SCREEN.GAME && lay === "p" && !!world && OVER_ST.has(world.state) ? 3 : s === SCREEN.GAME && isRunEnd(world) ? 2 : 0);
 /* The screens whose page paints the room look opaque over its whole canvas every frame it is up (v202 Task 3.1: MENU; Task 3.3: LEVEL
    SELECT; Task 3.4: SETTINGS and GRAPHICS, their LOADING plate included; Task 3.5: the GUIDE pages; Tasks 4.1 / 4.2: RECORDS' SCORES, STATS and MEDALS; Task 6.3: CONTROLS; each page task adds its screen): main passes
    {covered: true} to the renderer while one holds, so no look rasters a board nobody sees. PAUSE's views sit over the board and never cover it. */
@@ -157,12 +159,15 @@ function cssScale(cv) {
 }
 function ctlFrame(canvas, kind, paused) {
   const d = dims(canvas, kind), touch = layOf(canvas) !== "d", cue = hints().dev === "pad";
-  if (paused) { const B = overlayBox(kind); return { W: B.w, H: B.h, touch, shell: false, css: d.css, paused: true, cue }; }
+  if (paused) { const B = overlayBox(kind, canvas); return { W: B.w, H: B.h, touch, shell: false, css: d.css, paused: true, ...(B.free ? { free: true } : {}), cue }; } // a phone's over box (canvas.over, free of the HUD band) when one is up
   return { W: d.cw, H: d.ch, touch, shell: typeof d.lg === "number", css: d.css, play: d.play, cue }; // play: the room behind at play scale (fit.js shellGeo)
 }
 /* The CONTROLS page (pages/controls.js, with controlsgeo and padart) is not in the boot graph (v202): it loads when CONTROLS opens or in idle after
    the title (controlswire asks through main). Until it lands the kit's one LOADING plate stands in (DID NOT LOAD once the load failed), and a tap
    on the canvas finds nothing (null: the wire backs out only from a failed load). */
+/** A PAUSE view's frame, the one draw and tap read: overlayBox at the box's CSS scale (#c's stage scale, or a phone's over box on #sh, free of the
+    HUD band), paused, and the focused row (its page is the one on screen). */
+export const pauseLayout = (canvas, kind, focus) => { const B = overlayBox(kind, canvas); return { ...menudraw.layout(B.w, B.h, undefined, canvas && canvas.over ? canvas.css : dims(canvas, kind).css), paused: true, ...(B.free ? { free: true } : {}), focus }; };
 let art = null, artP = null;
 /** Loads the CONTROLS page once; resolves when it is in. A failed load is retried on the next call. */
 export function loadControlsArt() {
@@ -246,26 +251,35 @@ export function recPagesOf(canvas, kind, screen, rows) {
   const { cw, ch, lg, css } = dims(canvas, kind);
   return menudraw.recPages(menudraw.layout(cw, ch, lg, css), touchLay(canvas), REC_PAGE[screen], rows);
 }
-export function drawShell(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
+/* ro: the renderer's options main built this frame; ro.over = the renderer drew no PAUSE / run-end overlay (a portrait phone, shellMode 3), so
+   it is drawn here, on #sh's over box (canvas.over) or, where the phone has no shell box, on #c's (the board's own box, as the renderer would) */
+export function drawShell(c, app, world, canvas, kind, getScores, getPlaques, getCab, ro) {
   const s = app.screen;
   stepLookNote(app);
   if (s === SCREEN.MENU || s === SCREEN.GAME) lazy.idle(); // the lazy pages load in the first idle after MENU's (or a deep link's run's) first frame
   setLogoLook(kind);
-  shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab);
+  const ob = canvas && canvas.over ? canvas : null;
+  if (ob) probe.place({ el: "sh", oy: ob.top, fw: ob.full[0], fh: ob.full[1] }); // the probe maps the over box onto its band of #sh
+  shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab, ro);
+  if (ob) probe.place(null);
   logoProbe();
   loaderSpot(app, world, canvas);
   prevScreen = s;
   if (s === SCREEN.BOOT || !app.settings || app.settings.fpm !== 1) return;
-  const B = s === SCREEN.GAME ? overlayBox(kind) : null,
+  const B = s === SCREEN.GAME ? overlayBox(kind, canvas) : null,
     d = B ? null : dims(canvas, kind);
   const idle = s === SCREEN.GAME ? world.state !== "PLAY" : !(s === SCREEN.INTRO && app.introStage === 1); // main's frame-gate idle predicate
   menudraw.drawMeter(c, B ? B.w : d.cw, B ? B.h : d.ch, app.gfx, idle);
 }
 
-function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
+function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab, ro) {
   const s = app.screen;
   if (s === SCREEN.BOOT) return;
   if (s === SCREEN.GAME) {
+    if (ro && ro.over && world.state !== "PLAY") { // the overlay the renderer left to the shell: the over box's own css for the page and its taps
+      const B = overlayBox(kind, canvas), ob = canvas && canvas.over ? canvas : null, pu = ro.pause || {};
+      drawOverlay(c, world, B.w, B.h, B.cx, B.cy, ob ? { ...pu, css: ob.css } : pu, ro.time, overRun(ro.run, ob), ro.toast, B);
+    }
     /* All shell chrome routing stays in the one module whose job it is. The
        paused SETTINGS / GRAPHICS pages measure against overlayBox — the SAME
        box the pause list uses — never dims(canvas, kind), so list and page
@@ -273,12 +287,12 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     if (world.state === "PAUSE" && app.pauseView >= 1) {
       // no second dim: the PAUSE veil is the one wash, so the HUD stays lit as
       // run context on every pause view; every page keeps the HUD strip clear
-      const B = overlayBox(kind),
+      const B = overlayBox(kind, canvas),
         kicker = "PAUSED · " + LABEL.LEVEL + " " + (world.level | 0);
       if (app.pauseView === 3) return app.controls ? paintControls(c, app, canvas, kind, true, world, kicker) : undefined;
       /* the same box the pointer maps a PAUSE tap through: overlayBox at #c's CSS scale (the touch floors), paused (the HUD band kept clear), the
          focused row (its page is on screen); the room being played dresses the plate (world.level, never the menu's app.level) */
-      const g2 = app.pauseView === 2, PL = { ...menudraw.layout(B.w, B.h, undefined, dims(canvas, kind).css), paused: true, focus: g2 ? app.gfxRow : app.optRow }, lv = world.level | 0 || 1;
+      const g2 = app.pauseView === 2, PL = pauseLayout(canvas, kind, g2 ? app.gfxRow : app.optRow), lv = world.level | 0 || 1;
       if (g2) return menudraw.drawGraphics(c, PL, app.subT, { ...gfxUi(app, canvas, kicker), level: lv });
       menudraw.drawSettings(c, PL, app.subT, { ...optUi(app, canvas, kicker), level: lv });
     }

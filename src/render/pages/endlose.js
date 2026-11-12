@@ -179,9 +179,10 @@ function scene(p, F, G, tok, caps, A) {
   pager(p, G, tok);
   const K = (n) => dr(G, G.keys[n]);
   keyPart(p, "main", K("main"), "main", EW.AGAIN, {tok, phone: ph, cap: caps.main, big: true, sub: F.keys.sub, center: ph});
-  keyPart(p, "menu", K("menu"), "key", MENU, {tok, phone: ph, cap: caps.menu, center: !caps.menu});
-  keyPart(p, "copy", K("copy"), "key", EW.COPY, {tok, phone: ph, cap: caps.copy, center: !caps.copy});
-  keyPart(p, "map", K("map"), "key", EW.MAP, {tok, phone: ph, cap: caps.map, center: !caps.map});
+  const ln = G.lines || {};
+  keyPart(p, "menu", K("menu"), "key", MENU, {tok, phone: ph, cap: caps.menu, center: !caps.menu, lines: ln.menu});
+  keyPart(p, "copy", K("copy"), "key", EW.COPY, {tok, phone: ph, cap: caps.copy, center: !caps.copy, lines: ln.copy});
+  keyPart(p, "map", K("map"), "key", EW.MAP, {tok, phone: ph, cap: caps.map, center: !caps.map, lines: ln.map});
 }
 
 /** Paints GAME OVER over the board: c drawOverlay's context, B its box {w, h}; run / tm / toast as drawOverlay hands them. */

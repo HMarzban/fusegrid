@@ -114,7 +114,7 @@ const helpH = (dv, ts) => 2 * DEV[dv].sec * ts * 1.3 + 8;
 const LAND_TIGHT = Object.freeze({top: 12, bot: 12, pad: Object.freeze([6, 12, 8, 12]), below: 8});
 const HINT_H = DEV.d.caph + 6; // a paged column's back-out hint line under its page keys
 /* PAUSE keeps the HUD strip (y < 40) clear, and on a keyboard box the old CONSOLE band (H x 0.16 - 10 .. H - 28) */
-const pauseBand = (F) => [44, F.touch ? F.H - 8 : F.H - 28];
+const pauseBand = (F) => (F.free ? [8, F.H - 8] : [44, F.touch ? F.H - 8 : F.H - 28]); // F.free: the over box (Task 9.8), under the HUD already
 function col(F, rows, ts, fl, help) {
   const C = COL[big(ts) ? "c125" : "c"], dv = "d", T0 = DEV[dv].T, head = headH(ts, true, C.ttl), mx = T0 + 2 + GUT / 2, my = T0 + 3 + GUT / 2, hh = help ? helpH(dv, ts) : 0;
   const [b0, b1] = F.paused ? pauseBand(F) : [0, F.H], Hb = b1 - b0, pw = C.pad[3] + C.list + C.pad[1], u0 = Math.min(1, F.W / (pw + 2 * mx));
@@ -167,7 +167,7 @@ function phone(F, rows, ts, help, land) {
 const memo = new Map();
 function geom(F, rows, page) {
   const ts = F.ts > 0 ? F.ts : textScale(), touchy = !!F.touch, shell = !!F.shell, css = F.css > 0 ? F.css : 1, paused = !!F.paused, isPhone = !paused && shell && touchy && F.H > F.W * 1.3;
-  const id = [page, F.W, F.H, touchy, shell, css, ts, paused, ...rows].join("|");
+  const id = [page, F.W, F.H, touchy, shell, css, ts, paused, !!F.free, ...rows].join("|");
   let G = memo.get(id);
   if (G) return G;
   const fl = touchy ? {h: TOUCH.h / css, g: TOUCH.g / css} : null;

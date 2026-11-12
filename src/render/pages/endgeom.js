@@ -1,7 +1,7 @@
 /* END SCREENS: the one draw / tap contract of WIN and GAME OVER (UI upgrade v202 Task 5.2; design record §4 end screens, appendix 10; the round 7
    E7-end frames). Boot (pointer.js maps a tap through it while the lazy pages, endwin.js and endlose.js, are still on their way). Three modes:
    clear (a mid-run WIN), fin (FUSE/GRID CLEAR, the finale WIN) and lose (GAME OVER). They draw over the board on #c, inside drawOverlay's box
-   (600 x 520, iso 608 x 352), never on #sh: a run end keeps #c, its overlay and its taps.
+   (600 x 520, iso 608 x 352); on a portrait phone on #sh, in the over box under the HUD plate (Task 9.8: B.free, no HUD_TOP).
    endFacts(world, run, tm) is every word and claim the page shows, from the run-end facts main hands in (run: the tally, the run-start best
    snapshot, fromStart, daily, fixed, cap, medals; tm: the room time and the best captured before the WIN-edge write). A claim (a ribbon, the
    plaque, the shortfall) is made only at a run end (isRunEnd) from a persisted number, as "a delta that cannot lie" requires; the level-clear
@@ -169,13 +169,20 @@ function content(F, D, ph, ts, W, m, two) {
    foot, 44 tall, the page as "1 / 2" between); ↑ / ↓, the D-PAD and a tap on ▲ / ▼ turn it (main holds the page, run.page). Only a box too small for one section and the keys
    scales (the iso guard on its smallest windows): G.scaled says so. The touch key rows keep 8 CSS px from what is above them. */
 export const PAGER_H = 46, PAGER_W = 54; // 44 CSS px and more: a fitted stage scale rounds a hair under
+/* the touch keys (Task 9.8): stacked where a label does not fit its share of the row; where the stacked keys would make a box scale under its
+   floors, the row stays one and a label too wide for its key breaks once at a space instead (two lines, each with 8 px clear, G.lines) */
 export function endGeom(B, F, o = {}) {
+  const G = geomOf(B, F, o, false);
+  if (G && G.scaled && G.stacked) { const G2 = geomOf(B, F, o, true); if (G2 && !G2.scaled) return G2; }
+  return G;
+}
+function geomOf(B, F, o, brk) {
   if (!F || !F.mode || !(B && B.w > 0 && B.h > 0)) return null;
   const ph = o.lay === "p" || o.lay === "l", D = END[ph ? "p" : "d"], ts = o.ts > 0 ? o.ts : textScale(), css = o.css > 0 ? o.css : 1, L = D.L, lose = F.mode === "lose";
   const G = {mode: F.mode, ph, ts, d: D, rects: {}, keys: {}, page: 0, pages: 1, scaled: false};
   const side = lose ? (ph ? 14 : D.loseGap) : ph ? 12 : D.side, ring = 2 * (D.T + 3);
   const nominal = ph ? 600 : F.mode === "clear" ? D.clearW * (ts > 1.1 ? 1.18 : 1) : F.mode === "fin" ? D.finW * (ts > 1.1 ? 1.07 : 1) : D.loseL + D.loseR * (ts > 1.1 ? 1.2 : 1) + 3 * D.loseGap;
-  const availW = (B.w - 2 * MARGIN) * css - ring, availH = (B.h - HUD_TOP - 2 * MARGIN) * css - ring;
+  const top = B.free ? 0 : HUD_TOP, availW = (B.w - 2 * MARGIN) * css - ring, availH = (B.h - top - 2 * MARGIN) * css - ring; // B.free: the over box (Task 9.8), under the HUD already
   /* the keys' words (a touch layout in tap mode shows no keycaps): GAME OVER's foot keys share their row by what each needs (label and
      keycap), and its plate widens to hold them (never past the box) */
   const W = hints(), tap = ph && W.dev !== "pad", caps = W.dev === "pad" ? {menu: W.back, copy: EW.CAP_COPY, map: EW.CAP_MAP} : {menu: W.back, copy: "C", map: "B"};
@@ -192,7 +199,29 @@ export function endGeom(B, F, o = {}) {
   const copyNeed = Math.max(footNeed[1], footNeed[2]);
   const mainNeed = 8 + DEV.d.bombs + 12 + wOf(o.m, "display", MENU, 28) + (tap ? 4 : 14 + Math.max(DEV.d.capw, wOf(o.m, "label", W.ok, D.sec) + 20)) + 14;
   const menuW = Math.min(330, Math.max(mainNeed, inW - 28 - 2 * copyNeed)), fin2 = F.mode === "fin" && !ph && inW - 28 - 2 * copyNeed < mainNeed; // the keys keep label and keycap: else MENU over the copy keys
-  const keys = lose ? [["try", ph ? 64 : 1.32 * D.btnh + 0.4 * L], ["foot", ph ? 46 : 0.85 * D.btnh]] : [["keys", F.mode === "fin" && ph ? 46 + 10 + 46 : fin2 ? D.btnh + 8 + 0.85 * D.btnh : D.btnh]];
+  /* a phone's keys hold their labels whole (a label and 8 px clear each side inside its key): GAME OVER's foot row splits by need where every label
+     fits its share, else MENU over COPY RESULT | COPY MAP, else one key a row; the finale's COPY RESULT | COPY MAP halves, else a row each */
+  const lw = (l) => wOf(o.m, "label", l, D.pri), gpD = Math.max(12, 10), lines = {};
+  const split = (l) => { let best = null; for (let i = l.indexOf(" "); i > 0; i = l.indexOf(" ", i + 1)) { const q = [l.slice(0, i), l.slice(i + 1)], w = Math.max(lw(q[0]), lw(q[1])); if (!best || w < best.w) best = {q, w}; } return best; };
+  const twoL = 2 * D.pri * ts * 1.05 + 4 <= 46; // a 46 px key holds two label lines
+  /* each label's share of the row by need (adj: the row splits by need, so a broken label's share follows its new need; else fixed shares); in the
+     break pass the widest label that has a space breaks, until all fit; wts keeps the needs the row is split by */
+  const wts = {}, fits = (ls, ns0, w, nm, adj = true) => {
+    const ns = ns0.slice(), lw0 = ls.map(lw), out = {}, room = w - gpD * (ls.length - 1);
+    for (;;) {
+      const s = ns.reduce((a, b) => a + b, 0), bad = ls.map((l, i) => (room * ns[i]) / s < (out[nm[i]] ? split(l).w : lw0[i]) + 16);
+      if (!bad.some(Boolean)) { Object.assign(lines, out); nm.forEach((n, i) => { wts[n] = ns[i]; }); return true; }
+      if (!brk || !twoL) return false;
+      const j = ls.reduce((a, l, i) => (!out[nm[i]] && split(l) && (a < 0 || lw0[i] > lw0[a]) ? i : a), -1);
+      if (j < 0) return false;
+      const b = split(ls[j]); out[nm[j]] = b.q; if (adj) ns[j] += b.w - lw0[j];
+    }
+  };
+  const footRows = !(lose && ph) ? [[0, 1, 2]] : fits([MENU, EW.COPY, EW.MAP], footNeed, colW0, ["menu", "copy", "map"]) ? [[0, 1, 2]] : fits([EW.COPY, EW.MAP], footNeed.slice(1), colW0, ["copy", "map"]) ? [[0], [1, 2]] : [[0], [1], [2]];
+  const finRow = !(F.mode === "fin" && ph) || fits([EW.COPY, EW.MAP], [1, 1], colW0, ["copy", "map"], false);
+  if (footRows.length > 1 || !finRow) G.stacked = true;
+  if (Object.keys(lines).length) G.lines = lines;
+  const keys = lose ? [["try", ph ? 64 : 1.32 * D.btnh + 0.4 * L], ["foot", ph ? 46 * footRows.length + 10 * (footRows.length - 1) : 0.85 * D.btnh]] : [["keys", F.mode === "fin" && ph ? (finRow ? 46 + 10 + 46 : 3 * 46 + 2 * 10) : fin2 ? D.btnh + 8 + 0.85 * D.btnh : D.btnh]];
   const keysH = keys.reduce((a, [n, h], i) => a + h + (i ? Math.max(kgap, gap(n)) : 0), 0);
   /* the content's height at gap factor k (the first section's top gap is the pad) */
   const span = (rs, k) => rs.reduce((a, [n, h], i) => a + h + (i ? gap(n) * k : 0), 0);
@@ -217,8 +246,8 @@ export function endGeom(B, F, o = {}) {
   const body = paged ? Math.max(2 * PAGER_H + 20, ...pages.map((q) => span(q, k))) : span(mine, k);
   const H = pad[0] + body + (tight ? kgap : kTop(k)) + keysH + pad[2];
   let u = 1 / css;
-  if (H > availH + 0.5) { u = (B.h - HUD_TOP - 2 * MARGIN) / (H + ring); G.scaled = true; }
-  const pw = plateW * u, phh = H * u, px = Math.round((B.w - pw) / 2), py = HUD_TOP + Math.round((B.h - HUD_TOP - phh) / 2);
+  if (H > availH + 0.5) { u = (B.h - top - 2 * MARGIN) / (H + ring); G.scaled = true; }
+  const pw = plateW * u, phh = H * u, px = Math.round((B.w - pw) / 2), py = top + Math.round((B.h - top - phh) / 2);
   G.u = u; G.T = D.T * u; G.L = L * u; G.cssK = css; G.k = k; G.H = H; G.availH = availH;
   G.plate = {x: px, y: py, w: pw, h: phh};
   const R = (x, y, w, h) => ({x: px + x * u, y: py + y * u, w: w * u, h: h * u});
@@ -243,12 +272,20 @@ export function endGeom(B, F, o = {}) {
   if (lose) {
     const t0 = kr.try, th = ph ? t0.h : 1.32 * D.btnh * u;
     G.keys.main = {x: t0.x, y: t0.y + t0.h - th, w: t0.w, h: th};
-    const f = kr.foot, wt = footNeed, sum = wt.reduce((a, b) => a + b, 0);
-    let x = f.x;
-    ["menu", "copy", "map"].forEach((name, i) => { const w = ((f.w - 2 * gp) * wt[i]) / sum; G.keys[name] = {x, y: f.y, w, h: f.h}; x += w + gp; });
+    const f = kr.foot, names = ["menu", "copy", "map"], rh = footRows.length > 1 ? 46 * u : f.h;
+    footRows.forEach((row, j) => {
+      const wt = row.map((i) => wts[names[i]] ?? footNeed[i]), sum = wt.reduce((a, b) => a + b, 0), y = f.y + j * (rh + 10 * u);
+      let x = f.x;
+      row.forEach((i, q) => { const w = ((f.w - (row.length - 1) * gp) * wt[q]) / sum; G.keys[names[i]] = {x, y, w, h: rh}; x += w + gp; });
+    });
   } else if (F.mode === "fin") {
     const r = kr.keys;
-    if (ph) {
+    if (ph && !finRow) {
+      const kh = 46 * u, st = (46 + 10) * u;
+      G.keys.main = {x: r.x, y: r.y, w: r.w, h: kh};
+      G.keys.copy = {x: r.x, y: r.y + st, w: r.w, h: kh};
+      G.keys.map = {x: r.x, y: r.y + 2 * st, w: r.w, h: kh};
+    } else if (ph) {
       const kh = 46 * u, kw = (r.w - gp) / 2;
       G.keys.main = {x: r.x, y: r.y, w: r.w, h: kh};
       G.keys.copy = {x: r.x, y: r.y + r.h - kh, w: kw, h: kh};
@@ -282,7 +319,7 @@ let ctxN = 0, plans = new Map();
 const idOf = (m) => { if (!m || typeof m !== "object" && typeof m !== "function") return 0; let i = ctxId.get(m); if (!i) ctxId.set(m, (i = ++ctxN)); return i; };
 export function endPlan(B, world, run, tm, o = {}) {
   const w = world || {}, r = run ? {...run, et: 0, reduced: 0} : null, W = hints();
-  const key = JSON.stringify([B && B.w, B && B.h, w.state, w.level, w.score, w.heat, w.pace, w.pact, !!w.finale, r, tm || null, o.lay, o.css, o.page | 0, textScale(), W.dev, W.ok, W.back, idOf(o.m)]);
+  const key = JSON.stringify([B && B.w, B && B.h, !!(B && B.free), w.state, w.level, w.score, w.heat, w.pace, w.pact, !!w.finale, r, tm || null, o.lay, o.css, o.page | 0, textScale(), W.dev, W.ok, W.back, idOf(o.m)]);
   let P = plans.get(key);
   if (!P) {
     const F = endFacts(world, run, tm), G = endMode(w) ? endGeom(B, F, o) : null;

@@ -44,6 +44,8 @@
   html,body{margin:0;height:100%;width:100%;background:var(--bg);color:#dfe7f5;
     font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
     display:flex;align-items:center;justify-content:center;overflow:hidden}
+  /* the bottom safe area as a length fit.js can read (the phone's PAUSE and run ends stop above it); body never scrolls, so it changes nothing else */
+  body{scroll-padding-bottom:env(safe-area-inset-bottom,0px)}
   #wrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px}
   #stage{position:relative;line-height:0}
   /* real3d §7 dual-canvas: WebGL #gl under the classic overlay #c; both

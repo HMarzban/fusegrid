@@ -228,12 +228,15 @@ test("gates: REQUIRED is default-deny; n/a only for touch and gap on a desktop c
     for (const [k, v] of Object.entries(s.exempt)) assert.ok(EXEMPTABLE.includes(k) && whyOf(v).trim(), n + " exempts " + k + " with a reason");
   }
   /* scoped exemptions (fix round 1): a gate exempt only on the captures its `when` names is required on every other capture of the row */
-  const nf = (n, f) => needFor(SCREENS[n], { flags: f }); // the one needFor: a row and a capture (its flags)
-  assert.ok(!nf("win", { world: 1 }).includes("chosen") && nf("win", { world: 5 }).includes("chosen") && !nf("win", { world: 5, phone: true }).includes("chosen"), "win: chosen exempt on a level clear and a phone finale page 1 only");
-  assert.ok(nf("win2", { world: 5, phone: true }).includes("chosen"), "win2: a paged finale's second page records its course");
+  /* Task 9.8: a run end's course gates follow what the page draws (exemptIfNo): COURSE is a page with the course and a locked level drawn, BARE a
+     paged run end's first page with neither (a short box) */
+  const COURSE = [{ name: "cell 1" }, { name: "cell 6 locked" }], BARE = [{ name: "plate" }];
+  const nf = (n, f, rects = COURSE) => needFor(SCREENS[n], { flags: f, ui: { rects } }); // the one needFor: a row and a capture (its flags, its probe rects)
+  assert.ok(!nf("win", { world: 1 }).includes("chosen") && nf("win", { world: 5 }).includes("chosen") && nf("win", { world: 5, phone: true }).includes("chosen") && !nf("win", { world: 5, phone: true }, BARE).includes("chosen"), "win: chosen exempt on a level clear and on a finale page with no course only");
+  assert.ok(nf("win2", { world: 5, phone: true }).includes("chosen") && !nf("win2", { world: 5, phone: true }, BARE).includes("chosen"), "win2: a finale page that draws its course records it");
   assert.ok(nf("lose", { world: 1 }).includes("locked") && nf("lose", { world: 1 }).includes("chosen") && nf("lose", { world: 1 }).includes("info"), "lose: a desk first run is held to its course pairs and flag");
-  assert.ok(!nf("lose", { world: 8 }).includes("locked") && !nf("lose", { world: 1, phone: true }).includes("locked") && nf("lose", { world: 8, phone: true }).includes("info"), "lose: levels 6-8 and a phone's first page exempt the course, never a phone's info");
-  assert.ok(nf("losedaily", { world: 1 }).includes("chosen") && !nf("losedaily", { world: 1, phone: true }).includes("chosen"), "losedaily: the desk records its course");
+  assert.ok(!nf("lose", { world: 8 }).includes("locked") && nf("lose", { world: 1, phone: true }).includes("locked") && !nf("lose", { world: 1, phone: true }, BARE).includes("locked") && !nf("lose", { world: 1 }, [{ name: "cell 1" }]).includes("locked") && nf("lose", { world: 8, phone: true }).includes("info"), "lose: levels 6-8, a page with no course and one with no locked level exempt locked; a phone page with its course is held to it; never a phone's info");
+  assert.ok(nf("losedaily", { world: 1 }).includes("chosen") && nf("losedaily", { world: 1, phone: true }).includes("chosen") && !nf("losedaily", { world: 1, phone: true }, BARE).includes("chosen"), "losedaily: a page that draws its course records it");
   assert.deepEqual(nf("menu", {}), SCREENS.menu.need, "a row with only plain exemptions: needFor = need");
   assert.throws(() => needOf("t", { chosen: { why: "x" } }), /when/, "a scoped exemption needs a when");
   assert.deepEqual(REQUIRED, ["chosen", "band", "ring", "locked", "info", "text", "cap", "inside", "plate", "yellow"]);

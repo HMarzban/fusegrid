@@ -90,8 +90,10 @@ export function dailyLine(world, run) {
 export { PAUSE_ROWS, PAUSE_SHAPE, PAUSE_ROW_H, PAUSE_ROW_D, pauseGeom, pauseHit, pauseKick, pauseKickers, pauseKicker } from "./pages/pause.js";
 /* The ONE named coordinate space for pause chrome: it feeds both drawOverlay
    call sites and both hit tests, so the list, the inline SETTINGS page and the
-   tap map can never disagree by a pixel. */
-export function overlayBox(kind) {
+   tap map can never disagree by a pixel. ob: the over box (fit.js fit.over, Task 9.8: a portrait phone's PAUSE and run ends on #sh under the
+   HUD plate), when one is up: the box itself, free of the board box's HUD clearances. */
+export function overlayBox(kind, ob) {
+  if (ob && ob.over) return { w: ob.width, h: ob.height, cx: ob.width / 2, cy: ob.height / 2, free: true };
   if (kind === "iso")
     return { w: PROJ.canvasW, h: PROJ.canvasH, cx: 304, cy: 188 };
   const w = CFG.COLS * CFG.TILE,
@@ -124,16 +126,17 @@ function endLoading(c, world, w, h, run, mode) {
 }
 export const endReady = (mode) => { const p = endPage(mode); return p === undefined ? null : !!p; };
 /* main's run-end tap: x y in the overlay box of the look (overlayBox), run / tm as main hands them to drawOverlay (run.lay, run.css: the layout
-   and the stage's CSS px per box unit) */
+   and the stage's CSS px per box unit); ob the over box when one is up (its own css wins) */
 let mc;
 const mctx = () => { if (mc === undefined) { try { mc = typeof document !== "undefined" && document && typeof document.createElement === "function" ? document.createElement("canvas").getContext("2d") : null; } catch (e) { mc = null; } } return mc; }; // the run end's measure for a tap (the page measures on its own context: same fonts, same widths)
 const endOpts = (run) => ({ lay: run && run.lay, css: run && run.css, page: run && run.page, m: mctx() });
-export const endHitAt = (x, y, kind, world, run, tm) => {
-  const mode = endMode(world), B = overlayBox(kind);
+export const overRun = (run, ob) => (ob && ob.over && run ? { ...run, css: ob.css } : run);
+export const endHitAt = (x, y, kind, world, run0, tm, ob) => {
+  const mode = endMode(world), B = overlayBox(kind, ob), run = overRun(run0, ob);
   if (endPage(mode) === null && lazyFailed(END_NAME[mode])) { const P = loadBox(endFrame(B.w, B.h, run)); return x >= P.x && x < P.x + P.w && y >= P.y && y < P.y + P.h ? null : "menu"; }
   return endTap(x, y, B, world, run, tm, endOpts(run), endReady);
 };
-export const endPagesAt = (kind, world, run, tm) => endPagesOf(overlayBox(kind), world, run, tm, endOpts(run));
+export const endPagesAt = (kind, world, run, tm, ob) => endPagesOf(overlayBox(kind, ob), world, overRun(run, ob), tm, endOpts(overRun(run, ob)));
 export function drawOverlay(
   c,
   world,
@@ -145,10 +148,11 @@ export function drawOverlay(
   tm,
   run,
   toast,
+  box,
 ) {
-  const mode = endMode(world), page = mode ? endPage(mode) : undefined;
+  const mode = endMode(world), page = mode ? endPage(mode) : undefined, B = box || { w, h }; // box: the over box's (free: no HUD clearance)
   if (page === null) return endLoading(c, world, w, h, run, mode);
-  if (page) return void (mode === "lose" ? page.drawLose : page.drawWin)(c, { w, h }, world, run, tm, toast);
+  if (page) return void (mode === "lose" ? page.drawLose : page.drawWin)(c, B, world, run, tm, toast);
   if (world.state !== "PAUSE") return;
   c.fillStyle = world.state !== "PAUSE" ? "rgba(6,10,20,0.80)" : ui && ui.view | 0 ? "rgba(7,10,18,0.72)" : PAUSE_VEIL; // the PAUSE list wears the kit's veil (.6); the inline pages keep theirs
   c.fillRect(0, 0, w, h);
@@ -163,7 +167,7 @@ export function drawOverlay(
        drawShell's plate never lands on top of a live PAUSED headline. */
     if ((u.view | 0) >= 1) return;
     /* Static (R16: PAUSE freezes everything) — no entry timer. Every look calls this one painter (pages/pause.js). */
-    drawPause(c, world, { w, h }, { ...u, touch: u.touch == null ? touchOf(c) : !!u.touch }, tm, run); // css (#c's stage scale) arrives in ui from main, the value pointer.js taps with
+    drawPause(c, world, B, { ...u, touch: u.touch == null ? touchOf(c) : !!u.touch }, tm, run); // css (#c's stage scale) arrives in ui from main, the value pointer.js taps with
   }
 }
 

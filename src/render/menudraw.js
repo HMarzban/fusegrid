@@ -284,7 +284,7 @@ export const recPageHit = (x, y, L, touch, page, rows) => { const m = recMod(); 
    tap: L is layout(W, H, lg, css) for the box the page draws on (PAUSE: overlayBox's), touch body[data-lay] p / l (the draw reads ui.touch).
    Until the module is in: THE LOADING plate, -2 on it, -1 off it, *Geom null. ui is the page's (see its header); rows the visible list. */
 const page = () => lazy.get("settings");
-const setFrame = (L, touch, tap) => ({ ...frameOf(L, touch, tap), paused: !!L.paused, focus: L.focus });
+const setFrame = (L, touch, tap) => ({ ...frameOf(L, touch, tap), paused: !!L.paused, free: !!L.free, focus: L.focus });
 /* kit/copy.js words (CONTROLS' foot reads FOOT_TAP too) */
 export { FOOT_TAP, LOOK_NAME, lookVal };
 /** SETTINGS' geometry for the visible rows (pages/settings.js settingsGeom on this box); null until the page is in. */

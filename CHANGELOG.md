@@ -34,6 +34,7 @@ The HUD leaves the board and joins the world.
 - The old LV chip and difficulty token are gone from the board; LEVEL names the level.
 - Menu pages sit centred in a tall window (the old top margin is now the minimum), and the room behind them is drawn at the board's size in a run, its floor and walls continuing to the window's edges instead of zooming in.
 - **CONTROLS joins the world:** the controller page is on the level's own kit like every other menu: KEYBOARD and CONTROLLER as brick tabs, your binds as keys with their button shapes, SENSITIVITY and VIBRATION as steppers with a meter, and beside them a big drawing of the controller or keyboard with every action called out, the button you are on ringed. Rebinding listens right in the drawing, with no time limit. On a phone it is one column with 44 px rows, paged where they do not fit.
+- On a portrait phone, PAUSE (and its SETTINGS, GRAPHICS and CONTROLS views), LEVEL CLEAR, the finale and GAME OVER use the whole screen under the HUD instead of the board's box, so they no longer page or squeeze into two columns; the board stays visible under the veil. GAME OVER's MENU / COPY RESULT / COPY MAP keys hold their words whole at large text (stacked, or a label broken once at its space where there is no room to stack).
 
 ### Fixed
 

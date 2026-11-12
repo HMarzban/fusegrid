@@ -120,7 +120,7 @@ function scene(p, F, G, tok, caps, A) {
   pager(p, G, tok);
   const K = G.keys, k = (n) => dr(G, K[n]);
   keyPart(p, "main", k("main"), "main", F.keys.main, {tok, phone: ph, cap: caps.main, big: true});
-  if (K.copy) { keyPart(p, "copy", k("copy"), "key", EW.COPY, {tok, phone: ph, cap: caps.copy, center: !caps.copy}); keyPart(p, "map", k("map"), "key", EW.MAP, {tok, phone: ph, cap: caps.map, center: !caps.copy}); }
+  if (K.copy) { const ln = G.lines || {}; keyPart(p, "copy", k("copy"), "key", EW.COPY, {tok, phone: ph, cap: caps.copy, center: !caps.copy, lines: ln.copy}); keyPart(p, "map", k("map"), "key", EW.MAP, {tok, phone: ph, cap: caps.map, center: !caps.copy, lines: ln.map}); }
 }
 
 /** Paints WIN over the board: c drawOverlay's context, B its box {w, h}; run / tm / toast as drawOverlay hands them. */

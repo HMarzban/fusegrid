@@ -175,10 +175,10 @@ for (const ts of [1, 1.25]) {
   const src = (f) => readFileSync(new URL("../src/render/" + f, import.meta.url), "utf8");
   check("CLASSIC, PIXEL and REAL 3D call scenes.js drawOverlay for PAUSE, and its PAUSE branch is pages/pause.js drawPause (no second painter)",
     /drawOverlay\(ctx, world, B\.w/.test(src("renderer.js")) && /drawOverlay\(ovCtx, world, B\.w/.test(src("pixel/renderer.js")) && /drawOverlay\(ovCtx,world,B\.w/.test(src("three/wrapper.js")) &&
-    /drawPause\(c, world, \{ w, h \}/.test(src("scenes.js")) && !/PAUSED/.test(src("scenes.js").replace(/\/\*[\s\S]*?\*\//g, "")));
+    /drawPause\(c, world, B, /.test(src("scenes.js")) && /B = box \|\| \{ w, h \}/.test(src("scenes.js")) && /* Task 9.8: B is the board's { w, h } or a phone's over box */ !/PAUSED/.test(src("scenes.js").replace(/\/\*[\s\S]*?\*\//g, "")));
   const code = (f) => src(f).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, ""), main = readFileSync(new URL("../src/main.js", import.meta.url), "utf8"), ptr = readFileSync(new URL("../src/app/pointer.js", import.meta.url), "utf8");
   check("css reaches the painter through opts.pause (main hands #c's canvas.css), the very value pointer.js taps with; no painter reads canvas.css",
-    /pause: \{[^}]*css: canvas && canvas\.css[^}]*\}/.test(main) && /pauseHit\(px, py, B, touchLay\(canvas\), \{ css: canvas\.css,/.test(ptr) && !/canvas\.css/.test(code("scenes.js")) && (code("scenes.js").match(/\.css\b/g) || []).length === (code("scenes.js").match(/\brun\.css\b/g) || []).length /* scenes reads only run.css (main's run-end facts, v202 Task 5.2) */ && !/canvas\.css/.test(code("pages/pause.js")));
+    /pause: \{[^}]*css: canvas && canvas\.css[^}]*\}/.test(main) && /pauseHit\(px, py, B, touchLay\(cv\), \{ css: cv\.css,/.test(ptr) && /const cv = over\(\) \|\| canvas;/.test(ptr) && !/canvas\.css/.test(code("scenes.js")) && (code("scenes.js").match(/\.css\b/g) || []).length === (code("scenes.js").match(/\brun\.css\b/g) || []).length + (code("scenes.js").match(/\bob\.css\b/g) || []).length /* scenes reads only run.css (main's run-end facts, v202 Task 5.2) and a phone's over box's own css (Task 9.8); pointer taps with #c's canvas.css or that box's (cv) */ && !/canvas\.css/.test(code("pages/pause.js")));
   const { createRenderer } = await import("../src/render/renderer.js");
   const { createWorld, loadLevel } = await import("../src/core/world.js");
   const w = createWorld(11, 1); loadLevel(w, 3, false); w.state = "PAUSE";

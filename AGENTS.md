@@ -221,7 +221,7 @@ never a guessed next one) — never a second literal. The desk MENU's foot ends
 SETTINGS keeps its `BUILD v206` kicker. Never on the HUD.
 PAUSE is on the world kit since UI upgrade Task 5.1 (`src/render/pages/pause.js`, boot; `scenes.js` re-exports `PAUSE_ROWS`, `PAUSE_SHAPE`,
 `PAUSE_ROW_H` / `_D`, `pauseGeom`, `pauseHit`, `pauseKick`, `pauseKickers` / `pauseKicker`; the round 7 S7-pages 10-pause frame). It stays on `#c`
-over the frozen board in all three looks, through the one painter `drawPause` that `drawOverlay`'s PAUSE branch calls (view 0 only; views 1-3
+over the frozen board in all three looks (on a portrait phone on `#sh`'s over box under the HUD plate, Task 9.8: see SHELL BOX), through the one painter `drawPause` that `drawOverlay`'s PAUSE branch calls (view 0 only; views 1-3
 keep their own painters and the old 0.72 veil), in the tokens of the room being PLAYED (`world.level`), under the kit veil (`#0b0609` at .6).
 Top to bottom on the kit plate: a centred kicker `LEVEL n · WORLD` (` · DAILY` on a daily; a controller note replaces it, the look tail rides it
 through `pauseKick`), `PAUSED` (display 34 desk / 26 touch), a tag row from words.js `runParts` (only non-default rules, each naming its setting,
@@ -259,9 +259,18 @@ since a page under 600 wide clips its text; every landscape phone is under it,
 and a landscape tablet is the desktop form with touch pitches, lead ruling). `p`: the portrait
 board stage is width-bound (~0.63 on a 393 px phone), so ~0.9 (`PORT_SHELL {s 0.9, w [400,600],
 logo 0.27}`; a tablet keeps 600 wide and only grows taller; < 520 box units
-tall = no shell box). INTRO, ATTRACT, PLAY and PAUSE stay on `#c`
-with `#sh` hidden; a run end (`isRunEnd`, `shellMode` 2) shows `#sh` click-through
-and drawing nothing, so WIN/LOSE keep `#c`, its overlay and its taps.
+tall = no shell box). INTRO, ATTRACT and PLAY stay on `#c`
+with `#sh` hidden; on `d` and `l` PAUSE stays there too and a run end (`isRunEnd`, `shellMode` 2) shows `#sh` click-through
+and drawing nothing, so WIN/LOSE keep `#c`, its overlay and its taps. On `p` (Task 9.8, lead ruling 2026-11-12) PAUSE (the list and
+its views 1-3), every WIN (LEVEL CLEAR and the finale) and GAME OVER are `shellMode` 3: `#sh` takes taps and draws them on its OVER BOX
+(`fit.over()`, fit.js `overGeo`): #sh's width and scale from `PORT_GAME.top` (the HUD plate's foot, the board's top in a run) to the
+viewport's bottom safe area (`env(safe-area-inset-bottom)` read as body's `scroll-padding-bottom`), box (0, 0) at #sh's (0, top), its rect
+that band; main hands the renderer `{over}` so no look draws the overlay on `#c`, and `drawShell` (its `ro` argument) draws it there:
+`drawOverlay` on `overlayBox(kind, box)` (`free`: no HUD band or ability-bar clearance in pause.js `solve`, endgeom's `HUD_TOP`, settings'
+`pauseBand`), the page's css the box's. The frozen board stays in its place under the veil; the HUD (under #sh) and its PAUSE / RESUME key
+(`#touchpad`, over #sh) stay live; a tap over the HUD band or the safe area is inert. `endHitAt` / `endPagesAt` take the box (main hands
+`fit.over()`), shellview `pauseLayout` is the PAUSE views' frame (view 3 through `ctlFrame`, the box handed to pages/controls.js), the probe records `el` "sh" with the band (`probe.place`: `oy`, `fw`,
+`fh`; gatelib's mapper offsets it). A phone with no shell box keeps the overlay on `#c` (drawn by the shell from `ro`).
 `#c` / `#gl` / `#px` never see the box, so no renderer changes. `#sh` sits over `#c`, under `#touchpad` and the DOM cards.
 `fit.shell(on)` shows + clears `#sh` (device-density backing, cap 3 on `p` / 2 on `d` and `l`,
 smoothing off) and returns `{ctx, box}`; `box` is the logical canvas
@@ -379,7 +388,8 @@ keys it does nothing. A mode whose page is not registered keeps today's summary 
 WIN is its page since Task 5.3: `src/render/pages/endwin.js` (lazy, `pages/lazy.js` `endwin`, with `endkit.js`, the
 end parts: pen, keys label first and keycap last, stat cards, course cells, shelf, ribbon, medal piece, toast tag, the
 one cached `frame`); `drawOverlay` paints a LOADING plate until it lands (taps inert), and `shellview` calls
-`lazy.idle()` on MENU and GAME. It sits under the HUD band (`HUD_TOP` 42) inside `#c`'s box: a level clear (LEVEL n
+`lazy.idle()` on MENU and GAME. It sits under the HUD band (`HUD_TOP` 42) inside `#c`'s box (a portrait phone: the over box on `#sh`, Task
+9.8, no `HUD_TOP`): a level clear (LEVEL n
 CLEAR, three stat cards of this level, at most one time ribbon, NEXT LEVEL) and the finale (FUSE/GRID CLEAR over a
 blast cross and warm core, the saved score on bricks with `multTag` (`×2 HARD DIFFICULTY`), the course with check
 notches and 6-8 locked until a finale opens them: `endRun` saves the unlock on the run-end edge, the same edge as the bests,
@@ -405,7 +415,9 @@ ahead, locked past `roomCap`), SCORE as saved (score × difficulty, `multTag`), 
 saved against the run-start best of the same bucket, `Matched your …`, a quiet plaque (NEW BEST · bucket, or
 FURTHEST LEVEL YET from level 1 only), or the DAILY line; nothing on a first run scoring 0. TRY AGAIN (the one
 yellow; `New board · level 1`, or `Same board` on a DAILY / code run), MENU / COPY RESULT / COPY MAP sharing their
-row by what label and keycap need (a key too narrow drops its keycap, never its label). Two columns while the facts
+row by what label and keycap need (a key too narrow drops its keycap, never its label); on a touch column a label that would not fit its
+share with 8 px clear each side stacks the row (Task 9.8): MENU over COPY RESULT | COPY MAP, else one key a row (the finale's
+COPY RESULT | COPY MAP halves likewise, a row each); where stacking would scale the box under its floors the row stays one and the widest label breaks once at its space (`G.lines`). A course cell smaller than the device's (a paged column) keeps its number in proportion, never under the secondary cap floor (endkit `cell`), so the lit / well pair keeps its contrast. Two columns while the facts
 keep 330 px, else one with the bomb beside the headline. The old WIN / LOSE summary painter is gone; `drawOverlay`
 paints only PAUSE itself. Wrapped lines never split a setting's name (`endgeom.tokensOf`).
 

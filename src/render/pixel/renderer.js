@@ -264,7 +264,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     }
     if (world.state !== "PLAY") {
       const B = overlayBox("2d");
-      drawOverlay(ovCtx, world, B.w, B.h, B.cx, B.cy, o && o.pause, o && o.time, o && o.run, o && o.toast);
+      if (!(o && o.over)) drawOverlay(ovCtx, world, B.w, B.h, B.cx, B.cy, o && o.pause, o && o.time, o && o.run, o && o.toast); // over: a phone's, drawn by the shell on #sh
       if (world.state === "WIN" || world.state === "LOSE") drawPartsOver(V.parts);
     }
     if (o && o.hud === true && world.state === "PLAY") drawFxOverlay(ovCtx);

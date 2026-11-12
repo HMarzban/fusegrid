@@ -442,7 +442,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
       ovCtx.globalAlpha=1;
     }
     if(ov||(o&&o.hud===true)){
-      if(ov){ const B=overlayBox("3d");
+      if(ov&&!(o&&o.over)){ const B=overlayBox("3d"); // over: a phone's, drawn by the shell on #sh
         drawOverlay(ovCtx,world,B.w,B.h,B.cx,B.cy,o&&o.pause,o&&o.time,o&&o.run,o&&o.toast); }
       if(o&&o.hud===true&&world.state==="PLAY")drawFxOverlay(ovCtx);
       if(o&&o.hud===true&&world.state==="PLAY"){camera.updateMatrixWorld();drawPickupFx(ovCtx,{coach:o.coach2,proj});}

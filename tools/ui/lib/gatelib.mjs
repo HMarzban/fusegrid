@@ -110,8 +110,9 @@ export function mapper(d) {
   const u = d && d.ui, box = u && u.box, cv = okBox(box) && box.el && d.canvases ? d.canvases[box.el] : null;
   if (!cv) return null;
   if (!fin(cv.x, cv.y, cv.w, cv.h) || !(cv.w > 0) || !(cv.h > 0)) return { err: "the canvas rect of #" + box.el + " is not finite or has no area" };
-  const sx = cv.w / box.w, sy = cv.h / box.h;
-  return { sx, sy, css: (r) => ({ x: cv.x + r.x * sx, y: cv.y + r.y * sy, w: (r.w || 0) * sx, h: (r.h || 0) * sy }) };
+  /* a box that is a band of its canvas (probe.place: a phone's over box on #sh) maps through the canvas's whole box, offset by its top */
+  const band = fin(box.fw, box.fh, box.oy) && box.fw > 0 && box.fh > 0, sx = cv.w / (band ? box.fw : box.w), sy = cv.h / (band ? box.fh : box.h), oy = band ? box.oy : 0;
+  return { sx, sy, css: (r) => ({ x: cv.x + r.x * sx, y: cv.y + (oy + r.y) * sy, w: (r.w || 0) * sx, h: (r.h || 0) * sy }) };
 }
 
 const G = (status, o = {}) => ({ status, value: null, threshold: null, on: null, note: null, items: [], ...o });

@@ -60,7 +60,8 @@ export function keyPart(p, name, r, kind, label, o = {}) {
   const d = DEV[o.phone ? "p" : "d"], tok = o.tok, main = kind === "main", px = o.big ? (o.phone ? 26 : 28) : d.pri;
   if (p.c) key(p.c, r.x, r.y, r.w, r.h, kind, {tok, phone: o.phone});
   const face = o.big ? "display" : "label", lx = r.x + (main ? 8 + d.bombs + 12 : 16), ink = main ? CONST.yelInk : CONST.ink, cy = r.y + r.h / 2;
-  const lw = Math.max(textW(p, face, label, px), o.sub ? textW(p, "label", o.sub, d.sec) : 0), cw0 = o.cap ? capW(p.m, o.cap, {phone: o.phone}) : 0;
+  const ln = Array.isArray(o.lines) ? o.lines : null; // a label broken once at a space (endgeom G.lines: a touch row too narrow for it whole)
+  const lw = Math.max(ln ? Math.max(...ln.map((s) => textW(p, face, s, px))) : textW(p, face, label, px), o.sub ? textW(p, "label", o.sub, d.sec) : 0), cw0 = o.cap ? capW(p.m, o.cap, {phone: o.phone}) : 0;
   /* a key too narrow for its label and its keycap keeps the label (the keycap is a hint the label does not need) */
   if (o.cap && lx + lw + 14 + cw0 > r.x + r.w - 12) o = {...o, cap: null};
   const cw = o.cap ? cw0 : 0, room = r.x + r.w - (o.cap ? cw + 14 : 12) - lx;
@@ -68,7 +69,8 @@ export function keyPart(p, name, r, kind, label, o = {}) {
     const sp = d.sec, cx = o.center ? lx + room / 2 : lx, al = o.center ? "center" : "left";
     text(p, face, label, cx, cy - sp * 0.62, px, {col: ink, align: al});
     text(p, "label", o.sub, cx, cy + px * 0.5, sp, {col: CONST.yelInk, align: al, role: "secondary"});
-  } else text(p, face, label, o.center ? lx + room / 2 : lx, cy, px, {col: ink, align: o.center ? "center" : "left"});
+  } else if (ln) { const lh = px * textScale() * 1.05; ln.forEach((s, i) => text(p, face, s, o.center ? lx + room / 2 : lx, cy + (i - (ln.length - 1) / 2) * lh, px, {col: ink, align: o.center ? "center" : "left"})); }
+  else text(p, face, label, o.center ? lx + room / 2 : lx, cy, px, {col: ink, align: o.center ? "center" : "left"});
   if (o.cap) {
     const cx = r.x + r.w - cw - 12, cyy = r.y + (r.h - d.caph) / 2;
     if (p.c) cap(p.c, cx, cyy, o.cap, {tok, phone: o.phone, main});
@@ -156,7 +158,10 @@ function crack(c, x, y, s) {
   line([[8, 10], [3, 14]], OL, 2.4, "round"); line([[7, 28], [2.5, 31]], OL, 2.2, "round");
 }
 export function cell(p, x, y, s, cl, o = {}) {
-  const c = p.c, tok = o.tok, kind = cl.st === "ahead" ? "well" : cl.st === "locked" ? "wall" : "lit", n = String(cl.n), px = o.phone ? 15 : 17;
+  /* a cell smaller than the device's (a paged column) keeps its number in proportion (Task 9.8: a digit as big as a full cell's fills a small
+     one, and the lit / well pair loses its contrast), never under the secondary cap floor */
+  const px0 = o.phone ? 15 : 17, px = Math.min(px0, Math.max((px0 * s) / END[o.phone ? "p" : "d"].cell, ((o.phone ? 9 : 11) + 0.1) / (CAP_K * textScale())));
+  const c = p.c, tok = o.tok, kind = cl.st === "ahead" ? "well" : cl.st === "locked" ? "wall" : "lit", n = String(cl.n);
   if (c) {
     key(c, x, y, s, s, kind, {tok});
     const ty = kind === "lit" ? y - 2 : y;
@@ -169,7 +174,7 @@ export function cell(p, x, y, s, cl, o = {}) {
   if (cl.fin && cl.st === "ahead") rpair(p, "info", [x + s * 0.6, y + s * 0.32, s * 0.32, s * 0.32], [x + 3, y + 3, s - 6, s - 6], {col: CONST.ink, name: "finale flag"});
   const ty = kind === "lit" ? y - 2 : y, nx = cl.st === "crack" ? x + s / 2 + 7 * (s / 40) : cl.fin && cl.st !== "locked" ? x + s * 0.32 : x + s / 2;
   if (cl.st !== "locked") text(p, "num", n, nx, ty + s / 2, px, {align: "center", col: kind === "lit" ? CONST.dk : CONST.t2, role: "secondary"});
-  rrect(p, "cell " + n, x, y, s, s);
+  rrect(p, "cell " + n + (cl.st === "locked" ? " locked" : ""), x, y, s, s); // a locked level is named so (tools/ui screens.mjs exemptIfNo)
 }
 export function course(p, x, y, s, gap, cells, o = {}) {
   cells.forEach((cl, i) => cell(p, x + i * (s + gap), y, s, cl, o));

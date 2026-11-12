@@ -171,7 +171,7 @@ export function createRenderer(canvas, opts={}){
     }
     if(world.state!=="PLAY"){
       const B=overlayBox(kind==="3d"?"iso":"2d");
-      drawOverlay(ctx, world, B.w, B.h, B.cx, B.cy, o&&o.pause, o&&o.time, o&&o.run, o&&o.toast);
+      if(!(o&&o.over)) drawOverlay(ctx, world, B.w, B.h, B.cx, B.cy, o&&o.pause, o&&o.time, o&&o.run, o&&o.toast); // over: a phone's, drawn by the shell on #sh
       if(world.state==="WIN"||world.state==="LOSE") drawFx(ctx);
     }
     /* the in-run overlay ({hud:true} during GAME), drawn after restore so it never shakes with the camera; the HUD chips and the

@@ -432,7 +432,7 @@ export function createGame(canvas, opts = {}) {
     }
     if (code === "KeyC" && app.screen === SCREEN.STATS) { copyText(statsPayload(loadStats(), loadBests(), loadTimes(), dateStr()), toast, "COPIED"); return; }
     // WIN / LOSE: Enter = Space, C / B copy with a note; elsewhere C still reaches app.key (ATTRACT plays)
-    if (endKey(code, app, world, input, toast, () => dailyDate ? dailyStamp(dailyDate, world.level | 0, world.score | 0) : copyPayload(world), { menu: () => { world.state = "MENU"; app.leaveRun(); prevSt = null; }, page: (d) => { endPg = Math.max(0, Math.min(endPagesAt(curKind, world, runInfo(), timeInfo()) - 1, endPg + d)); } })) return; // Esc on GAME OVER: MENU (the LOSE edge saved the run); ↑↓ a paged end
+    if (endKey(code, app, world, input, toast, () => dailyDate ? dailyStamp(dailyDate, world.level | 0, world.score | 0) : copyPayload(world), { menu: () => { world.state = "MENU"; app.leaveRun(); prevSt = null; }, page: (d) => { endPg = Math.max(0, Math.min(endPagesAt(curKind, world, runInfo(), timeInfo(), fit && fit.over()) - 1, endPg + d)); } })) return; // Esc on GAME OVER: MENU (the LOSE edge saved the run); ↑↓ a paged end
     if (code === "KeyM" && app.screen !== SCREEN.INTRO && app.screen !== SCREEN.ATTRACT) { // INTRO / ATTRACT: M and R fall through to app.key (show: skip; title: no-op; ATTRACT: a run)
       if (app.screen === SCREEN.GAME && app.worldState === "PAUSE") {
         persistScore();
@@ -459,7 +459,7 @@ export function createGame(canvas, opts = {}) {
   };
   input.onPause = onPause;
 
-  if (canvas) mountPointer({ canvas, fit, input, app, world, kind: () => curKind, ctl: () => ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, recPageHit: (x, y, L, t, pg) => recPageHit(x, y, L, t, pg, getScoresForHeat(app.scoreHeat).length), endHit: (x, y) => endHitAt(x, y, curKind, world, runInfo(), timeInfo()), layout: menuLayout } }); // taps on #c and #sh: skip / confirm / play, the PAUSE rows, the C1 fire swallow (src/app/pointer.js)
+  if (canvas) mountPointer({ canvas, fit, input, app, world, kind: () => curKind, ctl: () => ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, recPageHit: (x, y, L, t, pg) => recPageHit(x, y, L, t, pg, getScoresForHeat(app.scoreHeat).length), endHit: (x, y) => endHitAt(x, y, curKind, world, runInfo(), timeInfo(), fit && fit.over()), layout: menuLayout } }); // taps on #c and #sh: skip / confirm / play, the PAUSE rows, the C1 fire swallow (src/app/pointer.js)
   /* pad taps bubble to #stage: play from ATTRACT too (spec §4 tap-to-play). */
   {
     const stageEl =
@@ -656,13 +656,14 @@ export function createGame(canvas, opts = {}) {
       const { cw, ch } = dims(canvas, curKind);
       camTransform(c, cw, ch, cam);
     }
+    const sm = shellMode(app.screen, world, layNow()); // 3: a portrait phone's PAUSE / run end, drawn by the shell on #sh's over box, never by the renderer
     let ro = attract
       ? { hud: false, amb: true }
       : app.screen === SCREEN.INTRO
         ? { intro: curKind === "3d" ? { stage: app.introStage, t: app.subT, pressT: app.pressT } : null, pop: app.introStage === 1 ? popOf(app.subT) : 0, hud: false }
         : app.screen === SCREEN.GAME
           ? {
-              hud: true, // S4 overlay HUD chips
+              hud: true, over: sm === 3, // S4 overlay HUD chips; over: the overlay is the shell's (shellview drawShell)
               // ghost coach: GAME screen (not ATTRACT, whose demo world is
               // state PLAY too) AND world.state==="PLAY" (not PAUSE/WIN/LOSE).
               // Fade alpha (not a bool) computed here from COACH_DUR so
@@ -683,9 +684,9 @@ export function createGame(canvas, opts = {}) {
     renderer.render(attract && demo ? demo.world : show ? show.world : world, dt, ro);
     c.restore();
     hud.frame(fit, app.screen === SCREEN.GAME ? world : null, ro, curKind, { proj: renderer.proj, cam }); // chips, power-ups, strip, tile tip on #hud; paints on a change
-    const sh = fit && fit.shell(shellMode(app.screen, world)); // MENU + plated pages on #sh's own box; a run end shows it click-through (shellview shellMode)
-    shBox = sh ? sh.box : null;
-    drawShell(sh ? sh.ctx : c, app, world, sh ? sh.box : canvas, curKind, getScoresForHeat, getPlaquesFn, getCab);
+    const sh = fit && fit.shell(sm); // MENU + plated pages on #sh's own box; a run end shows it click-through; a phone's PAUSE / run end on its over box (shellview shellMode)
+    shBox = sh && !sh.box.over ? sh.box : null;
+    drawShell(sh ? sh.ctx : c, app, world, sh ? sh.box : canvas, curKind, getScoresForHeat, getPlaquesFn, getCab, ro);
     if (swapped || world.grid !== gPrev) { swapped = false; gPrev = world.grid; last = null; } // G5: a look swap, run start or room start drops this long frame from the next dt
   }
 
