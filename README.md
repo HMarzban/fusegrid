@@ -60,6 +60,8 @@ Buttons are named by position. Powers marked `*` in the in-game HOW TO need thei
 
 **Your binds, your call.** **SETTINGS → CONTROLS** rebinds both devices. The table
 shows the defaults. Arrows, Esc, Enter, the D-PAD and START stay put, so you can always get back.
+Plug a controller in mid-run and a short CONTROLLER READY note beside the board names its MOVE
+and BOMB buttons.
 
 **On a phone or tablet,** a touch strip sits off the board: a D-PAD of four
 keys and a yellow BOMB key, every key at least 44 px. In portrait the strip docks
@@ -133,7 +135,9 @@ NORMAL ×1, HARD ×2, EXPERT ×3.
 
 ## ✨ What's in the cabinet
 
-- **The opening.** The FUSE/GRID title waits, its fuse sparking, for any key, tap or controller button.
+- **The opening.** While the game loads, the title builds itself where it will stand: the level's floor
+  fills in and the FUSE/GRID fuse burns toward its tip as the files arrive. Then the title waits, centred
+  on the board, its fuse sparking, for any key, tap or controller button.
   That press drops the music and a ~4 s show that blasts the menu open. Any key skips it. The
   wordmark is drawn in the art style you picked.
 - **A new board every run.** Every PLAY, restart and GAME OVER retry deals a
@@ -188,8 +192,9 @@ NORMAL ×1, HARD ×2, EXPERT ×3.
 - **Help on the cabinet.** **GUIDE** (HOW TO PLAY, POWER-UPS, ENEMIES, FLOOR) and
   **SOURCE**, which opens this repository.
 - **Menus that wear the world.** MENU (PLAY, LEVEL SELECT, DAILY, RECORDS, SETTINGS,
-  GUIDE, SOURCE) and every page sit on the look of the level you picked, in its own
-  colours, with a card showing the run PLAY starts. Keyboard, controller and touch
+  GUIDE, SOURCE) and every page sit centred on the look of the level you picked, drawn
+  at the size you play on, in its own colours, with a card showing the run PLAY starts.
+  PAUSE and the end of a run are drawn at your screen's full resolution in every look. Keyboard, controller and touch
   all work everywhere; on a phone every row and key is at least 44 px.
 - **Plays offline.** Install it from the browser as a PWA. After your first
   online visit it runs offline.
@@ -198,7 +203,7 @@ NORMAL ×1, HARD ×2, EXPERT ×3.
   never in the middle of one. LATER hides it until your next run ends or
   the next time you open the game.
 - **Know your build.** The main menu shows which version you're running
-  (for example `v206`), so you can tell when an update has landed.
+  (for example `v210`), so you can tell when an update has landed.
 
 Everything the game remembers lives in your browser's local storage. There is
 no account, no server and no global ranking. The game asks once whether to

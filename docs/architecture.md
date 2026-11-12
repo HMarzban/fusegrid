@@ -50,7 +50,7 @@ START) beside the same card. On a phone both become one column, and on a
 landscape phone a grid of tiles. Any teaser built from your record (a top
 score, a best time) reads only runs you played, never placeholders.
 
-The build you're running is named on the main menu (`v206` today): at the end
+The build you're running is named on the main menu (`v210` today): at the end
 of the desktop foot, or on the SOURCE row's teaser on a phone. SETTINGS shows
 it as its `BUILD` kicker and the NEW VERSION READY card says which build you're on.
 There is one source for it: `shellview.js` and `update.js` both derive it
@@ -97,16 +97,28 @@ portrait phone sizes the board by its width, which left the menus at about
 about 0.9 scale; it is narrower than 600, so pages re-flow there into one
 column. The board canvases never see the box: they keep their own size and
 position, so no renderer changes. A page covers the board with the look of
-the picked level, and the renderers skip the board raster under it. `fit.shell` hands the drawing code and the tap handler the same logical
-box, so a tap still lands where it is drawn. The intro, attract mode, play, the
-pause menu and a room WIN mid-run stay on the board canvas with `#sh` hidden. At the end of a run
-`#sh` shows but draws nothing and lets every tap through, so GAME OVER and the
-final WIN keep the board canvas and its taps. The HUD (shell v206,
+the picked level, drawn at the board's own scale in a run (so the cells behind a
+menu are the size you play on, the floor and walls running on to the window's
+edges), and the renderers skip the board raster under it. Every plate centres in
+its box with its foot; the old top margin is only the minimum. `fit.shell` hands the drawing code and the tap handler the same logical
+box, so a tap still lands where it is drawn. The intro, attract mode and play stay on
+the board canvas with `#sh` hidden. PAUSE (and its SETTINGS, GRAPHICS and CONTROLS views),
+LEVEL CLEAR, the finale and GAME OVER draw on `#sh` too, in one of two ways. On a desktop and
+a landscape layout `#sh` lies exactly on the board canvas's content box at device resolution
+(shell v210; before, these plates were drawn into the board's 600 × 520 backing and stretched,
+so they looked soft beside PIXEL and REAL 3D), click-through, and the overlay keeps the board's
+own box, so its layout and taps did not move. On a portrait phone they take the whole column
+under the HUD plate down to the safe area (`fit.over()`), where they no longer page or squeeze
+into two columns, with the frozen board still under the veil. The run-end plates centre in that
+box; they used to keep the board's top strip clear for the HUD the board no longer draws. The HUD (shell v206,
 [`hud.js`](../src/render/hud.js)) draws on a fourth canvas, `#hud`, laid over the
 viewport and clicked through: seven labelled chips in the level's frame above the
 board on a desktop, in a grid with the PAUSE key on a portrait phone and in the
 side gutters on a landscape one, never over the board. It paints only when what it
-shows changes, so a still frame costs no canvas calls.
+shows changes, so a still frame costs no canvas calls. A controller plugged in, back or lost
+during a run shows for 3 s in the plate the floor-tile tips use (beside the board, under it on
+a portrait phone, in the left gutter on a landscape one), with that controller's MOVE and BOMB
+buttons; off a run the menus' note says it as before.
 
 The 3D renderer works to a fixed budget of 500 draw calls, and the tests' fully
 populated room draws 141. Anything repeated is instanced, so cost doesn't grow
@@ -260,9 +272,12 @@ its own held axes and latches, OR-merged with keys. A held key beats the pad on 
   brick tabs, the rows as kit keys and steppers, and beside them a floor slab with the drawing large and its callouts. One look to
   maintain, no second skin: the old CONSOLE PANEL kit is gone.
 - [`controlswire.js`](../src/app/controlswire.js) binds all of it to `main`, the frame loop and the audio unlock.
+  It retries a failed `rumble.js` load on the next controller press or a CONTROLS open.
 
-Trade-offs: the page paints from the static boot graph (the twelve modules are 111,107 bytes raw at `ee2a34e`, +137,052 on the whole boot graph since the feature began), because lazy paint risks a blank
-first frame. Keyboard diagonals stay about 1.41x while a pad is 4-way, because changing keys would alter feel
+Trade-offs: since v202 the page's paint (the page, its geometry, the drawings, the capture and vibration modules) loads
+after the title, so CONTROLS can open on the kit's LOADING plate. Its taps follow the rule every lazy page follows: inert
+while the files are on their way, and once they have failed (the plate reads DID NOT LOAD) a tap off the plate backs out,
+so nobody is stuck on it. Keyboard diagonals stay about 1.41x while a pad is 4-way, because changing keys would alter feel
 and old bests. Every pad test uses a fake pad. The owner has played on a real controller and reports it works; the details
 are not in yet, so the human checks stay open, and nobody has yet confirmed vibration felt on real hardware. The
 [record](superpowers/specs/2026-11-06-controls-built.md) has the rulings and the go/no-go list.
@@ -286,6 +301,9 @@ Shell v185 (2026-10-26) gives the board a new look in all three looks. It adds:
   PREVIEW. Since v198 every ordinary run and the DAILY play them, and the flag is gone.
 - **A world bezel and a recessed well** around the board
   ([`frameart.js`](../src/render/frameart.js), [`frame.js`](../src/render/frame.js)).
+  In REAL 3D the bezel is one extruded rim ([`three/rimart.js`](../src/render/three/rimart.js)) whose outer edge is a plain
+  rectangle: the near corners used to lean in to stay on screen at the default zoom, which read as a flared tray once the
+  camera pulled back (v210), so now they run off the bottom of the screen at the default zoom instead.
 - **Depth**: cast and contact shadows, ambient occlusion, lower-value bricks
   ([`depth2d.js`](../src/render/depth2d.js), [`three/groundfx.js`](../src/render/three/groundfx.js)).
 - **Ambient motion** per world (motes, glints, steam, drift) from one
@@ -457,7 +475,11 @@ STATS or a run summary copies text, the screen says COPIED or COPY FAILED only
 after the clipboard has accepted or refused it.
 
 The [service worker](../sw.js) precaches the versioned
-[app shell](../src/pwa/shell.js), including the vendored 3D library. A
+[app shell](../src/pwa/shell.js), including the vendored 3D library. It serves
+cache-first under one `CACHE_NAME`, so any shipped file committed after the last
+bump must ship with a new name: an old cache kept under the old name serves old
+startup files beside new lazy ones, and a page whose imports no longer match fails
+to load (CONTROLS read DID NOT LOAD until v210's bump renamed the cache). A
 successful online first visit is needed before offline use. A new release
 installs in the background and waits; a **NEW VERSION READY** card
 ([`update.js`](../src/app/update.js)) offers RELOAD (or `U`), but only on the
@@ -471,10 +493,21 @@ the iso renderer, `?net=local` and the CONTROLS page's paint load after the
 title ([`lazyload.js`](../src/app/lazyload.js)); a run started before the
 tile builder is in holds behind a FLOOR TILES plate rather than dealing a
 different board. The worker caches the boot list at install and fills in the
-other looks in idle after it activates, PIXEL first. Switching to PIXEL or REAL
+other looks PIXEL first, but only inside an event the browser waits for (a FILL
+message the page posts once the worker is ready, or a navigation), never on a
+bare timer, and it stops writing once it is no longer the active worker or its
+cache was deleted (v210). Switching to PIXEL or REAL
 3D builds the new look in slices of about 8 ms that pause in live play
 ([`jobs.js`](../src/app/jobs.js)), keeps the old look on screen until the new
-one is ready, and keeps it if the new one fails. First-time offline
+one is ready, and keeps it if the new one fails. A look you saved that fails at boot shows
+CLASSIC for that session only and keeps your setting; a deep link straight into a
+run (`?play=1`, a challenge code) waits behind the look's PREPARING card and starts
+in that look, and the FLOOR TILES card offers RETRY or BACK TO MENU (v210).
+Before any of it the first load draws the title being made where the title will
+stand: the level's floor fills in cell by cell and logo B's fuse burns toward the
+tip as the files arrive (finished files against pinned totals), so the hand-off to
+the title has no jump. A look loading later shows the same kit card, or a slim
+chip at the top when you picked it from SETTINGS. First-time offline
 loading and syncing progress between devices are outside this design.
 Play stats are opt-in Google Analytics 4 ([`analytics.js`](../src/app/analytics.js),
 [privacy](privacy.md)). A small corner card asks once without stopping the game

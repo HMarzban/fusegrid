@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v197 on 2026-11-01.
+shell v210 on 2026-11-12.
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -874,6 +874,38 @@ learned the PIXEL and REAL 3D looks. Both lanes landed on R2 with only bookkeepi
 The last of the UI upgrade's four cuts. The HUD moved off the board onto its own canvas, in the level's frame, with a touch
 strip for phones and tile tips beside the board. The CLASSIC call log lost exactly its HUD tail and nothing else, so its
 pins moved by ruling; a short TRAP tip got its hazard back on the way in.
+
+## 2026-11-12: the owner plays it, and the cabinet listens (shell v210)
+
+R4 was cut, so the lead ran the full check the owner had asked for, and the phone told on us at once: PAUSE and GAME
+OVER were squeezed into the board's box while the bottom half of the screen sat empty. They now take the whole column
+under the HUD. Then the owner started sending screenshots. "I think you forgot to work on the cntroller side ha?":
+CONTROLS was still the old dark panel, the last page off the world kit, and it joined the rest. "The menu is not in
+center of screen, and why the board behind is too big?!": every page now centres, and the level behind it is drawn at
+the size you play on, its floor running on to the window's edges instead of zooming in.
+
+The first load got its own art team, because the owner called it "this is important hook". Three directions came back on
+one sheet, safe, rich and bold, and the owner said "Build B, RICH": while the files arrive, the title builds itself where
+it will stand, the floor filling in cell by cell and the logo's fuse burning toward the tip as an honest progress bar. Two
+more fixes came straight from screenshots. In REAL 3D, pulling the camera back showed the cabinet as a flared tray,
+because its near corners leaned in to stay on screen; the rim is a plain box now. And the title moved to the middle of the
+board, while LEVEL CLEAR and GAME OVER stopped looking soft: they had been drawn at the board's own small size and
+stretched, and now they are drawn at the screen's full resolution.
+
+Then the owner played it and found the best bug of the day: CONTROLS read DID NOT LOAD, and GUIDE sat at the top of the
+window over giant cells. Nothing in the code was broken. Six rounds of work had shipped under the v206 cache name, so the
+browser served its old startup files next to the new CONTROLS files, and they no longer fit together. The fix was a new
+cache name. The lesson went into AGENTS.md: rename the cache before a build goes to the owner, not only at a release.
+The same play found two real ones. The run ends still left room at the top for a HUD that had moved off the board, so
+they sat low; they are centred now. And plugging in a controller mid-run said nothing, by design, since the note waited
+for a menu. Now a short CONTROLLER READY note appears beside the board with that controller's own MOVE and BOMB buttons.
+
+The tidy-up afterwards turned up the last surprise. Two branches from 2026-11-06 held seven delivery review fixes that
+were finished but never merged, so v202 had shipped without them. An agent checked each one against today's code, and
+every one still applied: a deep link waits for its look, a saved look that fails at boot keeps your setting, the FLOOR
+TILES card gets a way back, a queued graphics change is never dropped, the offline cache fills only when the browser lets
+it finish, a failed vibration load retries, and CONTROLS can be left once it fails to load. A batch of offline tests that had never run, because they sat
+after the test file's own exit, runs now. Nothing is pushed: the owner's phone and controller checks come first.
 
 ---
 

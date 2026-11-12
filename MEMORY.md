@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — Docs sync for v210
+- architecture.md (build tag v210, pages centred with the room at play scale, PAUSE / run ends on #sh at device px or the phone column, the controller toast, CONTROLS lazy paint and its LOADING rule, the cache-name rule, the worker fill, held deep links, first load B, the straight REAL 3D rim), README (first load, centred title and menus, toast, v210) and a diary entry for the v207-v210 round. Docs only, no cache bump.
+
 ## 2026-11-12 — Task 9.13 fix round 1: CONTROLS' LOADING plate taps, the FLOOR TILES line
 - Lead ruling on 7b: CONTROLS follows R1 cohesion 1 (in flight inert, viewport clicks too; failed: off the plate backs out, on it inert; PAUSE view 3 alike), and taps meet the LOADING plate (kit loadBox) whenever it is drawn, never the full page's geometry (the owner's desk DID NOT LOAD). The FLOOR TILES card's line drops "OR CHANGE ART STYLE IN SETTINGS".
 
