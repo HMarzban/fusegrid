@@ -15,6 +15,45 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v203 · 2026-11-12
+
+The menus move into the world you're about to play. (v202 is kept for the controller release's own
+squash; this cut follows it.)
+
+### Added
+
+- **A new title.** FUSE/GRID is drawn with a lit fuse that sparks at its tip while the title waits for your press.
+- **Menus that wear the level.** MENU and every menu page sit on the look of the level you picked, inside its
+  own wall, and fill the whole window. PLAY is the one yellow key; a focused row wears a bomb and a ring.
+- **A next-run card on MENU.** It shows the level, difficulty, speed and modifiers PLAY will start, and your best there.
+- **RECORDS.** One door for SCORES, STATS and MEDALS, three tabs you can walk with ←/→, Q / E, a controller or a tap.
+  SCORES filters by difficulty. STATS keeps its two-step reset, and the confirm says exactly what goes and what stays.
+- **FLOOR in GUIDE.** Every floor tile at each difficulty, with its rule.
+
+### Changed
+
+- **Names you already know.** OPTIONS is SETTINGS, ROOM is LEVEL, CORE / PLUS / MAX are NORMAL / HARD / EXPERT
+  difficulty, EASY / NORM / HARD are SLOW / NORMAL / FAST game speed, PACT is MODIFIERS, RENDER is ART STYLE, and ITEMS
+  are POWER-UPS. Your saved records keep every value.
+- **MENU is seven rows:** PLAY, LEVEL SELECT, DAILY, RECORDS, SETTINGS, GUIDE, SOURCE.
+- **LEVEL SELECT is a list of rows.** ↑↓ walks LEVEL, DIFFICULTY, GAME SPEED, MODIFIERS and START; ←→ changes the row you're on.
+- **SETTINGS shows CAMERA and BRIGHTNESS only in REAL 3D.** The pause menu reads RESUME, SETTINGS, RESTART, QUIT TO MENU.
+- **Phones.** Every page keeps its words and buttons at a readable, tappable size: on a landscape phone a long page
+  turns into pages (▲ / ▼) instead of shrinking.
+- **The cards** (analytics, NEW VERSION READY, the loading card) use the menu's own type.
+
+### Fixed
+
+- No confetti on a loss.
+
+### Notes
+
+- **Rollback:** revert the release commit and bump `CACHE_NAME` (and `REV` in `sw.js`) again, so installed copies update.
+- **Boot size is an owner decision before the push.** The pages that open first (the menu kit, MENU, LEVEL SELECT and the
+  CLASSIC logo) add about 222 KB raw (about 86 KB gzip) to what the first visit downloads, against the plan's 60 KB. One
+  option: load LEVEL SELECT later, in the idle after MENU paints (about 58 KB raw, 20 KB gzip).
+
+## shell v201 · 2026-11-08
 ## shell v202 · 2026-11-12
 
 The game starts sooner, and a new look switches in only when it's ready.

@@ -191,12 +191,12 @@ band + 3px notch + caret; `danger` rows select red). Labels are system-ui
 sans (OS-dependent, owner-accepted), values / tags / hints mono. Lists go
 through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box). MENU is on the world kit since UI upgrade Task 3.1 (MENU page, below). Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v202` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v203` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v202", the running build,
+as `rev`) and `update.js` (the card's "You are on v203", the running build,
 never a guessed next one) — never a second literal. The desk MENU's foot ends
-`| v202`; the phone column carries it as SOURCE's teaser (the round 7 frame);
-SETTINGS keeps its `BUILD v202` kicker. Never on the HUD.
+`| v203`; the phone column carries it as SOURCE's teaser (the round 7 frame);
+SETTINGS keeps its `BUILD v203` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -337,7 +337,7 @@ MENU page (UI upgrade v202 Task 3.1, `src/render/pages/menu.js`; the round 7 S7-
 key (bare bomb + 3 px cream ring when focused); the doors are keys, a focused one wears the kit `band` + bomb + ring; no cord or spark but the logo's.
 Desk (every keyboard box; the 1366 x 768 frame at 1 box unit per CSS px): the logo in the plate's header, a 480 list (PLAY 64,
 doors 46, 8 px pitch, 24 px breaks after PLAY and before GUIDE; 125 %: 520, 72, 49) beside the next-run card (Task 3.2, below), the foot under
-the plate (`MOVE ▲▼ · START ENTER | v201`, label first, keycap last; the verb follows focus: START on PLAY, OPEN on a door, and with a controller
+the plate (`MOVE ▲▼ · START ENTER | v203`, label first, keycap last; the verb follows focus: START on PLAY, OPEN on a door, and with a controller
 on SOURCE `NEEDS A CLICK OR ENTER`, no keycap; a touch layout reads `TAP A ROW`; a note leads it, the controller's signpost replaces it in cream).
 Phone and compact have no foot: while a controller drives, SOURCE's teaser leads with `NEEDS A CLICK OR ENTER` (step-down `CLICK OR ENTER`, words.js
 `SOURCE_PAD_SHORT`; R1 cohesion 11), cream, before the signpost and the build tag.
@@ -1509,6 +1509,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; the tile boards were `?gen=3` only from v188 to v197).
+- Release state (2026-11-12): shell **v203** (UI upgrade release R1: the world kit menus, MENU's seven rows and next-run card, LEVEL SELECT rows, SETTINGS / GRAPHICS, GUIDE with FLOOR, RECORDS (SCORES · STATS · MEDALS), the cards, the player-word renames, logo B in CLASSIC 2D; plan `docs/superpowers/plans/2026-11-10-ui-upgrade-v202.md`, perf record `docs/superpowers/specs/2026-11-10-ui-upgrade-v202-perf.md` "R1 (v203)") is PREPARED as a local release commit on `feature/ui-upgrade`. It is NOT LIVE: the owner pushes after squashing `feature/delivery` (v202 is reserved for that squash). Owner checks U1–U7, U14, U15 (real phone, real controller) are OPEN. Owner decision before the push: boot growth +222 KB raw (+86 KB gzip) vs v201's c4e7598 against the plan's +60 KB (option: LEVEL SELECT lazy with idle preload, ~58 KB raw). Rollback: revert the release commit and bump `CACHE_NAME` / `REV` again.
 - Release state (2026-11-12): shell **v202** (delivery and loading: the boot graph preloaded and lighter (gen 3, the ATTRACT bot, iso, `?net=local` and the CONTROLS paint load after the title), the two-stage service worker cache, PIXEL and REAL 3D prepared in slices and swapped in when ready, the RENDER row's progress; record `docs/superpowers/specs/2026-11-06-delivery-loading-design.md`) is PREPARED as one local squash commit of `feature/delivery` on `main`. NOT LIVE: the owner pushes. Rollback: revert the squash commit and bump `CACHE_NAME` / `REV` again.
 - Release state (2026-11-07): shell **v201** (CONTROLS: controller play, rebinding, the CONTROLS page in the menu kit, VIBRATION levels and patterns with MEDIUM by default, SENSITIVITY levels, hints that follow the device; 578 tests; record `docs/superpowers/specs/2026-11-06-controls-built.md`) is LIVE: pushed to `main` on 2026-11-07 on the owner's word as one squashed commit (`ad2e940`, with the new share card beside it, `334ea8b`; `feature/controls` is never pushed, its history carries local notes), Pages CI green, live `sw.js` v201; GitHub release **v2.4.0**, shell v200 → v201. The owner played it on a real controller and reported it works, details not yet reported, so its human checks M1-M7 ship open, and the VIBRATION test buzz was felt on a real pad on 2026-11-03 (in-run patterns not yet reported). Shell **v200** (loose ends: PASS no longer causes false holds, GATE tips mention the hold, no crash on a hand-made conveyor loop; no board changes; GitHub release **v2.3.1**, shell v198 → v200) is LIVE on the owner's word. 478 tests. Shell **v199** (TRAP warning marks and arm sound, `carryPins` and `gatePins` keep a tile from closing your only way out, faster board building, bot and harness see every tile; BOOSTER flare dropped by the owner; record `docs/superpowers/specs/2026-11-02-tiles-finish-v199.md`) is LIVE on the owner's word. 475 tests. Shell **v198** (GitHub release **v2.3.0**, shell v188 → v198) makes the tile boards what everyone plays: ordinary runs and the DAILY deal gen 3, `?gen=3` is gone, F3 links exist (owner: "Ship without a playtest", waiving #30's playtest; record `docs/superpowers/specs/2026-11-02-tiles-default-v198.md`, with the known risks). Older text below that says `?gen=3` is history. Shell **v197** (loading bar, REAL 3D new-world freeze fix #36, boot graph minus 75 KB raw, and on `?gen=3` BOOSTER marks, ICE brake tip, REAL 3D heat look; rulings and numbers in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`) is LIVE on the owner's word (2026-11-02). A design on local branch `descent-design` is unmerged and stays unpushed until the owner says.
   Shell **v196** (rules for STREAM, QUICKSAND, GATE, PORTAL, all on

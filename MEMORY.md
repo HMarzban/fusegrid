@@ -24,6 +24,9 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-07 — v201 pushed: controller play, rebinding, CONTROLS page
 - Owner: "make it ready and push it up", a day before the planned Sunday. Released as one squashed commit on `origin/main`'s v200 tip (`feature/controls` and `feature/delivery` are never pushed); CHANGELOG and sitemap dated 2026-11-07; the brand of the test controller left the tracked docs (A5). 578 tests; the stubbed-pad browser pass re-run on the release tree, its leftover fails all stale against `e1384f5` or timing (record's go/no-go). M1-M7 ship open by the owner's call. The new share card (`og.png` + alt text) ships beside it as its own commit; the owner re-uploads Social preview by hand.
+## 2026-11-12 — Release R1 (shell v203) prepared locally (feature/ui-upgrade)
+- Fixes before the cut: STATS armed confirm plate on landscape #c (the page's plate, words.js resetShort, keys below, AGAIN ERASES >= 8 from the idle keys; 667x375 a named exemption >= 9 px cap), hudart PIXEL count pinned (27/27 verified), key-driven phone captures, stale text. Cache v203; boot +222 KB raw vs v201 is an owner decision before the push; U1-U7, U14, U15 open.
+
 ## 2026-11-11 — R1 landscape: touch sizes and paging on #c (feature/ui-upgrade)
 - fit.js writes #c's content-box scale (`stageCss`, inside the 1 px border), so 44 CSS px targets measure 44; every R1 page pages on a landscape phone's #c instead of scaling (SETTINGS/GRAPHICS the phone column, RECORDS split/parts paging, GUIDE step-downs, MENU's 125 % `least`); `tests/landscape.test.mjs` gates 852/932/740/667 at 1 and 1.25 with gates.mjs `evaluate()`; 568x320 is the named exemption (measured floors). Left open: PAUSE views keep the scaled column.
 

@@ -57,17 +57,28 @@ There is one source for it: `shellview.js` and `update.js` both derive it
 from `CACHE_NAME` in [`shell.js`](../src/pwa/shell.js), so a release bump
 renames it everywhere at once.
 
-Every menu is drawn by one small kit in
-[`menudraw.js`](../src/render/menudraw.js): one panel (`plate`), one title
-(`head`), one hint line (`foot`) and one row painter (`paintRow`), so the
-selected row is the same object on the main menu, the pause menu, OPTIONS,
-GRAPHICS and GUIDE. A list is laid out by `listGeom` and tapped through
-`listHit` from that same table, so a tap always lands on the row it looks
-like. The pause menu borrows the kit from [`scenes.js`](../src/render/scenes.js)
-instead of keeping its own look. Touch follows one rule everywhere: a tap on a
+Since shell v203 (the UI upgrade's first release) the menus are drawn by a
+world kit in [`src/render/kit/`](../src/render/kit/): `worldTokens(level)` gives
+each world its colours, `paint.js` the keys, cells, plate, the bare focus
+bomb and its ring, `type.js` the system-font type scale, `room.js` the look of
+the picked level behind the page, and `cache.js` an offscreen layer cache, so a
+steady menu frame is a few blits plus the live focus. Each page is one module
+in [`src/render/pages/`](../src/render/pages/) (MENU, LEVEL SELECT, the cards,
+SETTINGS / GRAPHICS, GUIDE, RECORDS) with ONE geometry that both the painter
+and the tap handler read, so a tap lands where the key is drawn.
+[`menudraw.js`](../src/render/menudraw.js) keeps the entry names and delegates
+to them. MENU, LEVEL SELECT, the cards and the CLASSIC logo
+([`logo/`](../src/render/logo/)) load at boot; SETTINGS, GUIDE and RECORDS
+load through [`pages/lazy.js`](../src/render/pages/lazy.js) in the idle after
+MENU's first frame, and draw a LOADING plate until they land. Player words
+live in one table, [`words.js`](../src/render/words.js). Under `?debug=1`
+every page can record what it drew (`kit/probe.js`), which
+[`tools/ui/`](../tools/ui/) turns into captures and readability gates. The
+pause menu still borrows the CONSOLE PANEL kit from
+[`scenes.js`](../src/render/scenes.js) until the end screens get theirs. Touch follows one rule everywhere: a tap on a
 row is Enter on it, and a tap off the rows does nothing on the main menu or
 the pause list and backs out of any other page. A chip tap on LEVEL SELECT or
-HIGH SCORES goes through the same app call as its arrow key, so it sounds the
+SCORES goes through the same app call as its arrow key, so it sounds the
 same.
 
 The main menu and every menu page draw on their own canvas, `#sh`, laid over

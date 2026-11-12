@@ -840,6 +840,22 @@ The loading work that sat on its own branch since 2026-11-06 became one commit. 
 needs all at once, and the floor-tile builder, the demo player and the CONTROLS page's drawing load once the title
 is up. A new RENDER look no longer freezes the game while it builds: PIXEL and REAL 3D get ready in small slices behind
 the look you already have and swap in when they're done.
+## 2026-11-12: the menus move into the world (shell v203, R1)
+
+The UI upgrade's first cut. The owner picked the look over seven design rounds, then saw two contact sheets
+(MENU and LEVEL SELECT, then RECORDS and the new title logo) and said "Approved, cut R1". Every menu now sits
+on the look of the level you picked, inside its wall: one kit of keys, cells, a plate and a bare focus bomb with
+a ring, drawn once into offscreen layers so a still menu costs a few blits. The words changed to the ones players
+already know (SETTINGS, LEVEL, NORMAL / HARD / EXPERT difficulty), RECORDS took SCORES, STATS and MEDALS under one
+door, and the title got its lit fuse.
+
+The last fix before the cut was a small one with a long tail. On a landscape phone the STATS reset's confirm
+shrank its words until they fit, down to a cap of 3.8 px. Paging was ruled out because any key or tap cancels a
+confirm, so the plate now takes the whole page, a shorter sentence still names everything it erases and
+keeps, and the keys sit under it, clear of the RESET key a double tap would hit. One phone size, 667 × 375, still
+needs its words a little under the floor, and the test names it. The honest leftover is size: the pages that
+open first add about 222 KB raw (86 KB gzip) to the first visit against a 60 KB plan, and that call is the
+owner's before the push.
 
 ---
 
