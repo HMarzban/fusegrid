@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — Sign-off: docs aligned to the v214 release
+- CHANGELOG's v214 section notes v207-v213 were local builds (never released); architecture.md dates its post-v206 facts to v214. State at sign-off: feature/ui-upgrade = v214, 723 tests green, nothing pushed. Owner to-dos: device checks, three vetoes, the 56-branch delete, push main (v202) then the branch, Social preview upload, the v2.5.0 release note (draft in the ledger folder), the marketing kit's stale copy blocks.
+
 ## 2026-11-12 — v214: share card P2, the pixel cabinet
 - Owner asked for "another D4 version with pixlated world and design and with custom art design", saw P1 / P2 / P3 and said "yes p2, also let's save those other in order to hand them over to the marketing team". og.png = P2 (real PIXEL world boards, custom pixel frame / sign / keys / type in the PIXEL palette); alt text updated; cache v214. Every card of the day saved in git-ignored `.superpowers/sdd/marketing/share-cards-2026-11-12/` with a README; the marketing kit's About text, topics and og checklist updated, its copy blocks flagged stale.
 

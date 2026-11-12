@@ -79,6 +79,8 @@ The menus centre, CONTROLS joins the world, the first load builds the title, and
 
 ### Notes
 
+- **One release for a day of fixes.** Shell v207 to v213 were local builds for the owner's own checks and were never
+  released; everything since v206 ships together as v214.
 - **Rollback:** revert the release commit and bump `CACHE_NAME` (and `REV` in `sw.js`) again, so installed copies update.
 
 ## shell v206 · 2026-11-12

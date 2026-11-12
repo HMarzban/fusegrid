@@ -68,7 +68,7 @@ SETTINGS / GRAPHICS, GUIDE, RECORDS, PAUSE and the run ends) with ONE geometry
 that both the painter and the tap handler read, so a tap lands where the key is
 drawn. [`menudraw.js`](../src/render/menudraw.js) keeps the entry names and
 delegates to them. MENU, the cards, PAUSE and the CLASSIC logo
-([`logo/`](../src/render/logo/)) load at boot; LEVEL SELECT (since v211), SETTINGS, GUIDE, RECORDS and the
+([`logo/`](../src/render/logo/)) load at boot; LEVEL SELECT (since v214), SETTINGS, GUIDE, RECORDS and the
 run ends (LEVEL CLEAR and the finale in `endwin.js`, GAME OVER in `endlose.js`,
 one draw and tap contract in `endgeom.js`) load through
 [`pages/lazy.js`](../src/render/pages/lazy.js) in the idle after MENU's first
@@ -105,7 +105,7 @@ box, so a tap still lands where it is drawn. The intro, attract mode and play st
 the board canvas with `#sh` hidden. PAUSE (and its SETTINGS, GRAPHICS and CONTROLS views),
 LEVEL CLEAR, the finale and GAME OVER draw on `#sh` too, in one of two ways. On a desktop and
 a landscape layout `#sh` lies exactly on the board canvas's content box at device resolution
-(shell v210; before, these plates were drawn into the board's 600 × 520 backing and stretched,
+(shell v214; before, these plates were drawn into the board's 600 × 520 backing and stretched,
 so they looked soft beside PIXEL and REAL 3D), click-through, and the overlay keeps the board's
 own box, so its layout and taps did not move. On a portrait phone they take the whole column
 under the HUD plate down to the safe area (`fit.over()`), where they no longer page or squeeze
@@ -303,7 +303,7 @@ Shell v185 (2026-10-26) gives the board a new look in all three looks. It adds:
   ([`frameart.js`](../src/render/frameart.js), [`frame.js`](../src/render/frame.js)).
   In REAL 3D the bezel is one extruded rim ([`three/rimart.js`](../src/render/three/rimart.js)) whose outer edge is a plain
   rectangle: the near corners used to lean in to stay on screen at the default zoom, which read as a flared tray once the
-  camera pulled back (v210), so now they run off the bottom of the screen at the default zoom instead.
+  camera pulled back (v214), so now they run off the bottom of the screen at the default zoom instead.
 - **Depth**: cast and contact shadows, ambient occlusion, lower-value bricks
   ([`depth2d.js`](../src/render/depth2d.js), [`three/groundfx.js`](../src/render/three/groundfx.js)).
 - **Ambient motion** per world (motes, glints, steam, drift) from one
@@ -479,7 +479,7 @@ The [service worker](../sw.js) precaches the versioned
 cache-first under one `CACHE_NAME`, so any shipped file committed after the last
 bump must ship with a new name: an old cache kept under the old name serves old
 startup files beside new lazy ones, and a page whose imports no longer match fails
-to load (CONTROLS read DID NOT LOAD until v210's bump renamed the cache). A
+to load (CONTROLS read DID NOT LOAD until the cache got a new name). A
 successful online first visit is needed before offline use. A new release
 installs in the background and waits; a **NEW VERSION READY** card
 ([`update.js`](../src/app/update.js)) offers RELOAD (or `U`), but only on the
@@ -496,13 +496,13 @@ different board. The worker caches the boot list at install and fills in the
 other looks PIXEL first, but only inside an event the browser waits for (a FILL
 message the page posts once the worker is ready, or a navigation), never on a
 bare timer, and it stops writing once it is no longer the active worker or its
-cache was deleted (v210). Switching to PIXEL or REAL
+cache was deleted (v214). Switching to PIXEL or REAL
 3D builds the new look in slices of about 8 ms that pause in live play
 ([`jobs.js`](../src/app/jobs.js)), keeps the old look on screen until the new
 one is ready, and keeps it if the new one fails. A look you saved that fails at boot shows
 CLASSIC for that session only and keeps your setting; a deep link straight into a
 run (`?play=1`, a challenge code) waits behind the look's PREPARING card and starts
-in that look, and the FLOOR TILES card offers RETRY or BACK TO MENU (v210).
+in that look, and the FLOOR TILES card offers RETRY or BACK TO MENU (v214).
 Before any of it the first load draws the title being made where the title will
 stand: the level's floor fills in cell by cell and logo B's fuse burns toward the
 tip as the files arrive (finished files against pinned totals), so the hand-off to
