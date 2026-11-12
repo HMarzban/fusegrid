@@ -31,7 +31,7 @@ import {key, plate, band, focusBomb, glyph, wallCell, capW, cap, plaque, rfill a
 import {T, DEV, measure, measure as W, textScale, dsp, measurer as mOf, text, CAP_K} from "../kit/type.js";
 import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch as touchK, keyOf, canMake} from "../kit/cache.js";
-import {roomLayer, pageRoomDpr} from "../kit/room.js";
+import {roomLayer, roomKey, pageRoomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
 import {paginate as pagesOf, pagerKeys, pageLabel, pageKeyAt, paintPager as kitPager, keySide, pageOfFocus} from "../kit/pager.js";
 import {deviceScale} from "../logo/draw2d.js";
@@ -709,7 +709,7 @@ function frame(c, F, ui, t, page, rows, specs, foc, fks, gRow) {
     const K = {biome: tok.name, level, W: F.W, H: F.H, look: "2d", textScale: ts, dpr};
     const pageKey = {...K, layer: page + ".page|" + sig}, pw = Math.round(pb.w * dpr), ph = Math.round(pb.h * dpr);
     const rd = pageRoomDpr(c, F, {rev: ui.rev}, dpr, pw * ph * 4); // MENU's room dpr (kit room.js: MENU's own room layer, the LOADING plate's too) unless this page needs less (no logo reserve: SETTINGS and GRAPHICS show no logo; lead ruling, R1 train)
-    s = S[page] = {sig, G, c, Pl, ob, pb, pw, ph, pageKey, pageK: keyOf(pageKey), rd, roomK: keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: rd, look: "2d", textScale: 1}), room: null, page: null, subs: s ? s.subs : []};
+    s = S[page] = {sig, G, c, Pl, ob, pb, pw, ph, pageKey, pageK: keyOf(pageKey), rd, roomK: roomKey({w: F.W, h: F.H}, level, tok, {dpr: rd, look: "2d", textScale: 1, play: F.play}), room: null, page: null, subs: s ? s.subs : []};
     _dbg.plans++;
   }
   const Pl = s.Pl, d = G.d, dv = DEV[d.dev], focus = !tap && Pl.rows[foc] ? foc : null, gp = page === "graphics" ? gfxPane(mOf(c), G, gRow) : null;
@@ -719,7 +719,7 @@ function frame(c, F, ui, t, page, rows, specs, foc, fks, gRow) {
     for (const k of s.subs) touchK(k); // the small layers and the page before the room: a value change frees the stale page, never the room
     if (s.page && s.page.width) touchK(s.pageK);
     if (!paused) {
-      if (!s.room || !s.room.width) s.room = roomLayer({w: F.W, h: F.H}, level, tok, {dpr: s.rd, look: "2d", textScale: 1});
+      if (!s.room || !s.room.width) s.room = roomLayer({w: F.W, h: F.H}, level, tok, {dpr: s.rd, look: "2d", textScale: 1, play: F.play});
       else touchK(s.roomK);
     }
     if (!s.page || !s.page.width) s.page = layer(s.pageKey, s.pw, s.ph, (g) => { subs = s.subs = []; try { g.scale(dpr * u, dpr * u); g.translate(-s.ob.x, -s.ob.y); paintStatic(g, G, Pl, tok, u, pg); } finally { subs = null; } });

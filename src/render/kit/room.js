@@ -2,11 +2,14 @@
    the 2D menu canvas, painted through the kit's cell painters (paint.js wallCell / floorCell / brickCell) on artOf(level): the level's REAL board art, the
    untinted biomeOf(level) (appendix 1.3: the backdrop keeps the game's real art, only the veil is tinted; the mock's lane paints the same raw biome).
    tok gives the UI colours only: the veil (tok.bg1), the lane bed (tok.bed) and the cache key (tok.name). roomLook and lane leave the context state as found.
-   roomLook   (c, box, level, tok, o) fills bg1, scales the 600 x 520 representative board to COVER box (s = max(w/600, h/520) x o.k) and centres it, then
-              lays the veil rgba(toL(tok.bg1, 0.004), o.veil = 0.5) over the box last (appendix 6). The layout is fixed, never the board the run deals:
-              border and even-even pillar walls (border codes, pillar variant [0,0,1,2] by hsh seed 7), bricks where hsh(x, y, 10) < 0.42 off both diagonals.
-   roomLayer  (box, level, tok, o) the same painted once per key into a cache.js layer at o.dpr (o.look, o.textScale in the key; a veil or k other than
-              the default joins the layer name, so a WIN veil never reuses the menu one).
+   roomLook   (c, box, level, tok, o) fills bg1, draws the 600 x 520 representative board centred at PLAY scale (Task 9.6: s = min(o.play, cover) x o.k,
+              o.play = box units per board unit in a run on this layout, fit.js shellGeo's play through the frame F; no o.play (#c, the board's own canvas,
+              where play = cover = 1) keeps COVER, s = max(w/600, h/520)), continues the field past the board's rampart over the whole box (_field), then lays
+              the veil rgba(toL(tok.bg1, 0.004), o.veil = 0.5) over the box last (appendix 6). The layout is fixed, never the board the run deals: border and
+              even-even pillar walls (border codes, pillar variant [0,0,1,2] by hsh seed 7), bricks where hsh(x, y, 10) < 0.42 off both diagonals; outside the
+              board the even-even pillars and the same brick hash (no spawn-corner rule there), so only the cells the box shows are painted.
+   roomLayer  (box, level, tok, o) the same painted once per key into a cache.js layer at o.dpr (o.look, o.textScale in the key; a veil, k or play other than
+              the default joins the layer name, so a WIN veil never reuses the menu one); roomKey is that key, the one every page touches.
    laneGrid   (level) pure and DOM-free: the representative board as T codes with fair.js stampStart over it (the sealed spawn pocket, doors (5,1) and
               (1,5) BRICK), MAKO on (1,1), the room's first CORE roster foe and its floor tile (core/feat.js HOME, coded by F's first code of that kind) on FLOOR cells of row 1 past the door,
               inside the first 8 columns so a 9-column crop still shows them. Its only true facts: the pocket, the roster, the tile. A fresh grid per call.
@@ -32,7 +35,7 @@ import {CONST, toL, worldTokens} from "./tokens.js";
 import {dsp, lbl, measure, T as TY, textScale, CAP_K} from "./type.js";
 import * as probe from "./probe.js";
 import {canMake} from "./cache.js";
-import {layer, BUDGET} from "./cache.js";
+import {layer, keyOf, BUDGET} from "./cache.js";
 
 const C = CFG.COLS, R = CFG.ROWS, TS = 40, BW = C * TS, BH = R * TS, SEED = 7;
 export const LANE_COLS = 14;
@@ -45,8 +48,12 @@ const hsh = (x, y, s) => { let h = (x * 374761393 + y * 668265263 + s * 14426950
 const rgba = (h, a) => `rgba(${parseInt(h.slice(1, 3), 16)},${parseInt(h.slice(3, 5), 16)},${parseInt(h.slice(5, 7), 16)},${a})`;
 const edge = (x, y) => x === 0 || y === 0 || x === C - 1 || y === R - 1;
 const isWall = (x, y) => edge(x, y) || (x % 2 === 0 && y % 2 === 0);
-const wallCode = (x, y) => (edge(x, y) ? borderCode(x, y) : [0, 0, 1, 2][Math.floor(hsh(x, y, SEED) * 4)]);
+const wallCode = (x, y) => (inBoard(x, y) && edge(x, y) ? borderCode(x, y) : [0, 0, 1, 2][Math.floor(hsh(x, y, SEED) * 4)]);
 const isBrick = (x, y) => !(x + y <= 3 || x + y >= C + R - 5) && hsh(x, y, SEED + 3) < 0.42;
+const inBoard = (x, y) => x >= 0 && y >= 0 && x < C && y < R;
+/* the field behind a page: the representative board inside, outside it the even-even pillars and the brick hash (0 floor, 1 wall, 2 brick) */
+export const _field = (x, y) => (inBoard(x, y) ? (isWall(x, y) ? 1 : isBrick(x, y) ? 2 : 0) : (x & 1) === 0 && (y & 1) === 0 ? 1 : hsh(x, y, SEED + 3) < 0.42 ? 2 : 0);
+const FIELD = [T.EMPTY, T.WALL, T.BRICK];
 const ART = new Map(), artOf = (level) => { const b = biomeOf(level); let a = ART.get(b); if (!a) ART.set(b, (a = Object.freeze({biome: b}))); return a; };
 function cell(c, px, py, s, art, v, x, y, level) {
   if (v === T.WALL) return wallCell(c, px, py, s, art, {code: wallCode(x, y)});
@@ -55,22 +62,29 @@ function cell(c, px, py, s, art, v, x, y, level) {
 }
 
 export function roomLook(c, box, level, tok, o = {}) {
-  const x = box.x || 0, y = box.y || 0, w = box.w, h = box.h, art = artOf(level), s = Math.max(w / BW, h / BH) * (o.k || 1);
+  const x = box.x || 0, y = box.y || 0, w = box.w, h = box.h, art = artOf(level), cover = Math.max(w / BW, h / BH), s = (o.play > 0 ? Math.min(o.play, cover) : cover) * (o.k || 1);
+  const ox = (w - BW * s) / 2, oy = (h - BH * s) / 2, q = TS * s, E = 1e-6;
   c.save();
   c.beginPath(); c.rect(x, y, w, h); c.clip();
   c.fillStyle = art.biome.bg1; c.fillRect(x, y, w, h);
-  c.save(); c.translate(x + (w - BW * s) / 2, y + (h - BH * s) / 2); c.scale(s, s);
-  for (let j = 0; j < R; j++) for (let i = 0; i < C; i++) cell(c, i * TS, j * TS, TS, art, isWall(i, j) ? T.WALL : isBrick(i, j) ? T.BRICK : T.EMPTY, i, j, level);
+  c.save(); c.translate(x + ox, y + oy); c.scale(s, s);
+  const i0 = Math.floor(-ox / q + E), i1 = Math.ceil((w - ox) / q - E), j0 = Math.floor(-oy / q + E), j1 = Math.ceil((h - oy) / q - E);
+  for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) cell(c, i * TS, j * TS, TS, art, FIELD[_field(i, j)], i, j, level);
   c.restore();
   c.fillStyle = rgba(toL(tok.bg1, 0.004), o.veil ?? 0.5); c.fillRect(x, y, w, h);
   c.restore();
 }
 
+const playOf = (o) => (o.play > 0 ? +o.play.toFixed(4) : 0);
+const roomSpec = (box, level, tok, o) => {
+  const veil = o.veil ?? 0.5, k = o.k || 1, p = playOf(o);
+  return {layer: (veil === 0.5 && k === 1 ? "room" : "room|" + veil + "|" + k) + (p ? "@" + p : ""), biome: tok.name, level, W: box.w, H: box.h, dpr: o.dpr || 1, look: o.look || "2d", textScale: o.textScale || 1};
+};
+export const roomKey = (box, level, tok, o = {}) => keyOf(roomSpec(box, level, tok, o));
 export function roomLayer(box, level, tok, o = {}) {
-  const dpr = o.dpr || 1, veil = o.veil ?? 0.5, k = o.k || 1, w = box.w, h = box.h;
-  const name = veil === 0.5 && k === 1 ? "room" : "room|" + veil + "|" + k;
-  return layer({layer: name, biome: tok.name, level, W: w, H: h, dpr, look: o.look || "2d", textScale: o.textScale || 1}, Math.round(w * dpr), Math.round(h * dpr),
-    (g) => { g.scale(dpr, dpr); roomLook(g, {x: 0, y: 0, w, h}, level, tok, {veil, k}); });
+  const dpr = o.dpr || 1, veil = o.veil ?? 0.5, k = o.k || 1, w = box.w, h = box.h, play = playOf(o);
+  return layer(roomSpec(box, level, tok, o), Math.round(w * dpr), Math.round(h * dpr),
+    (g) => { g.scale(dpr, dpr); roomLook(g, {x: 0, y: 0, w, h}, level, tok, {veil, k, play}); });
 }
 
 export const ROOM_RESERVE = 3 * 1024 * 1024;
@@ -96,7 +110,7 @@ export function loadingPlate(c, F, o) {
   const level = o.level | 0 || 1, tok = worldTokens(level), B = loadBox(F), lw = B.lw;
   if (!(F.W > 0 && F.H > 0) || typeof c.clip !== "function") return;
   if (!o.paused) {
-    if (canMake()) c.drawImage(roomLayer({w: F.W, h: F.H}, level, tok, {dpr: roomDpr(c, F, {rev: o.rev}, o.dpr), look: "2d", textScale: 1}), 0, 0, F.W, F.H);
+    if (canMake()) c.drawImage(roomLayer({w: F.W, h: F.H}, level, tok, {dpr: roomDpr(c, F, {rev: o.rev}, o.dpr), look: "2d", textScale: 1, play: F.play}), 0, 0, F.W, F.H);
     else { c.fillStyle = toL(tok.bg1, 0.004); c.fillRect(0, 0, F.W, F.H); }
   }
   const tw = measure(c, TY.display(LOAD_TTL), String(o.title)), tp = tw > lw - 32 ? LOAD_TTL * (lw - 32) / tw : LOAD_TTL;

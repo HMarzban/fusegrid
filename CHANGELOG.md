@@ -32,6 +32,7 @@ The HUD leaves the board and joins the world.
 ### Changed
 
 - The old LV chip and difficulty token are gone from the board; LEVEL names the level.
+- Menu pages sit centred in a tall window (the old top margin is now the minimum), and the room behind them is drawn at the board's size in a run, its floor and walls continuing to the window's edges instead of zooming in.
 
 ### Fixed
 

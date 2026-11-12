@@ -5,7 +5,7 @@
    featdraw drawSpec, wallart; PIXEL: hudart's cells when its atlas is in).
    guideGeom(F, page) is the one geometry for draw and tap: rects by NAME in box units (G.d: the same in design px; u box units per design px).
    F = {W, H, touch, shell, css, ts} as MENU's. Three arrangements: desk (every keyboard box, and a touch box whose desk scale holds TOUCH_U), the plate
-   centred under a 70 px top margin that gives way to a short window, then the page scales as one piece; phone (a touch-portrait shell box), one column
+   centred, the plate + foot block in a taller box with a 70 px minimum top margin (Task 9.6) that gives way to a short window, then the page scales as one piece; phone (a touch-portrait shell box), one column
    in CSS px with a BACK key in the head; compact (any other touch box), the phone grammar two columns wide. Heights come from a fixed estimate of each
    string (EST em per character, wider than the system sans), so the geometry needs no context; the painter wraps with the real measure into the lines
    the geometry gave, else steps down (APPEARS IN LEVELS n, then LEVELS n) or drops a help line, never an ellipsis.
@@ -30,7 +30,7 @@ import {key, cap, capW, plate, band, focusBomb, glyph, wallCell, floorCell, plaq
 import {T, DEV, dsp, measure, textScale, measurer as mOf, CAP_K} from "../kit/type.js";
 import {deep, R, sc, okBox, inR} from "../kit/geom.js";
 import {layer, capDpr, touch as hold, keyOf, canMake, BUDGET} from "../kit/cache.js";
-import {roomLayer, roomDpr} from "../kit/room.js";
+import {roomLayer, roomKey, roomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
 import {PAGE_KEY, PAGE_GAP, pagerKeys, pageLabel, pageKeyAt, paintPager, pageOfFocus as pageOfName} from "../kit/pager.js";
 import {menuGeom, FOOT_H, TZ, TOUCH_U, TOP_MIN, GUT} from "./menu.js";
@@ -259,7 +259,7 @@ function lay(F, page, mode, fr) {
     }
     let R0 = fit(u, F.H, TOP_MIN, tail, build);
     if (!R0) { const S = build(u), pg = paginate(S.bd, Infinity), band = Math.max(...S.bd.bands.map((b) => b.h)); u = Math.min(u, F.H / (TOP_MIN + P0[0] + S.hd.h + 14 + S.bd.top + band + PAGER + P0[2] + tail)); R0 = fit(u, F.H, TOP_MIN, tail, build) || {S: build(u), pg, u}; }
-    const {S, pg} = R0, Wd = F.W / u, Hd = F.H / u, plateH = P0[0] + S.hd.h + 14 + pg.h + P0[2], px = (Wd - S.pw) / 2, py = Math.max(TOP_MIN, Math.min(TOP, Hd - plateH - tail));
+    const {S, pg} = R0, Wd = F.W / u, Hd = F.H / u, plateH = P0[0] + S.hd.h + 14 + pg.h + P0[2], px = (Wd - S.pw) / 2, py = Math.max(TOP_MIN, Math.min(TOP, Hd - plateH - tail), (Hd - plateH - FOOT_GAP - FOOT_H) / 2); // centred, TOP the minimum (Task 9.6)
     return {mode, dev, u, m, plate: R(px, py, S.pw, plateH), ix: px + P0[3], iy: py + P0[0], iw: S.iw, hd: S.hd, bd: S.bd, pg, by: py + P0[0] + S.hd.h + 14, foot: R(px, py + plateH + FOOT_GAP, S.pw, FOOT_H)};
   }
   /* compact (a landscape phone's #c): margins just clear the plate's ring, tighter pads and head gap, so a foe's row keeps its tooltip's room */
@@ -279,7 +279,7 @@ function lay(F, page, mode, fr) {
   }
   for (let i = 0; !R0 && i < 12; i++) { const S = build(u), band = Math.max(...S.bd.bands.map((b) => b.h)); u = Math.min(u * 0.98, F.H / (top + P0[0] + S.hd.h + hg + S.bd.top + band + PAGER + P0[2] + bot)); R0 = fit(u, F.H, top, bot, build); } // the iso guard's last resort: the page scales as one piece (a narrower body reflows, so it re-fits)
   if (!R0) { const S = build(u); R0 = {S, pg: paginate(S.bd, Infinity), u}; }
-  const {S, pg} = R0, plateH = P0[0] + S.hd.h + hg + pg.h + P0[2], px = (F.W / u - S.pw) / 2, py = top + Math.max(0, F.H / u - top - bot - plateH) * (mode === "phone" ? 0 : 0.5);
+  const {S, pg} = R0, plateH = P0[0] + S.hd.h + hg + pg.h + P0[2], px = (F.W / u - S.pw) / 2, py = top + Math.max(0, F.H / u - top - bot - plateH) / 2; // a short column centres (Task 9.6), a full one stays anchored
   return {mode, dev, u, m, plate: R(px, py, S.pw, plateH), ix: px + P0[3], iy: py + P0[0], iw: S.iw, hd: S.hd, bd: S.bd, pg, by: py + P0[0] + S.hd.h + hg, foot: null, hk};
 }
 const off = (r, x, y) => (r ? R(r.x + x, r.y + y, r.w, r.h) : null);
@@ -781,7 +781,7 @@ const outer = (D) => R(D.plate.x - D.T - 2, D.plate.y - D.T - 2, D.plate.w + 2 *
 function sizes(S, G, F, level, tok, look) {
   const D = G.d, u = G.u, dpr = S.dpr, ob = outer(D), K = {biome: tok.name, level, W: F.W, H: F.H, look, textScale: S.ts};
   S.rd = roomDpr(S.c, F, {rev: S.ui.rev}, dpr); // the room's dpr: MENU's own rule (kit room.js roomDpr, which guards the ask), so MENU and GUIDE share one room layer
-  S.roomK = keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: S.rd, look: "2d", textScale: 1});
+  S.roomK = roomKey({w: F.W, h: F.H}, level, tok, {dpr: S.rd, look: "2d", textScale: 1, play: F.play});
   const roomB = Math.round(F.W * S.rd) * Math.round(F.H * S.rd) * 4, area = ob.w * u * ob.h * u;
   const tipA = D.tips ? Math.max(...D.tips.map((q) => (q.r.w + 2 * q.Tt + 4) * (q.r.h + 2 * q.Tt + 12))) * u * u * 2 : 0, footA = D.foot ? (D.plate.w + 4) * (FOOT_H + 8) * u * u : 0;
   const pd = +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - 1024 * 1024 - roomB) / (4 * (area * D.pages + tipA + footA + 4 * 400 * 40 * u * u))))).toFixed(3);
@@ -823,7 +823,7 @@ export function drawGuidePage(c, F, ui, t = 0) {
   _dbg.last = {G, P, foc, tipOn, S, pg};
   if (typeof c.clip !== "function" || typeof c.rect !== "function") return;
   if (canMake()) {
-    const room = (S.room && S.room.width) ? (hold(S.roomK), S.room) : (S.room = roomLayer({w: F.W, h: F.H}, level, tok, {dpr: S.rd, look: "2d", textScale: 1}));
+    const room = (S.room && S.room.width) ? (hold(S.roomK), S.room) : (S.room = roomLayer({w: F.W, h: F.H}, level, tok, {dpr: S.rd, look: "2d", textScale: 1, play: F.play}));
     for (const [l, st] of Object.entries(P.strips)) {
       const k = S.stripKeys[l];
       if (!S.strips[l] || !S.strips[l].width) S.strips[l] = layer(k, Math.max(1, Math.round(st.w * u * S.pd)), Math.max(1, Math.round(st.h * u * S.pd)), (g) => { g.scale(S.pd * u, S.pd * u); paintOps(g, st.ops, tok, {...o, blit: null}); });

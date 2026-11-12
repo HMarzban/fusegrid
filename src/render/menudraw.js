@@ -308,10 +308,11 @@ function segs(c, rs, labels, on, cols, touch, fs) {
    instead of pinning to the floor) and narrow any box under 560 wide
    (pages re-flow: LEVEL SELECT stacks its card under the grid, MEDALS goes to
    one column). Neither ever holds at 600x520 or 608x352. */
-export function layout(W, H, lg, css) {
+export function layout(W, H, lg, css, play) {
   return Object.freeze({
     W,
     H,
+    play: play > 0 ? play : undefined, // box units per board unit in a run on this layout (fit.js shellGeo play): the room behind a page at play scale; none on #c (its box is the board: COVER = 1)
     shell: typeof lg === "number", // dims hands lg only for #sh's shell box
     css: css > 0 ? css : 1, // CSS px per box unit on a touch layout (the MENU's touch floors and its phone column and compact tiles are in CSS px)
     cx: W / 2,
@@ -424,7 +425,7 @@ function backing(c, cx, cy, w, h) {
    drawn in, so a tap's geometry is the one on screen (GUIDE's lines follow it); undefined until a page is drawn (the page's fallback, hintcopy tapAt) */
 let tapNow;
 const drawn = (tap) => (tapNow = tap == null ? undefined : !!tap);
-const frameOf = (L, touch, tap) => ({ W: L.W, H: L.H, touch: !!touch, shell: !!L.shell, css: L.css, tap: tap !== undefined ? tap : tapNow });
+const frameOf = (L, touch, tap) => ({ W: L.W, H: L.H, touch: !!touch, shell: !!L.shell, css: L.css, play: L.play, tap: tap !== undefined ? tap : tapNow });
 export const menuGeom = (L, _n, touch) => menuPage.menuGeom(frameOf(L, touch));
 export const menuHit = (x, y, L, _n, touch) => menuPage.menuHit(x, y, frameOf(L, touch));
 export const drawMenu = (c, ui, L, t, touch) => menuPage.drawMenuPage(c, frameOf(L, touch, drawn((ui || {}).tap)), ui || {}, t);

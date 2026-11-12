@@ -165,9 +165,10 @@ export const WIN_SHELL = Object.freeze({ min: [600, 520], dpr: 2 });
 
 export function shellGeo(W, H, cw = 600, ch = 520, lay = "p") {
   const P = PORT_SHELL, b = fitBox(W, H, lay !== "d", cw, ch).s;
-  if (lay !== "p") return W < WIN_SHELL.min[0] || H < WIN_SHELL.min[1] ? null : { w: Math.floor(W), h: Math.floor(H), s: 1, left: 0, top: 0, logo: (H - ch * b) / 2 + 1 + P.logo * ch * b };
+  const g = fitBox(W, H, lay !== "d", cw, ch, true).s; // play: the board's scale in a run on this layout (the HUD reserves), per box unit: the room behind a page
+  if (lay !== "p") return W < WIN_SHELL.min[0] || H < WIN_SHELL.min[1] ? null : { w: Math.floor(W), h: Math.floor(H), s: 1, left: 0, top: 0, logo: (H - ch * b) / 2 + 1 + P.logo * ch * b, play: g };
   const aw = W - FIT_RES.p[0], s = Math.min(1.8, aw / Math.round(Math.max(P.w[0], Math.min(P.w[1], aw / P.s)))), w = Math.floor(W / s), h = Math.floor(H / s);
-  return h < 520 ? null : { w, h, s, left: 0, top: 0, logo: (portraitGeo(W, H, cw, ch, false).top + 1 + P.logo * ch * b) / s };
+  return h < 520 ? null : { w, h, s, left: 0, top: 0, logo: (portraitGeo(W, H, cw, ch, false).top + 1 + P.logo * ch * b) / s, play: g / s };
 }
 
 export function stripGeo(W, H, cw, ch) {
@@ -279,7 +280,7 @@ export function mountFit(canvas) {
     if (px && px.style) fitPx(px, canvas.width * s, canvas.height * s, cap);
   };
   fit.sh = shEl();
-  fit.box = () => { const sh = shG && shEl(); return sh && !sh.hidden && shM !== 2 ? { width: shG.w, height: shG.h, logo: shG.logo, css: shG.s, ownerDocument: sh.ownerDocument, getBoundingClientRect: () => sh.getBoundingClientRect() } : null; };
+  fit.box = () => { const sh = shG && shEl(); return sh && !sh.hidden && shM !== 2 ? { width: shG.w, height: shG.h, logo: shG.logo, css: shG.s, play: shG.play, ownerDocument: sh.ownerDocument, getBoundingClientRect: () => sh.getBoundingClientRect() } : null; };
   fit.shell = (on) => {
     const sh = shG && shEl();
     if (!sh) { shM = 0; return null; }

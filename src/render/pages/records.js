@@ -38,7 +38,7 @@ import {key, cap, capW, plate, focusBomb, wallCell, plaque, rpath as sp, rfill a
 import {T, DEV, measure, measure as W, textScale, nums, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
 import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
-import {roomLayer, pageRoomDpr} from "../kit/room.js";
+import {roomLayer, roomKey, pageRoomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
 import {PAGE_KEY, pagerKeys, pageLabel, pageKeyAt, paintPager as kitPager} from "../kit/pager.js";
 import {deviceScale} from "../logo/draw2d.js";
@@ -1129,7 +1129,7 @@ function sizes(S0, G, F, level, tok, ui) {
   const bytes = S0.pw * S0.ph * 4 + S0.feet.reduce((a, q) => a + q.w * q.h * 4, 0);
   S0.rd = pageRoomDpr(S0.c, F, {rev: ui.rev}, dpr, bytes);
   S0.box = {w: F.W, h: F.H};
-  S0.roomK = keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: S0.rd, look: "2d", textScale: 1});
+  S0.roomK = roomKey({w: F.W, h: F.H}, level, tok, {dpr: S0.rd, look: "2d", textScale: 1, play: F.play});
 }
 /** Paints one RECORDS tab on c for the frame F. ui = {page "scores" | "stats" | "medals", level, focus "tabs" | "body", heat, scores (played rows of that
     difficulty), plaques (the badge bits), rows (MEDALS: [name, desc, earned] x 8)}; a zero or non-finite box draws nothing. */
@@ -1154,7 +1154,7 @@ export function drawRecordsPage(c, F, ui, t = 0) {
   const q = S.feet.find((f) => f.v === foc) || S.feet[0] || null;
   S.fv = q ? q.v : null;
   if (canMake()) {
-    if (!S.room || !S.room.width) S.room = roomLayer(S.box, level, tok, {dpr: S.rd, look: "2d", textScale: 1});
+    if (!S.room || !S.room.width) S.room = roomLayer(S.box, level, tok, {dpr: S.rd, look: "2d", textScale: 1, play: F.play});
     else touch(S.roomK);
     if (!S.page || !S.page.width) S.page = layer(S.pageKey, S.pw, S.ph, (g) => { g.scale(dpr * u, dpr * u); g.translate(-S.ob.x, -S.ob.y); paintPage(g, G, P, ui, tok); });
     else touch(S.pageK);

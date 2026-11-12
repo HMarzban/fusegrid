@@ -87,7 +87,7 @@ for (const b of SIX) {
   setTextScale(1.25);
   const H = P.menuGeom(BOX.d1366), h = H.rows;
   setTextScale(1);
-  check("desktop at 125 %: the mock's t125 frame (plate 1180 wide from y 56, PLAY 520 x 72 at (117, 163.36), doors 49 at (117, 259.36))", near(H.plate.w, 1180, 0.01) && near(H.plate.y, 56, 0.01) && nearR(h.PLAY, { x: 117, y: 163.36, w: 520, h: 72 }, 0.01) && nearR(h["LEVEL SELECT"], { x: 117, y: 259.36, w: 520, h: 49 }, 0.01) && near(h.SOURCE.y, 560.36, 0.01), J([H.plate, h.PLAY, h.SOURCE]));
+  check("desktop at 125 %: the mock's t125 frame centred (Task 9.6: plate 1180 wide from y 58.32, over its 56 minimum; PLAY 520 x 72 at (117, 165.68), doors 49 at (117, 261.68))", near(H.plate.w, 1180, 0.01) && near(H.plate.y, 58.32, 0.01) && nearR(h.PLAY, { x: 117, y: 165.68, w: 520, h: 72 }, 0.01) && nearR(h["LEVEL SELECT"], { x: 117, y: 261.68, w: 520, h: 49 }, 0.01) && near(h.SOURCE.y, 562.68, 0.01) && near(H.plate.y, 768 - (H.foot.y + H.foot.h), 0.01), J([H.plate, h.PLAY, h.SOURCE]));
   const Q = P.menuGeom(BOX.p393), s = BOX.p393.css, q = (l) => css(Q.rows[l], s), MP = { PLAY: [24, 153.36, 345, 62], "LEVEL SELECT": [24, 225.36, 345, 50], DAILY: [24, 632, 167.5, 58], RECORDS: [201.5, 632, 167.5, 58], SETTINGS: [24, 700, 167.5, 58], GUIDE: [201.5, 700, 167.5, 58], SOURCE: [24, 768, 345, 50] };
   const badp = ITEMS.filter((l) => !nearR(q(l), { x: MP[l][0], y: MP[l][1], w: MP[l][2], h: MP[l][3] }, 1.2));
   check("phone 393x852 (#sh at ~0.9): every row at the mock's CSS rect within 1.2 px (PLAY 62, doors 50, tiles 58, one 10 px pitch)", badp.length === 0, J(badp.map((l) => [l, q(l)])));
@@ -104,7 +104,7 @@ for (const b of SIX) {
 /* sizes: the mock's plate keeps its size and centres; a narrower window narrows only the card's column; the iso guard and #c scale as one piece */
 {
   const g = (b) => P.menuGeom(BOX[b]), a = g("d1366"), w = g("d1920"), n = g("d1024"), k4 = P.menuGeom({ W: 3840, H: 2160, touch: false, shell: true, css: 1 });
-  check("1920x1080 and 3840x2160: the mock's plate (1060 x 567.36) centred, 70 from the top, nothing stretched", [w, k4].every((G) => near(G.plate.w, 1060, 0.01) && near(G.plate.h, 567.36, 0.01) && near(G.plate.x, (G.W - 1060) / 2, 0.01) && near(G.plate.y, 70, 0.01) && G.u === 1 && G.rows.PLAY.w === 480));
+  check("1920x1080 and 3840x2160: the mock's plate (1060 x 567.36) centred in both axes with its foot (Task 9.6: y (H - 639.36) / 2, 220.32 and 760.32), nothing stretched", [w, k4].every((G) => near(G.plate.w, 1060, 0.01) && near(G.plate.h, 567.36, 0.01) && near(G.plate.x, (G.W - 1060) / 2, 0.01) && near(G.plate.y, (G.H - 639.36) / 2, 0.01) && near(G.plate.y, G.H - (G.foot.y + G.foot.h), 0.01) && G.u === 1 && G.rows.PLAY.w === 480), J([w.plate, k4.plate]));
   check("1024x768: no scale (u 1), the list keeps 480, the card's column narrows (>= 360)", n.u === 1 && n.rows.PLAY.w === 480 && n.card.w >= 360 && n.card.w < a.card.w && n.plate.x >= 26, J([n.u, n.card.w, n.plate]));
   check("600x520 board and 608x352 iso: the desk geometry scaled as one piece (u < 1)", g("c600").u < 1 && g("iso").u < 1 && g("c600").mode === "desk" && g("iso").mode === "desk", J([g("c600").u, g("iso").u]));
 }

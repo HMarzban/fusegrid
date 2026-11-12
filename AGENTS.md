@@ -270,7 +270,9 @@ and drawing nothing, so WIN/LOSE keep `#c`, its overlay and its taps.
 smoothing off) and returns `{ctx, box}`; `box` is the logical canvas
 stand-in (`width/height/logo`, its rect) that `drawShell` measures and the
 one pointer handler (bound on `#c` and `#sh`) maps through, so a tap lands
-where it is drawn. `layout(W,H,lg,css)`: `W`, `H`, `shell` (an `lg` was handed: #sh's box) and `css` (CSS px per box unit, which
+where it is drawn. `layout(W,H,lg,css,play)`: `play` (Task 9.6: box units per board unit in a run on this layout, fit.js `shellGeo`'s `play` =
+`fitBox(…, hud true).s / s` on the #sh stand-in, handed through `dims` and `frameOf` as `F.play`; none on `#c`, whose box is the board) is the
+room's scale behind every page. `W`, `H`, `shell` (an `lg` was handed: #sh's box) and `css` (CSS px per box unit, which
 shellview `dims` hands on every touch layout, none on a keyboard one: fit.js writes it as the box's own `css`, shellGeo's `s` on the #sh
 stand-in and, on `#c`, the scale of its CONTENT box (`stageCss`: the stage it applied minus `#c`'s 1 px border, the tighter axis), so paint and tap read one number and no frame measures a rect; MENU's touch floors, phone
 column and compact tiles are laid out in CSS px). The touch size rule (R1 landscape): every touch target is sized in CSS px through that one
@@ -286,7 +288,7 @@ silent; `[ ]` pace keys cue too.
 Menu pages (owner pick 2026-10-19 round 2, direction B "ATLAS", over the
 CONSOLE PANEL skin; owner: "why all buttons are soo fat", "make the select
 lever more intractive", "put hooks … to see what we deliver"): pick on the
-left, see it on the right. Every CONSOLE PANEL plate HUGS its content through `pageBox` (GUIDE's pages: `pages/guide.js` `guideGeom`)
+left, see it on the right. Centred (Task 9.6, owner: "the menu is not in center of screen"): every plated page on `#sh` (MENU, LEVEL SELECT, SETTINGS / GRAPHICS, GUIDE and its pages, RECORDS, the LOADING plate) centres its plate + foot block in a box taller than it needs; each old top margin is the minimum, the short-window give-way order unchanged; a phone column that fills the height stays anchored (`tests/centre-room.test.mjs`). Every CONSOLE PANEL plate HUGS its content through `pageBox` (GUIDE's pages: `pages/guide.js` `guideGeom`)
 (band keyboard 73..492 / touch 8..512; pitches are caps, scale only in the
 iso 608x352 guard; `shellBox` is gone, no page divides its band by a row
 count). Pitches: list 26 keyboard / 52 touch (SETTINGS and GRAPHICS: their page's own, see SETTINGS page below), hero
@@ -333,7 +335,7 @@ paints THE LOADING plate, see Lazy pages, and its hits are -2), on the world kit
 from MENU's rule, `roomDpr`, so a hop never re-rasters the world), the rampart plate, a head (kicker GUIDE / MENU and the display title; a phone
 or compact page a BACK key that stays 44 CSS px), the foot under the plate (label first, keycap last: `PICK ▲▼◀▶ · OPEN ENTER · BACK ESC`,
 `MOVE … · POINTS ENTER · BACK ESC`, HOW TO `BACK ESC ENTER`; a touch desk `TAP A DOOR · TAP OUTSIDE TO GO BACK`). Desk, phone (one column, CSS
-px) and compact (every other touch box) as MENU. Fix round 1 (lead rulings R1 / R2 / R3): every height is the real measure
+px) and compact (every other touch box) as MENU; the desk plate + foot centred with `TOP` 70 the minimum, a short phone column centred too (Task 9.6). Fix round 1 (lead rulings R1 / R2 / R3): every height is the real measure
 (`measureText` on a 1x1 canvas; Node, with no canvas, a 0.66 em estimate), one wrap rule (words break only at their spaces, a slot grows to
 hold every line, never an ellipsis, never a drop: the documented step-downs are APPEARS IN LEVELS n to LEVELS n, ENEMIES' help on the phone
 and compact at 125 %, a door teaser breaking at its " · ", a HOW TO row's second keycap). A box whose text cannot hold its floors at one page
@@ -422,7 +424,8 @@ the plate (`MOVE ▲▼ · START ENTER | v206`, label first, keycap last; the ve
 on SOURCE `NEEDS A CLICK OR ENTER`, no keycap; a touch layout reads `TAP A ROW`; a note leads it, the controller's signpost replaces it in cream).
 Phone and compact have no foot: while a controller drives, SOURCE's teaser leads with `NEEDS A CLICK OR ENTER` (step-down `CLICK OR ENTER`, words.js
 `SOURCE_PAD_SHORT`; R1 cohesion 11), cream, before the signpost and the build tag.
-The plate keeps the mock's size and centres; a narrower window narrows only the card's column, the 70 px top margin gives way to a short one,
+The plate keeps the mock's size and centres in both axes with its foot (Task 9.6: the 70 px top margin, 56 at 125 %, is the MINIMUM, so 1366 x 768
+keeps the mock's y 70 and its 125 % frame centres at 58.32; 1920 x 1080 at 220.32); a narrower window narrows only the card's column, the minimum top margin gives way to a short one,
 then the page scales as one piece (#c with no shell box, the iso guard; text floors not held there).
 Touch floors (fix round 1, every touch layout): MENU's rows are >= 44 CSS px and >= 8 CSS px apart, never scaled below. A touch box takes the
 desk with its rows and gaps floored in CSS px (`TOUCH` 44 / 8) and the page re-solved round them (the largest scale that fits, by bisection),
@@ -458,7 +461,7 @@ live, so on the desk a key / controller flip, a note or a controller's arrival r
 room's dpr gives way to a foot reserve sized from the real feet: the three verbs (START, OPEN, the controller's SOURCE line) planned with no note
 or sign at the text scale in force, their layer widths summed and rounded up to `FEET_STEP` 256 device px, so key and controller words land on the
 same room key (Task 3.2; was three feet as wide as the box); feet wider in all (a note, the signpost, long rebound caps) paint live. 1366 x 768
-@2 with the logo (recorder widths): room dpr 1.549 at text scale 1, 1.421 at 1.25 (was 1.323 / below that; the 125 % plate is 1180 wide, and
+@2 with the logo (recorder widths): room dpr 1.549 at text scale 1, 1.421 at 1.25, 1920 x 1080 @2 1.102 / 1.011 (Task 9.6 re-measure; was 1.323 / below that; the 125 % plate is 1180 wide, and
 1.5 there leaves room for under one foot), the cache <= 23.99 MiB of the 24 MiB `BUDGET` (24 x 1024 x 1024 bytes; every budget figure here is MiB). A zero or non-finite box draws
 nothing (`menuHit` -1). `glyph` (chev, ext, up, dn, flag) is a kit part (`kit/paint.js`), `canMake` the kit cache's one copy (the logo painter's too). Page plumbing, for every page task: a page module exports one `*Geom` (rects by name, box units; `G.d` design px)
 for draw and hit, a painter fed names and values by shellview (never indices), and its hit; menudraw keeps the entry names and delegates.
@@ -471,7 +474,10 @@ it), `pagerKeys` (the strip, ▲ ▼ at its right end, the label left of them), 
 R1 cohesion: every page answers a ▲ / ▼ tap with `{k: "page", d, to}`, to = what the page it opens focuses, null at an end; pointer.js maps it in
 ONE branch to `app.pageKey(d, to)`, one step, one `move` feel and the one `uiMove` main wraps it with, the same on every page and PAUSE view),
 `paintPager`; a page keeps
-only what an item is; tap mode keeps the keys), `cache`, `room` (the room look, the lane, and the ONE shared room rule: `shareRoom` / `roomDpr` / `pageRoomDpr` /
+only what an item is; tap mode keeps the keys), `cache`, `room` (the room look (Task 9.6: `roomLook` draws the 600 x 520 representative board centred at
+PLAY scale, `F.play`, the cell a run shows on that layout, never COVER (COVER only with no play: `#c`, where it is 1), and continues the field past the board's
+rampart over the whole box (`_field`: even-even pillars and the brick hash outside, no spawn-corner rule there; only the cells the box shows are painted);
+`roomKey` is the one key, play in its name), the lane, and the ONE shared room rule: `shareRoom` / `roomDpr` / `pageRoomDpr` /
 `roomFit`; `frameOf` in menudraw hands every page the bare box, SETTINGS' delegates add `paused` / `focus`), `probe`. A part two or more pages use lives here; a part one page uses stays in its page.
 Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box, LEVEL SELECT's included, at one room dpr:
 MENU's rule (`pages/menu.js` installs it with `kit/room.js` `shareRoom`; every page asks `kit/room.js` `roomDpr`, or `pageRoomDpr` capped at its own

@@ -92,7 +92,7 @@ const SHELL_SCREENS = ["MENU", "LEVEL", "HOWTO", "SCORES", "ITEMS", "ENEMIES", "
     check(`d ${W}x${H}: the shell box is the window at scale 1, logo on the centred board's 0.27 line`,
       !!g && g.w === W && g.h === H && g.s === 1 && g.left === 0 && g.top === 0 && Math.abs(g.logo - boardLine(W, H, "d")) < 1e-9, J(g));
   }
-  check("d 1366x768 is exactly {w 1366, h 768, s 1, left 0, top 0} plus logo", J({ ...shellGeo(1366, 768, 600, 520, "d"), logo: 0 }) === J({ w: 1366, h: 768, s: 1, left: 0, top: 0, logo: 0 }));
+  check("d 1366x768 is exactly {w 1366, h 768, s 1, left 0, top 0} plus logo and play (the GAME scale, Task 9.6)", J({ ...shellGeo(1366, 768, 600, 520, "d"), logo: 0 }) === J({ w: 1366, h: 768, s: 1, left: 0, top: 0, logo: 0, play: fitBox(1366, 768, false, 600, 520, true).s }));
   check("WIN_SHELL is frozen: a 600 x 520 floor, backing dpr cap 2", Object.isFrozen(WIN_SHELL) && J(WIN_SHELL) === J({ min: [600, 520], dpr: 2 }));
   check("d floor: 520 tall has a box, 519 does not (falls back to #c)", !!shellGeo(1366, 520, 600, 520, "d") && shellGeo(1366, 519, 600, 520, "d") === null);
   check("d floor: 600 wide has a box, 599 does not (a narrower keyboard page clips its text)", !!shellGeo(600, 768, 600, 520, "d") && shellGeo(599, 768, 600, 520, "d") === null);

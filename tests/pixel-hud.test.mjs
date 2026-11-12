@@ -11,7 +11,8 @@
 // 2026-11-10 for the player words (UI upgrade v202 Task 2.1): only fillText strings changed, same
 // call count and coordinates — POWER-UPS for ITEMS / PICKUPS / CUBE, POWER BOMB, LEVELS for ROOMS,
 // and HOW TO's glossary line cut to "* NEEDS ITS POWER-UP"; the HUD pins did not move;
-// fix round 1: ENEMIES prints LEVEL 8, not LEVELS 8, for KNIGHT's one level, the one fillText that changed).
+// fix round 1: ENEMIES prints LEVEL 8, not LEVELS 8, for KNIGHT's one level, the one fillText that changed;
+// Task 9.6: HOW TO on the 600 x 520 keyboard box centres its plate + foot, the log the old one with every y 31.58 design px lower, nothing else).
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -57,13 +58,13 @@ const PIN = {
   hud0: "5188aeeb:8158", hud3: "9c9cdb21:8263", hud8: "40b3ec83:8158", // fix round 1: the HARD word left LEVEL (R1), the BOMBS glyph cream // the HUD on #hud (hud.js, UI upgrade Task 8.2)
   /* v202 Task 3.5 fix round 1: pages/guide.js's call logs, re-pinned (a 600 x 520 / 600 x 360 #c box, keyboard and touch; the shell through drawShell
      on the classic box per kind: iso keeps its own box, so its own pins) */
-  drawHowTo520: "37cf363d:21065", drawItemsHelp520: "4b731a9a:13296", drawEnemiesHelp520: "daf197f6:93094",
+  drawHowTo520: "ce79d89d:21065", drawItemsHelp520: "4b731a9a:13296", drawEnemiesHelp520: "daf197f6:93094",
   drawHowTo360: "1df6ba7e:21237", drawItemsHelp360: "eb60eb99:13283", drawEnemiesHelp360: "c6e3a685:78040",
   /* R1 kit harmonisation: the paged touch pages take the kit pager (PAGE n OF m beside the keys, the glyphs centred), re-pinned; same call counts */
   drawHowTo520T: "72bdb384:28033", drawItemsHelp520T: "ed9a705f:11758", drawEnemiesHelp520T: "169bcbea:13883",
   drawHowTo360T: "f6b11d67:25944", drawItemsHelp360T: "1083cb07:10559", drawEnemiesHelp360T: "49b6f472:10106", // R1 landscape leftovers: a 600 x 360 touch #c: ENEMIES' compact tooltip never covers the page keys (the one-line points rule where the full copy does not fit) (was 5428557f:10316)
-  "shell.2d.HOWTO": "37cf363d:21065", "shell.2d.ITEMS": "4b731a9a:13296", "shell.2d.ENEMIES": "3018d168:93529",
-  "shell.3d.HOWTO": "37cf363d:21065", "shell.3d.ITEMS": "4b731a9a:13296", "shell.3d.ENEMIES": "3018d168:93529",
+  "shell.2d.HOWTO": "ce79d89d:21065", "shell.2d.ITEMS": "4b731a9a:13296", "shell.2d.ENEMIES": "3018d168:93529",
+  "shell.3d.HOWTO": "ce79d89d:21065", "shell.3d.ITEMS": "4b731a9a:13296", "shell.3d.ENEMIES": "3018d168:93529",
   "shell.iso.HOWTO": "ccc7496f:21777", "shell.iso.ITEMS": "d9f28577:13470", "shell.iso.ENEMIES": "7e158d1a:78475",
 };
 /* and relational: every non-PIXEL kind (none, 2d, 3d, iso) paints the identical page call log, with or without a px atlas registered */

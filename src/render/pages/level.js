@@ -34,7 +34,7 @@ import {key, cap, capW, plate, band, focusBomb, glyph, plaque, rpath as rp} from
 import {T, DEV, measure as W, textScale, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
 import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
-import {roomLayer, roomDpr} from "../kit/room.js";
+import {roomLayer, roomKey, roomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
 import {pageKeyAt, PAGE_KEY, PAGE_GAP, paintPager} from "../kit/pager.js";
 import {deviceScale} from "../logo/draw2d.js";
@@ -593,7 +593,7 @@ function sizes(S, G, F, level, tok) {
   S.L.bed = {r: ob, b: bb, w: Math.max(1, Math.round(bb.w)), h: Math.max(1, Math.round(bb.h)), key: {...K, dpr: 1, layer: "level.bed|" + lay}};
   S.rd = roomDpr(S.c, F, {rev: ui.rev}, dpr);
   S.box = {w: F.W, h: F.H};
-  S.roomK = keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: S.rd, look: "2d", textScale: 1});
+  S.roomK = roomKey({w: F.W, h: F.H}, level, tok, {dpr: S.rd, look: "2d", textScale: 1, play: F.play});
 }
 const blit = (c, q) => c.drawImage(q.cv, q.b.x, q.b.y, q.b.w, q.b.h);
 function want(q, paint, u, dpr) {
@@ -626,7 +626,7 @@ export function drawLevelPage(c, F, ui0, t = 0) {
   if (typeof c.clip !== "function" || typeof c.rect !== "function") return;
   const L = S.L, dp = dpr;
   if (canMake()) {
-    if (!S.room || !S.room.width) S.room = roomLayer(S.box, level, tok, {dpr: S.rd, look: "2d", textScale: 1}); // MENU's call, MENU's key
+    if (!S.room || !S.room.width) S.room = roomLayer(S.box, level, tok, {dpr: S.rd, look: "2d", textScale: 1, play: F.play}); // MENU's call, MENU's key
     else touch(S.roomK);
     want(L.bed, (g) => paintPlate(g, G, tok), u, 1);
     for (const n of ["rT", "rB", "rL", "rR"]) want(L[n], (g) => paintPlate(g, G, tok), u, dp);

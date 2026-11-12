@@ -65,7 +65,7 @@ export const shellCovers = (s) => COVERS.has(s);
 const cssOf = (cv) => (cv.css > 0 ? cv.css : cssScale(cv));
 export function dims(canvas, kind) {
   const s = kindSize(kind);
-  return { cw: canvas ? canvas.width : s.w, ch: canvas ? canvas.height : s.h, lg: canvas ? canvas.logo : undefined, css: canvas && layOf(canvas) !== "d" ? cssOf(canvas) : undefined }; // lg: #sh's logo line (fit.js shellGeo)
+  return { cw: canvas ? canvas.width : s.w, ch: canvas ? canvas.height : s.h, lg: canvas ? canvas.logo : undefined, css: canvas && layOf(canvas) !== "d" ? cssOf(canvas) : undefined, play: canvas && canvas.play > 0 ? canvas.play : undefined }; // lg: #sh's logo line, play: the room's scale (fit.js shellGeo)
 }
 
 /** THE tap-mode predicate (R1 cohesion 4, ruling 4 for every page): a touch layout last driven by touch (app.lastDev, raw, no dwell). Any key or
@@ -303,7 +303,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     }
     return;
   }
-  const { cw, ch: chh, lg: logoY, css } = dims(canvas, kind), tap = tapOf(app, canvas); // THE tap mode, once a frame, handed to every page
+  const { cw, ch: chh, lg: logoY, css, play } = dims(canvas, kind), tap = tapOf(app, canvas); // THE tap mode, once a frame, handed to every page
   if (s === SCREEN.INTRO) // board alpha eases the veil from opaque once the board is ready (3D waits on three)
     return menudraw.drawIntroChrome(c, app.introStage, app.subT, cw, chh, layOf(canvas), app.boardReady ? Math.min(1, app.readyT / 0.4) : 0, { level: app.level, reduced: !!(app.settings && app.settings.flx), tap });
   if (s === SCREEN.ATTRACT) {
@@ -312,17 +312,17 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     menudraw.drawAttractHint(c, L, app.subT);
     return;
   }
-  if (s === SCREEN.MENU) { const t = touchLay(canvas); lazy.idle(); return menudraw.drawMenu(c, menuUi(app, tap, getCab), menudraw.layout(cw, chh, logoY, css), app.subT, t); } // the lazy pages load in the first idle after MENU's first frame
-  if (s === SCREEN.SETTINGS) return menudraw.drawSettings(c, menudraw.layout(cw, chh, logoY, css), app.subT, optUi(app, canvas)); // css: the box the pointer maps a tap through
-  if (s === SCREEN.GRAPHICS) return menudraw.drawGraphics(c, menudraw.layout(cw, chh, logoY, css), app.subT, gfxUi(app, canvas));
+  if (s === SCREEN.MENU) { const t = touchLay(canvas); lazy.idle(); return menudraw.drawMenu(c, menuUi(app, tap, getCab), menudraw.layout(cw, chh, logoY, css, play), app.subT, t); } // the lazy pages load in the first idle after MENU's first frame
+  if (s === SCREEN.SETTINGS) return menudraw.drawSettings(c, menudraw.layout(cw, chh, logoY, css, play), app.subT, optUi(app, canvas)); // css: the box the pointer maps a tap through
+  if (s === SCREEN.GRAPHICS) return menudraw.drawGraphics(c, menudraw.layout(cw, chh, logoY, css, play), app.subT, gfxUi(app, canvas));
   if (GUIDE_ON.has(s)) {
-    const t = touchLay(canvas), LG = menudraw.layout(cw, chh, logoY, css), o = guideO(app, tap);
+    const t = touchLay(canvas), LG = menudraw.layout(cw, chh, logoY, css, play), o = guideO(app, tap);
     if (s === SCREEN.GUIDE) return menudraw.drawGuide(c, LG, app.subT, app.guideRow, kind, t, o);
     if (s !== SCREEN.ENEMIES) guidePg = menudraw.guidePages(LG, t, s === SCREEN.HOWTO ? "HOW TO PLAY" : s === SCREEN.ITEMS ? "POWER-UPS" : "FLOOR");
     return (s === SCREEN.HOWTO ? menudraw.drawHowTo : s === SCREEN.ITEMS ? menudraw.drawItemsHelp : s === SCREEN.ENEMIES ? menudraw.drawEnemiesHelp : menudraw.drawFloorHelp)(c, LG, app.subT, kind, t, o);
   }
   if (s === SCREEN.SCORES || s === SCREEN.STATS || s === SCREEN.TROPHIES) { // RECORDS' pages (pages/records.js): one frame for draw and tap, the room opaque under them
-    const t = touchLay(canvas), Lr = menudraw.layout(cw, chh, logoY, css), focus = app.recFocus === 0 ? "tabs" : "body";
+    const t = touchLay(canvas), Lr = menudraw.layout(cw, chh, logoY, css, play), focus = app.recFocus === 0 ? "tabs" : "body";
     if (s === SCREEN.SCORES) { const sd = scoreData(app, getScores, getPlaques); return menudraw.drawScores(c, { level: app.level, rev: REV, tap, focus, heat: app.scoreHeat, scores: sd.s, plaques: sd.p, spage: app.recPage | 0 }, Lr, app.subT, t); }
     if (s === SCREEN.STATS) { const st = app.stats || {}; return menudraw.drawStats(c, { level: app.level, rev: REV, tap, focus, view: st.view, notes: st.notes, wipe: st.wipe, arm: !!app.resetArm, toast: app.toast && app.toast.t > 0 ? app.toast : null, unlocked: !!app.pactUnlocked, spage: app.recPage | 0 }, Lr, app.subT, t); }
     return menudraw.drawTrophies(c, { level: app.level, rev: REV, tap, focus, rows: app.stats && app.stats.trophies, spage: app.recPage | 0 }, Lr, app.subT, t);
@@ -330,7 +330,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   if (s === SCREEN.LEVEL) {
     /* opaque on the world kit (pages/level.js): the selected level's room; tap mode is tapOf's (ruling 4) */
     const t = touchLay(canvas);
-    menudraw.drawLevelSelect(c, app.level, menudraw.layout(cw, chh, logoY, css), app.subT, app.heat, app.pact, app.pactUnlocked, app.pace, app.timeAttack, t,
+    menudraw.drawLevelSelect(c, app.level, menudraw.layout(cw, chh, logoY, css, play), app.subT, app.heat, app.pact, app.pactUnlocked, app.pace, app.timeAttack, t,
       { ...infoOf(app, getCab), tap, enterT: app.subT, rev: REV }); // rev: MENU's foot reserve, so the room dpr (and key) is MENU's
   } else if (s === SCREEN.CONTROLS) {
     menudraw.drawDim(c, 0.72, cw, chh);

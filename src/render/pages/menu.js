@@ -4,7 +4,7 @@
    per design px). F = {W, H, touch, shell, css, ts}: the box (#sh's shell box, else #c's 600 x 520 / 608 x 352), touch (data-lay p / l), shell, css (CSS
    px per box unit, handed in by fit.js for #sh's box and #c on a touch layout; 1 when unknown), ts (the kit text scale). Three arrangements.
    desk: every keyboard box, the 1366 x 768 frame at u 1: the mock's plate centred, a narrower window narrows only the card's column (the list keeps
-   480), the 70 px top margin gives way to a short window, then the page scales as one piece (#c, the iso guard). On a touch layout its rows and gaps
+   480), the plate + foot centred in a taller box with the 70 px top margin the minimum (Task 9.6), which gives way to a short window, then the page scales as one piece (#c, the iso guard). On a touch layout its rows and gaps
    are floored in CSS px (>= 44 tall, >= 8 apart, never scaled below) and the page re-solved round them; it stays the desk while its own scale holds
    TOUCH_U (0.8 CSS px per design px, its text at the phone's cap floors), else the box goes compact. phone: a touch-portrait shell box, the 393 x 852
    column in CSS px (u = 1 / css), capped at 600 CSS px and centred; the card's slot takes the height left. compact: any other touch box (every
@@ -30,7 +30,7 @@ import {key, cap, capW, plate, band, focusBomb, glyph, plaque} from "../kit/pain
 import {T, DEV, measure as W, textScale, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
 import {R, sc, okBox, big, deep} from "../kit/geom.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
-import {roomLayer, roomFit, shareRoom, ROOM_RESERVE} from "../kit/room.js";
+import {roomLayer, roomKey, roomFit, shareRoom, ROOM_RESERVE} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
 import {drawLogo2d, deviceScale} from "../logo/draw2d.js";
 import {PLATE as LOGO} from "../logo/worlds.js";
@@ -82,7 +82,7 @@ function desk(F, rows, t125, fl) {
     S = at(u);
   }
   const {hs, gs, colH, plateH} = S, Wd = F.W / u, Hd = F.H / u;
-  const pw = Math.min(D.w, Wd - side), px = (Wd - pw) / 2, py = Math.max(TOP_MIN, Math.min(D.top, Hd - plateH - tail));
+  const pw = Math.min(D.w, Wd - side), px = (Wd - pw) / 2, py = Math.max(TOP_MIN, Math.min(D.top, Hd - plateH - tail), (Hd - plateH - D.foot - FOOT_H) / 2); // centred, D.top the minimum (Task 9.6)
   const hy = py + D.pad[0], ly = hy + Lp.pad[0], top = hy + head + Lp.below, lx = px + D.pad[3];
   const out = {}, hit = {};
   let y = top;
@@ -376,7 +376,7 @@ function sizes(S, G, F, level, tok) {
   S.live = S.feet.reduce((n, q) => n + q.w * q.h * 4, 0) > feet;
   S.rd = rdOf(F, dpr, S.pw * S.ph * 4, feet);
   S.box = {w: F.W, h: F.H};
-  S.roomK = keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: S.rd, look: "2d", textScale: 1});
+  S.roomK = roomKey({w: F.W, h: F.H}, level, tok, {dpr: S.rd, look: "2d", textScale: 1, play: F.play});
 }
 /* the room's dpr: what is left of the budget once the plate, the foot reserve and the logo reserve are held, never above the device's */
 const rdOf = (F, dpr, plate, feet) => roomFit(F, dpr, ROOM_RESERVE + plate + feet);
@@ -415,7 +415,7 @@ export function drawMenuPage(c, F, ui, t = 0) {
   _dbg.last = {G, P, foc, verb, S};
   if (typeof c.clip !== "function" || typeof c.rect !== "function") return;
   if (canMake()) {
-    if (!S.room || !S.room.width) S.room = roomLayer(S.box, level, tok, {dpr: S.rd, look: "2d", textScale: 1});
+    if (!S.room || !S.room.width) S.room = roomLayer(S.box, level, tok, {dpr: S.rd, look: "2d", textScale: 1, play: F.play});
     else touch(S.roomK);
     if (!S.plate || !S.plate.width) S.plate = layer(S.plateKey, S.pw, S.ph, (g) => { g.scale(dpr * u, dpr * u); g.translate(-S.ob.x, -S.ob.y); paintPlate(g, G, P, tok, dpr * u); });
     else touch(S.plateK);

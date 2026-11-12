@@ -19,6 +19,9 @@ append an entry when it makes a non-trivial change.
 ## 2026-11-12 — Task 9.7: REAL 3D cabinet rim is a plain rectangle again
 - Owner: "and look when camera is in far, this is wrong and fix". The rim's near-corner taper (nearX / NEAR_Z, 3f36d02) bent the E / W outline ~7 deg at z 100, invisible at STANDARD, a flared tray at FAR / DIST_MAX; removed (scene.js shape, rimart.js corner bosses), S4.E pins the rectangle; near corners bleed ~7.5% at STANDARD as AGENTS documents. Draws unchanged.
 
+## 2026-11-12 — Task 9.6: pages centred, the room at play scale (lane-9.6-centre-room)
+- Owner: "the menu is not in center of screen, and why the board behind is too big?!" MENU / GUIDE desk and GUIDE's short phone column now centre (old top margins the minimum; the rest already did); kit roomLook draws at fit.js shellGeo `play` (the GAME scale) and continues the field, never COVER; room dpr unchanged (1.549 / 1.421 at 1366x768@2; 1920x1080@2 1.102 / 1.011). Owner veto open on the before / after sheet.
+
 ## 2026-11-12 — v202 squashed locally: delivery and loading
 - Owner: "do the squash and rebase locally". `feature/delivery` (the delivery steps after the v201 controls squash) is one commit on local `main` with `CACHE_NAME` / `REV` v202, CHANGELOG and sitemap dated 2026-11-12; `feature/ui-upgrade` rebased onto it. Nothing pushed.
 
