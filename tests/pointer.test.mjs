@@ -15,6 +15,7 @@ lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page, 
 lazyPages._set("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages, as if their import had landed
 import { rec as textrec } from "./lib/textrec.mjs";
 import { want } from "../src/render/pages/lazy.js";
+(await import("../src/render/pages/lazy.js"))._set("level", await import("../src/render/pages/level.js")); // LEVEL SELECT is a lazy page (Task 9.14): in as if its import had landed
 const RP = await want("records"); // RECORDS is a lazy page (R20): its hits are inert until it lands
 
 let pass = 0,

@@ -16,6 +16,7 @@ import { wordsOf } from "../src/app/hints.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
 import { rec } from "./lib/textrec.mjs";
 import { _set as setLazyPage } from "../src/render/pages/lazy.js";
+(await import("../src/render/pages/lazy.js"))._set("level", await import("../src/render/pages/level.js")); // LEVEL SELECT is a lazy page (Task 9.14): in as if its import had landed
 setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 
 let pass = 0, fail = 0;

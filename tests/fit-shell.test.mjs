@@ -27,6 +27,7 @@ import { _set as setLazyPage } from "../src/render/pages/lazy.js";
 setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 import * as endWin from "../src/render/pages/endwin.js";
 import * as endLose from "../src/render/pages/endlose.js";
+(await import("../src/render/pages/lazy.js"))._set("level", await import("../src/render/pages/level.js")); // LEVEL SELECT is a lazy page (Task 9.14): in as if its import had landed
 setLazyPage("endwin", endWin); setLazyPage("endlose", endLose); // the run-end pages are lazy (v202 Tasks 5.3 / 5.4): handed in as if their imports had landed
 
 let pass = 0, fail = 0;

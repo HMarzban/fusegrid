@@ -50,7 +50,7 @@ START) beside the same card. On a phone both become one column, and on a
 landscape phone a grid of tiles. Any teaser built from your record (a top
 score, a best time) reads only runs you played, never placeholders.
 
-The build you're running is named on the main menu (`v210` today): at the end
+The build you're running is named on the main menu (`v211` today): at the end
 of the desktop foot, or on the SOURCE row's teaser on a phone. SETTINGS shows
 it as its `BUILD` kicker and the NEW VERSION READY card says which build you're on.
 There is one source for it: `shellview.js` and `update.js` both derive it
@@ -67,8 +67,8 @@ in [`src/render/pages/`](../src/render/pages/) (MENU, LEVEL SELECT, the cards,
 SETTINGS / GRAPHICS, GUIDE, RECORDS, PAUSE and the run ends) with ONE geometry
 that both the painter and the tap handler read, so a tap lands where the key is
 drawn. [`menudraw.js`](../src/render/menudraw.js) keeps the entry names and
-delegates to them. MENU, LEVEL SELECT, the cards, PAUSE and the CLASSIC logo
-([`logo/`](../src/render/logo/)) load at boot; SETTINGS, GUIDE, RECORDS and the
+delegates to them. MENU, the cards, PAUSE and the CLASSIC logo
+([`logo/`](../src/render/logo/)) load at boot; LEVEL SELECT (since v211), SETTINGS, GUIDE, RECORDS and the
 run ends (LEVEL CLEAR and the finale in `endwin.js`, GAME OVER in `endlose.js`,
 one draw and tap contract in `endgeom.js`) load through
 [`pages/lazy.js`](../src/render/pages/lazy.js) in the idle after MENU's first

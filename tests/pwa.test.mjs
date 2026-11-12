@@ -488,7 +488,7 @@ check(
   const L = LOOKS.flat();
   check("two-stage: BOOT + looks == PRECACHE, disjoint", BOOT.length + L.length === PRECACHE.length && new Set([...BOOT, ...L]).size === PRECACHE.length && [...BOOT, ...L].every((p) => PRECACHE.includes(p)));
   check("two-stage: three and all of pixel/** are in the looks", L.includes("./vendor/three.module.js") && PRECACHE.filter((p) => p.startsWith("./src/render/pixel/") && !p.endsWith("/load.js")).every((p) => L.includes(p)));
-  check("two-stage: the off-boot files first, then PIXEL, then REAL 3D with three", LOOKS.length === 3 && LOOKS[0].length === 22 && LOOKS[0].includes("./src/core/board3.js") && LOOKS[1].every((p) => !p.includes("three")) && LOOKS[2].includes("./vendor/three.module.js"));
+  check("two-stage: the off-boot files first, then PIXEL, then REAL 3D with three", LOOKS.length === 3 && LOOKS[0].length === 24 && LOOKS[0].includes("./src/core/board3.js") && LOOKS[1].every((p) => !p.includes("three")) && LOOKS[2].includes("./vendor/three.module.js"));
   check("two-stage: boot keeps shell, loader and the lazy seams", ["./index.html", "./src/main.js", "./src/render/pixel/load.js", "./src/render/three/load.js"].every((p) => BOOT.includes(p)));
   check("install caches BOOT only", /addAll\(BOOT\.map/.test(sw3) && !/addAll\(PRECACHE/.test(sw3));
   check("the fill runs only inside an event's waitUntil: FILL and navigate, never a bare timer", !/setTimeout\(\(\) => fillLooks/.test(sw3) && /"FILL"\) event\.waitUntil\(fillLooks/.test(sw3) && /cache-first-navigate"\) event\.waitUntil/.test(sw3));

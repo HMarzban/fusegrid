@@ -20,6 +20,7 @@ globalThis.OffscreenCanvas = Cv;
 const cache = await import("../src/render/kit/cache.js");
 cache.setFactory((w, h) => new Cv(w, h));
 const P = await import("../src/render/pages/level.js");
+(await import("../src/render/pages/lazy.js"))._set("level", P); // LEVEL SELECT is a lazy page (Task 9.14): in as if its import had landed
 const MP = await import("../src/render/pages/menu.js");
 const C = await import("../src/render/pages/card.js");
 const md = await import("../src/render/menudraw.js");
@@ -533,7 +534,8 @@ for (const [b, dpr] of [["d1366", 2], ["p393", 2.7], ["d1024", 2]]) for (const t
   const mdSrc = readFileSync(new URL("../src/render/menudraw.js", import.meta.url), "utf8");
   check("menudraw keeps no LEVEL SELECT painter (roomCard, schem, chip, capCell, levelNarrow, focusRing, heroRoom, heatLine, floorLine, modeHelp)", !/function\s+(roomCard|schem|chip|capCell|levelNarrow|focusRing|heroRoom|heatLine|floorLine|modeHelp)\b/.test(mdSrc));
   const shell = readFileSync(new URL("../src/pwa/shell.js", import.meta.url), "utf8");
-  check("the page is in the boot precache (src/pwa/shell.js), not lazy", shell.includes('"src/render/pages/level.js"'));
+  const { BOOT, LOOK_LATER, PRECACHE } = await import("../src/pwa/shell.js"), lz = await import("../src/render/pages/lazy.js");
+  check("the page is lazy (Task 9.14): in src/pwa/shell.js SRC and precached, in the worker's LATER stage, never its BOOT; one lazy.js LOAD line", shell.includes('"src/render/pages/level.js"') && PRECACHE.includes("./src/render/pages/level.js") && LOOK_LATER.includes("./src/render/pages/level.js") && !BOOT.includes("./src/render/pages/level.js") && lz.NAMES.includes("level"));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -203,7 +203,7 @@ NORMAL ×1, HARD ×2, EXPERT ×3.
   never in the middle of one. LATER hides it until your next run ends or
   the next time you open the game.
 - **Know your build.** The main menu shows which version you're running
-  (for example `v210`), so you can tell when an update has landed.
+  (for example `v211`), so you can tell when an update has landed.
 
 Everything the game remembers lives in your browser's local storage. There is
 no account, no server and no global ranking. The game asks once whether to

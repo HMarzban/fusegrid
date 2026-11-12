@@ -15,6 +15,7 @@ import { dailySeed } from "../src/app/daily.js";
 import { encodeChallenge, decodeChallenge } from "../src/app/code.js";
 import "../src/core/board3.js";
 import "../src/app/demobot.js";
+(await import("../src/render/pages/lazy.js"))._set("level", await import("../src/render/pages/level.js")); // LEVEL SELECT is a lazy page (Task 9.14): in as if its import had landed
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {

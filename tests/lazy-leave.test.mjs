@@ -1,4 +1,4 @@
-// R1 cohesion 1 (integration review, lane lesson 5): a touch player is never stuck on a lazy page. While SETTINGS / GRAPHICS, GUIDE or RECORDS
+// R1 cohesion 1 (integration review, lane lesson 5): a touch player is never stuck on a lazy page. While SETTINGS / GRAPHICS, GUIDE, RECORDS or LEVEL SELECT (Task 9.14)
 // loads, a tap on its LOADING plate does nothing; once the import failed (the plate says DID NOT LOAD), a tap OFF the plate backs out on every
 // one of them, through the real pointer and the real hits, and a tap ON it stays inert. Fresh process: no lazy page module is in.
 import { mountPointer } from "../src/app/pointer.js";
@@ -27,7 +27,7 @@ function mkEl(w, h, css, lay) {
 const HIT = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, enemiesHit: md.enemiesHit,
   guideReadHit: md.guideReadHit, levelHit: md.levelHit, scoresHit: md.scoresHit, statsHit: md.statsHit, recTabHit: md.recTabHit, layout: md.layout };
 const PAGES = [["settings", SCREEN.SETTINGS], ["settings", SCREEN.GRAPHICS], ["guide", SCREEN.GUIDE], ["guide", SCREEN.HOWTO], ["guide", SCREEN.ITEMS], ["guide", SCREEN.ENEMIES], ["guide", SCREEN.FLOOR],
-  ["records", SCREEN.SCORES], ["records", SCREEN.STATS], ["records", SCREEN.TROPHIES]];
+  ["records", SCREEN.SCORES], ["records", SCREEN.STATS], ["records", SCREEN.TROPHIES], ["level", SCREEN.LEVEL]];
 const BOXES = [["phone #sh", 393, 852, 1, "p"], ["landscape #c", 600, 520, 0.6, "l"]];
 const paint = (scr, c, L, t) => {
   const touch = true, o = { level: 1 };
@@ -38,6 +38,7 @@ const paint = (scr, c, L, t) => {
   else if (scr === SCREEN.ITEMS) md.drawItemsHelp(c, L, 0, "2d", touch, o);
   else if (scr === SCREEN.ENEMIES) md.drawEnemiesHelp(c, L, 0, "2d", touch, o);
   else if (scr === SCREEN.FLOOR) md.drawFloorHelp(c, L, 0, "2d", touch, o);
+  else if (scr === SCREEN.LEVEL) md.drawLevelSelect(c, 1, L, 0, 0, 0, false, 0, false, touch, {});
   else (scr === SCREEN.SCORES ? md.drawScores : scr === SCREEN.STATS ? md.drawStats : md.drawTrophies)(c, { level: 1 }, L, 0, touch);
 };
 function tapAll(failed) {
@@ -46,8 +47,8 @@ function tapAll(failed) {
     const cv = mkEl(W, H, css, lay), { cw, ch, lg } = dims(cv, "2d"), L = md.layout(cw, ch, lg, css), t = rec({ widthK: 0.6 });
     paint(scr, t.ctx, L, t);
     const B = loadBox({ W: cw, H: ch, touch: true, shell: lay === "p", css }), log = [];
-    const app = { screen: scr, optRows: () => optRows(false), optRow: 0, gfxRow: 0, guideRow: 0, foeRow: 0, foeTip: false, infoPg: 0, recFocus: 0, recPage: 0, scoreHeat: 0, resetArm: false, pauseView: 0, level: 1 };
-    for (const m of ["confirm", "back", "recTab", "recPageStep", "move", "foeTap", "foeFocus", "guideFocus", "infoStep"]) app[m] = (...a) => { log.push(m); return true; };
+    const app = { screen: scr, optRows: () => optRows(false), optRow: 0, gfxRow: 0, guideRow: 0, foeRow: 0, foeTip: false, infoPg: 0, recFocus: 0, recPage: 0, scoreHeat: 0, resetArm: false, pauseView: 0, level: 1, levelRow: 0, modOpen: false, pactUnlocked: false, heat: 0, pace: 0 };
+    for (const m of ["confirm", "back", "recTab", "recPageStep", "move", "foeTap", "foeFocus", "guideFocus", "infoStep", "levelFocus", "adjustPace", "pageKey"]) app[m] = (...a) => { log.push(m); return true; };
     app.foeClose = () => false;
     mountPointer({ canvas: cv, fit: null, input: { _intent: { fire: false }, onUiKey: (k) => log.push(k) }, app, world: { state: "PLAY" }, kind: () => "2d", ctl: () => null, hit: HIT });
     cv.fire("pointerdown", { clientX: B.x + B.w / 2, clientY: B.y + B.h / 2, pointerType: "touch" });
@@ -63,7 +64,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 /* in flight: every tap on and off the LOADING plate is inert, SETTINGS' off-plate tap excepted (its rule since Task 3.4) */
 md._rec.want = () => new Promise(() => {});
 let r = tapAll(false);
-check("an import in flight: LOADING on every lazy page, and GUIDE / RECORDS ignore every tap (a slow import is not a failure)",
+check("an import in flight: LOADING on every lazy page, and GUIDE / RECORDS / LEVEL SELECT ignore every tap (a slow import is not a failure)",
   r.every((q) => q.drew.includes("LOADING") && q.on.length === 0 && (/^.* settings /.test(q.at) ? true : q.off.length === 0)), J(r.filter((q) => q.on.length || (!/ settings /.test(q.at) && q.off.length)).map((q) => [q.at, q.on, q.off])));
 
 /* the import failed: DID NOT LOAD; a tap off the plate leaves (back / confirm = back on a read-only page), a tap on it stays inert */
@@ -72,15 +73,16 @@ tapAll(true);
 await flush(); await flush();
 r = tapAll(true);
 const left = (q) => q.off.length === 1 && (q.off[0] === "back" || q.off[0] === "confirm");
-check("DID NOT LOAD on SETTINGS, GRAPHICS, the five GUIDE pages and the three RECORDS tabs, on a phone and a landscape #c: a touch tap off the plate backs out, one on it does nothing",
-  r.length === 20 && r.every((q) => q.drew.includes("DID NOT LOAD") && q.on.length === 0 && left(q)), J(r.filter((q) => !(q.drew.includes("DID NOT LOAD") && q.on.length === 0 && left(q))).map((q) => [q.at, q.on, q.off])));
+check("DID NOT LOAD on SETTINGS, GRAPHICS, the five GUIDE pages, the three RECORDS tabs and LEVEL SELECT, on a phone and a landscape #c: a touch tap off the plate backs out, one on it does nothing",
+  r.length === 22 && r.every((q) => q.drew.includes("DID NOT LOAD") && q.on.length === 0 && left(q)), J(r.filter((q) => !(q.drew.includes("DID NOT LOAD") && q.on.length === 0 && left(q))).map((q) => [q.at, q.on, q.off])));
 {
   const L = md.layout(393, 852, 120, 1), F = { W: 393, H: 852, touch: true, shell: true, css: 1 }, B = loadBox(F), cx = B.x + B.w / 2, cy = B.y + B.h / 2;
-  check("the failed hits are SETTINGS' loadHit: -2 on the plate, -1 off it (guideHit, enemiesHit, guideReadHit, recTabHit, scoresHit; statsHit plate / back)",
+  check("the failed hits are SETTINGS' loadHit: -2 on the plate, -1 off it (guideHit, enemiesHit, guideReadHit, recTabHit, scoresHit; statsHit plate / back; levelHit its own {k: none} / {k: back})",
     md.guideHit(cx, cy, L, 4, true) === -2 && md.guideHit(3, 3, L, 4, true) === -1 && md.enemiesHit(cx, cy, L, true) === -2 && md.enemiesHit(3, 3, L, true) === -1 &&
     md.guideReadHit(cx, cy, L, true, "FLOOR", 0) === -2 && md.guideReadHit(3, 3, L, true, "FLOOR", 0) === -1 && md.recTabHit(cx, cy, L, 0, true) === -2 && md.recTabHit(3, 3, L, 0, true) === -1 &&
     md.scoresHit(cx, cy, L, true) === -2 && md.scoresHit(3, 3, L, true) === -1 && md.statsHit(cx, cy, L, false, true, true) === "plate" && md.statsHit(3, 3, L, false, true, true) === "back" &&
-    md.settingsHit(cx, cy, L, optRows(false), true) === -2 && md.settingsHit(3, 3, L, optRows(false), true) === -1);
+    md.settingsHit(cx, cy, L, optRows(false), true) === -2 && md.settingsHit(3, 3, L, optRows(false), true) === -1 &&
+    md.levelHit(cx, cy, L, false, true, false, "LEVEL").k === "none" && md.levelHit(3, 3, L, false, true, false, "LEVEL").k === "back");
 }
 console.log("\n  LAZY LEAVE RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

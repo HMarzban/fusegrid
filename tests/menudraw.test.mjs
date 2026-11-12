@@ -5,6 +5,7 @@ import { OPT_ROWS as ALL_OPT, optRows } from "../src/app/menuapp.js";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import { worldTokens } from "../src/render/kit/tokens.js";
 import * as settingsPage from "../src/render/pages/settings.js";
+(await import("../src/render/pages/lazy.js"))._set("level", await import("../src/render/pages/level.js")); // LEVEL SELECT is a lazy page (Task 9.14): in as if its import had landed
 lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page (v202 Task 3.4), in as if its import had landed (R20)
 lazyPages._set("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 await (await import("../src/render/pages/lazy.js")).want("records"); // RECORDS' SCORES / MEDALS page is lazy (R20): the smoke and hits reach it, not its LOADING plate

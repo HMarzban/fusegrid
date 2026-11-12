@@ -3,7 +3,7 @@
    Every page task proves its layout on these: tools/ui/gates.mjs measures them, tools/ui/compare.mjs puts each beside its approved mock frame.
 
    node tools/ui/shots.mjs [flags]
-     --screens a,b    screens to capture (default all): title, menu, level, options (alias settings), graphics, controls, padtoast, controlsnone, controlspad, controlscapture, guide, howto, items,
+     --screens a,b    screens to capture (default all): title, menu, level, levelloading (LEVEL SELECT's LOADING plate, its import held), options (alias settings), graphics, controls, padtoast, controlsnone, controlspad, controlscapture, guide, howto, items,
                       enemies, floor, scores, stats, statsreset (STATS armed), medals, scoresfull / statsfull (a seeded cabinet,
                       __GAME__.seedRecords()), statspage2 (STATS' second page on a paged phone), scoresidle (RECORDS through the real lazy.idle() load: no want()), pause, pausetags (PAUSE with the run's rules seeded: the tag row), win, win2 (a paged run end's second
                       page), lose, loseshort (a saved best: the shortfall), losedaily (today's DAILY), lose2,
@@ -120,6 +120,8 @@ export function ledger(rep, gid, errs) {
     },
   };
 }
+/* a recipe's `block`: that lazy page's import never lands (menudraw's ask seam held, the module taken out) until the capture is taken, then put back */
+const BLOCK = (n, on) => `Promise.all([import('/src/render/menudraw.js'),import('/src/render/pages/lazy.js')]).then(([md,lz])=>{const w=window.__block=window.__block||{};if(${on}){w.want=w.want||md._rec.want;w['${n}']=lz.get('${n}');md._rec.want=()=>new Promise(()=>{});lz._set('${n}',null);}else{if(w.want)md._rec.want=w.want;if(w['${n}'])lz._set('${n}',w['${n}']);}return true;})`;
 const RUN0 = "(async()=>{try{localStorage.clear();localStorage.setItem('nb.analytics.v1','0');}catch(e){}await import('/src/core/board3.js');window.__GAME__.reset();return true;})()";
 
 async function group(c, port, a, look, world, rep) {
@@ -220,6 +222,7 @@ async function group(c, port, a, look, world, rep) {
         continue;
       }
       await ev("(window.__GAME__.reset(),true)");
+      if (R.block) await ev(BLOCK(R.block, true));
       if (R.seed === "records" && !(await ev("!!(window.__GAME__.seedRecords&&window.__GAME__.seedRecords())"))) warn("no __GAME__.seedRecords: " + s + " shows a fresh profile");
       let ok = true;
       for (const [field, rows, labels] of [["cursor", "m.ITEMS", R.menu], ["optRow", "a.optRows()", R.opt], ["guideRow", "m.GUIDE_ROWS", R.guide]]) {
@@ -230,11 +233,12 @@ async function group(c, port, a, look, world, rep) {
       if (!ok) { L.close(base); continue; }
       for (const k of [].concat(R.key || [])) { if (a.phone && !R.real) await ev(`(window.__GAME__.app.key(${JSON.stringify(k)}),true)`); else await key(k, k.replace(/^Key/, "").toLowerCase()); await P.adv(50); } // a key or a list, pressed in order
       if (R.wait === "controls" && !(await poll("!!window.__GAME__.app.controls&&!window.__GAME__.app.controls.loading", 10000))) warn("the CONTROLS page never loaded");
-      if (R.wait === "records" && !(await poll("import('/src/render/pages/lazy.js').then((m)=>(m.want('records').catch(()=>{}),!!m.get('records')))", 10000))) warn("the RECORDS page never loaded");
+      if ((R.wait === "records" || R.wait === "level") && !(await poll(`import('/src/render/pages/lazy.js').then((m)=>(m.want('${R.wait}').catch(()=>{}),!!m.get('${R.wait}')))`, 10000))) warn("the " + R.wait.toUpperCase() + " page never loaded");
       if (R.wait === "records-idle" && !(await poll("import('/src/render/pages/lazy.js').then((m)=>!!m.get('records'))", 10000))) { L.fail(base, "the RECORDS page never loaded through lazy.idle()"); L.close(base); continue; } // never want(): the page's own idle load
       if (R.pad) { await ev(PAD(true)); await P.adv(100); }
       for (const st of [].concat(R.ctl || [])) { await ev(`(window.__GAME__.app.controls.${st},true)`); await P.adv(50); } // the page's own reducer calls, by name
       await shoot(s, R.settle || 600);
+      if (R.block) await ev(BLOCK(R.block, false));
       if (R.pad) { await ev(PAD(false)); await P.adv(100); }
     }
   } finally {

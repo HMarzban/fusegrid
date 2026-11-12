@@ -14,6 +14,7 @@ import { GFX_KEYS } from "../src/app/gfx.js";
 import { LIMITS, PATTERNS, scaleMag } from "../src/app/rumble.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
 import { setHints } from "../src/render/hintcopy.js";
+(await import("../src/render/pages/lazy.js"))._set("level", await import("../src/render/pages/level.js")); // LEVEL SELECT is a lazy page (Task 9.14): in as if its import had landed
 await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
 
 let pass = 0, fail = 0;

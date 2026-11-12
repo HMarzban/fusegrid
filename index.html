@@ -289,7 +289,7 @@
      #loadsay (outside #load, which hides) speaks stages only, never counts; a failure
      card speaks through #loadmsg's alert. Enter answers a failure card with RETRY,
      Escape with the other button, the keyboard twin of a pad's SOUTH and EAST. -->
-<script id="loadjs" data-files="122">
+<script id="loadjs" data-files="120">
 (function(w,d){
   var $=function(i){return d.getElementById(i)},E=$("load"),bar=$("loadbar"),fill=$("loadfill"),msg=$("loadmsg"),act=$("loadact"),retry=$("loadretry"),keep=$("loadkeep"),retryW=$("loadretryw"),keepW=$("loadkeepw"),retryK=$("loadretryk"),keepK=$("loadkeepk");
   var SLOW=10000,STALL=30000,say0=$("loadsay"),jobs={},cur=null,failed=null,drop=null,again=null,dl="USE CLASSIC 2D",shown=null,words=false,iv=0,base=new URL("./",d.baseURI).href;
@@ -568,7 +568,6 @@
 <link rel="modulepreload" href="./src/render/kit/cache.js">
 <link rel="modulepreload" href="./src/render/kit/copy.js">
 <link rel="modulepreload" href="./src/render/kit/geom.js">
-<link rel="modulepreload" href="./src/render/kit/pager.js">
 <link rel="modulepreload" href="./src/render/kit/paint.js">
 <link rel="modulepreload" href="./src/render/kit/probe.js">
 <link rel="modulepreload" href="./src/render/kit/room.js">
@@ -583,7 +582,6 @@
 <link rel="modulepreload" href="./src/render/pages/card.js">
 <link rel="modulepreload" href="./src/render/pages/endgeom.js">
 <link rel="modulepreload" href="./src/render/pages/lazy.js">
-<link rel="modulepreload" href="./src/render/pages/level.js">
 <link rel="modulepreload" href="./src/render/pages/menu.js">
 <link rel="modulepreload" href="./src/render/pages/pause.js">
 <link rel="modulepreload" href="./src/render/pixel/load.js">

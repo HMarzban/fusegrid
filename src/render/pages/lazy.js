@@ -1,4 +1,4 @@
-/* Lazy page modules (R20). SETTINGS / GRAPHICS, GUIDE, RECORDS and the run ends stay
+/* Lazy page modules (R20). SETTINGS / GRAPHICS, GUIDE, RECORDS, the run ends and LEVEL SELECT (Task 9.14) stay
    out of the boot graph: each is one entry in LOAD. want(name) starts its one import (a
    failed one is retried by the next ask) and get(name) is the module once it is in, else
    null, so a page paints its LOADING plate and its hit finds nothing until then. idle()
@@ -11,6 +11,7 @@ const LOAD = {
   records: () => import("./records.js"),
   endwin: () => import("./endwin.js"),
   endlose: () => import("./endlose.js"),
+  level: () => import("./level.js"),
 };
 const mods = {}, wait = {};
 

@@ -2,11 +2,10 @@
    file keeps the INTRO chrome, the ATTRACT hint, the FPS meter, the RENDER row's job note and THE LOADING plate's ask, and the CONSOLE PANEL
    kit (plate, head, foot, paintRow, listGeom) that the PAUSE list and CONTROLS still wear: accent #37f0d0, text #dfe7f5, muted #7385ad, veils
    rgba(7,10,18,a). Easing helpers duplicated from the intro beat table (spec §3): this file must not import from src/app. */
-import { LABEL, runParts } from "./words.js";
+import { LABEL, runParts, LEVEL_WORDS } from "./words.js";
 import { hints, tapAt } from "./hintcopy.js";
 import { drawLogo2d, deviceScale, TITLE_RUNUP, titleSpot } from "./logo/draw2d.js";
 import * as menuPage from "./pages/menu.js";
-import * as levelPage from "./pages/level.js";
 import * as kitProbe from "./kit/probe.js";
 import { rosterOf } from "./pages/card.js";
 import * as lazy from "./pages/lazy.js";
@@ -190,7 +189,9 @@ export const drawMenu = (c, ui, L, t, touch) => menuPage.drawMenuPage(c, frameOf
 
 /* LEVEL SELECT: the page is src/render/pages/level.js (UI upgrade v202 Task 3.3): one geometry for draw and tap, rects by name. These keep the
    entry names shellview, the pointer and the tests call; L is layout(W, H, lg, css) for the box the page draws on, touch body[data-lay] p / l, open
-   the MODIFIERS list (app.modOpen): the same arguments for draw and tap. */
+   the MODIFIERS list (app.modOpen): the same arguments for draw and tap. Lazy since Task 9.14 (pages/lazy.js "level"): until it is in the page paints
+   THE LOADING plate and its tap is the page's own {k: "none"} (inert) while the import is in flight; once it failed, SETTINGS' rule ({k: "back"} off
+   the plate). The keys never need it: menuapp walks the rows and START starts the run. */
 const NO_FOCUS = () => -1;
 let modeFocus = NO_FOCUS;
 /** The LEVEL SELECT MODIFIERS entry a controller's TRIGGER has focused, as a getter: -1 = none. Set once by main; shellview's info does not carry it. */
@@ -198,16 +199,21 @@ export function setModeFocus(f) { modeFocus = f || NO_FOCUS; }
 export function modeFocusOf() { return modeFocus(); }
 const lvOpt = (unlocked, open, row) => ({ unlocked: !!unlocked, open: !!open, row: row || LABEL.LEVEL });
 /* row: the focused row's name (app.levelRow), which picks a paged compact's page */
-export const levelGeom = (L, unlocked, touch, open, row) => levelPage.levelGeom(frameOf(L, touch), lvOpt(unlocked, open, row));
-export const levelHit = (x, y, L, unlocked, touch, open, row) => levelPage.levelHit(x, y, frameOf(L, touch), lvOpt(unlocked, open, row));
-export const LEVEL_TAP = levelPage.LEVEL_TAP, LEVEL_TAP_LIST = levelPage.LEVEL_TAP_LIST;
-/** LEVEL SELECT's foot words for the focused row (or the open list), label first and keycap last: the page's footItems as one line. */
-export const levelFoot = (row, open) => levelPage.footText(levelPage.footItems(row || LABEL.LEVEL, !!open));
+const lvMod = () => lazy.get("level");
+export const levelGeom = (L, unlocked, touch, open, row) => { const m = lvMod(); return m ? m.levelGeom(frameOf(L, touch), lvOpt(unlocked, open, row)) : null; };
+export function levelHit(x, y, L, unlocked, touch, open, row) {
+  const m = lvMod(), F = frameOf(L, touch);
+  return m ? m.levelHit(x, y, F, lvOpt(unlocked, open, row)) : { k: lazyHit("level", x, y, F) === -1 ? "back" : "none" };
+}
+export const LEVEL_TAP = LEVEL_WORDS.TAP, LEVEL_TAP_LIST = LEVEL_WORDS.TAP_LIST;
+/** LEVEL SELECT's foot words for the focused row (or the open list), label first and keycap last: the page's footItems as one line ("" until it is in). */
+export const levelFoot = (row, open) => { const m = lvMod(); return m ? m.footText(m.footItems(row || LABEL.LEVEL, !!open)) : ""; };
 /* info = {best: [8 formatted times or null] at this difficulty, speed and modifiers, row (the focused row's name), open, cur (the list), tap (THE tap mode,
    shellview tapOf; absent = the mode the last page frame was drawn in, else hintcopy tapAt), lockR, lockT, enterT, rev (MENU's build tag: the shared room's dpr)} from shellview (times arrive formatted; this file never reads a store). */
 export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAttack, touch, info) {
-  const I = info || {}, U = !!unlocked, lv = sel | 0 || 1;
-  levelPage.drawLevelPage(c, frameOf(L, touch, drawn(I.tap)), { level: lv, heat, pace, pact: U ? pact | 0 : 0, time: U && !!timeAttack, unlocked: U, best: (I.best || [])[lv - 1] || null, row: I.row || LABEL.LEVEL, open: !!I.open, cur: I.cur, trig: modeFocus(), tap: I.tap, lockR: I.lockR, lockT: I.lockT, enterT: I.enterT, rev: I.rev }, t);
+  const I = info || {}, U = !!unlocked, lv = sel | 0 || 1, F = frameOf(L, touch, drawn(I.tap)), m = lazyMod("level");
+  if (!m) return loadingPage(c, F, LABEL.LEVEL_SELECT, { level: lv, rev: I.rev }, "level");
+  m.drawLevelPage(c, F, { level: lv, heat, pace, pact: U ? pact | 0 : 0, time: U && !!timeAttack, unlocked: U, best: (I.best || [])[lv - 1] || null, row: I.row || LABEL.LEVEL, open: !!I.open, cur: I.cur, trig: modeFocus(), tap: I.tap, lockR: I.lockR, lockT: I.lockT, enterT: I.enterT, rev: I.rev }, t);
 }
 
 /* LAZY PAGES (R20, R1: one plate, one ask; AGENTS.md "Lazy pages"). _rec.want: the test seam. */

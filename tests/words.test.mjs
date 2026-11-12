@@ -64,6 +64,7 @@ setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy 
 import * as endWin from "../src/render/pages/endwin.js";
 setLazyPage("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
 import * as endLose from "../src/render/pages/endlose.js";
+(await import("../src/render/pages/lazy.js"))._set("level", await import("../src/render/pages/level.js")); // LEVEL SELECT is a lazy page (Task 9.14): in as if its import had landed
 setLazyPage("endlose", endLose); // GAME OVER is a lazy page (v202 Task 5.4)
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");

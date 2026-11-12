@@ -15,7 +15,7 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
-## shell v210 · 2026-11-12
+## shell v211 · 2026-11-12
 
 The menus centre, CONTROLS joins the world, the first load builds the title, and every overlay is sharp.
 
@@ -27,6 +27,7 @@ The menus centre, CONTROLS joins the world, the first load builds the title, and
 
 ### Changed
 
+- **A lighter first visit:** LEVEL SELECT now downloads after the title, in the same quiet moment as SETTINGS, GUIDE and RECORDS, so the first load is about 60 KB smaller (21 KB compressed). If you open it before it has arrived you see a short LOADING plate; the arrow keys and START already work.
 - **The title stands in the middle:** the FUSE/GRID plate is centred on the board instead of hugging its top, with PRESS ANY KEY OR BUTTON (TAP TO START) right under it, in all three looks; the first load builds the title in the same place.
 - **Rebinding on CONTROLS** now shows the target button's callout (THROW over NOW WEST) and the approved note, BUTTON
   ALREADY IN USE?, with the swap line the page would say; a phone shows the short note beside the controller. PAUSE's

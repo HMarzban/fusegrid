@@ -6,7 +6,7 @@ import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import { LOOK, TILES, TREE, lookPlan, paintYield, afterFirstRender, loadCard } from "../src/app/loadbar.js";
-import { PRECACHE } from "../src/pwa/shell.js";
+import { PRECACHE, BOOT as SW_BOOT, LOOK_LATER } from "../src/pwa/shell.js";
 import { lookVal } from "../src/render/menudraw.js";
 import { BANDS } from "../src/app/jobs.js";
 
@@ -108,6 +108,18 @@ check("loadbar.js is precached and in the boot graph (rcache reads it)", PRECACH
   check("CONTROLS: no modulepreload for a lazy CONTROLS file", lazyPre.length === 0, lazyPre.join());
   const ctlTree = graph(["src/render/pages/controls.js"]); // Task 9.10: the parts both pages paint live in the kit (kit/parts.js), so the CONTROLS fetch never pulls SETTINGS
   check("CONTROLS: the page's import graph leaves out pages/settings.js and takes the shared parts from kit/parts.js", !ctlTree.includes("src/render/pages/settings.js") && ctlTree.includes("src/render/kit/parts.js"), ctlTree.filter((f) => /pages\//.test(f)).join());
+}
+{
+  /* Task 9.14: the lazy pages (pages/lazy.js LOAD, LEVEL SELECT among them) load after the title: out of the boot graph and its modulepreload block,
+     in the worker's LATER stage, still precached; card.js (MENU's next-run card, which LEVEL SELECT reuses) stays boot */
+  const PAGES = ["settings", "guide", "records", "endwin", "endlose", "level"].map((n) => "src/render/pages/" + n + ".js");
+  const pre = [...html.matchAll(/<link rel="modulepreload" href="\.\/([^"]+)">/g)].map((m) => m[1]);
+  const inBoot = PAGES.filter((f) => boot.includes(f) || pre.includes(f)), notLater = PAGES.filter((f) => !LOOK_LATER.includes("./" + f) || SW_BOOT.includes("./" + f) || !PRECACHE.includes("./" + f));
+  check("lazy pages (LEVEL SELECT included): not in the boot graph, not modulepreloaded", inBoot.length === 0, inBoot.join());
+  check("lazy pages (LEVEL SELECT included): in the worker's LATER stage, never its BOOT, and precached (offline still opens them)", notLater.length === 0, notLater.join());
+  const tail = graph(PAGES).filter((f) => !boot.includes(f) && !PAGES.includes(f) && !LOOK_LATER.includes("./" + f));
+  check("every file only the lazy pages import (kit/parts.js, kit/pager.js, endkit.js) is in the LATER stage too, so install never downloads it", tail.length === 0, tail.join());
+  check("MENU's next-run card (pages/card.js) and the loader (pages/lazy.js) stay boot", boot.includes("src/render/pages/card.js") && boot.includes("src/render/pages/lazy.js") && SW_BOOT.includes("./src/render/pages/card.js"));
 }
 
 // CSS: compositor only, reduced motion, the hidden rule

@@ -28,6 +28,7 @@ import * as kprobe from "../src/render/kit/probe.js";
 import * as endWin from "../src/render/pages/endwin.js";
 import * as endLose from "../src/render/pages/endlose.js";
 import { endFacts, endGeom } from "../src/render/pages/endgeom.js";
+(await import("../src/render/pages/lazy.js"))._set("level", await import("../src/render/pages/level.js")); // LEVEL SELECT is a lazy page (Task 9.14): in as if its import had landed
 lazyPages._set("endlose", endLose); // GAME OVER is a lazy page (v202 Task 5.4)
 await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
 const RECP = await (await import("../src/render/pages/lazy.js")).want("records"); // RECORDS is a lazy page (R20): in before its taps

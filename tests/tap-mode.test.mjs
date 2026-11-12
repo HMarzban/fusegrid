@@ -8,7 +8,7 @@ let pass = 0, fail = 0;
 function check(name, cond, detail) { cond ? pass++ : fail++; console.log((cond ? "  PASS " : "  FAIL ") + name + (detail !== undefined && !cond ? " -> " + detail : "")); }
 const J = JSON.stringify;
 const lazy = await import("../src/render/pages/lazy.js");
-for (const n of ["settings", "guide", "records"]) lazy._set(n, await import("../src/render/pages/" + n + ".js"));
+for (const n of ["settings", "guide", "records", "level"]) lazy._set(n, await import("../src/render/pages/" + n + ".js")); // level: LEVEL SELECT, lazy since Task 9.14
 await import("../src/render/pages/menu.js");
 const probe = await import("../src/render/kit/probe.js");
 const { SCREEN, createMenuApp } = await import("../src/app/menuapp.js");

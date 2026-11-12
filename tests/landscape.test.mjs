@@ -14,7 +14,7 @@ function check(name, cond, detail) {
 const J = (v) => JSON.stringify(v);
 const lazy = await import("../src/render/pages/lazy.js");
 const MODS = {};
-for (const n of ["settings", "guide", "records"]) lazy._set(n, (MODS[n] = await import("../src/render/pages/" + n + ".js")));
+for (const n of ["settings", "guide", "records", "level"]) lazy._set(n, (MODS[n] = await import("../src/render/pages/" + n + ".js"))); // level: LEVEL SELECT, lazy since Task 9.14
 await import("../src/render/pages/menu.js");
 const { setTextScale } = await import("../src/render/kit/type.js");
 const probe = await import("../src/render/kit/probe.js");
@@ -97,7 +97,7 @@ const MUST = {
   stats: [W.STATS_WORDS.BEST_SCORE, W.STATS_WORDS.LIFETIME, W.STATS_WORDS.CLEARED, W.STATS_WORDS.KILLS, W.STATS_WORDS.PICKS, W.STATS_WORDS.DEATHS, W.STATS_WORDS.DAYS, W.STATS_WORDS.RUNS, W.STATS_WORDS.PLAY_TIME, W.STATS_WORDS.COPY_SHORT, W.STATS_WORDS.RESET],
   medals: STATS.trophies.map((r) => r[0]),
 };
-const LOADS = { options: ["settings", SCREEN.SETTINGS], graphics: ["settings", SCREEN.GRAPHICS], guide: ["guide", SCREEN.GUIDE], howto: ["guide", SCREEN.HOWTO], items: ["guide", SCREEN.ITEMS], enemies: ["guide", SCREEN.ENEMIES], floor: ["guide", SCREEN.FLOOR], scores: ["records", SCREEN.SCORES], stats: ["records", SCREEN.STATS], medals: ["records", SCREEN.TROPHIES] };
+const LOADS = { level: ["level", SCREEN.LEVEL], options: ["settings", SCREEN.SETTINGS], graphics: ["settings", SCREEN.GRAPHICS], guide: ["guide", SCREEN.GUIDE], howto: ["guide", SCREEN.HOWTO], items: ["guide", SCREEN.ITEMS], enemies: ["guide", SCREEN.ENEMIES], floor: ["guide", SCREEN.FLOOR], scores: ["records", SCREEN.SCORES], stats: ["records", SCREEN.STATS], medals: ["records", SCREEN.TROPHIES] };
 const GATES = ["touch", "gap", "cap", "inside", "plate"];
 const worst = (fs, k) => Math.min(...fs.map((f) => (f.g[k] && f.g[k].value != null ? f.g[k].value : Infinity)));
 

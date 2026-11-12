@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — Task 9.14: LEVEL SELECT loads after the title (shell v211)
+- pages/level.js is a lazy page (lazy.js `level`, LATER with kit/pager.js); boot 122 -> 120 files, -59.9 KB raw / -21.2 KB gzip (now +280 / +109 KB over v201's c4e7598); LOADING plate + R1 cohesion 1 taps; keys and START never need it; captures byte-identical once loaded.
+
 ## 2026-11-12 — Status sync: owner checks open, full check noted, release draft
 - AGENTS v210 release-state line now names the open owner items (device checks, three vetoes, the push) and the full capture check after R4 (0 fails). Release note draft for GitHub v2.5.0 (v201 -> v210) in the git-ignored ledger folder; Task 9.14 (LEVEL SELECT lazy, v211) and share-card candidates in flight.
 

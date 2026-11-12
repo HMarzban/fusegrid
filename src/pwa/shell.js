@@ -1,4 +1,4 @@
-export const CACHE_NAME = "fusegrid-shell-v210";
+export const CACHE_NAME = "fusegrid-shell-v211";
 
 const SRC = Object.freeze([
   "src/ai/enemies.js",
@@ -227,7 +227,8 @@ const LATER = new Set(["./src/core/board3.js", "./src/core/featplace.js", "./src
   "./src/render/controlsgeo.js", "./src/render/padart.js", "./src/net/localpair.js", "./src/net/lockstep.js",
   "./src/net/protocol.js", "./src/net/transport.js", "./src/render/r3d/scene3d.js",
   "./src/render/pages/settings.js", "./src/render/pages/guide.js", "./src/render/kit/parts.js",
-  "./src/render/pages/records.js", "./src/render/pages/endwin.js", "./src/render/pages/endkit.js", "./src/render/pages/endlose.js"]);
+  "./src/render/pages/records.js", "./src/render/pages/endwin.js", "./src/render/pages/endkit.js", "./src/render/pages/endlose.js",
+  "./src/render/pages/level.js", "./src/render/kit/pager.js"]);
 const isLater = (p) => LATER.has(p);
 export const LOOK_LATER = Object.freeze(FILES.filter(isLater));
 export const LOOK_PIXEL = Object.freeze(FILES.filter(isPixel));

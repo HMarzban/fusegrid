@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v210 on 2026-11-12.
+shell v211 on 2026-11-12.
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -906,6 +906,13 @@ every one still applied: a deep link waits for its look, a saved look that fails
 TILES card gets a way back, a queued graphics change is never dropped, the offline cache fills only when the browser lets
 it finish, a failed vibration load retries, and CONTROLS can be left once it fails to load. A batch of offline tests that had never run, because they sat
 after the test file's own exit, runs now. Nothing is pushed: the owner's phone and controller checks come first.
+
+## 2026-11-12: a lighter first visit (shell v211)
+
+The open size call got settled the practical way. LEVEL SELECT, about 60 KB of code, now loads right after the title
+like SETTINGS and GUIDE do, so a first visit downloads about 21 KB less (gzip). Measuring it honestly also corrected an
+old number: the new menus had grown since R1, so the first visit is about 109 KB (gzip) heavier than v201, not the 86
+KB written down at R1. Opened before it arrives, LEVEL SELECT shows the shared LOADING plate for a moment.
 
 ---
 
