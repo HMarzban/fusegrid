@@ -18,21 +18,21 @@
    With no canvas source (Node) it paints straight onto the target; a context with no clip or rect gets the plan only. Under the probe it records
    its rects, texts and squint pairs outside any layer paint. */
 import {biomeOf} from "../../core/config.js";
-import {LABEL, MENU_WORDS as M, runParts} from "../words.js";
+import {LABEL, MENU_WORDS as M, PAUSE_WORDS as PW, runParts} from "../words.js";
 import {worldTokens, CONST, rgba} from "../kit/tokens.js";
 import {key, plate, band, focusBomb, glyph} from "../kit/paint.js";
 import {T, DEV, measure, textScale} from "../kit/type.js";
 import {layer, touch as touchLayer, keyOf, canMake} from "../kit/cache.js";
 import * as probe from "../kit/probe.js";
 import {deviceScale} from "../logo/draw2d.js";
-import {hints, tapMode} from "../hintcopy.js";
+import {hints, tapAt} from "../hintcopy.js";
 
 const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
 /* Row copy mirrors src/app/menuapp.js PAUSE_ITEMS (words.test pins them equal): render/ never imports src/app. */
-export const PAUSE_ROWS = Object.freeze(["RESUME", LABEL.SETTINGS, "RESTART", "QUIT TO MENU"]);
-const DANGER = ["RESTART", "QUIT TO MENU"];
+export const PAUSE_ROWS = Object.freeze([PW.RESUME, LABEL.SETTINGS, PW.RESTART, PW.QUIT]);
+const DANGER = [PW.RESTART, PW.QUIT];
 /* the shape by LABEL, the one place draw and tap read it: RESUME the hero, SETTINGS the door, a divider before the first danger row */
-export const PAUSE_SHAPE = Object.freeze(PAUSE_ROWS.map((label, i) => Object.freeze({label, hero: label === "RESUME", door: label === LABEL.SETTINGS, danger: DANGER.includes(label), rule: i > 0 && DANGER.includes(label) && !DANGER.includes(PAUSE_ROWS[i - 1])})));
+export const PAUSE_SHAPE = Object.freeze(PAUSE_ROWS.map((label, i) => Object.freeze({label, hero: label === PW.RESUME, door: label === LABEL.SETTINGS, danger: DANGER.includes(label), rule: i > 0 && DANGER.includes(label) && !DANGER.includes(PAUSE_ROWS[i - 1])})));
 const RULE_AT = PAUSE_SHAPE.findIndex((r) => r.rule);
 /* box-unit caps: touch row 70, hero 76, plate 380; keyboard row 44, hero 54, plate 340 */
 export const PAUSE_ROW_H = 70, PAUSE_ROW_D = 44, PAUSE_HERO_H = 76, PAUSE_HERO_D = 54, PAUSE_W_H = 380, PAUSE_W_D = 340;
@@ -171,7 +171,7 @@ export function pauseKickers(world, run, o) {
 }
 export const pauseKicker = (world, run) => pauseKickers(world, run, {fold: true})[0];
 function kickers(world, run, fold, time) {
-  const lv = LABEL.LEVEL + " " + lvOf(world), lw = lv + " · " + biomeOf(lvOf(world)).name, dl = run && run.daily ? " · DAILY" : "";
+  const lv = LABEL.LEVEL + " " + lvOf(world), lw = lv + " · " + biomeOf(lvOf(world)).name, dl = run && run.daily ? " · " + PW.DAILY : "";
   if (!fold) return [lw + dl, lv + dl];
   const r = {heat: world && world.heat, pace: world && world.pace, pact: world && world.pact, time: !!time}, j = (h, a) => [h + dl].concat(a).join(" · ");
   return [j(lw, runParts(r)), j(lw, runParts(r, {count: true})), j(lw, runParts(r, {count: true, terse: true})), j(lv, runParts(r, {count: true, terse: true}))];
@@ -206,11 +206,11 @@ export function plan(G, world, ui, run, tm) {
       const cs = showCaps ? words.back : "";
       o.cap = cs ? {s: cs, w: capWd(c, cs, dv), h: dv.caph} : null;
       if (o.cap) { o.cap.x = right - o.cap.w; o.cap.y = r.y + r.h / 2 - dv.caph / 2; right = o.cap.x - 10; }
-    } else if (s.label === "QUIT TO MENU" && showCaps && words.dev !== "pad") {
+    } else if (s.label === PW.QUIT && showCaps && words.dev !== "pad") {
       o.cap = {s: "M", w: capWd(c, "M", dv), h: dv.caph};
       o.cap.x = right - o.cap.w; o.cap.y = r.y + r.h / 2 - dv.caph / 2; right = o.cap.x - 10;
     } else {
-      o.glyph = {n: s.door ? "chev" : s.label === "RESTART" ? "reset" : "back", s: gs, x: r.x + r.w - 14 - gs, y: r.y + r.h / 2 - gs / 2, col: s.danger ? CONST.cor : CONST.t2};
+      o.glyph = {n: s.door ? "chev" : s.label === PW.RESTART ? "reset" : "back", s: gs, x: r.x + r.w - 14 - gs, y: r.y + r.h / 2 - gs / 2, col: s.danger ? CONST.cor : CONST.t2};
       o.glyph.hide = grid;
       right = grid ? r.x + r.w - 8 : o.glyph.x - 10;
     }
@@ -221,10 +221,10 @@ export function plan(G, world, ui, run, tm) {
     o.f = lf; o.px = dv.pri;
     rows.push(o);
   });
-  const foot = d.foot ? (tapMode(G.touch) ? M.TAP : M.MOVE + " " + (words.dev === "pad" ? words.move : "↑↓") + " · CONFIRM " + words.ok) : "";
+  const foot = d.foot ? (tapAt(G.touch, ui.tap) ? M.TAP : M.MOVE + " " + (words.dev === "pad" ? words.move : "↑↓") + " · " + PW.CONFIRM + " " + words.ok) : "";
   const ff = T.label(dv.sec);
   if (tags) for (const q of tags.chips) q.tw = W(c, tags.f, q.s);
-  return {kick, kw: W(c, kf, kick), kf, kpx: dv.pri, pw: W(c, T.display(P.title), "PAUSED"), tags, rows, foot, fw: foot ? W(c, ff, foot) : 0, ff, fpx: dv.sec, tf: P.title,
+  return {kick, kw: W(c, kf, kick), kf, kpx: dv.pri, pw: W(c, T.display(P.title), PW.PAUSED), tags, rows, foot, fw: foot ? W(c, ff, foot) : 0, ff, fpx: dv.sec, tf: P.title,
     caps: rows.map((o) => (o.cap ? W(c, T.label(dv.sec), o.cap.s) : 0))};
 }
 
@@ -278,7 +278,7 @@ function paintPlate(c, G, Pl, tok) {
   const d = G.d, ph = d.dev === "p";
   plate(c, d.plate.x, d.plate.y, d.plate.w, d.plate.h, tok, {phone: ph});
   text(c, Pl.kick, d.cx, d.kickY, Pl.kf, CONST.t2, "center");
-  title(c, "PAUSED", d.cx, d.titleY, Pl.tf);
+  title(c, PW.PAUSED, d.cx, d.titleY, Pl.tf);
   if (Pl.tags) for (const q of Pl.tags.chips) {
     const y = Pl.tags.y - Pl.tags.h / 2;
     c.fillStyle = CONST.t2; c.beginPath(); rp(c, q.x, y, q.w, Pl.tags.h, 4); c.fill();
@@ -297,7 +297,7 @@ function record(G, Pl, cur, tok, dpr) {
   probe.rect("plate", ...b(d.plate), {plate: G.T});
   const txt = (s, x, y, w, px, col, role) => probe.text(s, x * u, (y - px * ts * CAP_K / 2) * u, Math.max(0.01, w * u), px * ts * CAP_K * u, {role, col, px: px * u});
   txt(Pl.kick, d.cx - Pl.kw / 2, d.kickY, Pl.kw, Pl.kpx, CONST.t2, "primary");
-  txt("PAUSED", d.cx - Pl.pw / 2, d.titleY, Pl.pw, Pl.tf, CONST.ink, "primary");
+  txt(PW.PAUSED, d.cx - Pl.pw / 2, d.titleY, Pl.pw, Pl.tf, CONST.ink, "primary");
   if (Pl.tags) for (const q of Pl.tags.chips) txt(q.s, q.x + q.w / 2 - q.tw / 2, Pl.tags.y, q.tw, Pl.tags.px, CONST.t2, "secondary");
   Pl.rows.forEach((o, i) => {
     const r = o.r, f = i === cur;

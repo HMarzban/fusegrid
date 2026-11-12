@@ -234,7 +234,7 @@ for (const r3d of [false, true]) for (const lab of optRows(r3d)) APPS.push(["SET
 APPS.push(["MENU", { cursor: ITEMS.indexOf(W.LABEL.SETTINGS), render3d: true }]); // the SETTINGS pane in REAL 3D: twelve rows, CAMERA · BRIGHTNESS
 for (let r = 0; r < 8; r++) APPS.push(["GRAPHICS", { gfxRow: r }]);
 APPS.push(["GRAPHICS", { gfxRow: 1, settings: { fpm: 1, fps: 2, res: 2, shd: 2, aa: 2, fxq: 1, dmo: 2 } }]); // FRAME RATE MAX: a frame rate's MAX
-APPS.push(["INTRO", { introStage: 0 }], ["INTRO", { introStage: 1, subT: 1 }], ["ATTRACT", { subT: 0.2 }]);
+APPS.push(["MENU", { lastDev: "touch" }], ["INTRO", { introStage: 0 }], ["INTRO", { introStage: 1, subT: 1 }], ["ATTRACT", { subT: 0.2 }]); // MENU in tap mode (shellview tapOf): its touch foot TAP A ROW (R1 cohesion 4; the old PAUSE cue no longer carries it)
 const LAYS = [["d", 600, 520], ["d", 1366, 768], ["l", 1024, 768], ["p", 436, 946], ["d", 608, 352]];
 const DEVS = [["key", null], ["pad", wordsOf("pad", DEF_CONTROLS)], ["touch", wordsOf("touch", DEF_CONTROLS)]];
 let draws = 0;

@@ -70,6 +70,8 @@ export const LOOK_WORDS = Object.freeze({RETRY: "RETRY", TAP_RETRY: "TAP TO RETR
   PH: Object.freeze({bake: "ART", build: "BUILDING", shaders: "SHADERS"})});
 /* MENU (v202 Task 3.1): the rows in order (menuapp ITEMS is pinned equal), the art styles by RENDER value 0..2, and the page's
    teaser and foot words (round 7 S7-menu). */
+/* PAUSE (v202 Task 5.1): its rows (menuapp PAUSE_ITEMS, pinned equal), title, the daily tag and the foot verb */
+export const PAUSE_WORDS = Object.freeze({RESUME: "RESUME", RESTART: "RESTART", QUIT: "QUIT TO MENU", PAUSED: "PAUSED", DAILY: "DAILY", CONFIRM: "CONFIRM"});
 export const MENU_ROWS = Object.freeze(["PLAY", LABEL.LEVEL_SELECT, "DAILY", LABEL.RECORDS, LABEL.SETTINGS, "GUIDE", "SOURCE"]);
 export const ART_STYLES = Object.freeze(["CLASSIC 2D", "PIXEL", "REAL 3D"]);
 export const MENU_WORDS = Object.freeze({

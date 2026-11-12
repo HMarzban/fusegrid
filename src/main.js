@@ -10,7 +10,7 @@ import { createRenderer } from "./render/renderer.js";
 import { loadRendererPx } from "./render/pixel/load.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
-import { controlsHit, dims, drawShell, guidePageCount, kindSize, loadControlsArt, shellMode, shellCovers, recPagesOf } from "./render/shellview.js";
+import { controlsHit, dims, drawShell, guidePageCount, kindSize, loadControlsArt, shellMode, shellCovers, recPagesOf, tapOf } from "./render/shellview.js";
 import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, recTabHit, recPageHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
 import { hints, setHints } from "./render/hintcopy.js";
@@ -664,7 +664,7 @@ export function createGame(canvas, opts = {}) {
                   ? Math.max(0, 1 - coachT / COACH_DUR)
                   : 0,
               coach2: world.state === "PLAY" ? { a: coachAlpha(coach2), s: coachTip(coach2.kind, undefined, world, hints()), k: coach2.kind } : { a: 0, s: "" },
-              pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0, note: app.padNote, next: app.lookNext }, toast: toastOf(toast),
+              pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0, note: app.padNote, next: app.lookNext, tap: tapOf(app, canvas) }, toast: toastOf(toast),
               time: { on: !!app.timeAttack, t: roomT, best: bestPrev }, ghost: ghostAt(ghost, world, roomT),
               run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn) },
             }
