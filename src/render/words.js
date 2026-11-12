@@ -94,7 +94,9 @@ export const CONTROLS_WORDS = Object.freeze({ NONE: "NO CONTROLLER", CONNECT: "C
   TITLE: "CONTROLS", KEYBOARD: "KEYBOARD", CONTROLLER: "CONTROLLER", LOST: "CONTROLLER LOST", ALSO: "ALWAYS ON, ALONGSIDE A CONTROLLER", TEST: "PRESS ANY BUTTON TO TEST IT",
   RULE_PAD: "In menus SOUTH or START confirms and EAST goes back. Those never change.", RULE_KEY: "ENTER confirms and ESC goes back in every menu. Those never change.",
   FIXED: "FIXED", SWAPPED: "SWAPPED", AGAIN: Object.freeze(["PRESS AGAIN", "AGAIN"]), PLUS: "+ ", NO_DRAWING: "NO DRAWING FOR THIS CONTROLLER", LISTEN: "REBIND", NO_LIMIT: "NO TIME LIMIT", CHANGED: "CHANGED", FOR: " FOR ", DRIFT: "DRIFT ", READS: "READS ", NOTHING: "NOTHING",
-  ROW, TAB: "TAB", CHANGE, ADJUST: "ADJUST", RESET: "RESET", BACK, CANCELS: " CANCELS", KEEPS: " KEEPS IT" });
+  ROW, TAB: "TAB", CHANGE, ADJUST: "ADJUST", RESET: "RESET", BACK, CANCELS: " CANCELS", KEEPS: " KEEPS IT",
+  /* listening (Task 9.10, the -capture frames): the target's callout reads the action over NOW and its input; the in-use plaque (the phone's short head) */
+  NOW: "NOW", WAS: "WAS", IN_USE: "BUTTON ALREADY IN USE?", IN_USE_KEY: "KEY ALREADY IN USE?", SWAPS: "The two actions swap, and the page says which one moved:", IN_USE_SHORT: "IN USE? THEY SWAP:" });
 /* The next-run card (v202 Task 3.2, MENU; LEVEL SELECT reuses it): its kicker, the level's mark (level 1, a finale, the last one), its
    section labels and its stat cells. ENEMIES counts the kinds when their names do not fit (the GUIDE page's word). */
 export const CARD_WORDS = Object.freeze({

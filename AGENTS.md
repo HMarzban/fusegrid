@@ -492,7 +492,9 @@ only what an item is; tap mode keeps the keys), `cache`, `room` (the room look (
 PLAY scale, `F.play`, the cell a run shows on that layout, never COVER (COVER only with no play: `#c`, where it is 1), and continues the field past the board's
 rampart over the whole box (`_field`: even-even pillars and the brick hash outside, no spawn-corner rule there; only the cells the box shows are painted);
 `roomKey` is the one key, play in its name), the lane, and the ONE shared room rule: `shareRoom` / `roomDpr` / `pageRoomDpr` /
-`roomFit`; `frameOf` in menudraw hands every page the bare box, SETTINGS' delegates add `paused` / `focus`), `probe`. A part two or more pages use lives here; a part one page uses stays in its page.
+`roomFit`; `frameOf` in menudraw hands every page the bare box, SETTINGS' delegates add `paused` / `focus`), `parts` (Task 9.10: the meter cell `meterCell`,
+`mark`, the wall `course` and the pane's `slab`, moved byte for byte from pages/settings.js; SETTINGS and CONTROLS both paint them, so neither page imports
+the other; lazy, in `LATER`, never boot; `slab`'s optional `sub` is the layer maker its wall cell goes through, SETTINGS' collecting one), `probe`. A part two or more pages use lives here; a part one page uses stays in its page.
 Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box, LEVEL SELECT's included, at one room dpr:
 MENU's rule (`pages/menu.js` installs it with `kit/room.js` `shareRoom`; every page asks `kit/room.js` `roomDpr`, or `pageRoomDpr` capped at its own
 fit, the kit guarding each ask (1 with no canvas source); it throws until installed), its dpr giving way so MENU's plate, its foot reserve and a 3 MiB logo reserve fit `BUDGET`; so a MENU /
@@ -1069,13 +1071,13 @@ not shell screens. Do not add them as `SCREEN` values.
   0.75 s dwell, `wordsOf`, `helpOf`), `rumble.js` (one-way from the event drain; player word VIBRATION, internal names stay `rumble`; stored `vib` OFF / LOW / MEDIUM / HIGH, default MEDIUM, owner's call, `rumble` still written for older cached pages; scale 0.4 / 0.75 / 1 gives x, played as x from 0.5 up and as `0.35 + 0.3x` below (`LIMITS.knee`), LOW never past 0.40; independent of REDUCE FLASH; `PATTERNS` lose, hurt, win, shield, chain, close, near, plant, test, and the menu feels launch, enter, hello, deny, confirm, back, move (2026-11-03, owner: "subtle vibration when menu changes"; shell call sites write one ranked slot `app.feel` (`menuapp.js` `FEELS`), `controlswire.js` arms it around the pad poll's routing and plays one feel per press, launch > enter > deny > back > confirm > move; deny only where a refusal is shown; hello on connect off GAME PLAY; weak motor except back, strong .3; none over 250 ms or 0.7; menu cap 900 ms per 10 s on cursor ticks, page feels (enter, back, deny) always play but count, launch and hello outside it; a late frame plays a menu step late, never skips it; gameplay preempts; record's Menu feels section); `LIMITS`: a pattern at most 500 ms and 3 pulses, a pulse at most 300 ms, gaps at least 80 ms, 4 pulses a second or 2 at LOW, about 50 % on-time, hurt and lose exempt, near + plant 900 ms per 10 s; LOW drops plant, near and menu ticks; OFF is zero calls through the one `fire`; a run and menu ticks only while `app.lastDev` is the pad, the row's test pulse is the one exception; menu feels have no separate off, MEDIUM and HIGH only, never a hold repeat or a clamped edge, move and confirm at least 100 ms apart; no actuator shows `NONE` and `NO VIBRATION ON THIS CONTROLLER OR BROWSER`); a held menu direction (`app.repDir`) runs its frame at up to `HELD_FPS` 60 under the FRAME RATE cap, keys too; render side `controlsgeo.js`
   (the model: rows, rules, foot items, lit parts, callout planners), `pages/controls.js` (the page), `padart.js`,
   `hintcopy.js` (the setter that keeps `menudraw.js` free of `src/app/`). The page's paint is lazy since v202:
-  `controlspage.js`, `capture.js`, `rumble.js`, `pages/controls.js` (it imports `pages/settings.js`' meter cell, slab, marks and course, a module
-  SETTINGS has always loaded first), `controlsgeo.js` and `padart.js` load through `shellview.loadControlsArt` / the
+  `controlspage.js`, `capture.js`, `rumble.js`, `pages/controls.js` (its shared parts come from `kit/parts.js`, so its fetch never pulls
+  `pages/settings.js`: `tests/loadbar.test.mjs`), `controlsgeo.js` and `padart.js` load through `shellview.loadControlsArt` / the
   wire's preload, never in the boot graph (`tests/loadbar.test.mjs` LAZY); the rest of the wire is boot. `SCREEN.CONTROLS = 16`; from PAUSE `pauseView 3`. The door
   sits between GRAPHICS and RESET DEFAULTS; SETTINGS is twelve rows in REAL 3D and ten otherwise, at its page's pitches (v202 Task 3.4: see SETTINGS page).
   CONTROLS page (UI upgrade v202 Task 6.3, `src/render/pages/controls.js`; the round 7 C7-controls frames): on the world kit, opaque (`shellCovers`), the
   room of `app.level` behind it (MENU's own room layer at play scale, `roomKey` / `play`), PAUSE view 3 over the board in the played room's tokens inside
-  the pause band. `controlsGeom(F, view)` is the one geometry for draw and tap (rows by id; `controlsHit` answers `{tab}`, `{row}`, the kit pager's
+  the pause band ([44, H - 8] on #c; [8, H - 8] on a phone's over box, `F.free`, Task 9.10). `controlsGeom(F, view)` is the one geometry for draw and tap (rows by id; `controlsHit` answers `{tab}`, `{row}`, the kit pager's
   `{k: "page", d, to}`, `{off: 1}`, `{}`; while a rebind listens, the plate (or, with no drawing, the capture plate) is inert and off it cancels; the wire
   takes the page key as a focus on the page's first row, nothing confirmed). Top to bottom: kicker SETTINGS (PAUSE: `PAUSED · LEVEL n`) over the display
   title, KEYBOARD | CONTROLLER as kit tab bricks in a wall trough, the rows (MOVE BOMB THROW REMOTE PAUSE, a course, CONFIRM BACK or SENSITIVITY VIBRATION,
@@ -1088,13 +1090,20 @@ not shell screens. Do not add them as `SCREEN` values.
   `ALWAYS ON, ALONGSIDE A CONTROLLER`, the drawing LARGE with its callouts at the kit's row type, the rule `In menus SOUTH or START confirms and EAST goes back.
   Those never change.` / `ENTER confirms and ESC goes back in every menu. Those never change.`, the foot plaque `ROW ▲▼ · TAB ◀▶ · CHANGE ENTER · BACK ESC`,
   label first, keycap last, whole items stepping down); the plate centred in a tall box (the top margin a minimum). Callouts show at 1366 x 768 and
-  1280 x 720 at 1 and 1.25; a 1024 wide pane draws the drawing without leaders (the rows name every input). Col (a keyboard #c, PAUSE on keys): the list
+  1280 x 720 at 1 and 1.25; a 1024 wide pane draws the drawing without leaders (the rows name every input): its art box is 420 wide (376 at 125 %)
+  and the full callouts need 556 / 548 (600 / 580) for the controller / keyboard, more than any list or margin step frees (Task 9.10, pinned in
+  `tests/page-controls.test.mjs`). Col (a keyboard #c, PAUSE on keys): the list
   alone with a compact drawing (no callouts) at the head's right, the status line and the foot, scaled as one piece. Phone (a touch-portrait shell box,
   every touch #c and touch PAUSE view): the column in CSS px, BACK and the title, the tabs, the name line, the drawing over the rows where both fit,
   rows 44 CSS px 8 apart, paged with the kit pager where they do not (a tight page closes the margins, drops the name line and puts the tabs in the
   head row beside a chevron BACK), the status line, a controller's cue line. A rebind listens in place where the page draws its drawing (the prompt
   `PRESS A BUTTON FOR THROW` and `NO TIME LIMIT` over the drawing, only the action's button lit and ringed, the cancel words label first), else on a
-  capture plate. Cached: the room, a base layer at 1 device px a box unit (plate and slab), the column layer at full dpr (head, tabs, courses, rows at
+  capture plate. Task 9.10 (the -capture frames): on the desk the target carries the one callout (`controlsgeo.js` `capCallouts`: the action over
+  `NOW WEST`; a 1024 keyboard keeps none, under `KB_FULL`) and an in-use plaque stands under the drawing in the rule's place (`BUTTON ALREADY IN USE?` /
+  `KEY ALREADY IN USE?`, `The two actions swap, and the page says which one moved:`, and `inUseLine`'s example, the swap line `bindBtn` / `bindKey` would
+  say for the first other action, e.g. `SOUTH WAS BOMB · BOMB NOW WEST`); the phone puts `IN USE? THEY SWAP:` and the line's two halves beside the
+  controller (under a keyboard) and draws no leader. A MOVE set listens with neither. Where the foot will not hold the cancel words (1024 at 125 %)
+  the status line carries them, label first. While listening `padFit` (its `floor` flag) also tries the PAD_KEEP floor itself after its 4-unit stride; the static drawing keeps the stride alone. Cached: the room, a base layer at 1 device px a box unit (plate and slab), the column layer at full dpr (head, tabs, courses, rows at
   rest), the drawing's own layers (its VIBRATION twin made with the page) and one small layer per foot keycap, all made with the page so a cursor move
   never misses; a steady frame is about 280 canvas calls and 0 measureText. Probe page `controls`; `tools/ui/lib/screens.mjs` exempts band on phone
   captures (tap mode) and ring / locked only where none is drawn (`exemptIfNo`). ↑↓ rows, ←→ tab (`[` `]` from any row), ←→ on SENSITIVITY or VIBRATION

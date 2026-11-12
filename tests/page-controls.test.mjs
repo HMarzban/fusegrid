@@ -186,7 +186,8 @@ setTextScale(1);
   globalThis.OffscreenCanvas = Cv;
   cache.setFactory((w, h) => new Cv(w, h));
   try {
-    for (const [nm, F] of [["desk 1366x768", { W: 1366, H: 768 }], ["phone 393x852", (() => { const g = shellGeo(393, 852, 600, 520); return { W: g.w, H: g.h, touch: true, shell: true, css: g.s }; })()]]) for (const v of [padV(), keyV()]) {
+    const capL = (v) => ({ ...v, row: 2, capture: { action: "THROW", prompt: "PRESS A BUTTON", sub: "NOW WEST", foot: "ESC CANCELS · WEST KEEPS IT" } }); // Task 9.10: listening, the callout and the in-use plaque, holds the same budget
+    for (const [nm, F] of [["desk 1366x768", { W: 1366, H: 768 }], ["phone 393x852", (() => { const g = shellGeo(393, 852, 600, 520); return { W: g.w, H: g.h, touch: true, shell: true, css: g.s }; })()]]) for (const v of [padV(), keyV(), capL(padV()), capL(keyV())]) {
       cache.release();
       const r = rec(); r.ctx.setTransform(2, 0, 0, 2, 0, 0);
       P.drawControlsPage(r.ctx, F, v, { level: 1, tap: false });
@@ -196,7 +197,7 @@ setTextScale(1);
       check(`steady frame (${nm} ${v.tab}): 0 misses, <= 400 canvas calls, <= 20 measureText`, cache._dbg.misses === m0 && calls.length <= 400 && mt <= 20, J([cache._dbg.misses - m0, calls.length, mt]));
       let miss = 0;
       for (let i = 0; i < 8; i++) { const m = cache._dbg.misses; P.drawControlsPage(r.ctx, F, { ...v, row: i }, { level: 1, tap: false }); miss += cache._dbg.misses - m; }
-      check(`a cursor move over every row (${nm} ${v.tab}): 0 misses`, miss === 0 || (F.touch && P.controlsGeom(F, v).pages.length > 1), miss);
+      if (!v.capture) check(`a cursor move over every row (${nm} ${v.tab}): 0 misses`, miss === 0 || (F.touch && P.controlsGeom(F, v).pages.length > 1), miss);
       check(`the cache inside the 24 MiB budget (${nm} ${v.tab})`, cache._dbg.bytes <= cache.BUDGET, cache._dbg.bytes);
     }
   } finally { delete globalThis.OffscreenCanvas; cache.release(); }
@@ -214,6 +215,77 @@ setTextScale(1);
   const N = probe.snapshot();
   check("probe, no controller on SENSITIVITY: no ring (none drawn), the locked body and plaque recorded", !N.rects.some((q) => /^ring /.test(q.name)) && N.rects.some((q) => q.name === "locked body") && N.texts.some((t) => t.s === "NO CONTROLLER"));
   probe.setOn(false);
+}
+
+/* ---- Task 9.10: the CONTROLS follow-ups. The owner, verbatim: "do the CONTROLS follow-ups and also look at the first init game page? ..." ---- */
+const { bindBtn, bindKey } = await import("../src/app/controls.js");
+const { padRing: ringOf } = await import("../src/render/controlsgeo.js");
+const CW9 = (await import("../src/render/words.js")).CONTROLS_WORDS;
+{
+  /* 1. listening: the callout on the target button (the action over NOW <its button>) and the in-use plaque with the mock's words */
+  const capP = padV({ row: 2, capture: { action: "THROW", prompt: "PRESS A BUTTON", sub: "NOW WEST", foot: "ESC CANCELS · WEST KEEPS IT" } });
+  const capK = keyV({ row: 2, capture: { action: "THROW", prompt: "PRESS A KEY", sub: "NOW E", foot: "ESC CANCELS · E KEEPS IT" } });
+  check("words: the plaque's words are the mock's, in CONTROLS_WORDS (controller, never pad)", CW9.IN_USE === "BUTTON ALREADY IN USE?" && CW9.SWAPS === "The two actions swap, and the page says which one moved:" && CW9.IN_USE_SHORT === "IN USE? THEY SWAP:" && !/\bpad\b/i.test(JSON.stringify(CW9)));
+  const lineP = bindBtn(DEF_CONTROLS, "THROW", DEF_CONTROLS.pad.BOMB).line, lineK = bindKey(DEF_CONTROLS, "THROW", DEF_CONTROLS.key.BOMB).line;
+  check("the plaque's example is the swap line the page would really say (controls.js bindBtn / bindKey: BOMB's input pressed for THROW)", lineP === "SOUTH WAS BOMB · BOMB NOW WEST" && lineK === "SPACE WAS BOMB · BOMB NOW E", J([lineP, lineK]));
+  for (const ts of [1, 1.25]) {
+    setTextScale(ts);
+    for (const [W, H] of [[1366, 768], [1280, 720], [1366, 657], [1024, 768]]) for (const [v, line, pos, head] of [[capP, lineP, "NOW WEST", CW9.IN_USE], [capK, lineK, "NOW E", CW9.IN_USE_KEY]]) {
+      const tg = `${W}x${H} @${ts} ${v.tab}`;
+      probe.setOn(true);
+      const r = rec(); P.drawControlsPage(r.ctx, { W, H }, v, { level: 1, tap: false });
+      const S = probe.snapshot(), L = P._dbg.last.live, G = P._dbg.last.G, lab = L.plan ? L.plan.labels.flatMap((l) => l.lines.map((q) => q.s)) : [];
+      probe.setOn(false);
+      if (W === 1024 && v.tab === "key") check(`listening ${tg}: the keyboard keeps no leader (KB_FULL: the 1024 pane cannot hold the board at callout size), the ring marks the key`, !L.plan && !!L.ring);
+      else check(`listening ${tg}: one callout, on the target, the action over its button now`, !!L.plan && L.plan.labels.length === 1 && lab.join("|") === "THROW|" + pos && L.plan.lines[0].grp === (v.tab === "pad" ? ringOf(v, "THROW") : "KeyE"), J(lab));
+      const U = L.inuse, ws = U ? U.lines.map((q) => q.s).join(" ") : "";
+      check(`listening ${tg}: the in-use plaque inside the pane, above the foot, its words whole (head, the mock's sentence, the real swap line)`, !!U && ws.startsWith(head) && ws.includes(CW9.SWAPS.split(" ").slice(0, 3).join(" ")) && ws.replace(/ /g, "").includes(line.replace(/ /g, "")) && U.box.x >= G.d.pane.x && U.box.x + U.box.w <= G.d.pane.x + G.d.pane.w && U.box.y + U.box.h <= (L.foot ? L.foot.y : G.d.foot.y) + 0.01 && U.box.y >= G.d.art.y, J([ws, U && U.box]));
+      const small = S.texts.filter((t) => t.capH < (t.role === "primary" ? 14 : 11) - 0.01);
+      check(`listening ${tg}: every text over the floors, the plaque's included in the record, no ellipsis`, !small.length && [head, line.split(" · ")[0]].every((s) => S.texts.some((t) => t.s.includes(s.split(" ")[0]))) && !r.texts.some((t) => /…/.test(t.s)), J(small.map((t) => t.s)));
+      check(`listening ${tg}: no countdown and the cancel words label first (the foot, or the status line where the foot will not hold them)`, !r.texts.some((t) => /\d+(\.\d+)?s\b/.test(t.s)) && (L.foot ? (() => { const seq = L.foot.lines.flatMap((q) => q.ps).map((q) => q.t || q.sep || q.cap); return seq[0] === "CANCELS" && seq[1] === "ESC"; })() : L.status.map((q) => q.s).join(" ").includes("CANCELS ESC")), J(L.status && L.status.map((q) => q.s)));
+    }
+  }
+  setTextScale(1);
+  /* the phone: the plaque beside the drawing (the p-05-capture frame), its three lines whole; the status line still says the rest */
+  for (const ts of [1, 1.25]) {
+    setTextScale(ts);
+    const g = shellGeo(393, 852, 600, 520), F = { W: g.w, H: g.h, touch: true, shell: true, css: g.s };
+    const r = rec(); P.drawControlsPage(r.ctx, F, capP, { level: 1, tap: false });
+    const L = P._dbg.last.live, G = P._dbg.last.G, U = L.inuse, ws = U ? U.lines.map((q) => q.s).join(" ") : "";
+    check(`listening phone @${ts}: the plaque beside the drawing inside the art box, IN USE? THEY SWAP: and the swap line whole`, !!U && ws.startsWith(CW9.IN_USE_SHORT) && ws.replace(/ /g, "").includes(lineP.replace(/ · /g, "").replace(/ /g, "")) && U.box.x + U.box.w <= G.d.art.x + G.d.art.w + 0.01 && U.box.y >= G.d.art.y - 0.01 && U.box.y + U.box.h <= G.d.art.y + G.d.art.h + 0.01 && U.box.x > G.d.art.x + G.d.art.w / 2, J([ws, U && U.box, G.d.art]));
+    check(`listening phone @${ts}: the drawing's ring stays on the target, left of the plaque`, !!L.ring && L.ring.x + L.ring.r <= U.box.x, J([L.ring, U && U.box]));
+    check(`listening phone @${ts}: the status line still carries the cancel words (the swap's own line comes after a press)`, L.status.map((q) => q.s).join(" ").includes("CANCELS"));
+  }
+  setTextScale(1);
+  /* MOVE on the keyboard listens for a set of four: no single target, no swap example (the sub line says ARROWS STAY ON) */
+  { const v = keyV({ row: 0, capture: { action: "MOVE · 1 OF 4", prompt: "PRESS UP", sub: "ARROWS STAY ON", foot: "ESC CANCELS", moveCap: 1 } }), r = rec(); P.drawControlsPage(r.ctx, { W: 1366, H: 768 }, v, { level: 1, tap: false });
+    check("listening for a MOVE set: no callout and no plaque (no single input to swap)", !P._dbg.last.live.plan && !P._dbg.last.live.inuse); }
+}
+{
+  /* 2. PAUSE view 3 on a phone's over box (F.free, Task 9.8): the 44 units the HUD strip needed come back, rows still >= 44 CSS px */
+  for (const [W, H, css] of [[436, 769, 393 / 436], [417, 565, 375 / 417]]) {
+    const base = { W, H, touch: true, css, paused: true }, G0 = P.controlsGeom(base, padV()), G1 = P.controlsGeom({ ...base, free: true }, padV());
+    const rows = G1.pages[0].map((l) => G1.rows[l].h * css), n0 = G0.pages.length, n1 = G1.pages.length;
+    check(`PAUSE CONTROLS on the over box ${W}x${H}: the plate starts in the top 44 units (band [8, H - 8]), inside the box, rows >= 44 CSS px, no more pages than with the strip reserved`,
+      G1.plate.y < 44 && G1.plate.y >= 8 - 0.01 && G1.plate.y + G1.plate.h <= H - 8 + 0.01 && rows.every((h) => h >= 44 - 1e-6) && n1 <= n0 && G1 !== G0, J([G1.plate, G0.plate, n0, n1]));
+  }
+}
+{
+  /* 3. 1024-wide desk windows: the callouts need a wider art box than the pane holds; the drawing keeps no leaders and the rows name every input */
+  const { padFit, kbFit, padCallouts, keyCallouts, padStates } = await import("../src/render/controlsgeo.js");
+  const { DEV, SANS } = await import("../src/render/kit/type.js");
+  for (const ts of [1, 1.25]) {
+    setTextScale(ts);
+    const r = rec(), c = r.ctx, m = { pri: DEV.d.pri * ts, sec: DEV.d.sec * ts, wOf: (s, px) => { c.font = "700 " + px + "px " + SANS; return c.measureText(s).width; } };
+    let needP = 0, needK = 0;
+    for (let aw = 300; aw <= 900 && (!needP || !needK); aw += 4) { if (!needP && padFit(aw, 460, padCallouts(padV()), m, padStates(padV())).plan) needP = aw; if (!needK && kbFit(aw, 460, keyCallouts(keyV()), m).plan) needK = aw; }
+    for (const v of [padV(), keyV()]) {
+      P.drawControlsPage(rec().ctx, { W: 1024, H: 768 }, v, { level: 1, tap: false });
+      const A = P._dbg.last.G.d.art, need = v.tab === "pad" ? needP : needK;
+      check(`1024x768 @${ts} ${v.tab}: no leaders, because the art box (${Math.round(A.w)}) is narrower than the callouts need (${need})`, !P._dbg.last.live.plan && need > A.w, J([A.w, need]));
+    }
+  }
+  setTextScale(1);
 }
 
 console.log("\n  PAGE-CONTROLS RESULT: " + pass + " PASS / " + fail + " FAIL");

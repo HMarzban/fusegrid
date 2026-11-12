@@ -27,7 +27,8 @@
    outside any layer paint. */
 import {LABEL, ART_STYLES, SETTINGS_WORDS as COPY} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
-import {key, plate, band, focusBomb, glyph, wallCell, capW, cap, plaque, rfill as rr} from "../kit/paint.js";
+import {key, plate, band, focusBomb, capW, cap, plaque, rfill as rr} from "../kit/paint.js";
+import {meterCell, mark, course, slab, SLAB} from "../kit/parts.js";
 import {T, DEV, measure, measure as W, textScale, dsp, measurer as mOf, text, CAP_K} from "../kit/type.js";
 import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch as touchK, keyOf, canMake} from "../kit/cache.js";
@@ -44,7 +45,7 @@ export const DESK = deep({
 });
 export const COL = deep({c: {pad: [14, 18, 14, 18], list: 480, row: 34, grp: 10, below: 10, ttl: 32}, c125: {pad: [12, 18, 12, 18], list: 540, row: 36, grp: 10, below: 8, ttl: 32}});
 export const PHONE = deep({p: {top: 14, bot: 12, side: 12, pad: [12, 12, 14, 12], row: 52, grp: 10, back: 112, below: 12, fgap: 14, max: 600}, p125: {top: 12, bot: 10, side: 12, pad: [10, 12, 12, 12], row: 52, grp: 10, back: 124, below: 10, fgap: 12, max: 600}});
-export const TOUCH = Object.freeze({h: 44, g: 8}), DESK_U = 0.8, GUT = 8, SLAB = 10, FOOT1 = 50, FOOT2 = 88;
+export const TOUCH = Object.freeze({h: 44, g: 8}), DESK_U = 0.8, GUT = 8, FOOT1 = 50, FOOT2 = 88;
 /* the GRAPHICS rows, pinned equal to src/app/gfx.js GRAPHICS GFX_ROWS (this module cannot import src/app) */
 export const GFX_LABELS = Object.freeze(["QUALITY", "FRAME RATE", "RESOLUTION", "SHADOWS", "ANTI-ALIAS", "EFFECTS", "DEMO", "FPS METER"]);
 /* a wall course before each of these rows: audio · look · comfort · privacy · doors · reset; GRAPHICS: preset · rows · meter */
@@ -481,26 +482,6 @@ function plan(c0, G, u, specs, tap, words) {
 }
 
 /* ---- painting ---- */
-/* the meter's cell: a small key, radius 3; lit = the brick standing up 2 px with its brickHi strip, mid = the brick's darker step, well = sunk */
-function cell(c, r, kind, tok) {
-  const y = r.y - (kind === "lit" ? 2 : 0), ix = r.x + 2, iy = y + 2, iw = r.w - 4, ih = r.h - 4;
-  if (kind !== "well") rr(c, r.x, y + 3, r.w, r.h, 3, CONST.ol);
-  rr(c, r.x, y, r.w, r.h, 3, CONST.ol);
-  if (kind === "lit") { c.fillStyle = tok.lit2; c.fillRect(ix, iy, iw, ih); c.fillStyle = tok.lit; c.fillRect(ix, iy, iw, ih * 0.54); c.fillStyle = tok.lithi; c.fillRect(ix, iy + 1, iw, 3); c.fillStyle = tok.lip; c.fillRect(ix, iy + ih - 4, iw, 4); }
-  else if (kind === "mid") { c.fillStyle = tok.mid; c.fillRect(ix, iy, iw, ih); c.fillStyle = "rgba(0,0,0,0.25)"; c.fillRect(ix, iy + ih - 4, iw, 4); }
-  else { c.fillStyle = tok.well; c.fillRect(ix, iy, iw, ih); c.fillStyle = "rgba(0,0,0,0.6)"; c.fillRect(ix, iy, iw, 3); }
-}
-/* the page's own marks on the 16-unit grid: the stepped arrows' chevrons, the arrow keycaps, reset and lock */
-function mark(c, n, x, y, s, col) {
-  if (n === "chev" || n === "up" || n === "dn") return glyph(c, n, x, y, s, col);
-  c.save(); c.translate(x, y); c.scale(s / 16, s / 16); c.strokeStyle = c.fillStyle = col; c.lineCap = c.lineJoin = "round"; c.beginPath();
-  if (n === "chl") { c.lineWidth = 2.4; c.moveTo(10, 3); c.lineTo(5, 8); c.lineTo(10, 13); c.stroke(); }
-  else if (n === "lf") { c.moveTo(11, 3); c.lineTo(5, 8); c.lineTo(11, 13); c.closePath(); c.fill(); }
-  else if (n === "rt") { c.moveTo(5, 3); c.lineTo(11, 8); c.lineTo(5, 13); c.closePath(); c.fill(); }
-  else if (n === "reset") { c.lineWidth = 2.2; c.arc(8, 8, 4.5, Math.PI, -Math.PI / 2, true); c.lineTo(5, 3.5); c.moveTo(6.5, 1); c.lineTo(4, 3.5); c.lineTo(6.5, 6); c.stroke(); }
-  else if (n === "lock") { c.lineWidth = 2; c.moveTo(4.5, 7); c.lineTo(4.5, 5); c.arc(8, 5, 3.5, Math.PI, 0); c.lineTo(11.5, 7); c.stroke(); c.beginPath(); c.rect(3, 7, 10, 7.5); c.fill(); }
-  c.restore();
-}
 /* a small layer the page layer blits from (a slab cell, a locked key); the page layer's paint collects their keys so a steady frame keeps them
    recent with it, and a re-raster never finds them freed */
 let subs = null;
@@ -517,7 +498,7 @@ function paintVal(c, o, tok, dv, fk) {
   const ph = dv === DEV.p;
   for (const p of o.val.P) {
     const r = p.r;
-    if (p.k === "cell") cell(c, r, p.kind, tok);
+    if (p.k === "cell") meterCell(c, r, p.kind, tok);
     else if (p.k === "num") { c.font = p.f; c.fillStyle = CONST.ink; c.textAlign = "right"; c.textBaseline = "middle"; c.fillText(p.s, p.x, p.y); }
     else if (p.k === "trough") rr(c, r.x, r.y, r.w, r.h, 8, CONST.ol);
     else if (p.k === "key") {
@@ -552,30 +533,6 @@ function jobLine(c, o, tok) {
   if (f < 0) for (let x = r.x; x < r.x + r.w; x += 8) c.fillRect(x, r.y, Math.min(4, r.x + r.w - x), r.h);
   else if (f > 0) c.fillRect(r.x, r.y, Math.round(r.w * Math.min(1, f)), r.h);
 }
-function course(c, r, tok) {
-  c.fillStyle = CONST.ol; c.fillRect(r.x, r.y, r.w, 2);
-  c.fillStyle = tok.band; c.fillRect(r.x, r.y + 2, r.w, 1);
-  c.fillStyle = CONST.ol; for (let x = r.x + 16; x < r.x + r.w - 3; x += 32) c.fillRect(x, r.y - 1, 3, 4);
-}
-/* one wall cell at the slab's size and this context's density, a small layer the frame blits; with no canvas source (Node) the frame is the
-   wall's flat colour */
-function slabCell(c, tok) {
-  if (!canMake()) return null;
-  const k = deviceScale(c), n = Math.max(1, Math.round(SLAB * k));
-  return sub({layer: "settings.slab", biome: tok.name, level: 0, W: n, H: n, dpr: +k.toFixed(4), look: "2d", textScale: 1}, n, n, (g) => { g.scale(n / SLAB, n / SLAB); wallCell(g, 0, 0, SLAB, tok, {code: 1}); });
-}
-/* the pane: a slab of the world's floor framed in its own wall cells (the mock's slab()) */
-function slab(c, P, tok) {
-  c.fillStyle = tok.pane; c.fillRect(P.x, P.y, P.w, P.h);
-  c.save(); c.beginPath(); c.rect(P.x, P.y, P.w, P.h); c.rect(P.x + SLAB, P.y + SLAB, P.w - 2 * SLAB, P.h - 2 * SLAB); c.clip("evenodd");
-  const cell = slabCell(c, tok), put = (x, y) => (cell ? c.drawImage(cell, x, y, SLAB, SLAB) : c.fillRect(x, y, SLAB, SLAB));
-  c.fillStyle = tok.wall;
-  for (let x = P.x; x < P.x + P.w; x += SLAB) { put(x, P.y); put(x, P.y + P.h - SLAB); } // the frame only: top and bottom courses, then the two sides
-  for (let y = P.y + SLAB; y < P.y + P.h - SLAB; y += SLAB) { put(P.x, y); put(P.x + P.w - SLAB, y); }
-  c.fillStyle = "rgba(6,4,6,0.42)"; c.fillRect(P.x, P.y, P.w, P.h);
-  c.restore();
-  c.strokeStyle = CONST.ol; c.lineWidth = 2; c.strokeRect(P.x + 1, P.y + 1, P.w - 2, P.h - 2); c.strokeRect(P.x + SLAB - 1, P.y + SLAB - 1, P.w - 2 * SLAB + 2, P.h - 2 * SLAB + 2);
-}
 function paintFoot(c, F, tok, ph) {
   const dv = DEV[ph ? "p" : "d"];
   plaque(c, F.x, F.y, F.w, F.h, tok);
@@ -606,7 +563,7 @@ function paintStatic(g, G, Pl, tok, u, p) {
   for (const q of d.divs) if (q.p === p) course(g, q.r, tok);
   for (const l of G.pages[p]) paintRow(g, Pl.rows[l], tok, dv, false, 0);
   paintPager(g, pagerOf(g, G, p, Pl.hint), tok, ph);
-  if (d.pane) slab(g, d.pane, tok);
+  if (d.pane) slab(g, d.pane, tok, sub);
   const P = Pl.pane;
   if (P && P.head) {
     text(g, P.head.s, P.head.x, P.head.y, P.head.f, CONST.ink);
@@ -759,5 +716,3 @@ export function drawGraphicsPage(c, F, ui = {}, t = 0) {
   if (fk > 0) rows.forEach((l, i) => { if ((chg >> i) & 1) fks[l] = fk; });
   frame(c, F, ui, t, "graphics", rows, specs, rows[cur], fks, vr[cur] || null);
 }
-/* the parts the CONTROLS page (pages/controls.js, Task 6.3) paints with the same hand: the meter cell, the floor slab, the page marks, the wall course */
-export {cell as meterCell, slab, mark, course};

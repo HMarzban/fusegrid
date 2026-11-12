@@ -231,11 +231,14 @@ const cub = (p, t) => [0, 1].map((k) => (1 - t) ** 3 * p[0][k] + 3 * (1 - t) ** 
 const BUMP_AT = [BUMP.slice(0, 4), BUMP.slice(3, 7)].flatMap((seg) => Array.from({ length: 9 }, (_, i) => cub(seg, i / 8))); // the bumper's centreline, sampled
 export const PAD_CAP = 460, PAD_FULL = 180, PAD_TALL = 0.74, PAD_KEEP = 0.7;
 /** Fits the controller into an art box aw x ah: the largest W (<= 460) whose clean plan fits, else (under PAD_FULL, or no clean plan) the compact
-    drawing with no leaders, as large as the box allows. {W, plan|null, ox, oy}: ox oy put the body box's top-left in the box's own px. */
-export function padFit(aw, ah, it, m, lit) {
+    drawing with no leaders, as large as the box allows. floor: also try the PAD_KEEP floor itself (a rebind's one callout). {W, plan|null, ox, oy}: ox oy put the body box's top-left in the box's own px. */
+export function padFit(aw, ah, it, m, lit, floor) {
   const Wc = Math.max(40, Math.min(PAD_CAP, aw - 8, (ah - 8) / PAD_TALL));
   if (it && it.length) {
-    for (let W = Math.floor(Math.min(PAD_CAP, aw - 120)); W >= Math.max(PAD_FULL, PAD_KEEP * Wc); W -= 4) { // callouts never shrink the drawing past PAD_KEEP of what the box holds without them
+    const lo = Math.ceil(Math.max(PAD_FULL, PAD_KEEP * Wc)), Ws = [];
+    for (let W = Math.floor(Math.min(PAD_CAP, aw - 120)); W >= lo; W -= 4) Ws.push(W); // callouts never shrink the drawing past PAD_KEEP of what the box holds without them
+    if (floor && lo <= Math.min(PAD_CAP, aw - 8) && Ws[Ws.length - 1] !== lo) Ws.push(lo); // floor (a rebind's one callout): the 4-unit stride never skips the floor itself; the static drawing keeps its stride
+    for (const W of Ws) {
       const p = padPlan(W, it, m), e = p.ext, w = e.x1 - e.x0, h = e.y1 - e.y0;
       if (p.ok && w <= aw && h <= ah && !padCross(p, lit).length) return { W, plan: p, ox: (aw - w) / 2 - e.x0, oy: (ah - h) / 2 - e.y0 };
     }
@@ -262,6 +265,22 @@ export function keyCallouts(s) {
   for (const a of ["REMOTE", "THROW", "PAUSE", "BOMB"]) out.push({ grp: k[a], act: a, pos: [nm(k[a])] });
   out.push({ grp: k.MOVE[0], act: "MOVE", pos: [[k.MOVE[0], k.MOVE[3], k.MOVE[2], k.MOVE[1]].map(nm).join(" ")] }, { grp: "ArrowDown", act: "MOVE", pos: ["ARROWS"], tag: true });
   return out.filter((q) => KB_AT[q.grp]);
+}
+const ACTS = ["BOMB", "THROW", "REMOTE", "PAUSE"];
+const inputOf = (s, a) => (s.tab === "key" ? (s.key || DEF_KEY)[a] : (s.binds || DEF_PAD)[a]), wordOf = (s, q) => (s.tab === "key" ? nameOf(q, s.names) : BTN[q] ? BTN[q].w : q);
+/** Listening for one action (the -capture frames): the one callout on its input, the action over NOW and the input it has now; none for a MOVE
+    set (four keys, no single target) or an input the drawing does not have. */
+export function capCallouts(s, id) {
+  if (!ACTS.includes(id)) return [];
+  const q = inputOf(s, id), it = { grp: q, act: id, pos: [CONTROLS_WORDS.NOW + " " + wordOf(s, q)] };
+  return s.tab === "key" ? (KB_AT[q] ? [it] : []) : PART_AT[q] ? [it] : [];
+}
+/** The in-use plaque's example: the swap line the page says when the first other action's input is pressed for id (src/app/controls.js bindKey /
+    bindBtn word for word, pinned in tests/page-controls.test.mjs); null for a MOVE set. */
+export function inUseLine(s, id) {
+  if (!ACTS.includes(id)) return null;
+  const o = ACTS.find((a) => a !== id), W = CONTROLS_WORDS;
+  return wordOf(s, inputOf(s, o)) + " " + W.WAS + " " + o + " · " + o + " " + W.NOW + " " + wordOf(s, inputOf(s, id));
 }
 /* Keyboard leaders (appendix 9.3): ESC straight left; a key in the top three rows straight up through the key gaps, a stub of 0.75 k, the label after
    it; the bottom rows and the arrows straight down, the label centred under. A label that would meet another goes one tier further out; a leader

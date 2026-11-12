@@ -98,7 +98,7 @@ check("three's weight is its real share of the REAL 3D bytes, within 5 points (b
 check("loadbar.js is precached and in the boot graph (rcache reads it)", PRECACHE.includes("./src/app/loadbar.js") && boot.includes("src/app/loadbar.js"));
 {
   /* v202: the CONTROLS page and its paint load when CONTROLS opens (or in idle), rumble on the first pad; the first pad press still leaves the title from boot code. */
-  const LAZY = ["src/app/controlspage.js", "src/app/capture.js", "src/app/rumble.js", "src/render/pages/controls.js", "src/render/controlsgeo.js", "src/render/padart.js"];
+  const LAZY = ["src/app/controlspage.js", "src/app/capture.js", "src/app/rumble.js", "src/render/pages/controls.js", "src/render/controlsgeo.js", "src/render/padart.js", "src/render/kit/parts.js"];
   const KEEP = ["src/app/controls.js", "src/app/hints.js", "src/render/hintcopy.js", "src/app/gamepad.js", "src/app/padroute.js", "src/app/controlswire.js"];
   const lazyIn = LAZY.filter((f) => boot.includes(f)), keepOut = KEEP.filter((f) => !boot.includes(f)), off = LAZY.filter((f) => !PRECACHE.includes("./" + f));
   check("CONTROLS: the page, its paint and rumble are not in the boot graph", lazyIn.length === 0, lazyIn.join());
@@ -106,6 +106,8 @@ check("loadbar.js is precached and in the boot graph (rcache reads it)", PRECACH
   check("CONTROLS: the lazy files stay in the service worker precache (offline still opens the page)", off.length === 0, off.join());
   const lazyPre = [...html.matchAll(/<link rel="modulepreload" href="\.\/([^"]+)">/g)].map((m) => m[1]).filter((f) => LAZY.includes(f));
   check("CONTROLS: no modulepreload for a lazy CONTROLS file", lazyPre.length === 0, lazyPre.join());
+  const ctlTree = graph(["src/render/pages/controls.js"]); // Task 9.10: the parts both pages paint live in the kit (kit/parts.js), so the CONTROLS fetch never pulls SETTINGS
+  check("CONTROLS: the page's import graph leaves out pages/settings.js and takes the shared parts from kit/parts.js", !ctlTree.includes("src/render/pages/settings.js") && ctlTree.includes("src/render/kit/parts.js"), ctlTree.filter((f) => /pages\//.test(f)).join());
 }
 
 // CSS: compositor only, reduced motion, the hidden rule

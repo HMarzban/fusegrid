@@ -33,9 +33,9 @@ import {paginate, pagerKeys, pageLabel, pageKeyAt, paintPager, keySide, pageOfFo
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapAt} from "../hintcopy.js";
 import {FOOT_TAP, BACK_TAP} from "../kit/copy.js";
-import {meterCell, slab, mark, course} from "./settings.js";
+import {meterCell, slab, mark, course, SLAB} from "../kit/parts.js";
 import {drawPad, drawCallouts, drawKeys, glyph as padGlyph, padBox, kbPrints, kbLegend, KB_AT, PART_AT, ringR, keyRect} from "../padart.js";
-import {rowsOf, statusOf, footItems, padStates, padRing, padCallouts, padFit, keyStates, keyRing, keyCallouts, kbFit, keyName, CAPTION, PAD_TALL} from "../controlsgeo.js";
+import {rowsOf, statusOf, footItems, padStates, padRing, padCallouts, padFit, keyStates, keyRing, keyCallouts, kbFit, keyName, CAPTION, PAD_TALL, capCallouts, inUseLine} from "../controlsgeo.js";
 
 export const DESK = deep({
   d: {pad: [18, 22, 18, 22], list: 440, gap: 24, row: 40, grp: 12, tabs: 10, below: 12, pw: 1300, paneMin: 420, art: [200, 460], foot: 50},
@@ -45,12 +45,12 @@ export const COL = deep({c: {pad: [14, 18, 14, 18], list: 480, row: 34, grp: 10,
 export const PHONE = deep({p: {top: 12, bot: 12, side: 12, pad: [12, 12, 14, 12], grp: 10, tabs: 10, back: 112, below: 12, max: 600, art: [120, 300]},
   p125: {top: 10, bot: 10, side: 12, pad: [10, 12, 12, 12], grp: 10, tabs: 10, back: 124, below: 10, max: 600, art: [120, 300]}});
 export const COL_ART = 180; // col's compact drawing, at the head's right over the tabs (no callouts: the rows name every input)
-export const TOUCH = Object.freeze({h: 44, g: 8}), DESK_U = 0.8, GUT = 8, SLAB = 10, FOOT1 = 50, TROUGH = 11, TAB_GAP = 8, MIN_ROWS = 2;
+export const TOUCH = Object.freeze({h: 44, g: 8}), DESK_U = 0.8, GUT = 8, FOOT1 = 50, TROUGH = 11, TAB_GAP = 8, MIN_ROWS = 2;
 /* a wall course before each of these rows: actions · fixed or feel · reset */
 export const GROUP = Object.freeze(["CONFIRM", "SENSITIVITY", "RESET"]);
 const BACK_CHEV = 52; // BACK as its chevron alone (>= 44 CSS px), records' compact step-down
 const LAND_TIGHT = Object.freeze({top: 12, bot: 12, pad: Object.freeze([6, 12, 8, 12]), below: 8, tabs: 6});
-const pauseBand = (F) => [44, F.touch ? F.H - 8 : F.H - 28]; // PAUSE keeps the HUD strip (y < 40) clear, and on keys the ability bar
+const pauseBand = (F) => (F.free ? [8, F.H - 8] : [44, F.touch ? F.H - 8 : F.H - 28]); // PAUSE keeps the HUD strip (y < 40) clear, and on keys the ability bar; F.free: a phone's over box (Task 9.8), under the HUD already
 const padOff = (s) => s.tab === "pad" && (!s.pad || s.pad.state === "none" || s.pad.state === "lost");
 const idsOf = (s) => rowsOf(s || {}).map((r) => r.id);
 
@@ -159,7 +159,7 @@ const memo = new Map();
 /** THE geometry for draw and tap; see the header. */
 export function controlsGeom(F, s) {
   const ids = idsOf(s), ts = F.ts > 0 ? F.ts : textScale(), touchy = !!F.touch, shell = !!F.shell, css = F.css > 0 ? F.css : 1, paused = !!F.paused, cue = !!F.cue && touchy;
-  const id = [F.W, F.H, touchy, shell, css, ts, paused, cue, ...ids].join("|");
+  const id = [F.W, F.H, touchy, shell, css, ts, paused, !!F.free, cue, ...ids].join("|");
   let G = memo.get(id);
   if (G) return G;
   const portrait = !paused && shell && touchy && F.H > F.W * 1.3, fl = touchy ? {h: TOUCH.h / css, g: TOUCH.g / css} : null;
@@ -425,8 +425,8 @@ const metrics = (c, dv) => { const ts = textScale(), m = mOf(c); return {pri: dv
 const fits = new Map();
 const fitOnce = (k, fn) => { if (!fits.has(k)) { if (fits.size > 32) fits.clear(); fits.set(k, fn()); } return fits.get(k); };
 function padArt(c, s, row, A, tok, ui) {
-  const cap = s.capture, off = padOff(s), tgt = cap ? padRing(s, row.id) : null, lit = off ? {} : cap ? (tgt ? {[tgt]: "lit"} : {}) : padStates(s), it = off || cap ? [] : padCallouts(s), plq = off ? 56 : 0, ts = textScale();
-  const F = fitOnce(["pad", A.w, A.h - plq, ts, JSON.stringify(it), JSON.stringify(lit)].join("|"), () => padFit(A.w, A.h - plq, it, metrics(c, ui.dv), lit));
+  const cap = s.capture, off = padOff(s), tgt = cap ? padRing(s, row.id) : null, lit = off ? {} : cap ? (tgt ? {[tgt]: "lit"} : {}) : padStates(s), it = off ? [] : cap ? (ui.call ? capCallouts(s, row.id) : []) : padCallouts(s), plq = off ? 56 : 0, ts = textScale();
+  const F = fitOnce(["pad", A.w, A.h - plq, ts, JSON.stringify(it), JSON.stringify(lit)].join("|"), () => padFit(A.w, A.h - plq, it, metrics(c, ui.dv), lit, !!cap));
   const Wd = off ? F.W * 0.82 : F.W, ox = A.x + F.ox + (F.W - Wd) / 2, oy = A.y + F.oy, ring = off || !ui.focus ? null : cap ? tgt : padRing(s, row.id);
   drawPad(c, ox, oy, Wd, {tok, lit, lock: off, ring, press: s.echo, grips: row.id === "VIBRATION" && !off && !row.none && !!row.bar && row.bar[0] > 0, reduced: !!ui.reduced});
   if (F.plan) drawCallouts(c, ox, oy, F.plan, tok);
@@ -436,7 +436,7 @@ function padArt(c, s, row, A, tok, ui) {
   return {plan: F.plan, W: Wd, none, body: off ? R(ox + 0.06 * Wd, oy + 0.42 * Wd, 0.18 * Wd, 0.14 * Wd) : null, ox, oy, ring: ring && PART_AT[ring] ? {x: ox + PART_AT[ring][0] * Wd, y: oy + PART_AT[ring][1] * Wd, r: ringR(ring, Wd)} : null};
 }
 function keyArt(c, s, row, A, tok, ui) {
-  const lit = s.capture ? {} : keyStates(s), it = s.capture ? [] : keyCallouts(s), ts = textScale();
+  const lit = s.capture ? {} : keyStates(s), it = s.capture ? (ui.call ? capCallouts(s, row.id) : []) : keyCallouts(s), ts = textScale();
   const K = fitOnce(["key", A.w, A.h, ts, JSON.stringify(it), Object.keys(lit).sort().join()].join("|"), () => { const m = metrics(c, ui.dv), F = kbFit(A.w, A.h, it, m); return {F, prints: kbPrints(F.k, lit, m.wOf, ts)}; });
   const {F, prints} = K, ox = A.x + F.ox, oy = A.y + F.oy, rk = ui.focus ? keyRing(s, row.id) : null;
   drawKeys(c, ox, oy, F.k, {tok, lit, ring: rk, prints, px: kbLegend(F.k, ts)});
@@ -547,6 +547,7 @@ function record(G, Pl, s, ui, foc, live, dpr, el, touchy, pg, tok) {
   if (live.plan) for (const L of live.plan.labels) for (const ln of L.lines) { const x = live.art.ox + L.x, tw = ln.tag || 0, w = ln.w; txt(ln.s, L.side === "l" ? x - tw - (tw ? 6 : 0) - w : x, live.art.oy + ln.y, w, ln.px / ts, ln.act ? CONST.ink : CONST.t2, ln.act ? "primary" : "secondary"); }
   if (live.art && live.art.none) for (const q of live.art.none) txt(q.s, q.x, q.y, q.w, q.px, q.col, q.role);
   if (Pl.rule && !cap) for (const q of Pl.rule) txt(q.s, q.x, q.y, q.w, q.px, CONST.t2, "body");
+  if (live.inuse) for (const q of live.inuse.lines) txt(q.s, q.x, q.y, q.w, q.px, q.col, q.role);
   if (live.status) for (const q of live.status) txt(q.s, q.x, q.y, q.w, q.px, q.col, "secondary");
   if (d.keys) { const f = LF(dv.sec), sL = pageLabel(pg, G.pages.length); txt(sL, d.keys.label.x, d.keys.label.y + d.keys.label.h / 2, W(mc, f, sL), dv.sec, CONST.t2, "secondary"); for (const [nm, r, on2] of [["PAGE UP", d.keys.up, pg > 0], ["PAGE DOWN", d.keys.dn, pg < G.pages.length - 1]]) { probe.rect(nm, ...b(r), {touch: touchy, set: "controls pages", kind: "step", fill: on2 ? tok.key : tok.well}); probe.pair("info", b(R(r.x + r.w / 2 - 11, r.y + r.h / 2 - 11, 22, 22)), b(R(r.x + 4, r.y + 5, r.w - 8, r.h - 9)), {col: on2 ? CONST.ink : CONST.off, name: nm, ...(on2 ? {} : {lock: true})}); } }
   const Fp = live.foot, fdv = d.dev === "p" ? DEV.p : DEV.d;
@@ -609,7 +610,7 @@ export function drawControlsPage(c, F, s, ui = {}) {
     if (canMake() && typeof c.drawImage === "function" && !s.capture) { c.save(); c.globalAlpha = 0; for (let i = 0; i < list.length; i++) { const q = footOf(c, G, {...s, row: i}, list[i], words, tap); if (q) paintFoot(c, q, tok, G.d.dev === "p", dpr * u); } c.restore(); } // every row's keycaps made with the page, so a cursor move never misses
   }
   const Pl = S.Pl, d = G.d, dv = DEV[d.dev], cap = s.capture, capIn = !!cap && !!d.art && !!d.name, focus = tap && !cap ? null : row.id, warm = !S.warm;
-  const live = {ring: null, status: null, foot: null, plan: null, art: null, name: null, capRow: null};
+  const live = {ring: null, status: null, foot: null, plan: null, art: null, name: null, capRow: null, inuse: null};
   S.warm = true;
   _dbg.last = {G, Pl, foc: focus, pg, live};
   if (typeof c.clip !== "function" || typeof c.rect !== "function") return;
@@ -638,9 +639,9 @@ export function drawControlsPage(c, F, s, ui = {}) {
     live.capRow = {s: cap.prompt, f, px: dv.sec, x: fo.r.x + fo.r.w - 12 - w, y: fo.r.y + fo.r.h / 2, w};
     text(c, cap.prompt, live.capRow.x, live.capRow.y, f, CONST.ink);
   } else if (fo) paintRow(c, fo, tok, dv, true);
-  const A = d.art, off = padOff(s);
+  const off = padOff(s), U = capIn ? inUsePlan(c, G, s, row) : null, A = U ? U.art : d.art;
   if (A && (!cap || capIn)) {
-    const ux = {focus: !!focus, reduced: !!ui.reduced, dv: d.pane ? DEV.d : DEV.p, warm};
+    const ux = {focus: !!focus, reduced: !!ui.reduced, dv: d.pane ? DEV.d : DEV.p, warm, call: capIn && !!d.pane};
     if (!cap && row.id === "SENSITIVITY" && !off && s.tab === "pad" && d.pane) stickView(c, s, A);
     else if (s.tab === "key") live.art = keyArt(c, s, row, A, tok, ux);
     else if (s.pad && s.pad.state === "nonstd") text(c, CW.NO_DRAWING, A.x + A.w / 2, A.y + A.h / 2, LF(dv.sec), CONST.t2, "center");
@@ -653,6 +654,7 @@ export function drawControlsPage(c, F, s, ui = {}) {
     text(c, say, N.x, live.name.y, f, d.pane ? CONST.ink : CONST.t2); void nd;
     if (live.name.note) text(c, CW.NO_LIMIT, live.name.note.x, live.name.note.y, sf, CONST.t2);
   }
+  if (U) { plaque(c, U.box.x, U.box.y, U.box.w, U.box.h, tok); for (const q of U.lines) text(c, q.s, q.x, q.y, q.f, q.col); live.inuse = U; }
   live.status = capIn ? capLines(c, G, cap) : cap ? [] : statusLines(c, G, s, row);
   for (const q of live.status) text(c, q.s, q.x, q.y, q.f, q.col);
   live.foot = capIn ? capFoot(c, G, cap) : cap ? null : footOf(c, G, s, row, words, tap);
@@ -661,7 +663,49 @@ export function drawControlsPage(c, F, s, ui = {}) {
   c.restore();
   if (probe.probe.on) record(G, Pl, s, ui, focus, live, dpr, F.shell ? "sh" : "c", touchy, pg, tok);
 }
-const capLines = (c, G, cap) => { const d = G.d, dv = DEV[d.dev], f = LF(dv.sec), B = d.status, lh = dv.sec * d.ts * 1.3, say = d.foot ? cap.sub || "" : [cap.sub, ...capPlan(cap).map((q) => q.t + (q.caps.length ? " " + q.caps.join(" ") : ""))].filter(Boolean).join(" · "), ls = lines(mOf(c), f, say, B.w, Math.max(1, Math.floor((B.h + 1) / lh))); return ls.map((q, i) => ({s: q, f, px: dv.sec, x: B.x, y: B.y + B.h - (ls.length - i - 0.5) * lh, w: W(mOf(c), f, q), col: cap.warn ? CONST.cor : CONST.t2})); };
+/* listening (Task 9.10, the -capture frames): the in-use plaque, what happens when the pressed input already does another action, with the swap
+   line the page would say. Desk: under the drawing, over the rule's place, the head, the mock's sentence and the line; the drawing gives up the
+   height. Phone: the short head and the line's two halves beside a controller (p-05-capture), under a keyboard (a wide drawing). None where the
+   drawing would keep too little room or a word would not fit whole. {box, art (the drawing's box left), lines}. */
+const useMemo = new Map();
+function inUsePlan(c, G, s, row) {
+  const d = G.d, A = d.art, ex = inUseLine(s, row.id), ts = d.ts;
+  if (!A || !ex) return null;
+  const k = JSON.stringify([s.tab, ex, A, d.rule, d.mode, ts]);
+  if (useMemo.has(k)) return useMemo.get(k);
+  const mc = mOf(c), out = [], put = (ls, f, px, lh, col, role, x, y) => { ls.forEach((q, i) => out.push({s: q, f, px, x, y: y + (i + 0.5) * lh, w: W(mc, f, q), col, role})); return y + ls.length * lh; };
+  let U = null;
+  if (d.pane && d.rule) {
+    const dv = DEV.d, pad = 16, iw = A.w - 2 * pad, fh = LF(dv.pri), fb = T.body(dv.bod), fe = LF(dv.sec), lh = [dv.pri * ts * 1.25, dv.bod * ts * 1.4, dv.sec * ts * 1.35];
+    const L = [wrap(mc, fh, s.tab === "key" ? CW.IN_USE_KEY : CW.IN_USE, iw, 2), wrap(mc, fb, CW.SWAPS, iw, 3), wrap(mc, fe, ex, iw, 2)];
+    if (L.every(Boolean)) {
+      const h = 12 + L[0].length * lh[0] + 4 + L[1].length * lh[1] + 4 + L[2].length * lh[2] + 12, y = d.rule.y + d.rule.h - h, art = R(A.x, A.y, A.w, y - 10 - A.y);
+      if (art.h >= 160) {
+        let ty = put(L[0], fh, dv.pri, lh[0], CONST.ink, "primary", A.x + pad, y + 12) + 4;
+        ty = put(L[1], fb, dv.bod, lh[1], CONST.t2, "body", A.x + pad, ty) + 4;
+        put(L[2], fe, dv.sec, lh[2], CONST.t2, "secondary", A.x + pad, ty);
+        U = {box: R(A.x, y, A.w, h), art, lines: out};
+      }
+    }
+  } else if (d.dev === "p") {
+    const dv = DEV.p, f = LF(dv.sec), lh = dv.sec * ts * 1.3, parts = [CW.IN_USE_SHORT, ...ex.split(" · ")], side = s.tab !== "key";
+    for (const k0 of side ? [0.4, 0.46, 0.52] : [1]) {
+      const pw = side ? Math.min(Math.round(A.w * k0), 220) : A.w, L = parts.map((q) => wrap(mc, f, q, pw - 24, 3));
+      if (!L.every(Boolean)) continue;
+      const h = 12 + L.reduce((a, q) => a + q.length * lh, 0) + (L.length - 1) * 4 + 12, box = side ? R(A.x + A.w - pw, A.y + (A.h - h) / 2, pw, h) : R(A.x, A.y + A.h - h, A.w, h);
+      const art = side ? R(A.x, A.y, A.w - pw - 10, A.h) : R(A.x, A.y, A.w, A.h - h - 10);
+      if (h > A.h || art.w < 150 || art.h < 60) continue;
+      let ty = box.y + 12;
+      L.forEach((q, i) => { ty = put(q, f, dv.sec, lh, i ? CONST.t2 : CONST.ink, "secondary", box.x + 12, ty) + 4; });
+      out.length = out.length; U = {box, art, lines: out};
+      break;
+    }
+  }
+  if (useMemo.size > 32) useMemo.clear();
+  useMemo.set(k, U);
+  return U;
+}
+const capLines = (c, G, cap) => { const d = G.d, dv = DEV[d.dev], f = LF(dv.sec), B = d.status, lh = dv.sec * d.ts * 1.3, say = d.foot && capFoot(c, G, cap) ? cap.sub || "" : [cap.sub, ...capPlan(cap).map((q) => q.t + (q.caps.length ? " " + q.caps.join(" ") : ""))].filter(Boolean).join(" · "), ls = lines(mOf(c), f, say, B.w, Math.max(1, Math.floor((B.h + 1) / lh))); return ls.map((q, i) => ({s: q, f, px: dv.sec, x: B.x, y: B.y + B.h - (ls.length - i - 0.5) * lh, w: W(mOf(c), f, q), col: cap.warn ? CONST.cor : CONST.t2})); };
 const capFoot = (c, G, cap) => { const d = G.d; if (!d.foot) return null; const k = JSON.stringify(["cap", cap.foot, d.foot, d.ts]); if (!footMemo.has(k)) footMemo.set(k, footPlan(mOf(c), d.foot, capPlan(cap), DEV.d, d.foot.h >= 88 ? 2 : 1)); return footMemo.get(k); };
 /** The adapter the shell and the tests call with a menudraw layout: the frame of L (layout(W, H, lg, css)) on a touch layout or not. */
 export const frameOfL = (L, touch, o = {}) => ({W: L.W, H: L.H, touch: !!touch, shell: !!L.shell, css: L.css, ...o});
