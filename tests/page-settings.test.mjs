@@ -29,7 +29,7 @@ const { shellGeo, fitBox, stageCss } = await import("../src/app/fit.js");
 const { overlayBox } = await import("../src/render/scenes.js");
 const SV = await import("../src/render/shellview.js");
 const { BOOT, LOOK_LATER } = await import("../src/pwa/shell.js");
-const { SCREENS } = await import("../tools/ui/lib/screens.mjs");
+const { SCREENS, needFor } = await import("../tools/ui/lib/screens.mjs"); // a capture's need is needFor's (R2 carry-in: scoped and exemptIfNo exemptions)
 
 /* ---- the LOADING plate: before the module is in, the entry names paint one plate and tap nothing (synchronously, before any await) ---- */
 {
@@ -118,7 +118,9 @@ check("CAMERA and BRIGHTNESS exist only in the twelve", !P.settingsGeom(BOX.d136
   const Q = P.settingsGeom(BOX.p393, R12), css = (r) => r.h * PG.s;
   check("phone: one column in CSS px, a BACK key beside the title, rows 44 CSS px 8 apart (the mock's 52 pitch), one page, the foot under the plate", Q.mode === "phone" && !!Q.back && Q.pages.length === 1 && R12.every((l) => near(css(Q.rows[l]), 44, 0.01)) && near((Q.rows.SFX.y - Q.rows.MUSIC.y) * PG.s, 52, 0.01) && Q.d.foot.y > Q.d.plate.y + Q.d.plate.h, J(R12.map((l) => css(Q.rows[l]))));
   check("phone: the BACK key is >= 44 CSS px and >= 8 CSS px above the first row", css(Q.back) >= 44 && (Q.rows.MUSIC.y - Q.back.y - Q.back.h) * PG.s >= 8);
-  for (const b of ["c600", "iso", "pauseK", "pauseT"]) { const C = P.settingsGeom(BOX[b], R12); check(`#c box (${b}): the single column, plate and ring inside`, C.mode === "col" && C.u <= 1 && C.plate.x - C.T >= 0 && C.plate.y - C.T >= 0 && C.plate.x + C.plate.w + C.T <= BOX[b].W + 0.5 && C.plate.y + C.plate.h + C.T <= BOX[b].H + 0.5, J([C.u, C.plate])); }
+  for (const b of ["c600", "iso", "pauseK"]) { const C = P.settingsGeom(BOX[b], R12); check(`#c box (${b}): the single column, plate and ring inside`, C.mode === "col" && C.u <= 1 && C.plate.x - C.T >= 0 && C.plate.y - C.T >= 0 && C.plate.x + C.plate.w + C.T <= BOX[b].W + 0.5 && C.plate.y + C.plate.h + C.T <= BOX[b].H + 0.5, J([C.u, C.plate])); }
+  { const C = P.settingsGeom(BOX.pauseT, R12), F = BOX.pauseT; // R2 carry-in: a touch PAUSE view takes the phone's CSS px column (44 / 8 CSS px rows, paged), never the scaled column
+    check("#c box (pauseT): the phone column at 1 design px per CSS px, plate and ring inside the pause band (y 44 .. H - 8)", C.mode === "phone" && Math.abs(C.u - 1 / F.css) < 1e-9 && C.plate.x - C.T >= 0 && C.plate.y - C.T >= 44 - 0.01 && C.plate.x + C.plate.w + C.T <= F.W + 0.5 && C.plate.y + C.plate.h + C.T <= F.H - 8 + 0.5, J([C.mode, C.u, C.plate])); }
   /* R1 landscape: a TOUCH board canvas (#c with no shell box: the landscape phones) takes the phone's column in CSS px (u = 1 / css, never scaled
      under the floors), a BACK key beside the title, paged; plate and ring inside */
   for (const b of ["c600t", "c852", "c667"]) { const C = P.settingsGeom(BOX[b], R12), F = BOX[b], y1 = F.paused ? F.H - 8 : F.H; check(`touch #c box (${b}): the phone column at 1 / css, a BACK key, plate and ring inside`, C.mode === "phone" && Math.abs(C.u * F.css - 1) < 1e-9 && !!C.back && C.plate.x - C.T >= 0 && C.plate.y - C.T >= (F.paused ? 44 : 0) && C.plate.x + C.plate.w + C.T <= F.W + 0.5 && C.plate.y + C.plate.h + C.T <= y1 + 0.5, J([C.u, C.plate])); }
@@ -398,7 +400,7 @@ for (const pv of [1, 2]) {
   check("GRAPHICS: steady 0 misses, a cursor move 0 misses, <= 400 calls", ga.miss === 0 && gm.every((m) => m.miss === 0 && m.calls.length <= 400), J(gm.map((m) => [m.miss, m.calls.length])));
   check("the bytes stay inside the 24 MiB budget with the room", cache._dbg.bytes <= cache.BUDGET, cache._dbg.bytes);
   /* fix round 1: the phone column (dpr 3) and a PAUSE view on a phone's #c (paged, dpr 2), steady and on a cursor move over every row */
-  for (const [nm, F, dpr] of [["phone 393x852", BOX.p393, 3], ["PAUSE on a phone's #c", BOX.pauseT, 2], ["360x640 phone (paged)", BOX.p360, 3]]) {
+  for (const [nm, F, dpr] of [["phone 393x852", BOX.p393, 3], ["PAUSE on a phone's #c", BOX.pauseT, 0.63 * 3 /* its real backing: 0.63 CSS px per box unit on a DPR 3 phone */], ["360x640 phone (paged)", BOX.p360, 3]]) {
     fresh();
     const cx = rec({ widthK: K8 }); cx.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const once = (ui) => { const n0 = cx.calls.length, m0 = cache._dbg.misses; P.drawSettingsPage(cx.ctx, F, ui, 5); const calls = cx.calls.slice(n0); return { calls, miss: cache._dbg.misses - m0, measure: calls.filter((c) => c.op === "measureText").length, hash: hashOf(calls) }; };
@@ -442,7 +444,8 @@ check("shellCovers: SETTINGS and GRAPHICS (and MENU), never GAME", SV.shellCover
   probe.setOn(false);
   check("GRAPHICS: the page holding FPS METER declares its rocker's chosen pair on every box (desk, phone, the landscape column's last page)", bad.length === 0, bad.join(" | "));
 }
-check("tools/ui screens: options and graphics exempt only what they have none of (ring: no key takes focus; graphics locked: REAL 3D locks no row; graphics chosen: SETTINGS' exemptIfNo, only where no two-state part is drawn, R1 cohesion 12)", !SCREENS.options.need.includes("ring") && !SCREENS.graphics.need.includes("ring") && !SCREENS.graphics.need.includes("locked") && SCREENS.options.need.includes("chosen") && SCREENS.graphics.need.includes("chosen") && !(SCREENS.graphics.exempt || {}).chosen && SCREENS.graphics.exemptIfNo && SCREENS.graphics.exemptIfNo.chosen.rect === SCREENS.options.exemptIfNo.chosen.rect && /FPS METER/.test(SCREENS.graphics.exemptIfNo.chosen.why) && ["band", "info", "text", "cap", "inside", "plate", "yellow", "touch", "gap"].every((g) => SCREENS.graphics.need.includes(g)));
+const TWO = { flags: {}, ui: { rects: [{ name: "two-state FPS METER" }] } }; // a desk capture that draws a two-state part
+check("tools/ui screens: options and graphics exempt only what they have none of (ring: no key takes focus; graphics locked: REAL 3D locks no row; graphics chosen: SETTINGS' exemptIfNo, only where no two-state part is drawn, R1 cohesion 12)", !needFor(SCREENS.options, TWO).includes("ring") && !needFor(SCREENS.graphics, TWO).includes("ring") && !needFor(SCREENS.graphics, TWO).includes("locked") && needFor(SCREENS.options, TWO).includes("chosen") && needFor(SCREENS.graphics, TWO).includes("chosen") && !(SCREENS.graphics.exempt || {}).chosen && SCREENS.graphics.exemptIfNo && SCREENS.graphics.exemptIfNo.chosen.rect === SCREENS.options.exemptIfNo.chosen.rect && /FPS METER/.test(SCREENS.graphics.exemptIfNo.chosen.why) && ["band", "info", "text", "cap", "inside", "plate", "yellow", "touch", "gap"].every((g) => needFor(SCREENS.graphics, TWO).includes(g)));
 
 /* ---- a box with no canvas source or no clip: the plan only, no throw ---- */
 {

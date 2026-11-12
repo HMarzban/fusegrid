@@ -32,7 +32,7 @@ const { setHints } = await import("../src/render/hintcopy.js");
 const { wordsOf } = await import("../src/app/hints.js");
 const { DEF_CONTROLS } = await import("../src/app/controls.js");
 const SV = await import("../src/render/shellview.js");
-const { SCREENS } = await import("../tools/ui/lib/screens.mjs");
+const { SCREENS, needFor } = await import("../tools/ui/lib/screens.mjs"); // a capture's need is needFor's (R2 carry-in: scoped and exemptIfNo exemptions)
 
 const PG = shellGeo(393, 852);
 const BOX = {
@@ -454,7 +454,7 @@ logo._dbg.on = true;
     check(`probe (${b}): band, ring and info pairs; a text for every row label and teaser, each with its colour`, kinds.has("band") && kinds.has("ring") && kinds.has("info") && ITEMS.every((l) => texts.includes(l)) && s.texts.every((t) => !!t.col), J([...kinds]));
   }
   const m = SCREENS.menu;
-  check("screens.mjs menu row: exempts chosen and locked with a reason each; needs band, ring, info, text, cap, inside, plate, yellow, touch, gap", J(Object.keys(m.exempt).sort()) === J(["chosen", "locked"]) && Object.values(m.exempt).every((v) => v.length > 10) && ["band", "ring", "info", "text", "cap", "inside", "plate", "yellow", "touch", "gap"].every((g) => m.need.includes(g)));
+  check("screens.mjs menu row: exempts chosen and locked with a reason each; needs band, ring, info, text, cap, inside, plate, yellow, touch, gap", J(Object.keys(m.exempt).sort()) === J(["chosen", "locked"]) && Object.values(m.exempt).every((v) => v.length > 10) && ["band", "ring", "info", "text", "cap", "inside", "plate", "yellow", "touch", "gap"].every((g) => needFor(m, { flags: {} }).includes(g)));
 }
 
 /* ---- the source: no filters, no pixel reads, imports ---- */

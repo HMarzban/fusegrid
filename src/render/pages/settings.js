@@ -144,11 +144,11 @@ function col(F, rows, ts, fl, help) {
 }
 /* phone: the column in CSS px. Also every touch board canvas (#c with no shell box: a landscape phone; R1 landscape, land): there it
    pages where the rows do not fit (the kit pager's strip under them) and, paged, drops the foot: the BACK key beside the title keeps the way back, so
-   the strip holds only PAGE n OF m and its keys (a PAUSE view keeps its column) */
+   the strip holds only PAGE n OF m and its keys; a PAUSE view on a touch #c takes it too, inside the pause band (R2 carry-in) */
 function phone(F, rows, ts, help, land) {
   let P = PHONE[big(ts) ? "p125" : "p"];
   const css = F.css > 0 ? F.css : 1, hh = help ? helpH("p", ts) : 0, u = 1 / css, Hd = F.H / u, Wd = F.W / u;
-  const b0 = 0, Hb = Hd, footH = P.fgap + FOOT1 + 4;
+  const [pb0, pb1] = F.paused ? pauseBand(F) : [0, F.H], b0 = pb0 / u, Hb = (pb1 - pb0) / u, footH = P.fgap + FOOT1 + 4; // a PAUSE view: inside the pause band
   const fixedOf = (q) => q.top + q.pad[0] + DEV.p.btnh + q.below + hh + q.pad[2] + footH + q.bot, S = run(rows, TOUCH.h, P.grp, TOUCH, 1); // 44 CSS px rows 8 apart: the mock's 52 pitch
   const capOf = (q) => Hb - fixedOf(q) + (land ? footH : 0) - 8 - keySide(css, u);
   if (land && fixedOf(P) + S.h > Hb && capOf(P) < S.hs[0]) P = {...P, ...LAND_TIGHT}; // a page short of one row: the margins and pads close first
@@ -171,11 +171,12 @@ function geom(F, rows, page) {
   let G = memo.get(id);
   if (G) return G;
   const fl = touchy ? {h: TOUCH.h / css, g: TOUCH.g / css} : null;
-  const land = touchy && !shell && !paused; // a touch board canvas (#c, a landscape phone): the phone's CSS px column, paged, never scaled under the floors (R1 landscape; a PAUSE view keeps its column)
+  const land = touchy && !shell; // a touch board canvas (#c: a landscape phone, any touch PAUSE view): the phone's CSS px column, paged, never scaled under the floors (R1 landscape; PAUSE views since R2)
   const ph = (q) => phone(q, rows, ts, page === "graphics", land);
   let d = isPhone || land ? ph(F) : paused ? null : desk(F, rows, ts, fl);
   /* a board canvas too small for even one row a page at its CSS scale (a 568 x 320 phone): the column scales as one piece, the one give-way left */
-  for (let i = 0, k = 1; land && i < 16 && (d.plate.y + d.plate.h + d.T) * d.u > F.H + 0.5; i++) d = ph({...F, css: css / (k *= 0.96)});
+  const bot = paused ? pauseBand(F)[1] : F.H;
+  for (let i = 0, k = 1; land && i < 16 && (d.plate.y + d.plate.h + d.T) * d.u > bot + 0.5; i++) d = ph({...F, css: css / (k *= 0.96)});
   if (!d || (!isPhone && !(d.u >= DESK_U))) d = col({...F, touch: touchy, paused}, rows, ts, fl, page === "graphics"); // the desk's part sizes: a col row is the desk's height or the touch floor, never under a part
   const u = d.u, ks = d.keys;
   G = {page, mode: d.mode, dev: d.dev, u, ts, t125: big(ts), W: F.W, H: F.H, d, T: d.T * u, order: rows.slice(), plate: sc(d.plate, u), pane: sc(d.pane, u), back: sc(d.back, u),

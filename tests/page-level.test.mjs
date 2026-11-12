@@ -33,7 +33,7 @@ const { setHints } = await import("../src/render/hintcopy.js");
 const { wordsOf } = await import("../src/app/hints.js");
 const { DEF_CONTROLS } = await import("../src/app/controls.js");
 const SV = await import("../src/render/shellview.js");
-const { SCREENS } = await import("../tools/ui/lib/screens.mjs");
+const { SCREENS, needFor } = await import("../tools/ui/lib/screens.mjs"); // a capture's need is needFor's (R2 carry-in: scoped and exemptIfNo exemptions)
 const { PACT } = await import("../src/core/pact.js");
 const { FOES } = await import("../src/core/entities.js");
 
@@ -520,7 +520,7 @@ for (const [b, dpr] of [["d1366", 2], ["p393", 2.7], ["d1024", 2]]) for (const t
   setTextScale(1);
   check("chosen pairs at every text scale (ruling (a)): the level course, DIFFICULTY and GAME SPEED declared at 1 and 1.25 (a paged compact: the banks on their own page)", miss.length === 0, miss.join(" | "));
   const m = SCREENS.level;
-  check("screens.mjs level row: exempts ring and locked, each with a reason; needs chosen, band, info, text, cap, inside, plate, yellow, touch, gap", J(Object.keys(m.exempt).sort()) === J(["locked", "ring"]) && Object.values(m.exempt).every((v) => v.length > 20) && ["chosen", "band", "info", "text", "cap", "inside", "plate", "yellow", "touch", "gap"].every((g) => m.need.includes(g)));
+  check("screens.mjs level row: exempts ring and locked, each with a reason; needs chosen, band, info, text, cap, inside, plate, yellow, touch, gap", J(Object.keys(m.exempt).sort()) === J(["locked", "ring"]) && Object.values(m.exempt).every((v) => v.length > 20) && ["chosen", "band", "info", "text", "cap", "inside", "plate", "yellow", "touch", "gap"].every((g) => needFor(m, { flags: {} }).includes(g)));
 }
 
 /* ---- the source ---- */

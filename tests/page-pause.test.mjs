@@ -28,7 +28,7 @@ const { fitBox } = await import("../src/app/fit.js");
 const { setHints } = await import("../src/render/hintcopy.js");
 const { wordsOf } = await import("../src/app/hints.js");
 const { DEF_CONTROLS } = await import("../src/app/controls.js");
-const { SCREENS } = await import("../tools/ui/lib/screens.mjs");
+const { SCREENS, needFor } = await import("../tools/ui/lib/screens.mjs"); // a capture's need is needFor's (R2 carry-in: scoped and exemptIfNo exemptions)
 
 P.setMeasure(rec({ widthK: K8 }).ctx); // the page plans on its own measuring context: here the recorder's 8 % wide one, so every fit below is checked against wider text than the plan's
 const B2 = S.overlayBox("2d"), BI = S.overlayBox("iso");
@@ -218,7 +218,7 @@ for (const ts of [1, 1.25]) {
     rows.every((r) => r && r.touch && r.set === "pause" && !r.kind) && yel.length === 1 && yel[0].name === "RESUME", J(s.rects));
   check("probe: the focus band and ring pairs on the focused row, text roles and colours for every string", s.pairs.some((p) => p.kind === "band") && s.pairs.some((p) => p.kind === "ring") && s.texts.length >= 6 && s.texts.every((t) => t.col && t.role));
   const row = SCREENS.pause;
-  check("tools/ui screens: PAUSE exempts only what it has none of (chosen, locked), each with a reason", row && !row.need.includes("chosen") && !row.need.includes("locked") && ["band", "ring", "info", "text", "cap", "inside", "plate", "yellow", "touch", "gap"].every((g) => row.need.includes(g)), J(row && row.need));
+  check("tools/ui screens: PAUSE exempts only what it has none of (chosen, locked), each with a reason", row && !needFor(row, { flags: {} }).includes("chosen") && !needFor(row, { flags: {} }).includes("locked") && ["band", "ring", "info", "text", "cap", "inside", "plate", "yellow", "touch", "gap"].every((g) => needFor(row, { flags: {} }).includes(g)), J(row && needFor(row, { flags: {} })));
 }
 console.log("\n  PAGE-PAUSE RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

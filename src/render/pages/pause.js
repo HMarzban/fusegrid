@@ -41,7 +41,7 @@ export const PZ = deep({
   p: {w: PAUSE_W_H, pad: [11, 14, 14, 14], top: 6, gap: 6, title: 26, below: 24, below125: 26, hero: PAUSE_HERO_H, row: PAUSE_ROW_H, heroGap: 12, div: 19, rowGap: 9, footTop: 14, gs: 18, tileGap: 12, gridMax: 560},
 });
 /* the touch floors in CSS px (44 x 44, 8 apart), and the row floor the plan holds: 45, since #c's 1 px border leaves its content box ~0.5 %
-   under the stage scale (canvas.css) on a phone; the box rows the plate keeps clear (the HUD band ends at 40, the ability bar starts at 486);
+   under the stage scale (canvas.css) on a phone; the box rows the plate keeps clear (CLEAR: the HUD band, y < 42, and the ability bar, y >= H - 38, 482 on a 520 box);
    MARGIN past the ring */
 export const TOUCH = Object.freeze({h: 44, g: 8, row: 45});
 export const CLEAR = Object.freeze({top: 42, bot: 38, short: 6});

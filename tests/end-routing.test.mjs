@@ -172,9 +172,11 @@ const drawnClear = () => { const cv = mkCv(mctxOf()), g = run(cv); clearRoom(g);
   check("tap the drawn TRY AGAIN -> a new run at level 1", g.world.state === "PLAY" && g.world.level === 1 && g.app.screen === SCREEN.GAME, g.world.state + "/" + g.world.level);
 }
 {
-  const { cv, g, D } = drawnLose();
+  const { cv, g, D } = drawnLose(), feels = [], f0 = g.app._feel.bind(g.app);
+  g.app._feel = (n) => (feels.push(n), f0(n));
   tapKey(cv, g, D.keys.menu); g.tick(5);
   check("tap the drawn MENU on GAME OVER -> MENU", g.app.screen === SCREEN.MENU && g.world.state === "MENU", g.app.screen + "/" + g.world.state);
+  check("tap the drawn MENU on GAME OVER plays the back feel, as Esc and EAST do (R2 carry-in)", feels.includes("back"), J(feels));
 }
 for (const [n, label] of [["copy", "COPY RESULT"], ["map", "COPY MAP"]]) {
   const { cv, g, D } = drawnLose(), n0 = copied.length;

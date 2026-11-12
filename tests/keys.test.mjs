@@ -1435,6 +1435,9 @@ for (const code of ["Space", "Enter"]) {
     });
   }
 
+  { const g = pRun(); g.world.state = "LOSE"; g.tick(); const feels = [], f0 = g.app._feel.bind(g.app); g.app._feel = (n) => (feels.push(n), f0(n)); // R2 carry-in
+    tap(g, "E");
+    check("pad: EAST at GAME OVER goes to MENU with the back feel (R19: the PAUSE quit's)", g.app.screen === SCREEN.MENU && feels.includes("back"), JSON.stringify(feels)); }
   { const g = page("LEVEL SELECT")(); const p0 = g.app.pace;
     tap(g, "SHR"); const p1 = g.app.pace; tap(g, "SHL");
     check("pad: L/R SHOULDER move PACE on LEVEL SELECT", p1 === Math.min(1, p0 + 1) && g.app.pace === Math.max(-1, p1 - 1), p0 + ">" + p1 + ">" + g.app.pace); }
