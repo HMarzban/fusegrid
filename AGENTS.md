@@ -216,12 +216,12 @@ band + 3px notch + caret; `danger` rows select red). Labels are system-ui
 sans (OS-dependent, owner-accepted), values / tags / hints mono. Lists go
 through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box). MENU is on the world kit since UI upgrade Task 3.1 (MENU page, below). Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v205` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v206` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v205", the running build,
+as `rev`) and `update.js` (the card's "You are on v206", the running build,
 never a guessed next one) — never a second literal. The desk MENU's foot ends
-`| v205`; the phone column carries it as SOURCE's teaser (the round 7 frame);
-SETTINGS keeps its `BUILD v205` kicker. Never on the HUD.
+`| v206`; the phone column carries it as SOURCE's teaser (the round 7 frame);
+SETTINGS keeps its `BUILD v206` kicker. Never on the HUD.
 PAUSE is on the world kit since UI upgrade Task 5.1 (`src/render/pages/pause.js`, boot; `scenes.js` re-exports `PAUSE_ROWS`, `PAUSE_SHAPE`,
 `PAUSE_ROW_H` / `_D`, `pauseGeom`, `pauseHit`, `pauseKick`, `pauseKickers` / `pauseKicker`; the round 7 S7-pages 10-pause frame). It stays on `#c`
 over the frozen board in all three looks, through the one painter `drawPause` that `drawOverlay`'s PAUSE branch calls (view 0 only; views 1-3
@@ -418,7 +418,7 @@ MENU page (UI upgrade v202 Task 3.1, `src/render/pages/menu.js`; the round 7 S7-
 key (bare bomb + 3 px cream ring when focused); the doors are keys, a focused one wears the kit `band` + bomb + ring; no cord or spark but the logo's.
 Desk (every keyboard box; the 1366 x 768 frame at 1 box unit per CSS px): the logo in the plate's header, a 480 list (PLAY 64,
 doors 46, 8 px pitch, 24 px breaks after PLAY and before GUIDE; 125 %: 520, 72, 49) beside the next-run card (Task 3.2, below), the foot under
-the plate (`MOVE ▲▼ · START ENTER | v205`, label first, keycap last; the verb follows focus: START on PLAY, OPEN on a door, and with a controller
+the plate (`MOVE ▲▼ · START ENTER | v206`, label first, keycap last; the verb follows focus: START on PLAY, OPEN on a door, and with a controller
 on SOURCE `NEEDS A CLICK OR ENTER`, no keycap; a touch layout reads `TAP A ROW`; a note leads it, the controller's signpost replaces it in cream).
 Phone and compact have no foot: while a controller drives, SOURCE's teaser leads with `NEEDS A CLICK OR ENTER` (step-down `CLICK OR ENTER`, words.js
 `SOURCE_PAD_SHORT`; R1 cohesion 11), cream, before the signpost and the build tag.
@@ -1677,6 +1677,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; the tile boards were `?gen=3` only from v188 to v197).
+- Release state (2026-11-12): shell **v206** (UI upgrade release R4: the HUD on the world kit (`src/render/hud.js` on `#hud`, off the board: seven labelled chips and the power-ups bar), the phone touch strip and tile tips; CLASSIC call-log pins re-pinned by ruling to `238a30af:71940` / `cef5c020:70998`, the old log minus its HUD tail only) is PREPARED as a local release commit on `feature/ui-upgrade` on top of R3 (v205). NOT LIVE: the owner pushes. Owner acceptance U15 OPEN; trimmed gate check (CLASSIC 2D, world 1, desktop and phone: play, hud). `hudart.js` now boots with the HUD (boot graph 122 files, PIXEL tree 28). Rollback: revert the release commit and bump `CACHE_NAME` / `REV` again.
 - Release state (2026-11-12): shell **v205** (UI upgrade release R3: CONTROLS art, the controller and keyboard drawings with callouts in the world's brick (`padart.js`, `controlsgeo.js`), and logo B in PIXEL and REAL 3D (`pixel/logo.js`, `logo/draw3d.js`)) is PREPARED as a local release commit on `feature/ui-upgrade` on top of R2 (v204). NOT LIVE: the owner pushes. Owner acceptance U12–U13 OPEN; trimmed gate check (CLASSIC 2D, world 1, desktop and phone: title, menu, the four CONTROLS captures; CONTROLS records no probe data, so its gates read n/a by its row's exemption). Rollback: revert the release commit and bump `CACHE_NAME` / `REV` again.
 - Release state (2026-11-12): shell **v204** (UI upgrade release R2: PAUSE on the world kit (`pages/pause.js`), the run ends WIN / FINALE / GAME OVER as their own lazy pages (`pages/endwin.js`, `endlose.js`, `endgeom.js`, `endkit.js`) through the one LOADING plate, PAUSE views on a touch #c on the phone column) is PREPARED as a local release commit on `feature/ui-upgrade` on top of R1 (v203). NOT LIVE: the owner pushes. Owner acceptance U8–U11 OPEN; release gate check trimmed (CLASSIC 2D, world 1, desktop and phone, the R2 screens only; the full matrix, perf and headed checks deferred to the owner's device checks). Rollback: revert the release commit and bump `CACHE_NAME` / `REV` again.
 - Release state (2026-11-12): shell **v203** (UI upgrade release R1: the world kit menus, MENU's seven rows and next-run card, LEVEL SELECT rows, SETTINGS / GRAPHICS, GUIDE with FLOOR, RECORDS (SCORES · STATS · MEDALS), the cards, the player-word renames, logo B in CLASSIC 2D; plan `docs/superpowers/plans/2026-11-10-ui-upgrade-v202.md`, perf record `docs/superpowers/specs/2026-11-10-ui-upgrade-v202-perf.md` "R1 (v203)") is PREPARED as a local release commit on `feature/ui-upgrade`. It is NOT LIVE: the owner pushes after squashing `feature/delivery` (v202 is reserved for that squash). Owner checks U1–U7, U14, U15 (real phone, real controller) are OPEN. Owner decision before the push: boot growth +222 KB raw (+86 KB gzip) vs v201's c4e7598 against the plan's +60 KB (option: LEVEL SELECT lazy with idle preload, ~58 KB raw). Rollback: revert the release commit and bump `CACHE_NAME` / `REV` again.

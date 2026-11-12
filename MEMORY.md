@@ -24,6 +24,9 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-07 — v201 pushed: controller play, rebinding, CONTROLS page
 - Owner: "make it ready and push it up", a day before the planned Sunday. Released as one squashed commit on `origin/main`'s v200 tip (`feature/controls` and `feature/delivery` are never pushed); CHANGELOG and sitemap dated 2026-11-07; the brand of the test controller left the tracked docs (A5). 578 tests; the stubbed-pad browser pass re-run on the release tree, its leftover fails all stale against `e1384f5` or timing (record's go/no-go). M1-M7 ship open by the owner's call. The new share card (`og.png` + alt text) ships beside it as its own commit; the owner re-uploads Social preview by hand.
+## 2026-11-12 — Release R4 (shell v206) prepared locally (feature/ui-upgrade)
+- Merged lane 8 HUD onto R3; CLASSIC pins 238a30af:71940 / cef5c020:70998 equal the lane's ruling (R3->R4 log: same prefix, 491 / 505 HUD calls removed, 0 added); carry-ins: TRAP short tip hazard, fx.js comment, foefade3d bound 56 (measured 58.35), REMOTE word test at 393x852; hudart.js now boots with hud.js. Trimmed gates 0 fail; U15 open.
+
 ## 2026-11-12 — Release R3 (shell v205) prepared locally (feature/ui-upgrade)
 - Merged lanes 6 CONTROLS art + 7.3 logo looks onto R2 (bookkeeping conflicts only; loader pins REAL 3D 21, PIXEL 29; px tree 175.3 KB); carry-in: PIXEL logo is 9,148 B. Trimmed gates 0 fail (CONTROLS n/a: no probe); U12-U13 open.
 
@@ -110,6 +113,7 @@ Locked floor sample now mapped to the box (endkit `rpair` transforms `o.floor`; 
 
 ## 2026-11-11 — UI upgrade Task 7.3: logo B in PIXEL and REAL 3D (held lane, R3)
 - Look seam in `logo/draw2d.js` (`setLogoLook` from shellview, `registerLogo` from `pixel/logo.js` and `logo/draw3d.js`); title and MENU gated in Chrome (logo faces as locked info pairs). PIXEL logo 9,148 B (pixel/logo.js 7,398 + art/logo.js 1,750; R3 carry-in, was misstated 8,858) inside its 9 KB sub-budget (lead ruling); the REAL 3D loading bar counts and warms draw3d.js (fix round 1). Open: O3 owner checkpoint
+
 ## 2026-11-11 — UI upgrade Task 8.3: phone touch strip and tile tips (lane-8-hud, held for R4)
 - The HUD paints the round 5 strip (D-PAD keys, yellow BOMB, THROW / REMOTE halves while held, PAUSE in the grid) under transparent DOM hit areas; `#tpause` docked on its key; floor-tile tips leave the board for a plate on a leader beside it (`scenes.js` `boardTip`, REAL 3D `renderer.proj`); HUD static parts are cache layers (< 400 calls a phone repaint). Open: owner checkpoint O4 on a real phone.
 

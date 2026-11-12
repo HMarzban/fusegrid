@@ -15,6 +15,30 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v206 · 2026-11-12
+
+The HUD leaves the board and joins the world.
+
+### Added
+
+- **A new HUD.** Seven labelled chips (LIVES, BOMBS, FLAME, LEVEL, ENEMIES, TIME, SCORE) and your power-ups bar sit off the
+  board, in the level's own frame: one row above the board on a desktop, a grid on a phone, the gutters on a landscape phone.
+  TIME shows the room clock in every run.
+- **A phone touch strip.** The D-PAD as four keys, BOMB as the one yellow key, THROW and REMOTE keys while you hold them,
+  and a PAUSE key that reads RESUME while paused, every key at least 44 px.
+- **Floor-tile tips beside the board.** The first time you step on a tile its tip appears beside the board on a leader,
+  never over the play.
+
+### Changed
+
+- The old LV chip and difficulty token are gone from the board; LEVEL names the level.
+
+### Notes
+
+- **Rollback:** revert the release commit and bump `CACHE_NAME` (and `REV` in `sw.js`) again, so installed copies update.
+- **Checks were trimmed for this cut** (owner's call): PLAY and the HUD captured and gated in CLASSIC 2D, world 1, on a desktop
+  and a phone only. The other looks and worlds, the headed perf run and the walk-through are deferred to the owner's device checks (U15).
+
 ## shell v205 · 2026-11-12
 
 CONTROLS draws your real controls, and the title logo follows your art style.
