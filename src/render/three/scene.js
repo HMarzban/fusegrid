@@ -18,7 +18,7 @@ import {buildFeat} from "./featmesh.js";
 import {hasGates, createGateBars} from "./gatebars.js";
 import {gateBar} from "../../core/tilegate.js";
 import {wallCodes} from "../wallvar.js";
-import {RIM_TEX, nearX, NEAR_Z} from "./rimart.js";
+import {RIM_TEX} from "./rimart.js";
 import {createAmbient} from "./ambientfx.js";
 import {rimFX, floorFX, featAO, createAO} from "./wellfx.js";
 
@@ -81,12 +81,12 @@ function buildRim(biome,atlas){
   const oX=W/2+RIM_W-RIM_BEV, oZ=D/2+RIM_W-RIM_BEV;
   const iX=W/2-RIM_IN+RIM_BEV, iZ=D/2-RIM_IN+RIM_BEV;
   const shape=new THREE.Shape();
-  /* frame round: shape y = -world z, so the NEAR edge is y = -oZ. From
-     z = NEAR_Z the outer E / W edge leans in to nearX so the rim stays inside
-     the canvas at the near corners (tests: reach, symmetry, hole unchanged) */
-  const nX=nearX(biome.hWall)-RIM_BEV;
-  shape.moveTo(-nX,-oZ); shape.lineTo(nX,-oZ); shape.lineTo(oX,-NEAR_Z);
-  shape.lineTo(oX,oZ); shape.lineTo(-oX,oZ); shape.lineTo(-oX,-NEAR_Z); shape.closePath();
+  /* frame round: shape y = -world z, so the NEAR edge is y = -oZ. A plain
+     rectangle (Task 9.7): the near quarter of the E / W edge once leaned in to
+     keep the corners on the canvas at STANDARD, and pulled back that bend read
+     as a flared tray; the near corners bleed off at STANDARD instead (§4b) */
+  shape.moveTo(-oX,-oZ); shape.lineTo(oX,-oZ);
+  shape.lineTo(oX,oZ); shape.lineTo(-oX,oZ); shape.closePath();
   const hole=new THREE.Path();          // reverse winding => real hole
   hole.moveTo(-iX,-iZ); hole.lineTo(-iX,iZ); hole.lineTo(iX,iZ);
   hole.lineTo(iX,-iZ); hole.closePath();

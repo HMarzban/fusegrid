@@ -2076,6 +2076,23 @@ await sec("S4.E",async()=>{
     &&Math.abs(bb.max.x-(Wr/2+RIM_W))<1e-9
     &&Math.abs(bb.max.z-(Dr/2+RIM_W))<1e-9,
     bb.max.x+"/"+bb.max.z);
+  /* Task 9.7 (owner: "and look when camera is in far, this is wrong and fix"):
+     the near quarter of the E / W edge used to lean in to keep the corners on
+     the canvas at STANDARD; pulled back, that bend read as a flared tray. The
+     outer contour is the plain rectangle in every world. */
+  const bent=[];
+  for(let lv=1;lv<=8;lv++){
+    const wl=createWorld(76,lv); loadLevel(wl,lv,false);
+    const s8=buildScene(wl), r8=s8.group.children.find(o=>o.userData.tag==="trim");
+    const pts=r8.geometry.parameters.shapes.extractPoints(1).shape;
+    const oX=Wr/2+RIM_W-RIM_BEV, oZ=Dr/2+RIM_W-RIM_BEV;
+    const uniq=pts.filter((p,i)=>i===0||p.distanceTo(pts[i-1])>1e-9).filter((p,i,a)=>i<a.length-1||p.distanceTo(a[0])>1e-9);
+    if(uniq.length!==4||!uniq.every(p=>Math.abs(Math.abs(p.x)-oX)<1e-9&&Math.abs(Math.abs(p.y)-oZ)<1e-9))
+      bent.push(BIOMES[lv-1].name+":"+uniq.map(p=>p.x.toFixed(1)+","+p.y.toFixed(1)).join(" "));
+    disposeGroup(s8.group);
+  }
+  check("S4.E rim's outer contour is the plain rectangle in all 8 worlds (no near-corner taper)",
+    bent.length===0, bent.join(" | "));
   check("S4.E rim caps the wall ring RIM_LIP above wall top, tinted DOWN",
     Math.abs(bb.max.y-(biome.hWall+RIM_LIP))<1e-9
     &&Math.abs(bb.min.y+RIM_BEV)<1e-9

@@ -33,6 +33,11 @@ The HUD leaves the board and joins the world.
 
 - The old LV chip and difficulty token are gone from the board; LEVEL names the level.
 
+### Fixed
+
+- **REAL 3D: the cabinet stays a straight rampart when you pull the camera back.** Its near corners no longer lean in,
+  so at WIDE, FAR or a full zoom-out the board's frame is a plain box, not a bent, flared tray.
+
 ### Notes
 
 - **Rollback:** revert the release commit and bump `CACHE_NAME` (and `REV` in `sw.js`) again, so installed copies update.

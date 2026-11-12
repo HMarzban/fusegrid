@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — Task 9.7: REAL 3D cabinet rim is a plain rectangle again
+- Owner: "and look when camera is in far, this is wrong and fix". The rim's near-corner taper (nearX / NEAR_Z, 3f36d02) bent the E / W outline ~7 deg at z 100, invisible at STANDARD, a flared tray at FAR / DIST_MAX; removed (scene.js shape, rimart.js corner bosses), S4.E pins the rectangle; near corners bleed ~7.5% at STANDARD as AGENTS documents. Draws unchanged.
+
 ## 2026-11-12 — v202 squashed locally: delivery and loading
 - Owner: "do the squash and rebase locally". `feature/delivery` (the delivery steps after the v201 controls squash) is one commit on local `main` with `CACHE_NAME` / `REV` v202, CHANGELOG and sitemap dated 2026-11-12; `feature/ui-upgrade` rebased onto it. Nothing pushed.
 

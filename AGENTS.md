@@ -794,6 +794,12 @@ not shell screens. Do not add them as `SCREEN` values.
   - No program compile on a room change (#36, v197): `three/progpin.js` pins compiled programs for the renderer's life (cap 96, released on a SHADOWS tier change, forgotten on context restore; it writes three's `usedTimes`, so it is tied to vendored r160), per-world values are uniforms, never a program key (`tests/program-share.test.mjs`), ambient and burst share one `_shared` material, world textures are kept per biome (`WORLDS_KEPT` 2) and the WIN overlay prepares the next room's. #36 stays open: no real phone measured.
   - The board border is ONE extruded cabinet rim (`tag:"trim"`, `RIM_W 36` /
     `RIM_LIP 6`) with a hole — never four rails, which crossed at the corners.
+    Its outer contour is the plain rectangle in every world (Task 9.7, owner:
+    "and look when camera is in far, this is wrong and fix"): the 2026-10-25
+    near-corner taper (`nearX` / `NEAR_Z`, the near quarter of the E / W edge
+    leaning in to stay on the canvas at STANDARD) read as a flared, bent tray
+    once the camera pulled back, so it is gone and the near corners bleed at
+    STANDARD as documented; `three.test` S4.E pins the four corners.
   - Walls follow the grid (shell v183, 2026-10-21): `scene.js` keeps a WALL
     mask beside the brick mask and refreshes the ONE wall InstancedMesh when
     the WALL set changes, so SHRINK rings draw in REAL 3D mid-room. Before
