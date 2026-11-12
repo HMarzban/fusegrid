@@ -840,6 +840,11 @@ The loading work that sat on its own branch since 2026-11-06 became one commit. 
 needs all at once, and the floor-tile builder, the demo player and the CONTROLS page's drawing load once the title
 is up. A new RENDER look no longer freezes the game while it builds: PIXEL and REAL 3D get ready in small slices behind
 the look you already have and swap in when they're done.
+## 2026-11-12: the controls get drawn (shell v205, R3)
+
+CONTROLS now draws the controller and the keyboard you play with, lit where a button does something, and the logo
+learned the PIXEL and REAL 3D looks. Both lanes landed on R2 with only bookkeeping conflicts.
+
 ## 2026-11-12: pause and the run's end join the world (shell v204, R2)
 
 PAUSE and the three run ends (LEVEL CLEAR, the finale, GAME OVER) left the old dark overlay for the world kit, merged

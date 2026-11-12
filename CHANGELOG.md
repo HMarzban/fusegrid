@@ -15,6 +15,22 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v205 · 2026-11-12
+
+CONTROLS draws your real controls, and the title logo follows your art style.
+
+### Added
+
+- **CONTROLS shows a controller and a keyboard.** Every bound button or key is lit in the level's own colours with a callout
+  naming its action; the row you are on rings its button. With no controller connected the drawing says NO CONTROLLER.
+- **The FUSE/GRID logo in PIXEL and REAL 3D.** The title and MENU wordmark are drawn in the art style you picked.
+
+### Notes
+
+- **Rollback:** revert the release commit and bump `CACHE_NAME` (and `REV` in `sw.js`) again, so installed copies update.
+- **Checks were trimmed for this cut** (owner's call): title, MENU and the CONTROLS captures in CLASSIC 2D, world 1, on a
+  desktop and a phone only. PIXEL / REAL 3D looks, the full matrix and the headed checks are deferred to the owner's device checks (U12–U13).
+
 ## shell v204 · 2026-11-12
 
 Pause and the end of a run move into the world too.

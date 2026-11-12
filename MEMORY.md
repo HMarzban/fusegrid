@@ -24,6 +24,9 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-07 — v201 pushed: controller play, rebinding, CONTROLS page
 - Owner: "make it ready and push it up", a day before the planned Sunday. Released as one squashed commit on `origin/main`'s v200 tip (`feature/controls` and `feature/delivery` are never pushed); CHANGELOG and sitemap dated 2026-11-07; the brand of the test controller left the tracked docs (A5). 578 tests; the stubbed-pad browser pass re-run on the release tree, its leftover fails all stale against `e1384f5` or timing (record's go/no-go). M1-M7 ship open by the owner's call. The new share card (`og.png` + alt text) ships beside it as its own commit; the owner re-uploads Social preview by hand.
+## 2026-11-12 — Release R3 (shell v205) prepared locally (feature/ui-upgrade)
+- Merged lanes 6 CONTROLS art + 7.3 logo looks onto R2 (bookkeeping conflicts only; loader pins REAL 3D 21, PIXEL 29; px tree 175.3 KB); carry-in: PIXEL logo is 9,148 B. Trimmed gates 0 fail (CONTROLS n/a: no probe); U12-U13 open.
+
 ## 2026-11-12 — Release R2 (shell v204) prepared locally (feature/ui-upgrade)
 - Merged lanes 5.1 PAUSE + 5 ends onto R1; adapted to R1 kit rules (PAUSE / END words in words.js, tap mode via tapOf, run-end LOADING through menudraw loadingPage, one needFor with scoped exemptions); carry-ins: PAUSE views on touch #c use the phone column, back feel on EAST / MENU tap, needFor readers, pause CLEAR comment. Trimmed gates 0 fail; U8-U11 open.
 
@@ -95,6 +98,7 @@ Locked floor sample now mapped to the box (endkit `rpair` transforms `o.floor`; 
 
 ## 2026-11-11 — UI upgrade Task 5.2: end-screen routing (lane-5-ends, held for R2)
 - `src/render/pages/endgeom.js` (draw / tap contract of WIN and GAME OVER, boot), Esc / EAST → MENU at a run end (finale via the fire edge), run-end taps on endgeom keys on pointerup; main's `runInfo` / `timeInfo`. The old summary stays until 5.3 / 5.4 register their pages.
+
 ## 2026-11-11 — UI upgrade Task 6 fix round 1 (CONTROLS)
 - Equal-strength tests for the fits (largest clean size, centred), the desk callouts and swap, whole-token row names; `padCross` samples triggers / bumpers as drawn; NO CONTROLLER says `Connect one and press a button.` (words.js); FIXED plaques in the world's band; armed reset says AGAIN when PRESS AGAIN will not fit; rule lines memoised; the four CONTROLS captures exempt every probe gate and pass `--strict`.
 
@@ -103,6 +107,7 @@ Locked floor sample now mapped to the box (endkit `rpair` transforms `o.floor`; 
 
 ## 2026-11-11 — UI upgrade Task 6.1: a real controller on CONTROLS (held lane lane-6-controls, R3)
 - `padart.js` draws the round 7 twin-grip controller in the world's brick (cached layer), `controlsgeo.js` plans crossing-free callouts (`padPlan` / `padCross` / `padFit`; compact with no leaders where they do not fit); desk boxes widen the CONTROLS plate; RESET PAD is RESET CONTROLLER. NORTH / shoulders / triggers stay bindable (lead ruling a); CONTROLS records no probe data and its captures exempt every probe gate (ruling b).
+
 ## 2026-11-11 — UI upgrade Task 7.3: logo B in PIXEL and REAL 3D (held lane, R3)
 - Look seam in `logo/draw2d.js` (`setLogoLook` from shellview, `registerLogo` from `pixel/logo.js` and `logo/draw3d.js`); title and MENU gated in Chrome (logo faces as locked info pairs). PIXEL logo 9,148 B (pixel/logo.js 7,398 + art/logo.js 1,750; R3 carry-in, was misstated 8,858) inside its 9 KB sub-budget (lead ruling); the REAL 3D loading bar counts and warms draw3d.js (fix round 1). Open: O3 owner checkpoint
 
