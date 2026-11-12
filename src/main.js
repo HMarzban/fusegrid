@@ -674,6 +674,7 @@ export function createGame(canvas, opts = {}) {
                   ? Math.max(0, 1 - coachT / COACH_DUR)
                   : 0,
               coach2: world.state === "PLAY" ? { a: coachAlpha(coach2), s: coachTip(coach2.kind, undefined, world, hints()), k: coach2.kind } : { a: 0, s: "" },
+              padToast: app.padToast, // the HUD's controller toast (controlswire)
               pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0, note: app.padNote, next: app.lookNext, tap: tapOf(app, canvas), css: canvas && canvas.css }, toast: toastOf(toast),
               time: timeInfo(), ghost: ghostAt(ghost, world, roomT),
               run: runInfo(),

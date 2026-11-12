@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — Shell v209: the controller toast in a run
+- Owner: "I connected the controller and it does not a toast". A controller connected / back / lost while a run PLAYs is now a 3 s HUD toast in the tile tip's plate and slots (controlswire app.padToast, hud.js toastState, words.js PAD_TOAST; tests/hud-toast.test.mjs, controlswire block). Bumped v208 -> v209 (v208 may already be cached). Placement is the tile tip's documented slot, chosen without a contact sheet (the other place, over the chips, hides LIVES / SCORE mid-run); owner may veto.
+
 ## 2026-11-12 — Shell v208: cache bump after the post-v206 lanes (CONTROLS DID NOT LOAD)
 - Owner saw CONTROLS read DID NOT LOAD and GUIDE top-aligned with a zoomed room: 33 shipped files changed after the v206 bump (bbc79c3), so the cache-first worker served old boot files beside new lazy ones (Node repro: `kit/room.js` has no export `roomKey`). Bumped to v208 (v207 local only); CHANGELOG v208 takes the post-v206 bullets. A fresh page opens CONTROLS from PAUSE fine. Also: run ends centre in #c's whole box (endgeom's HUD_TOP 42 reserve was stale since the HUD left the board; tests/end-centre.test.mjs). Open: the owner presses RELOAD on NEW VERSION READY; a connect toast during PLAY is a design ask, not built.
 

@@ -200,3 +200,7 @@ export const RESET_DEFAULT = resetSentence(ALL_CLEAR, ALL_KEEP), RESET_SHORT = r
    phone strip's PAUSE / RESUME and BOMB keys. */
 export const HUD_CHIPS = Object.freeze(["LIVES", "BOMBS", "FLAME", LABEL.LEVEL, "ENEMIES", "TIME", "SCORE"]);
 export const HUD_WORDS = Object.freeze({ PAUSE: "PAUSE", RESUME: "RESUME", BOMB: "BOMB" });
+/* the HUD's controller toast while a run PLAYs (owner 2026-11-12): the note's own words, then the controller's MOVE and BOMB (hints wordsOf "pad") */
+export const PAD_TOAST = Object.freeze({ READY: MENU_WORDS.PAD_READY, BACK: MENU_WORDS.PAD_BACK, LOST: CONTROLS_WORDS.LOST, LOST_BODY: "THE KEYS STILL WORK",
+  body: (move, bomb) => MENU_WORDS.MOVE + "\u00a0" + move + " · " + HUD_WORDS.BOMB + "\u00a0" + bomb, // a no-break space: a wrapped toast never parts an action from its button
+  SHORT: CONTROLS_WORDS.CONTROLLER }); // a slot too narrow for the whole title (the landscape gutters): CONTROLLER, its state leading the line under it

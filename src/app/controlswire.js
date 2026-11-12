@@ -5,7 +5,7 @@ import { createPadRouter } from "./padroute.js";
 import { createHintDev, keyPress, pointerPress, wordsOf } from "./hints.js";
 import { deferRegister } from "../pwa/register.js";
 
-const LOST = "CONTROLLER LOST", BACK = "CONTROLLER BACK", READY = "CONTROLLER READY", NOTE_MS = 6000, TICK_GAP = 100, HELLO_QUIET = 300, ARM_MS = 1000;
+const LOST = "CONTROLLER LOST", BACK = "CONTROLLER BACK", READY = "CONTROLLER READY", NOTE_MS = 6000, TOAST_MS = 3000, TOAST_FADE = 400, TICK_GAP = 100, HELLO_QUIET = 300, ARM_MS = 1000;
 export const NO_SOUND = "NO SOUND YET · PRESS A KEY OR TAP";
 const on = (o, t, f, c) => { if (o && typeof o.addEventListener === "function") { o.addEventListener(t, f, c); return () => o.removeEventListener && o.removeEventListener(t, f, c); } return () => {}; };
 const anyOf = (d) => d.up || d.down || d.left || d.right;
@@ -226,6 +226,15 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     if (pending !== LOST && shownT !== null && t - shownT >= NOTE_MS) { pending = ""; shownT = null; app.padNote = ""; return; }
     app.padNote = pending === READY && canBuzz() ? READY + " · VIBRATION " + VIB_LEVELS[c.vib] : pending;
   };
+  /* The HUD's toast (owner 2026-11-12): a controller connected, back or lost while a run PLAYs, for TOAST_MS, fading out over its last TOAST_FADE
+     (alpha in tenths, so the HUD repaints ten times, not every frame); off PLAY it waits unseen and its clock runs on. */
+  let toast = null;
+  const toastTick = (t) => {
+    const age = toast ? t - toast.t0 : 0;
+    if (!toast || age >= TOAST_MS) { toast = null; if (app.padToast) app.padToast = null; return; }
+    const w = wordsOf("pad", c), a = Math.round(Math.min(1, (TOAST_MS - age) / TOAST_FADE) * 10) / 10, q = app.padToast;
+    if (!q || q.k !== toast.k || q.a !== a || q.move !== w.move || q.bomb !== w.bomb) app.padToast = { k: toast.k, move: w.move, bomb: w.bomb, a };
+  };
   syncWords();
   return {
     /** One pad poll; true on a real press, which wakes the shell and pokes the frame gate. */
@@ -237,9 +246,16 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
       if (pressed || (dir && !wasDir)) app.lastDev = "pad"; // before routing, or SOUTH could consent
       wasDir = dir;
       hintDev.pad(snap, app.ctlT);
-      if (snap.found) { if (!rumbleMod) loadRumble().catch(noop); everSeen = true; pending = wasLost ? BACK : READY; shownT = null; wasLost = false; }
+      const inRun = app.screen === SCREEN.GAME && world.state === "PLAY" && !app.capturing;
+      if (snap.found) {
+        if (!rumbleMod) loadRumble().catch(noop);
+        everSeen = true; shownT = null;
+        if (inRun) { toast = { k: wasLost ? "back" : "ready", t0: t }; pending = ""; } else pending = wasLost ? BACK : READY; // in a run the HUD's toast says it once; the menus' note does not repeat it
+        wasLost = false;
+      }
       if (snap.lost) {
         if (app.lastDev === "pad" && app.screen === SCREEN.GAME && world.state === "PLAY" && !app.pauseView) onPause();
+        else if (inRun) toast = { k: "lost", t0: t };
         pending = LOST; shownT = null; wasLost = true;
       }
       if (pressed && app.screen === SCREEN.INTRO && !showWas) titleT = t;
@@ -277,6 +293,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
       if (rum()) rumble.tick(t);
       app.soundNote = app.lastDev === "pad" && app.sound && audio && audio.unlocked && !audio.unlocked() ? NO_SOUND : "";
       noteTick(t);
+      toastTick(t);
       unsay();
       syncWords();
       return edge || (pressed && app.screen === SCREEN.INTRO);

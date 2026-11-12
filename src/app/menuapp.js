@@ -140,6 +140,7 @@ export function createMenuApp(opts = {}) {
     feel: "", // the one menu feel the last presses asked for, highest FEELS rank kept; controlswire arms it before a pad poll routes and reads it after
     lastDev: "key", // raw last-used device "key" | "pad" | "touch", no dwell: opens the page's tab and gates the consent row
     padNote: "", // CONTROLLER LOST / BACK / READY, written by the controls seam
+    padToast: null, // the HUD's toast while a run PLAYs: {k: ready | back | lost, move, bomb, a}, written by the controls seam
     padCards: [], // the cards a pad may answer, {live, press}: never the consent card (padroute.js)
     modeCur: -1, // LEVEL SELECT's MODIFIERS chip in focus: the open list's cursor, or a pad's TRIGGER cursor; -1 = none. Shell-only, never reaches a run
     _anaSaid: false,

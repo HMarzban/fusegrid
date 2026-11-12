@@ -34,7 +34,7 @@ import {drawEnemyBody} from "./sprites.js";
 import {pixelArt, itemCell, foeCell, blitCell, opaqueBox} from "./hudart.js";
 import {abilityText, getStrip, getPulse, LBL} from "./fx.js";
 import {abilityChips, fmtTime} from "./scenes.js";
-import {HUD_CHIPS, HUD_WORDS} from "./words.js";
+import {HUD_CHIPS, HUD_WORDS, PAD_TOAST} from "./words.js";
 import {hints} from "./hintcopy.js";
 
 const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
@@ -68,7 +68,14 @@ export function hudState(world, o) {
   return {lives: Math.max(0, world.lives | 0), bombs: p.bombs | 0, flame: p.range | 0, level: world.level | 0, heat: Math.max(0, Math.min(2, world.heat | 0)),
     enemies: Array.isArray(world.enemies) ? world.enemies.length : 0, time: fmtTime(tm ? tm.t : 0), score: world.score | 0,
     ab, pu: {b: r3(u.b), r: r3(u.r), l: r3(u.l)}, keys: H.dev === "key" || H.dev === "pad", play: world.state === "PLAY", paused: world.state === "PAUSE",
-    hold: [!!p.throw, !!p.remote], tip: tipState(world, o)};
+    hold: [!!p.throw, !!p.remote], tip: toastState(world, o) || tipState(world, o)};
+}
+/* the controller toast (controlswire's app.padToast, main's o.padToast): it takes the tip's plate and slots, no leader, over a tile tip for its 3 s */
+export function toastState(world, o) {
+  const q = o && o.padToast;
+  if (!q || world.state !== "PLAY") return null;
+  const head = q.k === "lost" ? PAD_TOAST.LOST : q.k === "back" ? PAD_TOAST.BACK : PAD_TOAST.READY, body = q.k === "lost" ? PAD_TOAST.LOST_BODY : PAD_TOAST.body(q.move, q.bomb);
+  return {s: head + " · " + body, alt: PAD_TOAST.SHORT + " · " + head.slice(PAD_TOAST.SHORT.length + 1) + " · " + body, short: "", a: q.a, t: null, pad: true};
 }
 /* a floor-tile coach tip and its nearest tile of that kind (grid coords) to the player; null for any other tip */
 const TILEK = (k) => (k === "BRAKE" ? "GLIDE" : k && TILE_NAME[k] ? k : null);
@@ -181,16 +188,23 @@ function wrap(c, s, font, w) {
    over plate columns 1-3 (never the PAUSE column); l the left gutter above the D-PAD. */
 const TIP_FLOOR = {d: 17.9, p: 14.1}; // the kit's body font px floors (tools/ui/lib/gatelib.mjs cap: desktop 17.9, phone 14.1), whatever the text scale
 function tipGeom(c, G, geo, st, box) {
-  const lay = geo.lay, D = DEV[lay === "d" ? "d" : "p"], K = textScale(), [name, rest] = tipOf(st.tip.s), [, low] = tipOf(st.tip.short || ""), pad = 12, ST = geo.stage;
+  const D0 = DEV[geo.lay === "d" ? "d" : "p"], nfl = Math.min(D0.pri, NAME_CAP[geo.lay === "d" ? "d" : "p"] / (textScale() * CAPR.label)); // a toast's title may step down to the primary cap floor
+  const ss = [st.tip.s, st.tip.alt].filter(Boolean), nps = st.tip.pad && nfl < D0.pri ? [D0.pri, nfl] : [D0.pri]; // the toast's alt: its shorter title, tried with its words before any title alone
+  for (const nameOnly of [false, true]) for (const np of nps) for (const s of ss) { const g = tipGeomOf(c, G, geo, st, box, s, nameOnly, np); if (g) return g; }
+  return null;
+}
+const NAME_CAP = {d: 14, p: 11}; // the primary cap floors (tools/ui/lib/gatelib.mjs), CSS px
+function tipGeomOf(c, G, geo, st, box, s, nameOnly, np) {
+  const lay = geo.lay, D = DEV[lay === "d" ? "d" : "p"], K = textScale(), [name, rest] = tipOf(s), [, low] = tipOf(st.tip.short || ""), pad = 12, ST = geo.stage;
   const fl = Math.min(D.bod, TIP_FLOOR[lay === "d" ? "d" : "p"] / K);
   const words = [[rest, D.bod], [rest, fl], [low, D.bod], [low, fl]].filter(([b, px], i, a) => b && !a.slice(0, i).some(([b2, p2]) => b2 === b && p2 === px));
-  const size = (w, body, px) => { const lines = body ? wrap(c, body, T.body(px), w - 2 * pad) : []; return {lines, px, body, h: 10 + D.pri * K + (lines.length ? 6 + lines.length * px * K * 1.25 : 0) + 12}; };
+  const size = (w, body, px) => { const lines = body ? wrap(c, body, T.body(px), w - 2 * pad) : []; return {lines, px, body, h: 10 + np * K + (lines.length ? 6 + lines.length * px * K * 1.25 : 0) + 12}; };
   /* the first step of `steps` that fits a w x maxH inner box, or null */
   const pick = (w, maxH, steps) => {
-    if (!(w >= 2 * pad) || !(maxH > 0) || measure(c, T.label(D.pri), name) + 2 * pad > w) return null;
+    if (!(w >= 2 * pad) || !(maxH > 0) || measure(c, T.label(np), name) + 2 * pad > w) return null;
     for (const [body, px] of steps) {
       const z = size(w, body, px);
-      if (z.lines.length <= 2 && z.h <= maxH + 1e-6 && z.lines.every((l) => measure(c, T.body(px), l) + 2 * pad <= w + 1e-6)) return z;
+      if (z.lines.length <= (st.tip.pad ? 3 : 2) && z.h <= maxH + 1e-6 && z.lines.every((l) => measure(c, T.body(px), l) + 2 * pad <= w + 1e-6)) return z;
     }
     return null;
   };
@@ -203,7 +217,7 @@ function tipGeom(c, G, geo, st, box) {
     const rx = ST.x + ST.w + 30, rw = Math.min(360, box.w - 22 - rx - TIPT), lw = Math.min(360, ST.x - 30 - 22 - TIPT), right = rw >= lw, w = right ? rw : lw;
     const y0 = (G.plate ? G.plate.y + G.plate.h + 10 + TIPT : TIPT), y1 = Math.min(ST.y + ST.h, box.h - 184) - TIPT - 3;
     if (w >= 120) slots.push({w, maxH: y1 - y0, place: (z) => {
-      const h = z.h, cy = at ? at[1] : ST.y + ST.h / 2, y = Math.max(y0, Math.min(y1 - h, cy - h / 2)), x = right ? rx + TIPT : ST.x - 30 - TIPT - w;
+      const h = z.h, cy = at ? at[1] : st.tip.pad ? y0 + h / 2 : ST.y + ST.h / 2, y = Math.max(y0, Math.min(y1 - h, cy - h / 2)), x = right ? rx + TIPT : ST.x - 30 - TIPT - w;
       let lead = null;
       if (at) {
         const ex = right ? x - TIPT : x + w + TIPT, ky = Math.max(y + 12, Math.min(y + h - 12, at[1])), kx = right ? ST.x + ST.w + 12 : ST.x - 12;
@@ -220,11 +234,11 @@ function tipGeom(c, G, geo, st, box) {
     const a = R4(geo.left.x + TIPT, geo.left.y + TIPT, geo.left.w - 2 * TIPT, geo.left.h - 2 * TIPT - 3);
     top(a.x, a.y, a.w, a.h, G.cols[0].h - 2 * TIPT - 3);
   }
-  for (const steps of [words, [["", D.bod]]]) for (const sl of slots) {
+  for (const steps of nameOnly ? [[["", D.bod]]] : [words]) for (const sl of slots) {
     const z = pick(sl.w, sl.maxH, steps);
     if (!z) continue;
     const [inner, lead] = sl.place(z);
-    return {name, lines: z.lines, px: z.px, body: z.body === rest ? "whole" : z.body ? "short" : "name", in: inner, box: ring(inner), lead, a: st.tip.a, D};
+    return {name, np, lines: z.lines, px: z.px, body: z.body === rest ? "whole" : z.body ? "short" : "name", in: inner, box: ring(inner), lead, a: st.tip.a, D};
   }
   return null;
 }
@@ -499,13 +513,13 @@ function tip(c, G, tok, rec, q, look) {
   }
   cached(c, "tip", ringed(r, TIPT), tok, q, look, "", (x) => plate(x, r.x, r.y, r.w, r.h, tok, {T: TIPT, tile: 40, phone: G.lay !== "d"}));
   c.textAlign = "left"; c.textBaseline = "middle";
-  const ly = r.y + 10 + D.pri * K / 2;
-  c.font = T.label(D.pri); c.fillStyle = CONST.ink; c.fillText(t.name, r.x + 12, ly);
-  if (rec) P.text(t.name, r.x + 12, ly - D.pri * K * CAPR.label / 2, measure(c, T.label(D.pri), t.name), D.pri * K * CAPR.label, {role: "primary", col: CONST.ink});
+  const np = t.np || D.pri, ly = r.y + 10 + np * K / 2;
+  c.font = T.label(np); c.fillStyle = CONST.ink; c.fillText(t.name, r.x + 12, ly);
+  if (rec) P.text(t.name, r.x + 12, ly - np * K * CAPR.label / 2, measure(c, T.label(np), t.name), np * K * CAPR.label, {role: "primary", col: CONST.ink});
   const bp = t.px || D.bod;
   c.font = T.body(bp); c.fillStyle = CONST.t2;
   t.lines.forEach((l, i) => {
-    const y = ly + D.pri * K / 2 + 6 + (i + 0.5) * bp * K * 1.25;
+    const y = ly + np * K / 2 + 6 + (i + 0.5) * bp * K * 1.25;
     c.fillText(l, r.x + 12, y);
     if (rec) P.text(l, r.x + 12, y - bp * K * 0.36, measure(c, T.body(bp), l), bp * K * 0.72, {role: "body", px: bp * K, col: CONST.t2});
   });

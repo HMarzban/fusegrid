@@ -1150,6 +1150,36 @@ for (const via of ["LATER", "the backdrop"]) {
   check("LATER's button word only shows on a pad", /#upd \.later kbd\{display:none;/.test(html));
 }
 
+// ---- a controller connected mid-run: a toast in the HUD (owner 2026-11-12: "I connected the controller and it does not a toast") ----
+{
+  const J = (v) => JSON.stringify(v);
+  const g = mk({ noPad: true });
+  g.app.screen = SCREEN.MENU; g.app.cabinetSeen = true; g.tick(1);
+  g.app.startRun(); g.tick(2);
+  const inPlay = g.app.screen === SCREEN.GAME && g.world.state === "PLAY";
+  check("no controller: no toast", inPlay && !g.app.padToast, J(g.app.padToast));
+  g.gpr.list = [mkPad()]; g.tick(2);
+  const t = g.app.padToast;
+  check("connected in PLAY: a READY toast with the controller's own MOVE and BOMB words", inPlay && t && t.k === "ready" && t.move === "D-PAD" && t.bomb === "SOUTH" && t.a === 1, J(t));
+  check("and the menu note stays quiet in PLAY", g.app.padNote === "", g.app.padNote);
+  g.tick(60 * 2);
+  check("it holds about 3 s", !!g.app.padToast, J(g.app.padToast));
+  g.tick(60 * 2);
+  check("then it is gone", !g.app.padToast, J(g.app.padToast));
+  g.world.state = "PAUSE"; g.tick(2);
+  check("shown in the run: PAUSE does not repeat it", g.app.padNote === "", g.app.padNote);
+  g.world.state = "PLAY"; g.tick(2);
+  g.gpr.list = [null]; g.tick(2);
+  check("a keyboard player's idle controller drops in PLAY: a LOST toast, the run goes on", g.app.padToast && g.app.padToast.k === "lost" && g.world.state === "PLAY", J(g.app.padToast));
+  g.gpr.list = [mkPad()]; g.tick(2);
+  check("back again: BACK", g.app.padToast && g.app.padToast.k === "back", J(g.app.padToast));
+  const m = mk({ noPad: true });
+  m.app.screen = SCREEN.MENU; m.app.cabinetSeen = true; m.tick(1);
+  m.gpr.list = [mkPad()]; m.tick(2);
+  check("on MENU: no toast, the note as before", !m.app.padToast && /^CONTROLLER READY/.test(m.app.padNote), J([m.app.padToast, m.app.padNote]));
+  setHints(null);
+}
+
 delete globalThis.window; delete globalThis.location;
 console.log("\n  CONTROLSWIRE RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

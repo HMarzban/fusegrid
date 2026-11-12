@@ -3,7 +3,7 @@
    Every page task proves its layout on these: tools/ui/gates.mjs measures them, tools/ui/compare.mjs puts each beside its approved mock frame.
 
    node tools/ui/shots.mjs [flags]
-     --screens a,b    screens to capture (default all): title, menu, level, options (alias settings), graphics, controls, controlsnone, controlspad, controlscapture, guide, howto, items,
+     --screens a,b    screens to capture (default all): title, menu, level, options (alias settings), graphics, controls, padtoast, controlsnone, controlspad, controlscapture, guide, howto, items,
                       enemies, floor, scores, stats, statsreset (STATS armed), medals, scoresfull / statsfull (a seeded cabinet,
                       __GAME__.seedRecords()), statspage2 (STATS' second page on a paged phone), scoresidle (RECORDS through the real lazy.idle() load: no want()), pause, pausetags (PAUSE with the run's rules seeded: the tag row), win, win2 (a paged run end's second
                       page), lose, loseshort (a saved best: the shortfall), losedaily (today's DAILY), lose2,
@@ -207,6 +207,7 @@ async function group(c, port, a, look, world, rep) {
           await ev("window.__pause&&window.__pause()");
         }
         if (s === "hud" && (await ev(HUD_RUN)) == null) warn("the room has no floor tile: no tile tip");
+        if (s === "padtoast") { await P.adv(300); await ev(PAD(true)); await P.adv(200); } // a controller plugged in mid-run: the HUD's toast
         if (R.run === "lose" || R.run === "win") {
           await P.adv(300);
           await ev(R.run === "lose" ? LOSE : "window.__GAME__.clearAllEnemies()");
@@ -215,6 +216,7 @@ async function group(c, port, a, look, world, rep) {
           for (const k of [].concat(R.key || [])) { await P.adv(100); await ev(`(window.__GAME__.input.onUiKey(${JSON.stringify(k)}),true)`); } // a run end's keys (a paged end's ▼)
         }
         await shoot(s, R.settle);
+        if (s === "padtoast") await ev(PAD(false));
         continue;
       }
       await ev("(window.__GAME__.reset(),true)");

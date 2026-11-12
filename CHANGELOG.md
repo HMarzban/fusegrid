@@ -15,9 +15,15 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
-## shell v208 · 2026-11-12
+## shell v209 · 2026-11-12
 
 The menus centre, CONTROLS joins the world, the first load builds the title, and every overlay is sharp.
+
+### Added
+
+- **Plug in a controller mid-run and the game says so.** A small CONTROLLER READY note appears beside the board for 3 seconds (under it on
+  a phone, in the left column on a landscape phone) with your controller's MOVE and BOMB buttons, never over the play; CONTROLLER BACK
+  and CONTROLLER LOST too. In the menus the note shows where it always did.
 
 ### Changed
 
