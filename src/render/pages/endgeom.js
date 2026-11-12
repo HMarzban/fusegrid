@@ -1,7 +1,7 @@
 /* END SCREENS: the one draw / tap contract of WIN and GAME OVER (UI upgrade v202 Task 5.2; design record §4 end screens, appendix 10; the round 7
    E7-end frames). Boot (pointer.js maps a tap through it while the lazy pages, endwin.js and endlose.js, are still on their way). Three modes:
    clear (a mid-run WIN), fin (FUSE/GRID CLEAR, the finale WIN) and lose (GAME OVER). They draw over the board on #c, inside drawOverlay's box
-   (600 x 520, iso 608 x 352); on a portrait phone on #sh, in the over box under the HUD plate (Task 9.8: B.free, no HUD_TOP).
+   (600 x 520, iso 608 x 352); on a portrait phone on #sh, in the over box under the HUD plate (Task 9.8: B.free).
    endFacts(world, run, tm) is every word and claim the page shows, from the run-end facts main hands in (run: the tally, the run-start best
    snapshot, fromStart, daily, fixed, cap, medals; tm: the room time and the best captured before the WIN-edge write). A claim (a ribbon, the
    plaque, the shortfall) is made only at a run end (isRunEnd) from a persisted number, as "a delta that cannot lie" requires; the level-clear
@@ -9,7 +9,7 @@
    endGeom(B, F, o) is the geometry in box units, rects by NAME (plate, the sections, and the keys main / menu / copy / map): o = {lay ("d" desk,
    "p" touch portrait, "l" touch landscape), css (CSS px per box unit, fit.js's stage scale on #c; 1 when unknown), ts (the kit text scale)}.
    Sizes are the mock's CSS px (design px, appendix 10) at u = 1 / css box units per design px, never scaled under the floors: a short box
-   closes the gaps, then pages the content (see endGeom). The page sits under the HUD band (HUD_TOP). Desk: the mock's plates (level clear 560, finale 840, GAME OVER 200 | 400 two columns over a
+   closes the gaps, then pages the content (see endGeom). The page centres in the whole box (no HUD band on the board since v206). Desk: the mock's plates (level clear 560, finale 840, GAME OVER 200 | 400 two columns over a
    foot row); a touch-portrait box: the phone's one column, every key inside the plate (the board box has no window bottom to dock to).
    endHit(x, y, G) names the key under a tap (main, menu, copy, map; up / down the pager's) or null: off the keys a tap does nothing (it skips the motion). endTap is
    main's whole tap path: while the page for this mode is not in (LOADING), null; where no page is registered yet, today's tap, the main key. */
@@ -26,7 +26,7 @@ export const END = deep({
   p: {L: 11.3, sec: 13.5, pri: 16, hud: 20, bod: 15, btnh: 52, cell: 37, T: 10, gap: 1.2, side: 12, hClear: 38, hFin: 33, hLose: 40},
 });
 export const KEYS = Object.freeze(["main", "menu", "copy", "map", "up", "down"]);
-export const MARGIN = 6, HUD_TOP = 42, GAP_MIN = 0.25, MOTION = Object.freeze({win: 1.6, lose: 1.4});
+export const MARGIN = 6, GAP_MIN = 0.25, MOTION = Object.freeze({win: 1.6, lose: 1.4});
 export const fmtN = (n) => String(Math.max(0, Math.round(+n || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 export const endMode = (w) => (!w ? null : w.state === "LOSE" ? "lose" : w.state === "WIN" ? (isFinale(w.level) || w.finale ? "fin" : "clear") : null);
 const runFin = (lv) => (lv <= 5 ? 5 : 8);
@@ -182,7 +182,7 @@ function geomOf(B, F, o, brk) {
   const G = {mode: F.mode, ph, ts, d: D, rects: {}, keys: {}, page: 0, pages: 1, scaled: false};
   const side = lose ? (ph ? 14 : D.loseGap) : ph ? 12 : D.side, ring = 2 * (D.T + 3);
   const nominal = ph ? 600 : F.mode === "clear" ? D.clearW * (ts > 1.1 ? 1.18 : 1) : F.mode === "fin" ? D.finW * (ts > 1.1 ? 1.07 : 1) : D.loseL + D.loseR * (ts > 1.1 ? 1.2 : 1) + 3 * D.loseGap;
-  const top = B.free ? 0 : HUD_TOP, availW = (B.w - 2 * MARGIN) * css - ring, availH = (B.h - top - 2 * MARGIN) * css - ring; // B.free: the over box (Task 9.8), under the HUD already
+  const top = 0, availW = (B.w - 2 * MARGIN) * css - ring, availH = (B.h - top - 2 * MARGIN) * css - ring; // no look draws in #c's top band since the HUD left the board (v206), so the plate centres in the whole box, the over box (Task 9.8) too
   /* the keys' words (a touch layout in tap mode shows no keycaps): GAME OVER's foot keys share their row by what each needs (label and
      keycap), and its plate widens to hold them (never past the box) */
   const W = hints(), tap = ph && W.dev !== "pad", caps = W.dev === "pad" ? {menu: W.back, copy: EW.CAP_COPY, map: EW.CAP_MAP} : {menu: W.back, copy: "C", map: "B"};

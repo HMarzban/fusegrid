@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — Shell v208: cache bump after the post-v206 lanes (CONTROLS DID NOT LOAD)
+- Owner saw CONTROLS read DID NOT LOAD and GUIDE top-aligned with a zoomed room: 33 shipped files changed after the v206 bump (bbc79c3), so the cache-first worker served old boot files beside new lazy ones (Node repro: `kit/room.js` has no export `roomKey`). Bumped to v208 (v207 local only); CHANGELOG v208 takes the post-v206 bullets. A fresh page opens CONTROLS from PAUSE fine. Also: run ends centre in #c's whole box (endgeom's HUD_TOP 42 reserve was stale since the HUD left the board; tests/end-centre.test.mjs). Open: the owner presses RELOAD on NEW VERSION READY; a connect toast during PLAY is a design ask, not built.
+
 ## 2026-11-12 — Task 9.12: sharp PAUSE and run ends in every look (lane-9.12-sharp-ends)
 - Owner "why that menu (second pic) is blury?": `#c` is a 600 x 520 backing CSS-upscaled ~2.3x, so every overlay on it was soft (glaring beside PIXEL / 3D boards). Off p, PAUSE and every WIN / LOSE now draw on the STAGE: `#sh` laid on `#c`'s content box at device px, click-through, in `#c`'s units (fit.shell(2), shellMode 2); renderers' `over()` keeps run-end particles over the plate.
 

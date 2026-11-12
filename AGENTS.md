@@ -42,7 +42,7 @@ main's `let show`, never `demo`), plays under the title and the show and is
 dropped for good at GAME / ATTRACT; MENU covers the board (the room look opaque
 from its first frame, the plate, logo and foot fading in over 0.25 s), so no
 blast is seen under it. In 3D the title paints an opaque veil until three
-settles (`app.boardReady`, set on resolve or reject). The first load (v206,
+settles (`app.boardReady`, set on resolve or reject). The first load (v208,
 `index.html` `#loadst`) draws the title being made where the title paints, so
 the hand-off is its spark arriving at the tip: when it was on screen
 (`__load.lit()`: 150 ms with the boot job alive, latched at its end) shellview
@@ -221,12 +221,12 @@ the cntroller side ha?" reversed the 2026-11-02 ruling that kept it a CONSOLE PA
 CONSOLE PANEL kit in `menudraw.js` (`plate`, `head`, `foot`, `paintRow`, `listGeom` / `listHit`, `pageBox`, `segs`, the ellipsis `clip` / `wrap`)
 is gone with its last page; menudraw keeps only the fonts and colours the controller drawings' glyphs read (`TEXT`, `MUTED`, `sans`). MENU is on
 the world kit since UI upgrade Task 3.1 (MENU page, below). Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v206` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v208` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v206", the running build,
+as `rev`) and `update.js` (the card's "You are on v208", the running build,
 never a guessed next one) — never a second literal. The desk MENU's foot ends
-`| v206`; the phone column carries it as SOURCE's teaser (the round 7 frame);
-SETTINGS keeps its `BUILD v206` kicker. Never on the HUD.
+`| v208`; the phone column carries it as SOURCE's teaser (the round 7 frame);
+SETTINGS keeps its `BUILD v208` kicker. Never on the HUD.
 PAUSE is on the world kit since UI upgrade Task 5.1 (`src/render/pages/pause.js`, boot; `scenes.js` re-exports `PAUSE_ROWS`, `PAUSE_SHAPE`,
 `PAUSE_ROW_H` / `_D`, `pauseGeom`, `pauseHit`, `pauseKick`, `pauseKickers` / `pauseKicker`; the round 7 S7-pages 10-pause frame). It sits over
 `#c`'s frozen board in all three looks, drawn on the stage (`#sh` over `#c` at device px, Task 9.12; on a portrait phone on `#sh`'s over box under the HUD plate, Task 9.8: see SHELL BOX), through the one painter `drawPause` that `drawOverlay`'s PAUSE branch calls (view 0 only; views 1-3
@@ -281,7 +281,7 @@ its views 1-3), every WIN (LEVEL CLEAR and the finale) and GAME OVER are `shellM
 (`fit.over()`, fit.js `overGeo`): #sh's width and scale from `PORT_GAME.top` (the HUD plate's foot, the board's top in a run) to the
 viewport's bottom safe area (`env(safe-area-inset-bottom)` read as body's `scroll-padding-bottom`), box (0, 0) at #sh's (0, top), its rect
 that band; main hands the renderer `{over}` so no look draws the overlay on `#c`, and `drawShell` (its `ro` argument) draws it there:
-`drawOverlay` on `overlayBox(kind, box)` (`free`: no HUD band or ability-bar clearance in pause.js `solve`, endgeom's `HUD_TOP`, settings'
+`drawOverlay` on `overlayBox(kind, box)` (`free`: no HUD band or ability-bar clearance in pause.js `solve` or settings'
 `pauseBand`), the page's css the box's. The frozen board stays in its place under the veil; the HUD (under #sh) and its PAUSE / RESUME key
 (`#touchpad`, over #sh) stay live; a tap over the HUD band or the safe area is inert. `endHitAt` / `endPagesAt` take the box (main hands
 `fit.over()`), shellview `pauseLayout` is the PAUSE views' frame (view 3 through `ctlFrame`, the box handed to pages/controls.js), the probe records `el` "sh" with the band (`probe.place`: `oy`, `fw`,
@@ -403,8 +403,8 @@ keys it does nothing. A mode whose page is not registered keeps today's summary 
 WIN is its page since Task 5.3: `src/render/pages/endwin.js` (lazy, `pages/lazy.js` `endwin`, with `endkit.js`, the
 end parts: pen, keys label first and keycap last, stat cards, course cells, shelf, ribbon, medal piece, toast tag, the
 one cached `frame`); `drawOverlay` paints a LOADING plate until it lands (taps inert), and `shellview` calls
-`lazy.idle()` on MENU and GAME. It sits under the HUD band (`HUD_TOP` 42) inside `#c`'s box (a portrait phone: the over box on `#sh`, Task
-9.8, no `HUD_TOP`): a level clear (LEVEL n
+`lazy.idle()` on MENU and GAME. It centres in `#c`'s whole box (since v208: no look draws a HUD band on the board after v206, so the old `HUD_TOP` 42 reserve is gone; a portrait phone: the over box on `#sh`, Task
+9.8): a level clear (LEVEL n
 CLEAR, three stat cards of this level, at most one time ribbon, NEXT LEVEL) and the finale (FUSE/GRID CLEAR over a
 blast cross and warm core, the saved score on bricks with `multTag` (`×2 HARD DIFFICULTY`), the course with check
 notches and 6-8 locked until a finale opens them: `endRun` saves the unlock on the run-end edge, the same edge as the bests,
@@ -441,7 +441,7 @@ MENU page (UI upgrade v202 Task 3.1, `src/render/pages/menu.js`; the round 7 S7-
 key (bare bomb + 3 px cream ring when focused); the doors are keys, a focused one wears the kit `band` + bomb + ring; no cord or spark but the logo's.
 Desk (every keyboard box; the 1366 x 768 frame at 1 box unit per CSS px): the logo in the plate's header, a 480 list (PLAY 64,
 doors 46, 8 px pitch, 24 px breaks after PLAY and before GUIDE; 125 %: 520, 72, 49) beside the next-run card (Task 3.2, below), the foot under
-the plate (`MOVE ▲▼ · START ENTER | v206`, label first, keycap last; the verb follows focus: START on PLAY, OPEN on a door, and with a controller
+the plate (`MOVE ▲▼ · START ENTER | v208`, label first, keycap last; the verb follows focus: START on PLAY, OPEN on a door, and with a controller
 on SOURCE `NEEDS A CLICK OR ENTER`, no keycap; a touch layout reads `TAP A ROW`; a note leads it, the controller's signpost replaces it in cream).
 Phone and compact have no foot: while a controller drives, SOURCE's teaser leads with `NEEDS A CLICK OR ENTER` (step-down `CLICK OR ENTER`, words.js
 `SOURCE_PAD_SHORT`; R1 cohesion 11), cream, before the signpost and the build tag.
@@ -618,7 +618,7 @@ not shell screens. Do not add them as `SCREEN` values.
   `src/render/shellview.js` (`drawShell` + the `kindSize`/`dims` logical box),
   `src/app/update.js` (`mountUpdate`: registers the SW and owns the NEW
   VERSION READY card; `U` is its key, live only while the card shows),
-  `src/app/loadbar.js` + the `#load` plate and inline `#loadjs` script in `index.html` (the honest loading bar, v197: finished files against totals `tests/loadbar.test.mjs` pins to the real graphs, `--write` re-pins; indeterminate when there are no numbers, shown after about 150 ms, a failure card with RETRY / USE CLASSIC 2D; `rcache.js` paints it before a lazy look's fetch and bake; `#wrap` stays hidden until the title paints; `armUnlock`'s `skip` keeps the card's buttons from pressing the title; since v206 the first load is direction B · RICH: `#loadst`, boot only and beside `#load` (a fixed child would be placed against `#load`'s translate) so the chip and a look's docked card keep `#load`'s own box, draws `#c`'s border box as the stage, its floor (`--k-fl0` / `--k-fl1`) filling cell by cell with the finished files (round(195 n / (files + 1)), whole rows from the bottom), and the title's kit plate and logo B (inline SVG from `glyphs.js`; the stacked build on a portrait phone, re-placed on resize) at the title's rects in `#c`'s content box (fit.js `fitBox` and `portraitGeo`'s top, menudraw `titleLogoBox` and the prompt's backing, draw2d `titleSpot`; `tests/firstload.test.mjs` pins them at 1366x768, 1280x720, 852x393, 393x852 and 375x667); logo B's fuse lights from the collar as the progress (never done), the spark riding the front, so STARTING is the spark at the tip. `#load` is its status box in the title prompt's backing (sans 900 at the prompt's size, floored 20 / 16 px: the 14 / 11 px caps; `SLOW CONNECTION · STILL TRYING` replaces the count) and, on a 30 s stall or a failure, a kit card under the plate, lifted just enough to end 8 px inside the window where it does not fit there (a landscape phone, over the plate's foot) (`#loadsub` the second line; a failure has the coral notch and headline and the fuse goes out). REAL 3D (saved `r3d`, or `?render=3d|iso`) skips the floor, its board being tilted; REDUCE FLASH or reduced motion hold the spark's amber frame; it fades over 180 ms at the hand-off and never shows on a load under 150 ms),
+  `src/app/loadbar.js` + the `#load` plate and inline `#loadjs` script in `index.html` (the honest loading bar, v197: finished files against totals `tests/loadbar.test.mjs` pins to the real graphs, `--write` re-pins; indeterminate when there are no numbers, shown after about 150 ms, a failure card with RETRY / USE CLASSIC 2D; `rcache.js` paints it before a lazy look's fetch and bake; `#wrap` stays hidden until the title paints; `armUnlock`'s `skip` keeps the card's buttons from pressing the title; since v208 the first load is direction B · RICH: `#loadst`, boot only and beside `#load` (a fixed child would be placed against `#load`'s translate) so the chip and a look's docked card keep `#load`'s own box, draws `#c`'s border box as the stage, its floor (`--k-fl0` / `--k-fl1`) filling cell by cell with the finished files (round(195 n / (files + 1)), whole rows from the bottom), and the title's kit plate and logo B (inline SVG from `glyphs.js`; the stacked build on a portrait phone, re-placed on resize) at the title's rects in `#c`'s content box (fit.js `fitBox` and `portraitGeo`'s top, menudraw `titleLogoBox` and the prompt's backing, draw2d `titleSpot`; `tests/firstload.test.mjs` pins them at 1366x768, 1280x720, 852x393, 393x852 and 375x667); logo B's fuse lights from the collar as the progress (never done), the spark riding the front, so STARTING is the spark at the tip. `#load` is its status box in the title prompt's backing (sans 900 at the prompt's size, floored 20 / 16 px: the 14 / 11 px caps; `SLOW CONNECTION · STILL TRYING` replaces the count) and, on a 30 s stall or a failure, a kit card under the plate, lifted just enough to end 8 px inside the window where it does not fit there (a landscape phone, over the plate's foot) (`#loadsub` the second line; a failure has the coral notch and headline and the fuse goes out). REAL 3D (saved `r3d`, or `?render=3d|iso`) skips the floor, its board being tilted; REDUCE FLASH or reduced motion hold the spark's amber frame; it fades over 180 ms at the hand-off and never shows on a load under 150 ms),
   `src/app/fit.js` (`mountFit`: stage scale per layout reserve `FIT_RES`, and
   `body[data-lay]` = `d` desktop / `p` touch portrait / `l` touch landscape —
   the ONE predicate `index.html`'s touch layout keys off, never a media
@@ -1745,6 +1745,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; the tile boards were `?gen=3` only from v188 to v197).
+- Release state (2026-11-12): shell **v208** (the menus centred with the room at play scale, CONTROLS on the world kit with its capture callout, the phone overlays on `#sh`, the first load B · RICH, the title centred, the look card and chip, the REAL 3D straight rim, every overlay sharp at device px, the run ends centred on the board) is PREPARED on `feature/ui-upgrade` on top of R4 (v206; v207 was a local-only bump, never handed out). NOT LIVE: the owner pushes. Bumped because the lanes after v206 committed shipped bytes under the v206 name: a browser holding the v206 cache mixed old boot files with new lazy ones, so CONTROLS read DID NOT LOAD (`kit/room.js` has no export `roomKey`) and the pages kept their old top-aligned layout. Any shipped file committed after the last `CACHE_NAME` commit needs the bump before the owner loads it; lanes may skip it, the lead bumps before handing a build to the owner. Rollback: revert and bump `CACHE_NAME` / `REV` again.
 - Release state (2026-11-12): shell **v206** (UI upgrade release R4: the HUD on the world kit (`src/render/hud.js` on `#hud`, off the board: seven labelled chips and the power-ups bar), the phone touch strip and tile tips; CLASSIC call-log pins re-pinned by ruling to `238a30af:71940` / `cef5c020:70998`, the old log minus its HUD tail only) is PREPARED as a local release commit on `feature/ui-upgrade` on top of R3 (v205). NOT LIVE: the owner pushes. Owner acceptance U15 OPEN; trimmed gate check (CLASSIC 2D, world 1, desktop and phone: play, hud). `hudart.js` now boots with the HUD (boot graph 122 files, PIXEL tree 28). Rollback: revert the release commit and bump `CACHE_NAME` / `REV` again.
 - Release state (2026-11-12): shell **v205** (UI upgrade release R3: CONTROLS art, the controller and keyboard drawings with callouts in the world's brick (`padart.js`, `controlsgeo.js`), and logo B in PIXEL and REAL 3D (`pixel/logo.js`, `logo/draw3d.js`)) is PREPARED as a local release commit on `feature/ui-upgrade` on top of R2 (v204). NOT LIVE: the owner pushes. Owner acceptance U12–U13 OPEN; trimmed gate check (CLASSIC 2D, world 1, desktop and phone: title, menu, the four CONTROLS captures; CONTROLS records no probe data, so its gates read n/a by its row's exemption). Rollback: revert the release commit and bump `CACHE_NAME` / `REV` again.
 - Release state (2026-11-12): shell **v204** (UI upgrade release R2: PAUSE on the world kit (`pages/pause.js`), the run ends WIN / FINALE / GAME OVER as their own lazy pages (`pages/endwin.js`, `endlose.js`, `endgeom.js`, `endkit.js`) through the one LOADING plate, PAUSE views on a touch #c on the phone column) is PREPARED as a local release commit on `feature/ui-upgrade` on top of R1 (v203). NOT LIVE: the owner pushes. Owner acceptance U8–U11 OPEN; release gate check trimmed (CLASSIC 2D, world 1, desktop and phone, the R2 screens only; the full matrix, perf and headed checks deferred to the owner's device checks). Rollback: revert the release commit and bump `CACHE_NAME` / `REV` again.

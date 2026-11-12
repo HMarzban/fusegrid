@@ -60,7 +60,7 @@ export function golden() {
   setTextScale(1);
   return sha(J(out));
 }
-const GOLD = "5769fda632c575f0"; // taken at 3f772be, before the change
+const GOLD = "f384e8324b348427"; // re-pinned for v208 (run ends centred in #c's whole box, no HUD_TOP): without the run-end rects the hash is unchanged (560ce9b6647b43b3 before and after); was 5769fda632c575f0, taken at 3f772be
 {
   const g = golden();
   check("d / l / the #c fallback: PAUSE, run-end and paused SETTINGS / GRAPHICS geometry on the board's box byte-identical to before Task 9.8", g === GOLD, g);
