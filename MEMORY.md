@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — v213: share card D4, eight worlds
+- Owner rejected every card so far ("I do not like the cards at all, let's create more creative and fancy one"); round 2 made five fresh directions from real captures (`.superpowers/sdd/2026-11-12-share-card/round2/`); owner: "D4, eight worlds". og.png = D4 as shown (eight CLASSIC 2D world stripes, CROWN plate with logo B and the kit keys); it shows no PIXEL / REAL 3D, which the owner saw. Alt text updated; cache v213. Open: owner re-uploads og.png to Social preview after the push.
+
 ## 2026-11-12 — v212: share card C and the SEO words
 - Owner: "C, three looks", then "yes, polish card C and update all the SEO". og.png = card C2 (three looks side by side, real captures; the polish pass put logo B's plate in ARENA's colours and made it the hero, 643 x 212), alt text in index.html and README. SEO: meta / og / twitter / JSON-LD descriptions, manifest and the itch blurb now say NORMAL / HARD / EXPERT, eight levels, keyboard, touch or controller (no Heat CORE / PLUS / MAX); media.test renegotiated (requires the new words, refuses `Heat CORE`). GitHub About text and topics updated LIVE (deterministic-simulation -> gamepad). Cache v212 (index.html is precached). Open: owner re-uploads og.png to Social preview after the push.
 

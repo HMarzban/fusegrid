@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v212 on 2026-11-12.
+shell v213 on 2026-11-12.
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -916,7 +916,10 @@ KB written down at R1. Opened before it arrives, LEVEL SELECT shows the shared L
 
 The share card got the same treatment as everything else: a real capture, not a drawing. The owner picked the bold
 one of three, "C, three looks": the same moment in CLASSIC 2D, PIXEL and REAL 3D side by side, the first card that
-shows REAL 3D instead of only naming it (shell v212).
+shows REAL 3D instead of only naming it (shell v212). Seeing it on the page, the owner said "I do not like the cards at all,
+let's create more creative and fancy one". Round 2 started from nothing: five directions, all still real captures, and
+the owner picked "D4, eight worlds", eight stripes of real boards from JUNGLE to CROWN with the logo on a gold plate in
+the middle (shell v213).
 
 ---
 
