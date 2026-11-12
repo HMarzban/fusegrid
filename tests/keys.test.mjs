@@ -25,7 +25,6 @@ import { createToast, copyText, toastOf, toastTick, TOAST_T } from "../src/app/e
 import "../src/app/demobot.js";
 import { rec as krec } from "./lib/textrec.mjs";
 import * as kprobe from "../src/render/kit/probe.js";
-import * as lazyPages from "../src/render/pages/lazy.js";
 import * as endWin from "../src/render/pages/endwin.js";
 import * as endLose from "../src/render/pages/endlose.js";
 import { endFacts, endGeom } from "../src/render/pages/endgeom.js";

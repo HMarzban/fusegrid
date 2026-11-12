@@ -9,6 +9,7 @@
    Every claim comes from endFacts (isRunEnd and the run-start best). The world of the level played dresses it. The motion beats run on run.et
    (appendix 10.4: plate in, headline drop, digits flip, cells pop, pieces swing, focus at 1.5 s); REDUCE FLASH or prefers-reduced-motion: the end
    state with one 200 ms fade. At rest one cache layer; live: the focus (bare bomb + ring) and the toast. Under the kit probe it records as "win". */
+import {END_WORDS as EW, MENU} from "../words.js";
 import {worldTokens, CONST, rgba} from "../kit/tokens.js";
 import {plate, key} from "../kit/paint.js";
 import {DEV, textScale} from "../kit/type.js";
@@ -119,7 +120,7 @@ function scene(p, F, G, tok, caps, A) {
   pager(p, G, tok);
   const K = G.keys, k = (n) => dr(G, K[n]);
   keyPart(p, "main", k("main"), "main", F.keys.main, {tok, phone: ph, cap: caps.main, big: true});
-  if (K.copy) { keyPart(p, "copy", k("copy"), "key", "COPY RESULT", {tok, phone: ph, cap: caps.copy, center: !caps.copy}); keyPart(p, "map", k("map"), "key", "COPY MAP", {tok, phone: ph, cap: caps.map, center: !caps.copy}); }
+  if (K.copy) { keyPart(p, "copy", k("copy"), "key", EW.COPY, {tok, phone: ph, cap: caps.copy, center: !caps.copy}); keyPart(p, "map", k("map"), "key", EW.MAP, {tok, phone: ph, cap: caps.map, center: !caps.copy}); }
 }
 
 /** Paints WIN over the board: c drawOverlay's context, B its box {w, h}; run / tm / toast as drawOverlay hands them. */

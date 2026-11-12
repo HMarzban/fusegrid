@@ -9,9 +9,7 @@ import { drawPause, VEIL as PAUSE_VEIL } from "./pages/pause.js";
 import { hints } from "./hintcopy.js";
 import { endTap, endMode, endPagesOf } from "./pages/endgeom.js";
 import * as lazy from "./pages/lazy.js";
-import { worldTokens, CONST } from "./kit/tokens.js";
-import { plate as kitPlate } from "./kit/paint.js";
-import { lbl } from "./kit/type.js";
+import { loadingPage, lazyPage, lazyFailed, loadBox } from "./menudraw.js";
 
 /* Scene UI: HUD, and the CLEARED / GAME OVER / PAUSED overlays.
    Pure draw; reads world + (optionally) DOM for HUD. The MENU logo is the MENU
@@ -112,17 +110,18 @@ const touchOf = (c) => touchLay(c && c.canvas);
 /* The run-end pages by mode (v202 Tasks 5.2-5.4): a mode with no page here keeps today's summary and its tap-anywhere; a registered one draws
    its page once the lazy module is in, a LOADING plate until then, and its taps go through endgeom's keys. endReady(mode) is that state for
    endTap: null (no page), false (loading), true. */
-const lazyEnd = (n) => () => { const m = lazy.get(n); if (!m && typeof document !== "undefined") lazy.want(n).catch(() => {}); return m; }; // Node never imports: tests hand the page in (lazy._set)
+const lazyEnd = (n) => () => (typeof document !== "undefined" ? lazyPage(n) : lazy.get(n)); // the one ask (menudraw lazyPage: re-asked, a failure retried); Node never imports: tests hand the page in (lazy._set)
+const END_NAME = Object.freeze({ clear: "endwin", fin: "endwin", lose: "endlose" });
 const END_PAGES = Object.freeze({ clear: lazyEnd("endwin"), fin: lazyEnd("endwin"), lose: lazyEnd("endlose") });
 const endPage = (mode) => (END_PAGES[mode] ? END_PAGES[mode]() : undefined);
-/* a run-end page not in yet: the veil and a kit plate in the room's world with one LOADING line; its taps find nothing (endReady false) */
-function endLoading(c, world, w, h) {
-  const tok = worldTokens(world.level | 0 || 1), pw = 220, ph = 64, x = (w - pw) / 2, y = (h - ph) / 2;
-  c.save(); c.fillStyle = "rgba(11,6,9,0.45)"; c.fillRect(0, 0, w, h);
-  if (typeof c.rect !== "function" || typeof c.clip !== "function") return void c.restore(); // the headless renderer's context: the veil only
-  kitPlate(c, x, y, pw, ph, tok);
-  lbl(c, "LOADING", w / 2, h / 2, 21, { align: "center", col: CONST.t2 });
-  c.restore();
+/* a run-end page not in yet: the veil, then THE LOADING plate (menudraw loadingPage: kit room.js loadingPlate, no room under it, DID NOT LOAD once its
+   import failed) in the played room's world, titled with the level; its taps find nothing while it loads, and once it failed a tap off the plate
+   is MENU (endHitAt), so a touch player is never stuck */
+const endFrame = (w, h, run) => ({ W: w, H: h, touch: !!run && (run.lay === "p" || run.lay === "l"), shell: false, css: run && run.css > 0 ? run.css : 0 });
+function endLoading(c, world, w, h, run, mode) {
+  c.save(); c.fillStyle = "rgba(11,6,9,0.45)"; c.fillRect(0, 0, w, h); c.restore();
+  const lv = world.level | 0 || 1;
+  loadingPage(c, endFrame(w, h, run), LABEL.LEVEL + " " + lv, { level: lv, paused: true }, END_NAME[mode]);
 }
 export const endReady = (mode) => { const p = endPage(mode); return p === undefined ? null : !!p; };
 /* main's run-end tap: x y in the overlay box of the look (overlayBox), run / tm as main hands them to drawOverlay (run.lay, run.css: the layout
@@ -130,7 +129,11 @@ export const endReady = (mode) => { const p = endPage(mode); return p === undefi
 let mc;
 const mctx = () => { if (mc === undefined) { try { mc = typeof document !== "undefined" && document && typeof document.createElement === "function" ? document.createElement("canvas").getContext("2d") : null; } catch (e) { mc = null; } } return mc; }; // the run end's measure for a tap (the page measures on its own context: same fonts, same widths)
 const endOpts = (run) => ({ lay: run && run.lay, css: run && run.css, page: run && run.page, m: mctx() });
-export const endHitAt = (x, y, kind, world, run, tm) => endTap(x, y, overlayBox(kind), world, run, tm, endOpts(run), endReady);
+export const endHitAt = (x, y, kind, world, run, tm) => {
+  const mode = endMode(world), B = overlayBox(kind);
+  if (endPage(mode) === null && lazyFailed(END_NAME[mode])) { const P = loadBox(endFrame(B.w, B.h, run)); return x >= P.x && x < P.x + P.w && y >= P.y && y < P.y + P.h ? null : "menu"; }
+  return endTap(x, y, B, world, run, tm, endOpts(run), endReady);
+};
 export const endPagesAt = (kind, world, run, tm) => endPagesOf(overlayBox(kind), world, run, tm, endOpts(run));
 export function drawOverlay(
   c,
@@ -145,7 +148,7 @@ export function drawOverlay(
   toast,
 ) {
   const mode = endMode(world), page = mode ? endPage(mode) : undefined;
-  if (page === null) return endLoading(c, world, w, h);
+  if (page === null) return endLoading(c, world, w, h, run, mode);
   if (page) return void (mode === "lose" ? page.drawLose : page.drawWin)(c, { w, h }, world, run, tm, toast);
   if (world.state !== "PAUSE") return;
   c.fillStyle = world.state !== "PAUSE" ? "rgba(6,10,20,0.80)" : ui && ui.view | 0 ? "rgba(7,10,18,0.72)" : PAUSE_VEIL; // the PAUSE list wears the kit's veil (.6); the inline pages keep theirs

@@ -74,6 +74,10 @@ export const LOOK_WORDS = Object.freeze({RETRY: "RETRY", TAP_RETRY: "TAP TO RETR
    teaser and foot words (round 7 S7-menu). */
 /* PAUSE (v202 Task 5.1): its rows (menuapp PAUSE_ITEMS, pinned equal), title, the daily tag and the foot verb */
 export const PAUSE_WORDS = Object.freeze({RESUME: "RESUME", RESTART: "RESTART", QUIT: "QUIT TO MENU", PAUSED: "PAUSED", DAILY: "DAILY", CONFIRM: "CONFIRM"});
+/* the run ends (v202 Tasks 5.2-5.4): headlines, stat names, keys and the controller caps of COPY RESULT / COPY MAP; MENU is words.js MENU */
+export const END_WORDS = Object.freeze({TIME: "TIME", DAILY: "DAILY", CLEAR: "CLEAR", ENEMIES: "ENEMIES", NEXT: "NEXT LEVEL", FUSE_CLEAR: "FUSE/GRID CLEAR", SCORE: "SCORE",
+  OPEN: "6 TO 8 NOW OPEN", OVER: "GAME OVER", NEW_BEST: "NEW BEST", NEW: "NEW", FURTHEST: "FURTHEST", YET: "YET", AGAIN: "TRY AGAIN", MORE: "MORE",
+  COPY: "COPY RESULT", MAP: "COPY MAP", CAP_COPY: "WEST", CAP_MAP: "NORTH"});
 export const MENU_ROWS = Object.freeze(["PLAY", LABEL.LEVEL_SELECT, "DAILY", LABEL.RECORDS, LABEL.SETTINGS, "GUIDE", "SOURCE"]);
 export const ART_STYLES = Object.freeze(["CLASSIC 2D", "PIXEL", "REAL 3D"]);
 export const MENU_WORDS = Object.freeze({

@@ -178,7 +178,7 @@ for (const ts of [1, 1.25]) {
     /drawPause\(c, world, \{ w, h \}/.test(src("scenes.js")) && !/PAUSED/.test(src("scenes.js").replace(/\/\*[\s\S]*?\*\//g, "")));
   const code = (f) => src(f).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, ""), main = readFileSync(new URL("../src/main.js", import.meta.url), "utf8"), ptr = readFileSync(new URL("../src/app/pointer.js", import.meta.url), "utf8");
   check("css reaches the painter through opts.pause (main hands #c's canvas.css), the very value pointer.js taps with; no painter reads canvas.css",
-    /pause: \{[^}]*css: canvas && canvas\.css \}/.test(main) && /pauseHit\(px, py, B, touchLay\(canvas\), \{ css: canvas\.css,/.test(ptr) && !/canvas\.css|\.css\b/.test(code("scenes.js")) && !/canvas\.css/.test(code("pages/pause.js")));
+    /pause: \{[^}]*css: canvas && canvas\.css[^}]*\}/.test(main) && /pauseHit\(px, py, B, touchLay\(canvas\), \{ css: canvas\.css,/.test(ptr) && !/canvas\.css/.test(code("scenes.js")) && (code("scenes.js").match(/\.css\b/g) || []).length === (code("scenes.js").match(/\brun\.css\b/g) || []).length /* scenes reads only run.css (main's run-end facts, v202 Task 5.2) */ && !/canvas\.css/.test(code("pages/pause.js")));
   const { createRenderer } = await import("../src/render/renderer.js");
   const { createWorld, loadLevel } = await import("../src/core/world.js");
   const w = createWorld(11, 1); loadLevel(w, 3, false); w.state = "PAUSE";

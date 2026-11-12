@@ -6,6 +6,7 @@
    A page paints its static parts once into a kit cache layer (pen with rec off) and records them every frame with c null, so a steady frame paints
    the blit and the live parts only. No filters: the soft parts are gradients. A colour is a token or a CONST, never a new hex but the few the
    appendix names (the warm core #fff3b0, char and soot #15181f / #07080b / #3a302c, the medal disc #1e1216). */
+import {END_WORDS as EW} from "../words.js";
 import {CONST, rgba} from "../kit/tokens.js";
 import {key, cap, capW, glyph, focusBomb} from "../kit/paint.js";
 import {T, DEV, measure, textScale} from "../kit/type.js";
@@ -185,7 +186,7 @@ const hook = (c, cx, y, L, tok) => { const s = 0.6 * L; c.fillStyle = OL; c.fill
    ribbonW measures it (at least 9 L wide). x y its top-left; the hook stud sits on its top centre */
 export function ribbonW(p, piece, L, ph) {
   const d = DEV[ph ? "p" : "d"], vpx = (1.6 * L) / 0.72, pad = ph ? 9 : 16;
-  return Math.max(9 * L, textW(p, "label", "NEW BEST", d.sec) + 2 * pad, textW(p, "label", piece.name, d.pri) + 2 * pad, textW(p, "num", piece.value || "", vpx) + 2 * pad);
+  return Math.max(9 * L, textW(p, "label", EW.NEW_BEST, d.sec) + 2 * pad, textW(p, "label", piece.name, d.pri) + 2 * pad, textW(p, "num", piece.value || "", vpx) + 2 * pad);
 }
 export function ribbon(p, x, y, w, h, piece, L, o = {}) {
   const c = p.c, tok = o.tok, d = DEV[o.phone ? "p" : "d"], vpx = (1.6 * L) / 0.72, tw = 1.6 * L, tl = 1.4 * L, nv = 0.6 * L, apart = 1.2 * L;
@@ -206,7 +207,7 @@ export function ribbon(p, x, y, w, h, piece, L, o = {}) {
   const cx = x + w / 2, top = y + (o.phone ? 7 : 8), K = textScale();
   if (piece.kind === "more") text(p, "label", piece.name, cx, y + h / 2, d.pri, {align: "center", col: CONST.dk});
   else {
-    text(p, "label", "NEW BEST", cx, top + d.sec * K * 0.6, d.sec, {align: "center", col: CONST.yelInk, role: "secondary"});
+    text(p, "label", EW.NEW_BEST, cx, top + d.sec * K * 0.6, d.sec, {align: "center", col: CONST.yelInk, role: "secondary"});
     text(p, "label", piece.name, cx, top + d.sec * K * 1.2 + 3 + d.pri * K * 0.6, d.pri, {align: "center", col: CONST.dk});
     text(p, "num", piece.value, cx, top + d.sec * K * 1.2 + 6 + d.pri * K * 1.2 + vpx * K * 0.5, vpx, {align: "center", col: CONST.dk});
   }
@@ -216,7 +217,7 @@ export function ribbon(p, x, y, w, h, piece, L, o = {}) {
    meet at the hook stud; the name in cream and a NEW tag (an outline, never a yellow fill), the rule under it in body copy. Desk: stacked; phone:
    octagon left, words right. medalW measures it. */
 export function medalW(p, piece, L, ph) {
-  const d = DEV[ph ? "p" : "d"], nw = textW(p, "label", piece.name, d.pri) + 8 + textW(p, "label", "NEW", d.sec) + 26;
+  const d = DEV[ph ? "p" : "d"], nw = textW(p, "label", piece.name, d.pri) + 8 + textW(p, "label", EW.NEW, d.sec) + 26;
   const bw = Math.min(19 * L, Math.max(...wrap(p, "body", piece.desc, d.bod, 19 * L).slice(0, 2).map((s) => textW(p, "body", s, d.bod))));
   return ph ? 4 * L + 12 + Math.max(nw, bw) : Math.max(4 * L + 4, nw, bw);
 }
@@ -230,11 +231,11 @@ export function medal(p, x, y, w, piece, L, o = {}) {
   }
   rrect(p, "medal " + piece.name, ox - D / 2, y + sh, D, D);
   const tx = ph ? x + D + 12 : x + w / 2, al = ph ? "left" : "center", ny = ph ? y + sh + d.pri * K * 0.6 : oy + D / 2 + 8 + d.pri * K * 0.6;
-  const nw = textW(p, "label", piece.name, d.pri), tagW = textW(p, "label", "NEW", d.sec) + 18, n0 = ph ? tx : tx - (nw + 8 + tagW) / 2;
+  const nw = textW(p, "label", piece.name, d.pri), tagW = textW(p, "label", EW.NEW, d.sec) + 18, n0 = ph ? tx : tx - (nw + 8 + tagW) / 2;
   text(p, "label", piece.name, n0, ny, d.pri, {});
   const tgx = n0 + nw + 8, tgh = d.sec * K + 8;
   if (c) { c.fillStyle = OL; c.fillRect(tgx, ny - tgh / 2, tagW, tgh); c.strokeStyle = CONST.medal; c.lineWidth = 2; c.strokeRect(tgx + 1, ny - tgh / 2 + 1, tagW - 2, tgh - 2); }
-  text(p, "label", "NEW", tgx + 9, ny, d.sec, {col: CONST.medal, role: "secondary"});
+  text(p, "label", EW.NEW, tgx + 9, ny, d.sec, {col: CONST.medal, role: "secondary"});
   wrap(p, "body", piece.desc, d.bod, Math.min(ph ? w - D - 12 : w, RULE_L * L)).slice(0, 2).forEach((s, i) => text(p, "body", s, tx, ny + d.pri * K * 0.6 + 6 + d.bod * K * (0.65 + 1.35 * i), d.bod, {align: al, role: "body"}));
 }
 export const pieceW = (p, piece, L, ph) => pieceWidth(piece, L, ph, p.m);
@@ -271,7 +272,7 @@ export const ease = (t) => 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 3);
 export function capsOf(touch) {
   const W = hints();
   if (tapMode(touch)) return {main: null, menu: null, copy: null, map: null};
-  return W.dev === "pad" ? {main: W.ok, menu: W.back, copy: "WEST", map: "NORTH"} : {main: W.ok, menu: W.back, copy: "C", map: "B"};
+  return W.dev === "pad" ? {main: W.ok, menu: W.back, copy: EW.CAP_COPY, map: EW.CAP_MAP} : {main: W.ok, menu: W.back, copy: "C", map: "B"};
 }
 /* the pager (endGeom on a short box): ▲ and ▼ keys (44 design px = 44 CSS px tall) either side of "page / pages"; r its row, G.keys.up / down */
 export function pager(p, G, tok) {

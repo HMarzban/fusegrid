@@ -9,6 +9,7 @@
    Motion (appendix 10.6, 1.4 s, downward, no overshoot): the veil deepens, the plate fades in, the headline settles, the spark gutters out, the crack
    draws, the smoke starts (a loop), TRY AGAIN takes focus; REDUCE FLASH or prefers-reduced-motion: the end state, one static puff, one 200 ms fade.
    At rest one cache layer; live: the smoke, the focus (bare bomb + ring) and the toast. Under the kit probe it records as "lose". */
+import {END_WORDS as EW, MENU} from "../words.js";
 import {worldTokens, CONST, rgba, toL} from "../kit/tokens.js";
 import {plate, key} from "../kit/paint.js";
 import {DEV, textScale} from "../kit/type.js";
@@ -177,10 +178,10 @@ function scene(p, F, G, tok, caps, A) {
   }
   pager(p, G, tok);
   const K = (n) => dr(G, G.keys[n]);
-  keyPart(p, "main", K("main"), "main", "TRY AGAIN", {tok, phone: ph, cap: caps.main, big: true, sub: F.keys.sub, center: ph});
-  keyPart(p, "menu", K("menu"), "key", "MENU", {tok, phone: ph, cap: caps.menu, center: !caps.menu});
-  keyPart(p, "copy", K("copy"), "key", "COPY RESULT", {tok, phone: ph, cap: caps.copy, center: !caps.copy});
-  keyPart(p, "map", K("map"), "key", "COPY MAP", {tok, phone: ph, cap: caps.map, center: !caps.map});
+  keyPart(p, "main", K("main"), "main", EW.AGAIN, {tok, phone: ph, cap: caps.main, big: true, sub: F.keys.sub, center: ph});
+  keyPart(p, "menu", K("menu"), "key", MENU, {tok, phone: ph, cap: caps.menu, center: !caps.menu});
+  keyPart(p, "copy", K("copy"), "key", EW.COPY, {tok, phone: ph, cap: caps.copy, center: !caps.copy});
+  keyPart(p, "map", K("map"), "key", EW.MAP, {tok, phone: ph, cap: caps.map, center: !caps.map});
 }
 
 /** Paints GAME OVER over the board: c drawOverlay's context, B its box {w, h}; run / tm / toast as drawOverlay hands them. */

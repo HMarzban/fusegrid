@@ -485,6 +485,8 @@ function lazyMod(name) {
 }
 const loadHit = (x, y, F) => { const B = loadBox(F); return x >= B.x && x < B.x + B.w && y >= B.y && y < B.y + B.h ? -2 : -1; };
 const failedOf = (name) => !!(asks[name] && asks[name].fails > 0);
+/* the run ends (scenes.js, v202 Tasks 5.2-5.4) reach their lazy pages through the same one ask and the same failed state */
+export { lazyMod as lazyPage, failedOf as lazyFailed, loadBox };
 /* a lazy page's hit before its module is in: inert (-2) while it loads; once the plate says DID NOT LOAD, SETTINGS' rule on every lazy page: -2 on
    the plate, -1 off it (backs out), so a touch player is never stuck on a failed page (lane lesson 5) */
 const lazyHit = (name, x, y, F) => (failedOf(name) ? loadHit(x, y, F) : -2);

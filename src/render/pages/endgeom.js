@@ -14,7 +14,7 @@
    endHit(x, y, G) names the key under a tap (main, menu, copy, map; up / down the pager's) or null: off the keys a tap does nothing (it skips the motion). endTap is
    main's whole tap path: while the page for this mode is not in (LOADING), null; where no page is registered yet, today's tap, the main key. */
 import {isFinale, biomeOf} from "../../core/config.js";
-import {LABEL, diffTag, multTag, runParts} from "../words.js";
+import {LABEL, diffTag, multTag, runParts, END_WORDS as EW, MENU} from "../words.js";
 import {fmtTime, fmtSpan, bestLabel, dailyLine, pauseKickers, isRunEnd} from "../scenes.js";
 import {T, DEV, measure, textScale} from "../kit/type.js";
 import {hints} from "../hintcopy.js";
@@ -44,7 +44,7 @@ function course(mode, lv, run) {
   }
   return out;
 }
-const timeRib = (lv, tm) => (tm && Number.isFinite(tm.t) && (tm.best == null || tm.t < tm.best) ? {kind: "rib", name: [LABEL.LEVEL + " " + lv + " TIME"], value: fmtTime(tm.t)} : null);
+const timeRib = (lv, tm) => (tm && Number.isFinite(tm.t) && (tm.best == null || tm.t < tm.best) ? {kind: "rib", name: [LABEL.LEVEL + " " + lv + " " + EW.TIME], value: fmtTime(tm.t)} : null);
 
 /* a medal's rule as the end page's body copy (appendix 10.3: sentence case, "Levels 1 to 5 in one run, no life lost."): the MEDALS page keeps the
    caps row (medals.js MEDAL_ROWS); a setting's name stays in caps as everywhere in body copy (NORMAL DIFFICULTY, FAST SPEED, DEFAULT RULES) */
@@ -57,45 +57,45 @@ export function ruleSentence(s) {
 }
 export function endFacts(world, run, tm) {
   const w = world || {}, mode = endMode(w), lv = w.level | 0 || 1, h = Math.max(0, Math.min(2, w.heat | 0)), k = h + 1, s = w.score | 0;
-  const end = !!run && isRunEnd(w), b = run && run.best, lvw = LABEL.LEVEL + " " + lv + " · " + biomeOf(lv).name, dly = run && run.daily ? " · DAILY" : "";
+  const end = !!run && isRunEnd(w), b = run && run.best, lvw = LABEL.LEVEL + " " + lv + " · " + biomeOf(lv).name, dly = run && run.daily ? " · " + EW.DAILY : "";
   const F = {mode, lv, heat: h, k, fixed: !!(run && run.fixed), daily: !!(run && run.daily), pieces: [], tail: null, note: null};
   F.kick = mode === "clear" ? [lvw] : [lvw + " · " + runParts({heat: w.heat, pace: w.pace, pact: w.pact}, {diff: true}).join(" · ") + dly, ...pauseKickers(w, run)];
   if (mode === "clear") {
-    F.head = LABEL.LEVEL + " " + lv + " CLEAR";
-    F.stats = [["clock", "TIME", tm && Number.isFinite(tm.t) ? fmtTime(tm.t) : "0:00.0"], ["foe", "ENEMIES", String(run ? run.lk | 0 : 0)], ["item", LABEL.POWER_UPS, String(run ? run.lp | 0 : 0)]];
+    F.head = LABEL.LEVEL + " " + lv + " " + EW.CLEAR;
+    F.stats = [["clock", EW.TIME, tm && Number.isFinite(tm.t) ? fmtTime(tm.t) : "0:00.0"], ["foe", EW.ENEMIES, String(run ? run.lk | 0 : 0)], ["item", LABEL.POWER_UPS, String(run ? run.lp | 0 : 0)]];
     const t = timeRib(lv, tm);
     if (t) F.pieces.push(t);
-    F.keys = {main: "NEXT LEVEL"};
+    F.keys = {main: EW.NEXT};
     return deep(F);
   }
   F.course = course(mode, lv, run);
   if (mode === "fin") {
-    F.head = "FUSE/GRID CLEAR";
-    F.score = {digits: fmtN(s * k), sub: "SCORE · " + multTag(h), subs: ["SCORE · " + multTag(h), multTag(h)]};
-    F.stats = [["foe", "ENEMIES", String(run ? run.k | 0 : 0)], ["item", LABEL.POWER_UPS, String(run ? run.p | 0 : 0)], ["clock", "TIME", fmtSpan(run ? run.t : 0)]];
+    F.head = EW.FUSE_CLEAR;
+    F.score = {digits: fmtN(s * k), sub: EW.SCORE + " · " + multTag(h), subs: [EW.SCORE + " · " + multTag(h), multTag(h)]};
+    F.stats = [["foe", EW.ENEMIES, String(run ? run.k | 0 : 0)], ["item", LABEL.POWER_UPS, String(run ? run.p | 0 : 0)], ["clock", EW.TIME, fmtSpan(run ? run.t : 0)]];
     if (end && F.daily) F.note = dailyLine(w, run);
     /* the finale that first opens levels 6-8 says so: run.opened is main's persisted fact (endRun saves the unlock on this run-end edge) */
-    if (end && run.opened) F.opened = LABEL.LEVELS + " 6 TO 8 NOW OPEN";
+    if (end && run.opened) F.opened = LABEL.LEVELS + " " + EW.OPEN;
     const p = [];
-    if (end && !F.daily && (b ? s > (b.s | 0) : s > 0)) p.push({kind: "rib", name: ["SCORE · " + bestLabel(w), "SCORE"], value: fmtN(s * k)});
+    if (end && !F.daily && (b ? s > (b.s | 0) : s > 0)) p.push({kind: "rib", name: [EW.SCORE + " · " + bestLabel(w), EW.SCORE], value: fmtN(s * k)});
     const t = run ? timeRib(lv, tm) : null;
     if (t) p.push(t);
     for (const m of (end && run.medals) || []) p.push({kind: "medal", name: m[0], desc: ruleSentence(m[1])});
     F.pieces = p.length > 3 ? [p[0], p[1], {kind: "more", n: p.length - 2}] : p;
-    F.keys = {main: "MENU", copy: true};
+    F.keys = {main: MENU, copy: true};
     return deep(F);
   }
-  F.head = "GAME OVER";
+  F.head = EW.OVER;
   F.reached = "Reached level " + lv + " of " + runFin(lv) + ".";
-  F.scoreLine = {label: "SCORE", value: fmtN(s * k), mult: multTag(h)};
+  F.scoreLine = {label: EW.SCORE, value: fmtN(s * k), mult: multTag(h)};
   if (end && F.daily) F.tail = {kind: "daily", text: dailyLine(w, run)};
   else if (end && (b || s > 0)) {
-    if (!b || s > (b.s | 0)) F.tail = {kind: "plaque", text: ["NEW BEST · " + bestLabel(w), "NEW BEST"]};
-    else if (run.fromStart !== false && lv > (b.r | 0)) F.tail = {kind: "plaque", text: ["FURTHEST " + LABEL.LEVEL + " YET"]};
+    if (!b || s > (b.s | 0)) F.tail = {kind: "plaque", text: [EW.NEW_BEST + " · " + bestLabel(w), EW.NEW_BEST]};
+    else if (run.fromStart !== false && lv > (b.r | 0)) F.tail = {kind: "plaque", text: [EW.FURTHEST + " " + LABEL.LEVEL + " " + EW.YET]};
     else if (s === (b.s | 0)) F.tail = {kind: "short", lead: "Matched", text: "Matched your " + bestLabel(w) + " best (" + fmtN(b.s * k) + ")."};
     else { const lead = fmtN(((b.s | 0) - s) * k) + " points short"; F.tail = {kind: "short", lead, text: lead + " of your " + bestLabel(w) + " best (" + fmtN(b.s * k) + ")."}; }
   }
-  F.keys = {main: "TRY AGAIN", sub: F.fixed ? "Same board" : "New board · " + LABEL.LEVEL.toLowerCase() + " 1", menu: true, copy: true};
+  F.keys = {main: EW.AGAIN, sub: F.fixed ? "Same board" : "New board · " + LABEL.LEVEL.toLowerCase() + " 1", menu: true, copy: true};
   return deep(F);
 }
 
@@ -117,11 +117,11 @@ const wOf = (m, face, s, px) => { const w = m ? measure(m, T[face](px), String(s
 const wrapW = (m, face, s, px, w) => { const out = []; let line = ""; for (const word of tokensOf(s)) { const t = line ? line + " " + word : word; if (line && wOf(m, face, t, px) > w) { out.push(line); line = word; } else line = t; } if (line) out.push(line); return out; };
 /* a record piece's name, the first of its candidates within 18 L (a whole statement, never a cut one), and its width in design px (the painter
    draws at exactly this: endkit pieceW calls it). A ribbon is at least 9 L wide; a medal its octagon, name + NEW tag and two lines of rule (19 L) */
-export const pieceName = (q, L, ph, m) => (q.kind === "more" ? "+" + q.n + " MORE" : q.kind === "medal" ? q.name : [].concat(q.name).find((s) => wOf(m, "label", s, END[ph ? "p" : "d"].pri) <= 18 * L) || [].concat(q.name).pop());
+export const pieceName = (q, L, ph, m) => (q.kind === "more" ? "+" + q.n + " " + EW.MORE : q.kind === "medal" ? q.name : [].concat(q.name).find((s) => wOf(m, "label", s, END[ph ? "p" : "d"].pri) <= 18 * L) || [].concat(q.name).pop());
 export function pieceWidth(q, L, ph, m) {
   const D = END[ph ? "p" : "d"], pad = ph ? 9 : 16, name = pieceName(q, L, ph, m);
-  if (q.kind !== "medal") return Math.max(9 * L, wOf(m, "label", "NEW BEST", D.sec) + 2 * pad, wOf(m, "label", name, D.pri) + 2 * pad, wOf(m, "num", q.value || "", (1.6 * L) / 0.72) + 2 * pad);
-  const nw = wOf(m, "label", name, D.pri) + 8 + wOf(m, "label", "NEW", D.sec) + 26, bw = Math.min(RULE_L * L, Math.max(...wrapW(m, "body", q.desc, D.bod, RULE_L * L).slice(0, 2).map((t) => wOf(m, "body", t, D.bod))));
+  if (q.kind !== "medal") return Math.max(9 * L, wOf(m, "label", EW.NEW_BEST, D.sec) + 2 * pad, wOf(m, "label", name, D.pri) + 2 * pad, wOf(m, "num", q.value || "", (1.6 * L) / 0.72) + 2 * pad);
+  const nw = wOf(m, "label", name, D.pri) + 8 + wOf(m, "label", EW.NEW, D.sec) + 26, bw = Math.min(RULE_L * L, Math.max(...wrapW(m, "body", q.desc, D.bod, RULE_L * L).slice(0, 2).map((t) => wOf(m, "body", t, D.bod))));
   return ph ? 4 * L + 12 + Math.max(nw, bw) : Math.max(4 * L + 4, nw, bw);
 }
 /* a medal's rule takes one line where RULE_L L holds it, else two */
@@ -178,9 +178,9 @@ export function endGeom(B, F, o = {}) {
   const availW = (B.w - 2 * MARGIN) * css - ring, availH = (B.h - HUD_TOP - 2 * MARGIN) * css - ring;
   /* the keys' words (a touch layout in tap mode shows no keycaps): GAME OVER's foot keys share their row by what each needs (label and
      keycap), and its plate widens to hold them (never past the box) */
-  const W = hints(), tap = ph && W.dev !== "pad", caps = W.dev === "pad" ? {menu: W.back, copy: "WEST", map: "NORTH"} : {menu: W.back, copy: "C", map: "B"};
+  const W = hints(), tap = ph && W.dev !== "pad", caps = W.dev === "pad" ? {menu: W.back, copy: EW.CAP_COPY, map: EW.CAP_MAP} : {menu: W.back, copy: "C", map: "B"};
   const need = (l, c) => 16 + wOf(o.m, "label", l, D.pri) + (tap ? 4 : 14 + Math.max(DEV.d.capw, wOf(o.m, "label", c, D.sec) + 20)) + 14;
-  const footNeed = [need("MENU", caps.menu), need("COPY RESULT", caps.copy), need("COPY MAP", caps.map)];
+  const footNeed = [need(MENU, caps.menu), need(EW.COPY, caps.copy), need(EW.MAP, caps.map)];
   let plateW = Math.min(lose && !ph ? Math.max(nominal, footNeed.reduce((a, b) => a + b, 0) + 24 + 2 * side) : nominal, availW);
   const pad = ph ? [10, side, 10, side] : lose ? [1.4 * L, side, 1.3 * L, side] : [1.3 * L, side, 1.5 * L, side], inW = plateW - 2 * side; // a phone column keeps 10 px above and below
   /* GAME OVER's two columns (the bomb's 200 | the facts) while the facts keep 330 px; narrower, one column with the bomb beside the headline */
@@ -190,7 +190,7 @@ export function endGeom(B, F, o = {}) {
   const colX = two ? side + D.loseL + D.loseGap : side, colW0 = two ? inW - D.loseL - D.loseGap : inW;
   /* a narrow desk finale stacks its keys: MENU over COPY RESULT | COPY MAP */
   const copyNeed = Math.max(footNeed[1], footNeed[2]);
-  const mainNeed = 8 + DEV.d.bombs + 12 + wOf(o.m, "display", "MENU", 28) + (tap ? 4 : 14 + Math.max(DEV.d.capw, wOf(o.m, "label", W.ok, D.sec) + 20)) + 14;
+  const mainNeed = 8 + DEV.d.bombs + 12 + wOf(o.m, "display", MENU, 28) + (tap ? 4 : 14 + Math.max(DEV.d.capw, wOf(o.m, "label", W.ok, D.sec) + 20)) + 14;
   const menuW = Math.min(330, Math.max(mainNeed, inW - 28 - 2 * copyNeed)), fin2 = F.mode === "fin" && !ph && inW - 28 - 2 * copyNeed < mainNeed; // the keys keep label and keycap: else MENU over the copy keys
   const keys = lose ? [["try", ph ? 64 : 1.32 * D.btnh + 0.4 * L], ["foot", ph ? 46 : 0.85 * D.btnh]] : [["keys", F.mode === "fin" && ph ? 46 + 10 + 46 : fin2 ? D.btnh + 8 + 0.85 * D.btnh : D.btnh]];
   const keysH = keys.reduce((a, [n, h], i) => a + h + (i ? Math.max(kgap, gap(n)) : 0), 0);

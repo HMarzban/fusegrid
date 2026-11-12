@@ -270,9 +270,9 @@ inLayers(() => { for (const kind of ["2d", "px", "3d"]) {
       const RUNS = [null, { r: 3, k: 12, p: 4, t: 200 }, { r: 5, k: 40, p: 9, t: 700, best: { s: 99999, r: 8 }, fromStart: true, md: medalLine(255) }, { r: 5, k: 40, p: 9, t: 700, best: { s: 1, r: 1 }, md: medalLine(128), medals: [["IRON CROWN", "LEVELS 6-8 IN ONE RUN ON EXPERT DIFFICULTY"]], et: 9 },
         { r: 2, k: 4, p: 1, t: 90, best: null }, { r: 1, k: 1, p: 0, t: 60, daily: "2026-11-10", tries: 3, dbest: 1840 }, { r: 3, k: 1, p: 0, t: 60, best: { s: 1234, r: 3 } }];
       for (const run of RUNS) for (const [state, lv] of [["PAUSE", wo.level], ["WIN", 3], ["WIN", 5], ["WIN", 8], ["LOSE", wo.level]]) for (const ui of [{ view: 0, cursor: PAUSE_ITEMS.indexOf("RESTART"), touch }, { view: 0, cursor: PAUSE_ITEMS.indexOf("RESUME"), touch, note: "CONTROLLER LOST" }, { view: 0, cursor: PAUSE_ITEMS.indexOf(W.LABEL.SETTINGS), touch, next: "REAL 3D NEXT" }]) {
-        const R = rec({ widthK: 0.648 }), world = { ...wo, state, level: lv, score: 1234, players: [{}] };
+        const R = rec({ widthK: 0.648 }), world = { ...wo, state, level: lv, score: 1234, players: [{}] }, n0 = made.length;
         drawOverlay(R.ctx, world, B.w, B.h, B.cx, B.cy, ui, { on: true, t: 41.2, best: 38.9 }, run && { ...run, css: 1.38 }, { s: "COPIED", ok: true }); // a 1366 x 768 stage: the run ends on one page (v202 Tasks 5.3 / 5.4)
-        note(state + " " + lv + " " + kind + " " + lay + w + " " + dev, R.texts, true);
+        note(state + " " + lv + " " + kind + " " + lay + w + " " + dev, withLayers(R, n0), true); // the run-end pages and PAUSE paint their static parts into kit layers (R1)
       }
     }
   }
@@ -484,6 +484,7 @@ check("source grep (tripwire): no string literal in src/ carries an old word out
     ["BACK", /probe\.rect\("BACK"|name: "BACK"|\["BACK", /], ["PAGE UP", /"PAGE UP"/], ["PAGE DOWN", /"PAGE DOWN"/], // probe rect names (tools/ui/lib/screens.mjs)
     ...["BLOOM", "GLIDE", "BELT", "STREAM", "PLATE", "QUICK", "PORTAL", "GATE"].map((k) => [k, /^export const FLOOR_ROWS = /]), // TILE_NAME's keys (core/feat.js)
     ["ICE", /b\.name === "ICE"/], // a BIOMES name key (core/config.js)
+    ["LOSE", /w\.state === "LOSE"/], ["WIN", /w\.state === "WIN"/], // world.state values (core/sim.js), read by the run ends' mode (endgeom endMode)
   ]);
   const hits = [];
   for (const d of ["src/render/pages", "src/render/kit"]) for (const f of walk(join(ROOT, d))) {
