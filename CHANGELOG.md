@@ -59,6 +59,11 @@ The menus centre, CONTROLS joins the world, the first load builds the title, and
   your pick again; ART STYLE says it did not load, and Enter on it tries again.
 - **The FLOOR TILES card has a way out.** If the floor tiles cannot load before a run, the card now offers RETRY and BACK TO
   MENU (Escape, EAST or a tap), and P or Escape while they load goes back to the menu too.
+- **The FLOOR TILES card no longer points at ART STYLE.** Changing the art style does not help floor tiles load, so the
+  card now just says to check your connection and retry.
+- **CONTROLS never traps you on DID NOT LOAD.** If the CONTROLS page fails to load, a tap or click off its plate goes back
+  (on the plate it does nothing); while it is still loading, taps wait instead of hitting the buttons of a page that is not
+  drawn yet. The same in PAUSE.
 - **Changing ANTI-ALIAS or SHADOWS while another art style loads is no longer lost.** The change waits for that load to end and
   then applies.
 - **Offline caching finishes reliably.** The game's offline copy of the PIXEL and REAL 3D files now fills only while the browser

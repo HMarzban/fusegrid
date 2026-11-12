@@ -30,7 +30,7 @@ const PLAY = { state: "PLAY", time: 0 }, PAUSE = { state: "PAUSE", time: 0, leve
   const a = mkApp(); a.screen = SCREEN.CONTROLS;
   const R = rec(); SV.drawShell(R.ctx, a, PLAY, null, "2d", () => [], () => 0);
   const w = R.texts.map((t) => t.s);
-  check("before the page lands: the LOADING plate (CONTROLS + LOADING), no row; a tap finds nothing", w.includes("CONTROLS") && w.includes("LOADING") && !w.includes("BOMB") && SV.controlsHit(a.controls.view(0), 300, 260, null, "2d", false) === null, J(w));
+  check("before the page lands: the LOADING plate (CONTROLS + LOADING), no row; a tap on or off the plate is inert ({}, R1 cohesion 1)", w.includes("CONTROLS") && w.includes("LOADING") && !w.includes("BOMB") && J(SV.controlsHit(a.controls.view(0), 300, 260, null, "2d", false)) === "{}" && J(SV.controlsHit(a.controls.view(0), 4, 4, null, "2d", false)) === "{}", J(w));
   check("the LOADING plate is the kit's (no CONSOLE PANEL fill)", !R.paints.some((q) => q.style === "rgba(10,14,24,0.94)") && R.paints.some((q) => q.style === worldTokens(1).bedA));
 }
 await SV.loadControlsArt();

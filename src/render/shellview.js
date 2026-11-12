@@ -168,8 +168,9 @@ function ctlFrame(canvas, kind, paused) {
   return { W: d.cw, H: d.ch, touch, shell: typeof d.lg === "number", css: d.css, play: d.play, cue }; // play: the room behind at play scale (fit.js shellGeo)
 }
 /* The CONTROLS page (pages/controls.js, with controlsgeo and padart) is not in the boot graph (v202): it loads when CONTROLS opens or in idle after
-   the title (controlswire asks through main). Until it lands the kit's one LOADING plate stands in (DID NOT LOAD once the load failed), and a tap
-   on the canvas finds nothing (null: the wire backs out only from a failed load). */
+   the title (controlswire asks through main). Until it lands (its paint or the wire's reducer: the view says loading) the kit's one LOADING plate
+   stands in (DID NOT LOAD once the load failed), and taps meet that plate, R1 cohesion 1 as GUIDE and RECORDS: in flight every tap is inert ({}),
+   once failed a tap off the plate backs out ({off: 1}) and on it stays inert; PAUSE view 3 alike. */
 /** A PAUSE view's frame, the one draw and tap read: overlayBox at the box's CSS scale (#c's stage scale, or a phone's over box on #sh, free of the
     HUD band), paused, and the focused row (its page is the one on screen). */
 export const pauseLayout = (canvas, kind, focus) => { const B = overlayBox(kind, canvas); return { ...menudraw.layout(B.w, B.h, undefined, canvas && canvas.over ? canvas.css : dims(canvas, kind).css), paused: true, ...(B.free ? { free: true } : {}), focus }; };
@@ -182,8 +183,12 @@ export function loadControlsArt() {
 export function controlsGeo(canvas, kind, paused, view) {
   return art ? art.controlsGeom(ctlFrame(canvas, kind, paused), view || {}) : null;
 }
-/** A tap on the CONTROLS page: the page's controlsHit on the painted geometry; null (inert) until the page is in. */
-export const controlsHit = (view, x, y, canvas, kind, paused) => (art ? art.controlsHit(view, x, y, controlsGeo(canvas, kind, paused, view)) : null);
+/** A tap on the CONTROLS page: the page's controlsHit on the painted geometry; while the LOADING plate is drawn, that plate's (above). */
+export const controlsHit = (view, x, y, canvas, kind, paused) => {
+  if (art && !(view && view.loading)) return art.controlsHit(view, x, y, controlsGeo(canvas, kind, paused, view));
+  const B = menudraw.loadBox(ctlFrame(canvas, kind, paused)); // the plate paintControls draws (kit room.js loadingPlate)
+  return view && view.failed && !(x >= B.x && x < B.x + B.w && y >= B.y && y < B.y + B.h) ? { off: 1 } : {};
+};
 const paintControls = (c, app, canvas, kind, paused, world, kicker) => {
   const F = { ...ctlFrame(canvas, kind, paused), tap: tapOf(app, canvas) }, level = (paused && world ? world.level : app.level) | 0 || 1;
   if (!art || app.controls.loading) return menudraw.loadingPage(c, F, "CONTROLS", { level, rev: REV, paused, failed: !!app.controls.failed }, "controls");

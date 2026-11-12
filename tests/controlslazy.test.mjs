@@ -72,12 +72,25 @@ const draw = (g) => { const R = rec(); drawShell(R.c, g.app, g.world, null, "2d"
   check("the OPTIONS door still opens CONTROLS", a.confirm() === true && a.screen === SCREEN.CONTROLS && a.onControls());
   const t0 = draw(g);
   check("one frame of the plate: CONTROLS + LOADING, no rows", t0.includes("CONTROLS") && t0.includes("LOADING") && !t0.includes("BOMB"), t0.join("|"));
-  check("controlsHit / controlsGeo are null until the paint is in", controlsHit(a.controls.view(0), 300, 260, null, "2d", false) === null && controlsGeo(null, "2d", false) === null);
+  check("controlsGeo is null until the paint is in", controlsGeo(null, "2d", false) === null);
+  /* fix round 1 (lead ruling on 7b, R1 cohesion 1 as GUIDE / RECORDS): while the LOADING plate is drawn, taps meet ITS geometry: in flight every
+     hit is inert ({}), once the load failed (DID NOT LOAD) a tap OFF the plate backs out ({off: 1}) and ON it stays inert; PAUSE view 3 too */
+  const v0 = a.controls.view(0), vF = { ...v0, failed: true }, J = JSON.stringify;
+  check("while loading the stand-in view says so (loading, not failed)", v0.loading === true && v0.failed === false, J({ l: v0.loading, f: v0.failed }));
+  for (const paused of [false, true]) {
+    const P = paused ? " (PAUSE view 3)" : "", pts = [];
+    for (let y = 0; y < 520; y += 4) for (const x of [4, 150, 300, 450, 596]) pts.push([x, y]);
+    const fl = pts.map(([x, y]) => controlsHit(v0, x, y, null, "2d", paused)), fd = pts.map(([x, y]) => controlsHit(vF, x, y, null, "2d", paused));
+    check("in flight every hit on and off the LOADING plate is inert ({}), never null, never a back-out" + P, fl.every((h) => h && J(h) === "{}"), J(fl.find((h) => !h || J(h) !== "{}")));
+    const on = fd.filter((h) => h && J(h) === "{}").length, off = fd.filter((h) => h && h.off === 1).length;
+    check("DID NOT LOAD: off the plate backs out ({off:1}), on it stays inert ({}), nothing else" + P, on > 10 && off > 10 && on + off === pts.length && controlsHit(vF, 300, 260, null, "2d", paused) && J(controlsHit(vF, 300, 260, null, "2d", paused)) === "{}" && controlsHit(vF, 4, 4, null, "2d", paused).off === 1, J({ on, off, n: pts.length }));
+  }
   const row0 = a.controls.view(a.ctlT).row;
   const keys = ["ArrowDown", "ArrowUp", "ArrowRight", "ArrowLeft", "Enter", "Space"].map((k) => a.key(k));
   check("keys on the LOADING page do nothing: no move, no tab, no capture", keys.every((r) => !r) && !a.capturing && a.controls.view(a.ctlT).row === row0 && a.ctlTab === "key" && a.screen === SCREEN.CONTROLS, keys.join());
-  g.ctl.tap(null);
-  check("a tap on the canvas is inert while loading", a.screen === SCREEN.CONTROLS);
+  g.ctl.tap(controlsHit(a.controls.view(0), 4, 4, null, "2d", false));
+  g.ctl.tap(controlsHit(a.controls.view(0), 300, 260, null, "2d", false));
+  check("a canvas tap on or off the plate is inert while loading (through the real wire)", a.screen === SCREEN.CONTROLS);
   check("the way out stays live: ESC backs out onto the door", a.key("Escape") === true && a.screen === SCREEN.SETTINGS && a.optRow === a.optRows().indexOf("CONTROLS") && a.optLabel() === "CONTROLS");
   a.lastDev = "pad";
   a.confirm();
@@ -90,6 +103,13 @@ const draw = (g) => { const R = rec(); drawShell(R.c, g.app, g.world, null, "2d"
   a.lastDev = "key"; a.key("Escape"); a.confirm();
   check("landed: keys reach the page (Enter on BOMB starts a capture)", a.screen === SCREEN.CONTROLS && a.ctlTab === "key" && a.key("Enter") === true && a.capturing === true);
   check("landed: a canvas tap now resolves on the painted geometry", controlsHit(a.controls.view(a.ctlT), 1, 1, null, "2d", false) !== null);
+  /* the mismatch (fix round 1): the page's paint in, its reducer not (a loading view), the LOADING plate is what is drawn, so taps meet the plate */
+  {
+    const vl = { ...a.controls.view(a.ctlT), capture: null }, lv = { ...vl, loading: true, failed: false }, lf = { ...lv, failed: true }, rows = [];
+    for (let y = 0; y < 520; y += 4) for (let x = 4; x < 600; x += 16) { const h = controlsHit(vl, x, y, null, "2d", false); if (h && h.row != null && controlsHit(lf, x, y, null, "2d", false).off === 1) rows.push([x, y]); }
+    check("paint in, reducer not: a point on a real row but off the LOADING plate is inert in flight, a back-out once failed (the plate's geometry, never the page's)", rows.length > 0 && rows.every(([x, y]) => JSON.stringify(controlsHit(lv, x, y, null, "2d", false)) === "{}"), rows.length);
+    check("paint in, reducer not: the LOADING plate's centre stays inert even once failed", JSON.stringify(controlsHit(lf, 300, 260, null, "2d", false)) === "{}");
+  }
   setHints(null);
 }
 
@@ -133,11 +153,26 @@ const draw = (g) => { const R = rec(); drawShell(R.c, g.app, g.world, null, "2d"
   check("once in, a later mount builds at once and defers nothing", !m2.app.controls.loading && q2.length === 0);
   const F = await import("../src/app/controlswire.js?fail"); // another fresh copy: its paint load fails
   const fa = { screen: SCREEN.CONTROLS, pauseView: 0, ctlT: 0, lastDev: "key", wake: noop, _feel: noop, onControls: () => true, get capturing() { return false; }, ctlBtn: () => false, ctlKey: () => false, back() { this.screen = SCREEN.SETTINGS; return true; } };
-  const fc = F.mountControls({ win: null, doc: null, input: new Input(null), app: fa, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => null, store: null, defer: null, art: () => Promise.reject(new Error("offline")) });
+  const WL = {}, fwin = { addEventListener: (t, f) => { WL[t] = f; }, removeEventListener: noop };
+  const vp = () => WL.pointerdown({ pointerType: "mouse", button: 0, target: { closest: () => null } }); // a click in the viewport, off the canvas
+  let artGo = null;
+  const fc = F.mountControls({ win: fwin, doc: null, input: new Input(null), app: fa, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => null, store: null, defer: null, art: () => new Promise((ok, no) => { artGo = no; }) });
   fa.controls.open("key");
-  check("a failed load reads failed, and the page stays out", (await until(() => fa.controls.failed)) && fa.controls.loading);
+  check("in flight the stand-in view reads loading, not failed", fa.controls.view(0).loading === true && fa.controls.view(0).failed === false);
+  vp();
+  fc.tap(controlsHit(fa.controls.view(0), 4, 4, null, "2d", false));
+  check("in flight a viewport click off the canvas and a canvas tap off the plate are both inert (R1 cohesion 1)", fa.screen === SCREEN.CONTROLS);
+  artGo(new Error("offline"));
+  check("a failed load reads failed, and the page stays out", (await until(() => fa.controls.failed)) && fa.controls.loading && fa.controls.view(0).failed === true);
+  fc.tap(controlsHit(fa.controls.view(0), 300, 260, null, "2d", false));
+  check("after a failed load a tap ON the DID NOT LOAD plate stays inert", fa.screen === SCREEN.CONTROLS);
   fc.tap(null);
-  check("after a failed load a canvas tap backs out, so a touch player is never trapped", fa.screen === SCREEN.SETTINGS);
+  check("a hit of nothing (null) is inert", fa.screen === SCREEN.CONTROLS);
+  fc.tap(controlsHit(fa.controls.view(0), 4, 4, null, "2d", false));
+  check("after a failed load a tap OFF the plate backs out, so a touch or mouse player is never trapped", fa.screen === SCREEN.SETTINGS);
+  fa.screen = SCREEN.CONTROLS;
+  vp();
+  check("after a failed load a viewport click off the canvas backs out too", fa.screen === SCREEN.SETTINGS);
   setHints(null);
 }
 

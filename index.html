@@ -362,7 +362,7 @@
     if(failed){
       msg.setAttribute("role","alert");
       if(j.k==="boot"){sub.textContent="CHECK YOUR CONNECTION, THEN RETRY.";E.setAttribute("data-fail","")}
-      msg.textContent=(j.k==="boot"?"COULD NOT LOAD THE GAME.":j.label+(again?" COULD NOT LOAD. CHECK YOUR CONNECTION, THEN RETRY, OR CHANGE ART STYLE IN SETTINGS.":" STILL WILL NOT LOAD. RETRY RELOADS THE PAGE; A RUN IN PROGRESS ENDS. ART STYLE IS IN SETTINGS."));
+      msg.textContent=(j.k==="boot"?"COULD NOT LOAD THE GAME.":j.label+(again?" COULD NOT LOAD. CHECK YOUR CONNECTION, THEN RETRY"+(j.k==="tiles"?".":", OR CHANGE ART STYLE IN SETTINGS."):" STILL WILL NOT LOAD. RETRY RELOADS THE PAGE; A RUN IN PROGRESS ENDS. ART STYLE IS IN SETTINGS."));
       bar.hidden=true;act.hidden=false;keep.hidden=!drop;E.setAttribute("data-act","");return
     }
     bar.hidden=false;msg.removeAttribute("role");

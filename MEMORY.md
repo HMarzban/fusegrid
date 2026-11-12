@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-12 — Task 9.13 fix round 1: CONTROLS' LOADING plate taps, the FLOOR TILES line
+- Lead ruling on 7b: CONTROLS follows R1 cohesion 1 (in flight inert, viewport clicks too; failed: off the plate backs out, on it inert; PAUSE view 3 alike), and taps meet the LOADING plate (kit loadBox) whenever it is drawn, never the full page's geometry (the owner's desk DID NOT LOAD). The FLOOR TILES card's line drops "OR CHANGE ART STYLE IN SETTINGS".
+
 ## 2026-11-12 — Task 9.13: the 2026-11-06 delivery review fixes, ported (shell v210)
 - Owner: "Yes, review them". 244a07a / f46f672 / 2a5621b were never merged; all still applied on v209 and are ported test first: held run starts (lazyload createHold), a saved look failing at boot stays saved (_bootMiss, through _setR3d), FLOOR TILES BACK TO MENU, queued AA / SHADOWS rebuilds (rcache rebuildAgain), the worker's fill only inside waitUntil (FILL message), the rumble.js retry, pwa.test's dead checks after process.exit. Left open as a design call: CONTROLS' in-flight LOADING plate taps (SETTINGS' rule, off backs out, vs GUIDE / RECORDS' inert rule).
 

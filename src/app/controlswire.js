@@ -102,7 +102,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
   };
   const pre = (t) => {
     const p = padView();
-    return { tab: openDev === null || openDev === "key" ? "key" : "pad", device: hintDev.device(t), row: 1, pad: { state: p.state, name: p.name, rumble: p.rumble === true, effects: p.effects }, key: c.key, binds: c.pad, stick: c.stick, dead: c.dead, vib: c.vib,
+    return { loading: true, failed, tab: openDev === null || openDev === "key" ? "key" : "pad", device: hintDev.device(t), row: 1, pad: { state: p.state, name: p.name, rumble: p.rumble === true, effects: p.effects }, key: c.key, binds: c.pad, stick: c.stick, dead: c.dead, vib: c.vib,
       stickVal: p.stickVal || [0, 0], reads: "", drift: 0, armed: false, swap: null, status: "", capture: null, echo: null, names: {} };
   };
   /* Cues live here, not in main's wrapper: a write is uiTog (a capture commit has no confirm behind it), anything else on a row is uiSel, a tab is uiMove as ←→ is, and a refusal is silent. */
@@ -187,7 +187,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
       const p = pointerPress(e);
       if (p) { app.lastDev = p; hintDev.pointer(e, app.ctlT); }
       else if (e && e.pointerType === "mouse") app.lastDev = "key"; // raw only: a click is no pad press, and the hints stay put
-      if (onPage() && offCanvas(e)) tap({ off: 1 }); // the words say TAP OUTSIDE, and the viewport is bigger than the canvas
+      if (onPage() && offCanvas(e) && !(face.loading && !face.failed)) tap({ off: 1 }); // the words say TAP OUTSIDE, and the viewport is bigger than the canvas; a load in flight is inert (R1 cohesion 1)
     }, true),
     on(W, "blur", blurAll),
     on(D, "visibilitychange", () => { blurAll(); if (D.hidden) stopRumble(); }),
@@ -195,7 +195,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
   /* A tap resolved by controlsHit: a row is Enter on it; a page key (the kit pager, a paged touch column) focuses the first row of the page it
      opens, nothing confirmed; off the plate cancels a capture, else backs out. */
   function tap(h) {
-    if (!h) { if (face.failed) tap({ off: 1 }); return; } // the paint is not in: the canvas is inert, unless the load failed
+    if (!h) return; // while the LOADING plate is drawn controlsHit answers for it: {} inert, {off: 1} off a DID NOT LOAD plate
     if (h.off) {
       if (app.capturing) page.cancel();
       else if (app.screen === SCREEN.GAME) app.pauseBack();
