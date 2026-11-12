@@ -63,14 +63,15 @@ Pause and the end of a run move into the world too.
 
 - **A new PAUSE.** The level and its world on top, PAUSED, the rules you are playing with as tags, RESUME as the one
   yellow key, then SETTINGS, RESTART and QUIT TO MENU. On a phone the rows sit two by two so every button stays tappable.
-- **LEVEL CLEAR and the finale.** A clear shows your time, enemies and power-ups; a finale shows the whole run on its level
-  course, the score with its difficulty, any medals you just earned, and NEXT LEVEL / MENU / COPY RESULT / COPY MAP keys you can tap.
+- **LEVEL CLEAR and the finale.** A clear shows your time, enemies and power-ups, with NEXT LEVEL to go on. A finale shows the
+  whole run on its level course, the score with its difficulty and any medals you just earned, with MENU, COPY RESULT and COPY MAP.
+  Every key can be tapped.
 - **GAME OVER is its own screen.** How far you got, your score, how short of your best you fell (only from a saved best),
   TRY AGAIN with what board you get, and MENU, COPY RESULT, COPY MAP.
 
 ### Changed
 
-- **Esc, Backspace or a controller's EAST at the end of a run go to MENU**, with the same feel as quitting from PAUSE.
+- **Esc, a controller's EAST or a tap on MENU at the end of a run go to MENU**, with the same feel as quitting from PAUSE.
 - **SETTINGS inside PAUSE on a phone** keeps 44 px rows and turns into pages instead of shrinking.
 - A run end that is still loading shows the same LOADING plate as the menus.
 
