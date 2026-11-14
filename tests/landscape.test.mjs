@@ -207,6 +207,32 @@ const ARMED_EX = { "667x375 1": 9.0, "667x375 1.25": 9.0 }; // box + text scale 
   check("LEVEL SELECT's finale flag reads >= 4.5 against its key's face (well: cream, lit: dark) in all eight worlds", bad.length === 0 && LP.FLAG_INK.well === CONST.ink, bad.join(" | "));
 }
 
+/* ---- every-controller Task 3: CONTROLS' CONTROLLER tab with the CONNECT row (SW2, a ninth row) on the landscape phones, at text 1 and 1.25, every row
+   focused (each row's page is the focused row's): the same gates (touch, gap, cap, inside, plate), with a controller and with none, and the
+   CONNECT row's label on some page; the eight-row tab is swept beside it, so the extra row is measured against what the page held before ---- */
+{
+  await SV.loadControlsArt();
+  const { createControlsPage, SW2_WORDS } = await import("../src/app/controlspage.js"), bad = [];
+  for (const sw of [false, true]) for (const st of ["ready", "none"]) for (const ts of [1, 1.25]) for (const wh of LAND) {
+    setTextScale(ts);
+    const B = boxOf(wh), at = wh.join("x") + (ts > 1 ? " 125%" : "") + (sw ? " +CONNECT" : "") + " " + st, pv = { state: st, name: "CONTROLLER 1 · STANDARD", rumble: true };
+    const page = createControlsPage({ get: () => DEF_CONTROLS, set() {}, padView: () => pv, say() {}, sw2: () => ({ shown: sw, state: "idle" }) });
+    page.open("touch");
+    const n = sw ? 9 : 8, words = [];
+    for (let r = 0; r < n; r++) {
+      page.pick(r);
+      const { snap, err, g } = frame(B, SCREEN.CONTROLS, { controls: page, lastDev: "touch" });
+      if (err || snap.fault) { bad.push(at + " row " + r + " threw " + (err ? err.message : snap.fault)); continue; }
+      if (snap.page !== "controls" || !snap.box || snap.box.el !== "c") bad.push(at + " row " + r + " drew " + snap.page + " on #" + (snap.box && snap.box.el));
+      for (const k of GATES) if (g[k].status !== "pass") bad.push(at + " row " + r + " " + k + " " + g[k].status + " " + g[k].on + " " + g[k].value + (g[k].note ? " (" + g[k].note + ")" : ""));
+      words.push(...snap.texts.map((t) => t.s));
+    }
+    if (sw && !words.includes(SW2_WORDS.row)) bad.push(at + " never shows " + SW2_WORDS.row);
+  }
+  setTextScale(1);
+  check("CONTROLS' CONTROLLER tab on the landscape phones (" + LAND.map((b) => b.join("x")).join(", ") + ") at text 1 and 1.25, with and without the CONNECT row, a controller or none, every row focused: touch, gap, cap, inside and plate pass; the CONNECT row shows", bad.length === 0, bad.slice(0, 12).join(" | ") + " (" + bad.length + ")");
+}
+
 /* ---- the one named exemption: a 568 x 320 phone (#c 236 x 204 CSS px; three RECORDS tabs and BACK do not fit 44 CSS px across, nor one GUIDE
    band a page): there the pages that cannot page whole scale as one piece, their last give-way. Asserted at their measured best (today's values,
    floored to 0.1: a regression fails), and never a throw, an overflow (inside, plate) or a LOADING plate under the floors ---- */

@@ -38,6 +38,7 @@ const P = await import("../src/render/pages/controls.js");
 const PR = { state: "ready", name: "CONTROLLER 1 · STANDARD", rumble: true };
 const keyV = (o = {}) => ({ tab: "key", device: "key", row: 1, pad: { state: "none" }, key: DEF_KEY, binds: DEF_PAD, stick: "L", dead: 25, vib: 2, stickVal: [0, 0], reads: "", drift: 0, armed: false, swap: null, status: "", capture: null, echo: null, ...o });
 const padV = (o = {}) => keyV({ tab: "pad", device: "pad", pad: PR, ...o });
+const SW = { shown: true, state: "idle" }, swV = (o = {}) => padV({ sw2: SW, ...o }); // Task 3: the CONNECT row shown (switch2.js usbReach true)
 const ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];
 const inBox = (r, W, H) => r.x >= -0.01 && r.y >= -0.01 && r.x + r.w <= W + 0.01 && r.y + r.h <= H + 0.01;
 const DESKS = [[1366, 768], [1366, 657], [1280, 720], [1024, 768]];
@@ -62,14 +63,18 @@ for (const ts of [1, 1.25]) {
     const above = G.plate.y, below = H - G.plate.y - G.plate.h;
     check(`desk ${tg}: centred vertically (top margin a minimum)`, Math.abs(above - below) <= 1, J([above, below]));
     probe.setOn(true);
-    for (const v of [padV(), keyV(), padV({ pad: { state: "none" } }), padV({ row: 6 }), keyV({ row: 7, armed: true })]) {
+    {
+      const Gs = P.controlsGeom(F, swV()), a = Gs.plate.y, b = H - Gs.plate.y - Gs.plate.h;
+      check(`desk ${tg} with the CONNECT row: still the desk, u >= 0.96, centred, the plate and its ring inside the box`, Gs.mode === "desk" && Gs.u >= 0.96 && Math.abs(a - b) <= 1 && inBox({ x: Gs.plate.x - Gs.T, y: Gs.plate.y - Gs.T, w: Gs.plate.w + 2 * Gs.T, h: Gs.plate.h + 2 * Gs.T }, W, H), J([Gs.mode, Gs.u, a, b]));
+    }
+    for (const v of [padV(), keyV(), padV({ pad: { state: "none" } }), padV({ row: 6 }), keyV({ row: 7, armed: true }), swV({ row: 7 }), swV({ row: 7, pad: { state: "none" } }), swV({ row: 8, armed: true })]) {
       const r = rec(); P.drawControlsPage(r.ctx, F, v, { level: 1, tap: false });
       const S = probe.snapshot(), small = S.texts.filter((t) => t.capH < (t.role === "primary" ? 14 : 11) - 0.01), out = S.texts.filter((t) => !inBox({ x: t.x, y: t.y, w: t.w, h: t.capH }, W, H));
       check(`desk ${tg} ${v.tab}${v.pad.state === "none" ? " (no controller)" : ""} row ${v.row}: every text over the floors (14 / 11 px cap) and inside the box`, !small.length && !out.length, J([small.map((t) => t.s + ":" + t.capH.toFixed(1)), out.map((t) => t.s)]));
       check(`desk ${tg} ${v.tab} row ${v.row}: no ellipsis anywhere`, !r.texts.some((t) => /…/.test(t.s)));
     }
     probe.setOn(false);
-    if ((W === 1366 && H === 768) || (W === 1280 && H === 720)) for (const v of [padV(), keyV()]) {
+    if ((W === 1366 && H === 768) || (W === 1280 && H === 720)) for (const v of [padV(), keyV(), swV()]) {
       const r = rec(); P.drawControlsPage(r.ctx, F, v, { level: 1, tap: false });
       const L = P._dbg.last.live, words = L.plan ? L.plan.labels.flatMap((l) => l.lines.map((q) => q.s)) : [];
       check(`desk ${tg} ${v.tab === "key" ? "keyboard" : "controller"}: the drawing carries its callouts (every bound action named)`, !!L.plan && ["BOMB", "THROW", "REMOTE", "PAUSE", "MOVE"].every((w) => words.includes(w)), J(words));
@@ -93,8 +98,8 @@ BOXES.push(["tablet 1024x768 (touch shell)", { W: 1024, H: 768, touch: true, she
 BOXES.push(["short touch 1024x600 (touch shell)", { W: 1024, H: 600, touch: true, shell: true, css: 1 }], ["short touch 800x600 (touch shell)", { W: 800, H: 600, touch: true, shell: true, css: 1 }]); // lane lesson 1: short touch windows
 for (const ts of [1, 1.25]) {
   setTextScale(ts);
-  for (const [nm, F] of BOXES) for (const v0 of [padV(), keyV()]) {
-    const tg = `${nm} @${ts} ${v0.tab}`, ids = P.controlsGeom(F, v0).order;
+  for (const [nm, F] of BOXES) for (const v0 of [padV(), keyV(), swV(), swV({ pad: { state: "none" } })]) {
+    const tg = `${nm} @${ts} ${v0.tab}${v0.sw2 ? " +CONNECT" + (v0.pad.state === "none" ? " (no controller)" : "") : ""}`, ids = P.controlsGeom(F, v0).order;
     let ok = true, drawnOk = true;
     ids.forEach((id, i) => {
       const v = { ...v0, row: i }, G = P.controlsGeom(F, v), r = G.rows[id], h = P.controlsHit(v, ...ctr(r), G);
@@ -187,7 +192,7 @@ setTextScale(1);
   cache.setFactory((w, h) => new Cv(w, h));
   try {
     const capL = (v) => ({ ...v, row: 2, capture: { action: "THROW", prompt: "PRESS A BUTTON", sub: "NOW WEST", foot: "ESC CANCELS · WEST KEEPS IT" } }); // Task 9.10: listening, the callout and the in-use plaque, holds the same budget
-    for (const [nm, F] of [["desk 1366x768", { W: 1366, H: 768 }], ["phone 393x852", (() => { const g = shellGeo(393, 852, 600, 520); return { W: g.w, H: g.h, touch: true, shell: true, css: g.s }; })()]]) for (const v of [padV(), keyV(), capL(padV()), capL(keyV())]) {
+    for (const [nm, F] of [["desk 1366x768", { W: 1366, H: 768 }], ["phone 393x852", (() => { const g = shellGeo(393, 852, 600, 520); return { W: g.w, H: g.h, touch: true, shell: true, css: g.s }; })()]]) for (const v of [padV(), keyV(), capL(padV()), capL(keyV()), swV()]) {
       cache.release();
       const r = rec(); r.ctx.setTransform(2, 0, 0, 2, 0, 0);
       P.drawControlsPage(r.ctx, F, v, { level: 1, tap: false });
@@ -196,7 +201,7 @@ setTextScale(1);
       const calls = r.calls.slice(n0), mt = calls.filter((q) => q.op === "measureText").length;
       check(`steady frame (${nm} ${v.tab}): 0 misses, <= 400 canvas calls, <= 20 measureText`, cache._dbg.misses === m0 && calls.length <= 400 && mt <= 20, J([cache._dbg.misses - m0, calls.length, mt]));
       let miss = 0;
-      for (let i = 0; i < 8; i++) { const m = cache._dbg.misses; P.drawControlsPage(r.ctx, F, { ...v, row: i }, { level: 1, tap: false }); miss += cache._dbg.misses - m; }
+      for (let i = 0; i < P.controlsGeom(F, v).order.length; i++) { const m = cache._dbg.misses; P.drawControlsPage(r.ctx, F, { ...v, row: i }, { level: 1, tap: false }); miss += cache._dbg.misses - m; }
       if (!v.capture) check(`a cursor move over every row (${nm} ${v.tab}): 0 misses`, miss === 0 || (F.touch && P.controlsGeom(F, v).pages.length > 1), miss);
       check(`the cache inside the 24 MiB budget (${nm} ${v.tab})`, cache._dbg.bytes <= cache.BUDGET, cache._dbg.bytes);
     }
@@ -211,6 +216,9 @@ setTextScale(1);
   check("probe: page controls, the plate, every row a list rect with one focused, the tabs a set", S.page === "controls" && S.rects.some((q) => q.name === "plate") && S.rects.filter((q) => q.kind === "list").length === 8 && S.rects.filter((q) => q.focus).length === 1 && S.rects.filter((q) => q.set === "tabs").length === 2);
   check("probe: the chosen pair (tab open vs not), the band pair, the drawing's ring (SOUTH on BOMB), a locked pair (the FIXED plaque)", ["chosen", "band", "ring", "locked"].every((k) => S.pairs.some((q) => q.kind === k)) && S.rects.some((q) => /^ring /.test(q.name)) && S.rects.some((q) => /^locked /.test(q.name)));
   check("probe: the callout labels are recorded texts", ["BOMB", "SOUTH", "THROW", "WEST"].every((w) => S.texts.filter((t) => t.s === w).length >= 2));
+  { const q = rec(); P.drawControlsPage(q.ctx, { W: 1366, H: 768, shell: true }, swV(), { level: 1, tap: false });
+    const Q = probe.snapshot();
+    check("probe with the CONNECT row: nine list rects, SW2 among them, its label and door recorded", Q.rects.filter((q) => q.kind === "list").length === 9 && Q.rects.some((q) => q.name === "SW2") && Q.texts.some((t) => t.s === "SWITCH 2 CONTROLLER") && Q.texts.some((t) => t.s === "CONNECT")); }
   const n = rec(); P.drawControlsPage(n.ctx, { W: 1366, H: 768, shell: true }, padV({ pad: { state: "none" }, row: 5 }), { level: 1, tap: false });
   const N = probe.snapshot();
   check("probe, no controller on SENSITIVITY: no ring (none drawn), the locked body and plaque recorded", !N.rects.some((q) => /^ring /.test(q.name)) && N.rects.some((q) => q.name === "locked body") && N.texts.some((t) => t.s === "NO CONTROLLER"));
@@ -286,6 +294,38 @@ const CW9 = (await import("../src/render/words.js")).CONTROLS_WORDS;
     }
   }
   setTextScale(1);
+}
+
+/* ---- Task 3: the CONNECT row (SW2): words, door, status, foot, in every arrangement ---- */
+{
+  const SW2 = (await import("../src/render/words.js")).SW2_WORDS, { footItems, footText, statusOf, rowsOf } = await import("../src/render/controlsgeo.js");
+  check("no CONNECT row unless the view says shown: eight pad rows, no SW2", !P.controlsGeom({ W: 1366, H: 768 }, padV()).order.includes("SW2") && !P.controlsGeom({ W: 1366, H: 768 }, padV({ sw2: { shown: false, state: "idle" } })).order.includes("SW2"));
+  check("shown: SW2 after VIBRATION, before RESET, on the CONTROLLER tab only", P.controlsGeom({ W: 1366, H: 768 }, swV()).order.join() === "MOVE,BOMB,THROW,REMOTE,PAUSE,SENSITIVITY,VIBRATION,SW2,RESET" && !P.controlsGeom({ W: 1366, H: 768 }, keyV({ sw2: SW })).order.includes("SW2"));
+  const none = rowsOf(swV({ pad: { state: "none" } })).find((r) => r.id === "SW2"), lost = rowsOf(swV({ pad: { state: "lost" } })).find((r) => r.id === "SW2");
+  check("NO CONTROLLER and LOST: the CONNECT row is live (never off), its door CONNECT", none && !none.off && lost && !lost.off && none.door === SW2.door, J(none));
+  check("the door reads CONNECTED only once woken with a controller seen", rowsOf(swV({ sw2: { shown: true, state: "woken" } })).find((r) => r.id === "SW2").door === SW2.ok && rowsOf(swV({ sw2: { shown: true, state: "woken" }, pad: { state: "none" } })).find((r) => r.id === "SW2").door === SW2.door);
+  const sr = (o) => rowsOf(swV(o)).find((r) => r.id === "SW2");
+  check("its status line: the help sentence; a result in its place once there is one, even with no controller", statusOf(swV({ pad: { state: "none" } }), sr({ pad: { state: "none" } })) === SW2.help && statusOf(swV({ status: SW2.cancel, pad: { state: "none" } }), sr()) === SW2.cancel);
+  const fk = footText(footItems(swV({ row: 7, device: "key" }), sr(), {})), fp = footText(footItems(swV({ row: 7, device: "pad" }), sr(), {})), fn = footText(footItems(swV({ row: 7, device: "key", pad: { state: "none" } }), sr({ pad: { state: "none" } }), {}));
+  check("its foot: CONNECT ENTER on keys, on a controller (SOUTH would not open the chooser) and with no controller", /CONNECT ENTER/.test(fk) && /CONNECT ENTER/.test(fp) && !/CONNECT SOUTH/.test(fp) && /CONNECT ENTER/.test(fn), J([fk, fp, fn]));
+  for (const ts of [1, 1.25]) {
+    setTextScale(ts);
+    for (const [nm, F] of BOXES) for (const v0 of [swV({ row: 7 }), swV({ row: 7, pad: { state: "none" } })]) {
+      const tg = `${nm} @${ts}${v0.pad.state === "none" ? " (no controller)" : ""}`, r = rec(); P.drawControlsPage(r.ctx, F, v0, { level: 1, tap: false });
+      const o = P._dbg.last.Pl.rows.SW2, door = o.val.P.find((q) => q.s === SW2.door), chev = o.val.P.find((q) => q.k === "glyph" && q.n === "chev"), at = door ? (door.r ? door.r.x : door.x) : chev ? chev.r.x : -1;
+      check(`the CONNECT row (${tg}): its label drawn, then the door right of it with room between (the CONNECT key, its word, or where neither fits the door's chevron)`, r.texts.some((t) => t.s === SW2.row) && (door ? r.texts.some((t) => t.s === SW2.door) : !!chev) && at >= o.label.x + o.label.w + 8 && o.val.x + o.val.w <= o.r.x + o.r.w + 0.01, J([o.label.x + o.label.w, at, door ? "word" : chev ? "chev" : "none"]));
+      const st = P._dbg.last.live.status.map((q) => q.s).join(" "), rl = (P._dbg.last.G.d.rule ? P._dbg.last.Pl.rule2 : []).map((q) => q.s).join(" "), first = SW2.help.split(". ")[0] + ".";
+      check(`the CONNECT row (${tg}): the help sentence whole, or where it will not fit its first sentence whole (the pane's rule on the desk, the status line off it); never cut mid-sentence, never twice`, P._dbg.last.G.d.rule ? (rl === SW2.help || rl === first) && st === "" : st === SW2.help || st === first, J([rl, st]));
+    }
+    for (const [W, H] of DESKS.filter(([W]) => W > 1024 && (ts === 1 || W === 1366))) { const r = rec(); P.drawControlsPage(r.ctx, { W, H }, swV({ row: 7 }), { level: 1, tap: false }); const rl = P._dbg.last.Pl.rule2.map((q) => q.s); check(`desk ${W}x${H} @${ts} (1366 and 1280 wide at 1, 1366 at 1.25; a narrower pane keeps the first sentence): the help sentence whole in the pane's rule on the CONNECT row (drawn), the menus rule on every other row`, rl.join(" ") === SW2.help && rl.every((q) => r.texts.some((t) => t.s === q)) && (() => { const k = rec(); P.drawControlsPage(k.ctx, { W, H }, swV({ row: 6 }), { level: 1, tap: false }); return !k.texts.some((t) => t.s === rl[0]); })(), J(rl)); }
+  }
+  setTextScale(1);
+  /* the ninth row takes the 393 x 852 phone's drawing under LOCK_MIN with no controller: the locked body is not drawn (too small to read as locked;
+     the gates' lip under 4 CSS px), the NO CONTROLLER plaque stands alone; the eight-row page keeps its body */
+  { const g = shellGeo(393, 852, 600, 520), F = { W: g.w, H: g.h, touch: true, shell: true, css: g.s };
+    const r8 = rec(); P.drawControlsPage(r8.ctx, F, padV({ pad: { state: "none" } }), { level: 1, tap: true }); const a8 = P._dbg.last.live.art;
+    const r9 = rec(); P.drawControlsPage(r9.ctx, F, swV({ pad: { state: "none" } }), { level: 1, tap: true }); const a9 = P._dbg.last.live.art;
+    check("393x852, no controller: eight rows keep the locked body; with the CONNECT row a drawing under LOCK_MIN gives way to the plaque alone (NO CONTROLLER and its line still drawn)", a8.W >= P.LOCK_MIN && !!a8.body && a9.W < P.LOCK_MIN && !a9.body && r9.texts.some((t) => t.s === "NO CONTROLLER") && r9.texts.some((t) => t.s === "Connect one and press a button."), J([a8.W, a9.W])); }
 }
 
 console.log("\n  PAGE-CONTROLS RESULT: " + pass + " PASS / " + fail + " FAIL");

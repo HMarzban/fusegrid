@@ -29,9 +29,18 @@ const loadArt = (art) => (!art ? Promise.resolve() : artP || (artP = Promise.res
 const loadRumble = (imp) => rumbleP || (rumbleP = (imp ? Promise.resolve(imp()) : import("./rumble.js")).then((m) => { rumbleMod = m; }, retry(() => { rumbleP = null; })));
 /** Every lazy CONTROLS part in; resolves once they are. Tests await it once, so their mounts build at once. */
 export const preloadControls = (art) => Promise.all([loadPage(), loadArt(art), loadRumble()]);
+/* The Switch 2 waker (switch2.js, Task 3): asked for only where the browser has WebUSB, in idle after the title or when CONTROLS opens; its
+   usbReach decides whether the CONNECT row shows at all. A module that is in stays in. */
+let sw2Mod = null, sw2P = null;
+const loadSw2 = (imp) => sw2P || (sw2P = (imp ? Promise.resolve(imp()) : import("./switch2.js")).then((m) => { sw2Mod = m; }, retry(() => { sw2P = null; })));
+/** switch2.js in; tests await it once, so a mount where it reaches builds its waker at once. */
+export const preloadSwitch2 = () => loadSw2();
+const navOf = () => (typeof navigator !== "undefined" && navigator ? navigator : null);
+/* "macOS" from the client hints, else from the old platform string (Safari and Firefox have no WebUSB anyway) */
+const platformOf = (n) => (!n ? "" : n.userAgentData && n.userAgentData.platform ? n.userAgentData.platform : /^Mac/.test(n.platform || "") ? "macOS" : n.platform || "");
 
 /** Mounts the pad, the page, the hints and rumble on the live shell. poll(t) belongs above the frame gate. */
-export function mountControls({ win, doc, input, app, SCREEN, world, onPause, getGamepads, store, audio, unlock, setHints, art, idle, defer, importRumble }) {
+export function mountControls({ win, doc, input, app, SCREEN, world, onPause, getGamepads, store, audio, unlock, setHints, art, idle, defer, importRumble, usb, policy, platform, importSwitch2 }) {
   const W = win !== undefined ? win : typeof window !== "undefined" ? window : null;
   const D = doc !== undefined ? doc : typeof document !== "undefined" ? document : null;
   const gp = standardPads(getGamepads || padsOf());
@@ -49,6 +58,24 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
   };
   /* null until rumble.js is in: every call below is then skipped, so a feel or an event before it lands is lost, never queued (the hello waits, see poll). */
   let rumble = null;
+  /* The CONNECT row (Task 3): the waker exists only where switch2.js usbReach is true; until then and elsewhere ctl.sw2().shown is false. The chooser
+     needs user activation: a key or a mouse press (app.lastDev "key", set before routing) or a touch tap's pointerup (tapUp); a controller press is none. */
+  const usbNow = () => (usb !== undefined ? usb : (navOf() && navOf().usb) || null);
+  const reach = () => sw2Mod.usbReach({ usb: usbNow(), policy: policy !== undefined ? policy : D ? D.permissionsPolicy || D.featurePolicy || null : null, platform: platform !== undefined ? platform : platformOf(navOf()) });
+  let waker = null, autoDone = false, reqP = null, upRow = null, upAct = false;
+  const sw2Build = () => {
+    if (!waker && sw2Mod && usbNow() && reach()) { waker = sw2Mod.createWaker({ usb: usbNow(), pads: getGamepads || padsOf() }); if (app.wake) app.wake(); } // the raw list: the waker reads each pad's own id
+    return waker;
+  };
+  const sw2Want = () => (waker || !usbNow() ? Promise.resolve(waker) : loadSw2(importSwitch2).then(sw2Build, () => null));
+  const sw2View = () => ({ shown: !!waker, state: waker ? waker.state() : "idle" });
+  const connect = () => {
+    if (!waker || !page) return false;
+    if (!upAct && app.lastDev !== "key") { page.sw2Said("pad"); app._feel("deny"); return false; } // no user activation: the page says what does open it
+    const p = waker.request();
+    if (p !== reqP) { reqP = p; p.then((r) => { if (reqP === p) reqP = null; if (page) page.sw2Said(r); if (app.wake) app.wake(); }, noop); } // one note per chooser, whatever presses came while it was open
+    return true;
+  };
   const rum = () => rumble || (rumbleMod && (rumble = rumbleMod.createRumble({
     level: () => c.vib,
     gamepad: activePad, // any mapping: a pad that offers an actuator buzzes
@@ -91,7 +118,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
      load never traps the player. */
   let page = null, openDev = null, failed = false;
   const build = () => {
-    page = pageMod.createControlsPage({ get: () => c, set, padView, say, device: () => hintDev.device(app.ctlT) });
+    page = pageMod.createControlsPage({ get: () => c, set, padView, say, device: () => hintDev.device(app.ctlT), sw2: sw2View });
     if (openDev !== null && app.onControls()) page.open(openDev);
     openDev = null;
   };
@@ -103,14 +130,14 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
   const pre = (t) => {
     const p = padView();
     return { loading: true, failed, tab: openDev === null || openDev === "key" ? "key" : "pad", device: hintDev.device(t), row: 1, pad: { state: p.state, name: p.name, rumble: p.rumble === true, effects: p.effects }, key: c.key, binds: c.pad, stick: c.stick, dead: c.dead, vib: c.vib,
-      stickVal: p.stickVal || [0, 0], reads: "", drift: 0, armed: false, swap: null, status: "", capture: null, echo: null, names: {} };
+      stickVal: p.stickVal || [0, 0], reads: "", drift: 0, armed: false, swap: null, status: "", capture: null, echo: null, names: {}, sw2: sw2View() };
   };
   /* Cues live here, not in main's wrapper: a write is uiTog (a capture commit has no confirm behind it), anything else on a row is uiSel, a tab is uiMove as ←→ is, and a refusal is silent. */
   const face = {
     get loading() { return !page; },
     get failed() { return failed && !page; },
     view: (t) => (page ? page.view(t) : pre(t)),
-    open(d) { if (pad.snap().connected) wantRumble(); if (page) return page.open(d); openDev = d; want(); }, // the VIBRATION row's test buzz needs rumble.js
+    open(d) { if (pad.snap().connected) wantRumble(); sw2Want(); if (page) return page.open(d); openDev = d; want(); }, // the VIBRATION row's test buzz needs rumble.js; the CONNECT row its waker
     walk: (d, axis, h) => (page ? page.walk(d, axis, h) : false),
     adjust: (d, r) => (page ? page.adjust(d, r) : false),
     pick: (i) => (page ? page.pick(i) : false),
@@ -118,7 +145,8 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     confirm(t) {
       if (!page) return false;
       writing = false; didReset = false;
-      const r = page.confirm(t);
+      let r = page.confirm(t);
+      if (r === "sw2") r = connect();
       if (r === "refused") { app._feel("deny"); return false; } // the page shows why
       if (r && !writing) play("uiSel");
       if (r && !didReset) app._feel("confirm"); // a reset never buzzes
@@ -134,6 +162,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     get capturing() { return !!page && page.capturing; },
     get fed() { return page ? page.fed : ""; },
   };
+  if (sw2Mod) sw2Build();
   if (pageMod && (!art || artDone)) build();
   app.controls = face;
   apply(c);
@@ -142,6 +171,11 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
   if (later && !page) {
     const warm = () => { if (page) return; if (idle && !idle()) later(warm); else want(); };
     later(warm);
+  }
+  /* auto() once, in idle after the title: a pad the player already allowed wakes with no chooser, and one plugged in later wakes on connect */
+  if (later && usbNow()) {
+    const warmSw2 = () => { if (autoDone) return; if (idle && !idle()) return void later(warmSw2); sw2Want().then((w) => { if (w && !autoDone) { autoDone = true; w.auto().catch(noop); } }); };
+    later(warmSw2);
   }
   input.gate = { canThrow: () => app.screen === SCREEN.GAME && world.state === "PLAY" && !!(world.players[0] && world.players[0].throw) };
   /* The one key entry: Input runs it first, before onPause and onUiKey, in the browser and under the Node stubs alike. */
@@ -194,8 +228,9 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
   ];
   /* A tap resolved by controlsHit: a row is Enter on it; a page key (the kit pager, a paged touch column) focuses the first row of the page it
      opens, nothing confirmed; off the plate cancels a capture, else backs out. */
-  function tap(h) {
+  function tap(h, pt) {
     if (!h) return; // while the LOADING plate is drawn controlsHit answers for it: {} inert, {off: 1} off a DID NOT LOAD plate
+    upRow = null;
     if (h.off) {
       if (app.capturing) page.cancel();
       else if (app.screen === SCREEN.GAME) app.pauseBack();
@@ -204,8 +239,19 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     }
     if (app.capturing || !page) return;
     if (h.tab) face.tab(h.tab);
+    else if (h.row != null && pt && pt !== "mouse" && page.idAt(h.row) === "SW2") { page.pick(h.row); upRow = h.row; } // a touch pointerdown carries no activation: CONNECT acts on its pointerup (tapUp)
     else if (h.row != null) { page.pick(h.row); app.confirm(); }
     else if (h.k === "page" && h.to != null) page.pick(h.to);
+  }
+  /* The pointerup of a touch tap that went down on the CONNECT row: on the same row it is Enter there (with the up's activation); else, or null (a
+     cancelled or left pointer), nothing. */
+  function tapUp(h) {
+    const r = upRow;
+    upRow = null;
+    if (r == null || !h || h.row !== r || !page || app.capturing || page.idAt(r) !== "SW2") return;
+    page.pick(r);
+    upAct = true;
+    try { app.confirm(); } finally { upAct = false; }
   }
   const syncWords = () => {
     const d = hintDev.device(app.ctlT);
@@ -307,10 +353,13 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     /** Any key or pad button down: the capture's arm clock. */
     anyDown() { return keys.size > 0 || pad.snap().anyDown; },
     tap,
+    tapUp,
+    /** The CONNECT row: shown only where switch2.js reaches (WebUSB, the page allowed, a measured platform); state is the waker's. */
+    sw2: sw2View,
     /** The device the hints name now. */
     device() { return hintDev.device(app.ctlT); },
     blurAll,
     capturing() { return app.capturing; },
-    dispose() { for (const f of offs) f(); input.guard = null; input.gate = null; if (setHints) setHints(null); },
+    dispose() { for (const f of offs) f(); input.guard = null; input.gate = null; if (setHints) setHints(null); if (waker) waker.stop(); },
   };
 }

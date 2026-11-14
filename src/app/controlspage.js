@@ -7,6 +7,10 @@ const ROWS = {
   key: ["MOVE", "BOMB", "THROW", "REMOTE", "PAUSE", "CONFIRM", "BACK", "RESET"],
   pad: ["MOVE", "BOMB", "THROW", "REMOTE", "PAUSE", "SENSITIVITY", "VIBRATION", "RESET"],
 };
+/* The CONNECT row's words (src/render/words.js SW2_WORDS, pinned equal in tests/words.test.mjs: src/app never imports src/render). */
+export const SW2_WORDS = Object.freeze({ row: "SWITCH 2 CONTROLLER", door: "CONNECT", ok: "CONNECTED", cancel: "NOT CONNECTED · TRY AGAIN", busy: "IN USE BY ANOTHER APP", failed: "COULD NOT START IT HERE", blocked: "NOT ALLOWED ON THIS PAGE", pad: "PRESS ENTER OR CLICK", vib: "ALLOW VIBRATION", help: "It needs a USB cable. Your browser asks once which controller, and once more for vibration." });
+const SW2_SAY = { pad: "pad", woken: "ok", cancelled: "cancel", busy: "busy", failed: "failed", blocked: "blocked" };
+const PAD_SW2 = [...ROWS.pad.slice(0, -1), "SW2", "RESET"];
 const NO_VIB = "NO VIBRATION ON THIS CONTROLLER OR BROWSER", NO_VIB_SAY = "Vibration, none. No vibration on this controller or browser.";
 const DRIFT_MS = 2000, REST_MS = 200; // a stick let go still passes under the ring on its way home: that is no drift
 const NOTE_MS = 6000, ECHO_MS = 120, CANCELLED = "CANCELLED · NOTHING CHANGED", PAUSE_ROW = 4;
@@ -25,19 +29,23 @@ const sensSay = (dead) => {
 const btnNo = (id) => "BUTTON " + Object.keys(PAD_IDX).find((i) => PAD_IDX[i] === id);
 
 /** The page's walk, tabs, capture and writes; it reads and saves only through get / set. */
-export function createControlsPage({ get, set, padView, say, device }) {
+export function createControlsPage({ get, set, padView, say, device, sw2 }) {
   const cap = createCapture();
   let tabId = "key", dev = "key", row = 1, armed = false, swap = null, status = "", noteT = null;
   let echo = null, echoEnd = 0, held = null, padWas = padView().state, adjusting = false;
   let st = null, restAt = 0, peaks = [], fed = "";
   const names = {};
-  const rows = () => ROWS[tabId];
+  const sw2View = () => { const v = sw2 ? sw2() : null; return { shown: !!(v && v.shown), state: (v && v.state) || "idle" }; };
+  const rowsFor = (id) => (id === "pad" && sw2View().shown ? PAD_SW2 : ROWS[id]); // SW2 only where the wire's waker exists (switch2.js usbReach)
+  const rows = () => rowsFor(tabId);
+  let seen = null; // [the rows, the focused id] at the last tick: a row that appears never moves the focus
+  const sw2Door = () => (sw2View().state === "woken" && !absent(padView().state) ? SW2_WORDS.ok : SW2_WORDS.door);
   const capturing = () => cap.view() !== null;
   const noPad = () => tabId === "pad" && absent(padView().state);
   const noVib = () => padView().rumble !== true;
   const nonstd = () => padView().state === "nonstd";
   const devNow = (t) => (device ? device(t) : dev);
-  const label = (id) => (id === "RESET" ? LABEL[tabId] : id);
+  const label = (id) => (id === "RESET" ? LABEL[tabId] : id === "SW2" ? SW2_WORDS.row : id);
   const clearNote = () => { swap = null; status = ""; noteT = null; };
   const note = (s, sw) => { status = s; swap = sw || null; noteT = null; say(s); };
   const btnWord = (id) => (nonstd() ? btnNo(id) : BTN[id].w);
@@ -45,6 +53,7 @@ export function createControlsPage({ get, set, padView, say, device }) {
   const boundWord = (id) => {
     const c = get(), isKey = tabId === "key";
     if (id === "RESET") return "";
+    if (id === "SW2") return sw2Door();
     if (isKey) return FIXED_KEY[id] || (id === "MOVE" ? moveLabel(c.key.MOVE, names) : keyName(c.key[id], names[c.key[id]]));
     if (id === "MOVE") return "D-PAD and " + c.stick + "-STICK";
     return id === "PAUSE" ? "START and " + btnWord(c.pad.PAUSE) : btnWord(c.pad[id]);
@@ -59,7 +68,7 @@ export function createControlsPage({ get, set, padView, say, device }) {
   const onValue = () => !noPad() && (rows()[row] === "SENSITIVITY" || (rows()[row] === "VIBRATION" && !noVib()));
   const switchTab = (id) => {
     if (!ROWS[id] || id === tabId) return false;
-    const at = ROWS[id].indexOf(rows()[row]);
+    const at = rowsFor(id).indexOf(rows()[row]);
     tabId = id; armed = false; clearNote();
     row = at >= 0 ? at : PAUSE_ROW; // never onto a row the other tab means differently: ← on a value row writes
     say(TAB_SAY[id]);
@@ -139,7 +148,7 @@ export function createControlsPage({ get, set, padView, say, device }) {
     view(t) {
       const c = get(), p = padView();
       return { tab: tabId, device: devNow(t), row, pad: { state: p.state, name: p.name, rumble: p.rumble === true, effects: p.effects }, key: c.key, binds: c.pad, stick: c.stick, dead: c.dead, vib: c.vib,
-        stickVal: p.stickVal || [0, 0], reads: readsOf(), drift: peaks.length ? peaks[0][1] : 0, armed, swap, status, capture: cap.view(CANCEL_WORD[devNow(t)]), echo, names };
+        stickVal: p.stickVal || [0, 0], reads: readsOf(), drift: peaks.length ? peaks[0][1] : 0, armed, swap, status, capture: cap.view(CANCEL_WORD[devNow(t)]), echo, names, sw2: sw2View() };
     },
     /** Enters the page on the last-used device's tab; touch opens CONTROLLER. */
     open(d) {
@@ -185,7 +194,9 @@ export function createControlsPage({ get, set, padView, say, device }) {
     },
     /** Enter on the selected row. */
     confirm(t) {
-      if (capturing() || noPad()) return false;
+      if (capturing()) return false;
+      if (rows()[row] === "SW2") { armed = false; return "sw2"; } // the wire's: only a press with user activation may open the chooser, a pad press never does
+      if (noPad()) return false;
       const id = rows()[row], c = get();
       if (id === "CONFIRM" || id === "BACK") { note("ENTER AND ESC STAY PUT SO YOU CAN ALWAYS GET BACK"); return "refused"; } // a refusal shown on the page: no cue, a pad's deny
       if (id === "RESET") {
@@ -210,6 +221,10 @@ export function createControlsPage({ get, set, padView, say, device }) {
       }
       return startCapture(id, t);
     },
+    /** What came of a CONNECT: a request() result, or "pad" (a press with no user activation); anything else writes nothing. */
+    sw2Said(r) { if (SW2_SAY[r]) note(SW2_WORDS[SW2_SAY[r]]); },
+    /** The id of row i on the open tab (the wire's tap reads it). */
+    idAt(i) { return rows()[i] || null; },
     /** ESC or EAST: ends a capture, then an armed reset, then asks the shell to leave. */
     back() {
       if (capturing()) { cap.cancel(); note(CANCELLED); return "cap"; }
@@ -250,6 +265,9 @@ export function createControlsPage({ get, set, padView, say, device }) {
     },
     /** Once a frame: the arm clock, a lost pad, and the notes' ages. */
     tick(t, anyDown) {
+      const ids = tabId + ":" + rows().join(); // the same tab's rows changed (SW2 arrived), never a tab switch
+      if (seen && seen[0] !== ids && seen[0].startsWith(tabId + ":")) { const at = rows().indexOf(seen[1]); row = at >= 0 ? at : Math.min(row, rows().length - 1); armed = false; }
+      seen = [ids, rows()[row]];
       cap.tick(t, anyDown);
       stickTick(t);
       if (!anyDown) held = null;

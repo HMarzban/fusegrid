@@ -97,6 +97,10 @@ export const CONTROLS_WORDS = Object.freeze({ NONE: "NO CONTROLLER", CONNECT: "C
   ROW, TAB: "TAB", CHANGE, ADJUST: "ADJUST", RESET: "RESET", BACK, CANCELS: " CANCELS", KEEPS: " KEEPS IT",
   /* listening (Task 9.10, the -capture frames): the target's callout reads the action over NOW and its input; the in-use plaque (the phone's short head) */
   NOW: "NOW", WAS: "WAS", IN_USE: "BUTTON ALREADY IN USE?", IN_USE_KEY: "KEY ALREADY IN USE?", SWAPS: "The two actions swap, and the page says which one moved:", IN_USE_SHORT: "IN USE? THEY SWAP:" });
+/* The CONNECT row on CONTROLS (Task 3, every-controller plan): a Switch 2 Pro Controller woken over a USB cable (src/app/switch2.js); its name, the
+   door, each chooser result, the refusal a controller press gets (no user activation), the vibration ask (Task 7) and the help line. Owner ruling
+   R-LABELS: the row names the one controller it is for. src/app/controlspage.js keeps the literal, pinned equal in tests/words.test.mjs. */
+export const SW2_WORDS = Object.freeze({ row: "SWITCH 2 CONTROLLER", door: "CONNECT", ok: "CONNECTED", cancel: "NOT CONNECTED · TRY AGAIN", busy: "IN USE BY ANOTHER APP", failed: "COULD NOT START IT HERE", blocked: "NOT ALLOWED ON THIS PAGE", pad: "PRESS ENTER OR CLICK", vib: "ALLOW VIBRATION", help: "It needs a USB cable. Your browser asks once which controller, and once more for vibration." });
 /* The next-run card (v202 Task 3.2, MENU; LEVEL SELECT reuses it): its kicker, the level's mark (level 1, a finale, the last one), its
    section labels and its stat cells. ENEMIES counts the kinds when their names do not fit (the GUIDE page's word). */
 export const CARD_WORDS = Object.freeze({

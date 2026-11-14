@@ -21,7 +21,7 @@
    every row at rest, the pane's slab, name and rule), keyed by what they show, so a cursor move never misses; live: the focused row, the drawing
    (its own layers, padart) with its ring and callouts, the status line, the foot and the capture plate. Under the probe the page records its rects,
    texts and squint pairs outside any layer paint. */
-import {CONTROLS_WORDS as CW, LABEL} from "../words.js";
+import {CONTROLS_WORDS as CW, LABEL, SW2_WORDS} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, plate, band, focusBomb, plaque, rfill as rr, wallCell} from "../kit/paint.js";
 import {T, DEV, SANS, measure as W, textScale, dsp, measurer as mOf, text, CAP_K} from "../kit/type.js";
@@ -46,7 +46,7 @@ export const PHONE = deep({p: {top: 12, bot: 12, side: 12, pad: [12, 12, 14, 12]
   p125: {top: 10, bot: 10, side: 12, pad: [10, 12, 12, 12], grp: 10, tabs: 10, back: 124, below: 10, max: 600, art: [120, 300]}});
 export const COL_ART = 180; // col's compact drawing, at the head's right over the tabs (no callouts: the rows name every input)
 export const TOUCH = Object.freeze({h: 44, g: 8}), DESK_U = 0.8, GUT = 8, FOOT1 = 50, TROUGH = 11, TAB_GAP = 8, MIN_ROWS = 2;
-/* a wall course before each of these rows: actions · fixed or feel · reset */
+/* a wall course before each of these rows: actions · fixed or feel · connect (Task 3: shown only where switch2.js reaches) · reset */
 export const GROUP = Object.freeze(["CONFIRM", "SENSITIVITY", "RESET"]);
 const BACK_CHEV = 52; // BACK as its chevron alone (>= 44 CSS px), records' compact step-down
 const LAND_TIGHT = Object.freeze({top: 12, bot: 12, pad: Object.freeze([6, 12, 8, 12]), below: 8, tabs: 6});
@@ -95,9 +95,11 @@ function paneParts(P, ts, footH) {
   const foot = R(ix, P.y + P.h - SLAB - 12 - footH, iw, footH), rule = R(ix, foot.y - 10 - hR, iw, hR), name = R(ix, iy, iw, hN);
   return {pane: P, name, art: R(ix, iy + hN + 8, iw, rule.y - 8 - (iy + hN + 8)), rule, foot};
 }
+/* a short desk window gives way before it scales (Task 3: the CONNECT row's ninth row at 1366 x 657): the courses, the gap under the head and over the rows close */
+export const DESK_SHORT = Object.freeze({grp: 8, below: 6, tabs: 6});
 /* desk: the head, the tabs, the rows and the row's status line in the left column; the pane the plate's full inner height on the right */
-function desk(F, ids, ts, fl) {
-  const D = DESK[big(ts) ? "d125" : "d"], dv = DEV.d, T0 = dv.T, head = headH(ts, dv.ttl), mx = T0 + 2 + GUT, my = T0 + 3 + GUT, chrome = paneChrome(ts, D.foot), hS = 2 * dv.sec * ts * 1.3;
+function desk(F, ids, ts, fl, short) {
+  const D = short ? {...DESK[big(ts) ? "d125" : "d"], ...DESK_SHORT} : DESK[big(ts) ? "d125" : "d"], dv = DEV.d, T0 = dv.T, head = headH(ts, dv.ttl), mx = T0 + 2 + GUT, my = T0 + 3 + GUT, chrome = paneChrome(ts, D.foot), hS = 2 * dv.sec * ts * 1.3;
   const tabH = (u) => Math.max(dv.bkh, fl ? fl.h / u : 0), leftH = (u) => head + D.below + tabH(u) + TROUGH + D.tabs + run(ids, D.row, D.grp, fl, u).h + 12 + hS;
   const need = (u) => D.pad[0] + Math.max(leftH(u), chrome + D.art[0]) + D.pad[2], pwMin = D.pad[3] + D.list + D.gap + D.paneMin + D.pad[1];
   const u = solve(Math.min(1, F.W / (pwMin + 2 * mx)), (v) => v * (need(v) + 2 * my) <= F.H);
@@ -164,6 +166,7 @@ export function controlsGeom(F, s) {
   if (G) return G;
   const portrait = !paused && shell && touchy && F.H > F.W * 1.3, fl = touchy ? {h: TOUCH.h / css, g: TOUCH.g / css} : null;
   let d = portrait || (touchy && !shell) ? null : paused ? null : desk(F, ids, ts, fl);
+  if (d && d.u < 1) { const e = desk(F, ids, ts, fl, true); if (e.u > d.u + 1e-9) d = e; } // only where it buys scale: a width-bound box keeps its gaps
   if (!d || d.u < DESK_U) d = touchy ? phone(F, ids, ts, cue) : col(F, ids, ts);
   /* a touch board canvas too small for even MIN_ROWS rows a page at its CSS scale (a 568 x 320 phone): the column scales as one piece, the one give-way left */
   const bot = paused ? pauseBand(F)[1] : F.H;
@@ -265,6 +268,14 @@ function rowPlan(c, G, r, s, dv) {
     return o;
   }
   if (r.text) { o.val = stepper(c, r, xr, cy, dv, G.d.dev === "p"); return o; }
+  if (r.door) { /* the CONNECT door: a key with its word; the word alone where the label leaves no room; then the door's chevron alone (the foot or the
+       status says it); at 125 % a label that leaves not even that steps down to its 100 % size (SETTINGS' rule, R1 landscape) */
+    const gs = dv === DEV.p ? 18 : 16, chev = {P: [{k: "glyph", n: "chev", r: R(xr - gs - 2, cy - gs / 2, gs, gs), col: CONST.ink}], x: xr - gs - 2, w: gs + 2};
+    const door = (rm) => { let v = place(c, [{k: "cap", s: r.door}], xr, cy, dv); if (v.w > rm) v = place(c, [{k: "word", s: r.door}], xr, cy, dv); return v.w > rm ? chev : v; };
+    o.val = door(room);
+    if (o.val === chev && chev.w > room && textScale() > 1) { const p1 = dv.pri / textScale(), f1 = LF(p1), w1 = W(c, f1, label); o.label = {...o.label, f: f1, px: p1, w: w1}; o.val = door(xr - (g.x + labx + w1 + 10)); }
+    return o;
+  }
   for (let lvl = 0; lvl <= 3; lvl++) { o.val = place(c, tokens(s, r, lvl), xr, cy, dv, off); if (o.val.w <= room) break; }
   return o;
 }
@@ -299,13 +310,13 @@ function wrap(c, f, s, w, n) {
   if (a > 0 && !out[k].includes(" ")) { const down = out[k - 1].slice(a + 1) + " " + out[k]; if (W(c, f, down) <= w) { out[k - 1] = out[k - 1].slice(0, a); out[k] = down; } }
   return out.length <= n && out.every((q) => W(c, f, q) <= w) ? out : null;
 }
-/* a status or rule line: whole, split at its " · " parts, wrapped; the last that fits; never an ellipsis */
+/* a status or rule line: whole, split at its " · " parts (a sentence, at its sentences), wrapped; the last that fits; never an ellipsis */
 function lines(c, f, s, w, n) {
   if (!s) return [];
   const one = wrap(c, f, s, w, n);
   if (one) return one;
-  const parts = String(s).split(" · ");
-  for (let k = parts.length - 1; k >= 1; k--) { const q = wrap(c, f, parts.slice(0, k).join(" · "), w, n); if (q) return q; }
+  const sep = String(s).includes(" · ") ? " · " : ". ", parts = String(s).split(sep), end = sep === ". " ? "." : "";
+  for (let k = parts.length - 1; k >= 1; k--) { const q = wrap(c, f, parts.slice(0, k).join(sep) + end, w, n); if (q) return q; }
   return wrap(c, f, parts[0], w, 99) ? wrap(c, f, parts[0], w, 99).slice(0, n) : [];
 }
 function nameWords(s) {
@@ -337,9 +348,10 @@ function plan(c0, G, s, ui) {
   const [nm, note] = nameWords(s), nf = LF(d.dev === "p" || d.mode === "col" ? dv.sec : dv.pri), sf = LF(DEV.d.sec);
   const name = d.name ? {s: nm, f: nf, px: d.dev === "p" || d.mode === "col" ? dv.sec : dv.pri, x: d.name.x, y: d.name.y + d.name.h / 2, w: W(c, nf, nm)} : null;
   if (name && note && d.pane && name.w + 24 + W(c, sf, note) <= d.name.w) name.note = {s: note, f: sf, px: DEV.d.sec, x: d.name.x + d.name.w, y: name.y, w: W(c, sf, note)};
-  let rule = null;
-  if (d.rule) { const bf = T.body(DEV.d.bod), ls = lines(c, bf, s.tab === "key" ? CW.RULE_KEY : CW.RULE_PAD, d.rule.w, 2), lh = DEV.d.bod * d.ts * 1.4; rule = ls.map((q, i) => ({s: q, f: bf, px: DEV.d.bod, x: d.rule.x, y: d.rule.y + d.rule.h - (ls.length - i - 0.5) * lh, w: W(c, bf, q)})); }
-  return {rows, list, tabs, name, rule, head: headPlan(c, G, ui), c};
+  let rule = null, rule2 = null;
+  const ruleOf = (say) => { const bf = T.body(DEV.d.bod), ls = lines(c, bf, say, d.rule.w, 2), lh = DEV.d.bod * d.ts * 1.4; return ls.map((q, i) => ({s: q, f: bf, px: DEV.d.bod, x: d.rule.x, y: d.rule.y + d.rule.h - (ls.length - i - 0.5) * lh, w: W(c, bf, q)})); };
+  if (d.rule) { rule = ruleOf(s.tab === "key" ? CW.RULE_KEY : CW.RULE_PAD); if (rows.SW2) rule2 = ruleOf(SW2_WORDS.help); } // the CONNECT row's help takes the rule's place (the sentence wants the pane's width)
+  return {rows, list, tabs, name, rule, rule2, head: headPlan(c, G, ui), c};
 }
 
 /* ---- painting ---- */
@@ -410,30 +422,34 @@ function paintCol(g, G, Pl, tok, s, p) {
   if (!d.pane && Pl.name && !s.capture) text(g, Pl.name.s, Pl.name.x, Pl.name.y, Pl.name.f, CONST.t2); // a rebind listening in place: its prompt paints there live
 }
 /* the pane's words (live: three fillText, measured once in the plan) */
-function paneWords(c, G, Pl, s) {
+const ruleAt = (Pl, row) => (row && row.id === "SW2" && Pl.rule2 && Pl.rule2.length ? Pl.rule2 : Pl.rule);
+function paneWords(c, G, Pl, s, row) {
   const d = G.d, N = s.capture ? null : Pl.name;
   if (!d.pane) return;
   if (N) text(c, N.s, N.x, N.y, N.f, CONST.ink);
   if (N && N.note) text(c, N.note.s, N.note.x, N.note.y, N.note.f, CONST.t2, "right");
-  if (Pl.rule && !s.capture) for (const q of Pl.rule) text(c, q.s, q.x, q.y, q.f, CONST.t2);
+  if (Pl.rule && !s.capture) for (const q of ruleAt(Pl, row)) text(c, q.s, q.x, q.y, q.f, CONST.t2);
 }
 const paintStatic = (g, G, Pl, tok, s, p) => { paintBase(g, G, tok); paintCol(g, G, Pl, tok, s, p); };
 
 /* ---- the drawings (padart), in the art box A ---- */
 const SANS_F = (px) => "700 " + px + "px " + SANS; // padart's callout face (menudraw sans), measured so
 const metrics = (c, dv) => { const ts = textScale(), m = mOf(c); return {pri: dv.pri * ts, sec: dv.sec * ts, wOf: (s, px) => W(m, SANS_F(px), s)}; };
+/* the NO CONTROLLER body under this width (design px) is too small to read as locked (its lip under 4 CSS px: tools/ui/gates.mjs locked): the
+   plaque alone stands in the art box (Task 3: the CONNECT row's ninth row leaves a 393 x 852 phone's drawing that small) */
+export const LOCK_MIN = 112;
 const fits = new Map();
 const fitOnce = (k, fn) => { if (!fits.has(k)) { if (fits.size > 32) fits.clear(); fits.set(k, fn()); } return fits.get(k); };
 function padArt(c, s, row, A, tok, ui) {
   const cap = s.capture, off = padOff(s), tgt = cap ? padRing(s, row.id) : null, lit = off ? {} : cap ? (tgt ? {[tgt]: "lit"} : {}) : padStates(s), it = off ? [] : cap ? (ui.call ? capCallouts(s, row.id) : []) : padCallouts(s), plq = off ? 56 : 0, ts = textScale();
   const F = fitOnce(["pad", A.w, A.h - plq, ts, JSON.stringify(it), JSON.stringify(lit)].join("|"), () => padFit(A.w, A.h - plq, it, metrics(c, ui.dv), lit, !!cap));
-  const Wd = off ? F.W * 0.82 : F.W, ox = A.x + F.ox + (F.W - Wd) / 2, oy = A.y + F.oy, ring = off || !ui.focus ? null : cap ? tgt : padRing(s, row.id);
-  drawPad(c, ox, oy, Wd, {tok, lit, lock: off, ring, press: s.echo, grips: row.id === "VIBRATION" && !off && !row.none && !!row.bar && row.bar[0] > 0, reduced: !!ui.reduced});
+  const Wd = off ? F.W * 0.82 : F.W, ox = A.x + F.ox + (F.W - Wd) / 2, oy = A.y + F.oy, ring = off || !ui.focus ? null : cap ? tgt : padRing(s, row.id), bare = off && Wd < LOCK_MIN;
+  if (!bare) drawPad(c, ox, oy, Wd, {tok, lit, lock: off, ring, press: s.echo, grips: row.id === "VIBRATION" && !off && !row.none && !!row.bar && row.bar[0] > 0, reduced: !!ui.reduced});
   if (F.plan) drawCallouts(c, ox, oy, F.plan, tok);
   let none = null;
-  if (off) { const y = A.y + A.h - plq, dv = ui.dv; none = [{s: CW.NONE, f: LF(dv.pri), px: dv.pri, y: y + 14, col: CONST.ink, role: "primary"}, {s: CAPTION.none, f: T.body(dv.bod), px: dv.bod, y: y + 40, col: CONST.t2, role: "body"}]; for (const q of none) { q.w = W(mOf(c), q.f, q.s); q.x = A.x + (A.w - q.w) / 2; text(c, q.s, q.x, q.y, q.f, q.col); } }
+  if (off) { const y = bare ? A.y + (A.h - plq) / 2 : A.y + A.h - plq, dv = ui.dv; none = [{s: CW.NONE, f: LF(dv.pri), px: dv.pri, y: y + 14, col: CONST.ink, role: "primary"}, {s: CAPTION.none, f: T.body(dv.bod), px: dv.bod, y: y + 40, col: CONST.t2, role: "body"}]; for (const q of none) { q.w = W(mOf(c), q.f, q.s); q.x = A.x + (A.w - q.w) / 2; text(c, q.s, q.x, q.y, q.f, q.col); } }
   if (!off && !cap && ui.warm && !(row.id === "VIBRATION")) { const a = c.globalAlpha; c.globalAlpha = 0; drawPad(c, ox, oy, Wd, {tok, lit, grips: true}); c.globalAlpha = a; } // the grips layer made with the page, so a cursor move onto VIBRATION never misses
-  return {plan: F.plan, W: Wd, none, body: off ? R(ox + 0.06 * Wd, oy + 0.42 * Wd, 0.18 * Wd, 0.14 * Wd) : null, ox, oy, ring: ring && PART_AT[ring] ? {x: ox + PART_AT[ring][0] * Wd, y: oy + PART_AT[ring][1] * Wd, r: ringR(ring, Wd)} : null};
+  return {plan: F.plan, W: Wd, none, body: off && !bare ? R(ox + 0.06 * Wd, oy + 0.42 * Wd, 0.18 * Wd, 0.14 * Wd) : null, ox, oy, ring: ring && PART_AT[ring] ? {x: ox + PART_AT[ring][0] * Wd, y: oy + PART_AT[ring][1] * Wd, r: ringR(ring, Wd)} : null};
 }
 function keyArt(c, s, row, A, tok, ui) {
   const lit = s.capture ? {} : keyStates(s), it = s.capture ? (ui.call ? capCallouts(s, row.id) : []) : keyCallouts(s), ts = textScale();
@@ -546,7 +562,7 @@ function record(G, Pl, s, ui, foc, live, dpr, el, touchy, pg, tok) {
   if (live.ring && d.art) ringPair(probe, b, live.ring, cap ? "capture" : foc, R(d.art.x + 2, d.art.y + d.art.h - 22, 20, 20));
   if (live.plan) for (const L of live.plan.labels) for (const ln of L.lines) { const x = live.art.ox + L.x, tw = ln.tag || 0, w = ln.w; txt(ln.s, L.side === "l" ? x - tw - (tw ? 6 : 0) - w : x, live.art.oy + ln.y, w, ln.px / ts, ln.act ? CONST.ink : CONST.t2, ln.act ? "primary" : "secondary"); }
   if (live.art && live.art.none) for (const q of live.art.none) txt(q.s, q.x, q.y, q.w, q.px, q.col, q.role);
-  if (Pl.rule && !cap) for (const q of Pl.rule) txt(q.s, q.x, q.y, q.w, q.px, CONST.t2, "body");
+  if (Pl.rule && !cap) for (const q of ruleAt(Pl, rowsOf(s)[Math.min(s.row | 0, rowsOf(s).length - 1)])) txt(q.s, q.x, q.y, q.w, q.px, CONST.t2, "body");
   if (live.inuse) for (const q of live.inuse.lines) txt(q.s, q.x, q.y, q.w, q.px, q.col, q.role);
   if (live.status) for (const q of live.status) txt(q.s, q.x, q.y, q.w, q.px, q.col, "secondary");
   if (d.keys) { const f = LF(dv.sec), sL = pageLabel(pg, G.pages.length); txt(sL, d.keys.label.x, d.keys.label.y + d.keys.label.h / 2, W(mc, f, sL), dv.sec, CONST.t2, "secondary"); for (const [nm, r, on2] of [["PAGE UP", d.keys.up, pg > 0], ["PAGE DOWN", d.keys.dn, pg < G.pages.length - 1]]) { probe.rect(nm, ...b(r), {touch: touchy, set: "controls pages", kind: "step", fill: on2 ? tok.key : tok.well}); probe.pair("info", b(R(r.x + r.w / 2 - 11, r.y + r.h / 2 - 11, 22, 22)), b(R(r.x + 4, r.y + 5, r.w - 8, r.h - 9)), {col: on2 ? CONST.ink : CONST.off, name: nm, ...(on2 ? {} : {lock: true})}); } }
@@ -575,6 +591,7 @@ const stMemo = new Map();
 function statusLines(c, G, s, row) {
   const d = G.d, dv = DEV[d.dev], f = LF(dv.sec), B = d.status, lh = dv.sec * d.ts * 1.3;
   let say = (row.changed && !s.status && !s.armed && !s.swap ? CW.CHANGED + " · " : "") + statusOf(s, row); // a changed row: the dot by its label and the word here
+  if (row.id === "SW2" && say === SW2_WORDS.help && d.rule) return []; // the pane's rule says it, at the pane's width
   if (!d.pane && row.id === "SENSITIVITY" && !padOff(s) && !s.status) say += " · " + CW.DRIFT + (s.drift || 0).toFixed(2) + " · " + CW.READS + (s.reads || CW.NOTHING);
   const k = [say, B.w, d.ts].join("|");
   if (!stMemo.has(k)) { if (stMemo.size > 32) stMemo.clear(); stMemo.set(k, lines(mOf(c), f, say, B.w, Math.max(1, Math.floor((B.h + 1) / lh)))); }
@@ -631,7 +648,7 @@ export function drawControlsPage(c, F, s, ui = {}) {
     c.scale(u, u); paintStatic(c, G, Pl, tok, s, pg); c.restore();
   }
   c.save(); c.scale(u, u);
-  paneWords(c, G, Pl, s);
+  paneWords(c, G, Pl, s, row);
   const fo = focus && Pl.rows[focus] && G.pages[pg].includes(focus) ? Pl.rows[focus] : null;
   if (fo && cap) { /* the row listening: its band, bomb and label, the prompt where its binds stood */
     band(c, fo.r.x, fo.r.y, fo.r.w, fo.r.h, tok); focusBomb(c, fo.r.x + 8, fo.r.y + fo.r.h / 2, dv.bombs); text(c, fo.label.s, fo.label.x, fo.label.y, fo.label.f, CONST.ink);

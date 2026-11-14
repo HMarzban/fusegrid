@@ -1,7 +1,7 @@
 // CONTROLS page geometry and copy, shared by draw, tap and the page reducer. Pure. BTN, DEF_KEY, DEF_PAD, VIB_LEVELS, SENS_LEVELS, keyName, moveLabel and softAliasesOf are local copies of src/app/controls.js (render never reads src/app), pinned equal in tests/controlsdraw.test.mjs.
 import { VIB_LEVELS, vibWord } from "./menudraw.js";
 import { KB_AT, KB_KEYS, KB_W, KB_H, PART_AT, PART_R, BUMP, padBox, keyRect, kbBox } from "./padart.js";
-import { CONTROLS_WORDS } from "./words.js";
+import { CONTROLS_WORDS, SW2_WORDS } from "./words.js";
 const CW = CONTROLS_WORDS;
 
 const dpad = { g: "dpad", v: "all", w: "D-PAD" };
@@ -76,6 +76,7 @@ export function rowsOf(s) {
   const tail = () => [
     { id: "SENSITIVITY", gap: 1, text: SENS_LEVELS[sensIdx(dead)].name, off, changed: dead !== DEF_DEAD, bar: [sensIdx(dead) + 1, SENS_LEVELS.length] },
     noBuzz(s) ? { id: "VIBRATION", text: "NONE", off, none: 1 } : { id: "VIBRATION", text: VIB_LEVELS[vibOf(s)], off, changed: vibOf(s) !== DEF_VIB, bar: [vibOf(s), VIB_LEVELS.length - 1] },
+    ...(s.sw2 && s.sw2.shown ? [{ id: "SW2", gap: 1, label: SW2_WORDS.row, door: s.sw2.state === "woken" && p.state !== "none" && p.state !== "lost" ? SW2_WORDS.ok : SW2_WORDS.door }] : []), // never off: it is how a controller arrives
     { id: "RESET", gap: 1, label: "RESET CONTROLLER", reset: 1, off },
   ];
   if (p.state === "nonstd") {
@@ -99,6 +100,7 @@ export function rowsOf(s) {
 export function statusOf(s, row) {
   if (s.status) return s.status;
   if (s.armed) return "PRESS AGAIN TO RESET THIS TAB";
+  if (row.id === "SW2") return SW2_WORDS.help;
   if (padOff(s)) return s.pad && s.pad.state === "lost" ? "PLUG IT BACK IN OR PRESS ANY BUTTON" : s.device === "touch" ? "PAIR ONE AND PRESS ANY BUTTON" : "IT WAKES ON ITS FIRST PRESS · USB OR BLUETOOTH";
   if (row.fixed) return "ENTER AND ESC STAY PUT SO YOU CAN ALWAYS GET BACK";
   if (row.reset) return "BACK TO THE DEFAULTS · THIS TAB ONLY";
@@ -121,7 +123,7 @@ export function footItems(s, row, words, short) {
   const w = words || {}, padTab = s.tab === "pad", gone = padOff(s), nonstd = padTab && s.pad && s.pad.state === "nonstd";
   if (s.device === "touch") return null;
   const adjusts = padTab && !gone && (row.id === "SENSITIVITY" || (row.id === "VIBRATION" && !noBuzz(s)));
-  const verb = gone || row.fixed || (padTab && row.id === "VIBRATION" && noBuzz(s)) ? null : row.reset ? CW.RESET : CW.CHANGE;
+  const sw2 = row.id === "SW2", verb = sw2 ? SW2_WORDS.door : gone || row.fixed || (padTab && row.id === "VIBRATION" && noBuzz(s)) ? null : row.reset ? CW.RESET : CW.CHANGE;
   const onPad = (s.device || s.tab) === "pad" && !gone;
   /* ←→ is taken on a value row, so the line names the other way to the tab; on SENSITIVITY the stick is under test, so a pad's line names the D-PAD. */
   const lr = [["lf"], ["rt"]], it = [{ t: CW.ROW, caps: [["up"], ["dn"]] }];
@@ -131,6 +133,7 @@ export function footItems(s, row, words, short) {
   } else it.push({ t: CW.TAB, caps: lr });
   let ok = w.ok || "ENTER", back = w.back || "ESC";
   if (onPad) { ok = nonstd ? "BUTTON 0" : "SOUTH"; back = nonstd ? "BUTTON 1" : "EAST"; }
+  if (sw2) ok = "ENTER"; // a controller press opens no chooser (no user activation): the keyboard's own key, whatever drives
   if (verb) it.push({ t: verb, caps: [ok] });
   it.push({ t: CW.BACK, caps: [back] });
   return it;

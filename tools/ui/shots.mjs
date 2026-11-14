@@ -3,7 +3,7 @@
    Every page task proves its layout on these: tools/ui/gates.mjs measures them, tools/ui/compare.mjs puts each beside its approved mock frame.
 
    node tools/ui/shots.mjs [flags]
-     --screens a,b    screens to capture (default all): title, menu, level, levelloading (LEVEL SELECT's LOADING plate, its import held), options (alias settings), graphics, controls, padtoast, controlsnone, controlspad, controlscapture, guide, howto, items,
+     --screens a,b    screens to capture (default all): title, menu, level, levelloading (LEVEL SELECT's LOADING plate, its import held), options (alias settings), graphics, controls, padtoast, controlsnone, controlspad, controlscapture, controlsconnect, guide, howto, items,
                       enemies, floor, scores, stats, statsreset (STATS armed), medals, scoresfull / statsfull (a seeded cabinet,
                       __GAME__.seedRecords()), statspage2 (STATS' second page on a paged phone), scoresidle (RECORDS through the real lazy.idle() load: no want()), pause, pausetags (PAUSE with the run's rules seeded: the tag row), win, win2 (a paged run end's second
                       page), lose, loseshort (a saved best: the shortfall), losedaily (today's DAILY), lose2,
@@ -104,6 +104,9 @@ const TWIN_MS = 1000 / 30;
 /* a standard-mapping controller in slot 0 (headless Chrome has none), no button down, for the CONTROLS frames that need one; false takes it away */
 const PAD = (on) => `(()=>{const b=()=>({pressed:false,touched:false,value:0}),p={id:'shots controller',index:0,connected:true,mapping:'standard',timestamp:0,axes:[0,0,0,0],buttons:Array.from({length:17},b),vibrationActuator:null};
  Object.defineProperty(navigator,'getGamepads',{value:${on} ? (()=>[p,null,null,null]) : (()=>[null,null,null,null]),configurable:true,writable:true});return true;})()`;
+/* a WebUSB on macOS (the CONNECT row's reach, every-controller Task 3): the chooser always answers NotFoundError (cancelled), no pad is ever allowed */
+const USB = `(()=>{const u={requestDevice:()=>Promise.reject(Object.assign(new Error('none'),{name:'NotFoundError'})),getDevices:()=>Promise.resolve([]),addEventListener(){},removeEventListener(){}};
+ Object.defineProperty(navigator,'usb',{value:u,configurable:true});Object.defineProperty(navigator,'userAgentData',{value:{platform:'macOS',mobile:false,brands:[]},configurable:true});return true;})()`;
 /* the run's ledger: a capture that fails is named in failed and errors; a page error is charged to the capture whose window it falls in (from the
    start of reaching that screen to the end of its capture) or, outside every window, to the run */
 export function ledger(rep, gid, errs) {
@@ -231,10 +234,12 @@ async function group(c, port, a, look, world, rep) {
         await confirm(); await P.adv(50);
       }
       if (!ok) { L.close(base); continue; }
+      if (R.usb) await ev(USB); // before CONTROLS opens: its open asks for switch2.js, whose usbReach reads these
       for (const k of [].concat(R.key || [])) { if (a.phone && !R.real) await ev(`(window.__GAME__.app.key(${JSON.stringify(k)}),true)`); else await key(k, k.replace(/^Key/, "").toLowerCase()); await P.adv(50); } // a key or a list, pressed in order
       if (R.wait === "controls" && !(await poll("!!window.__GAME__.app.controls&&!window.__GAME__.app.controls.loading", 10000))) warn("the CONTROLS page never loaded");
       if ((R.wait === "records" || R.wait === "level") && !(await poll(`import('/src/render/pages/lazy.js').then((m)=>(m.want('${R.wait}').catch(()=>{}),!!m.get('${R.wait}')))`, 10000))) warn("the " + R.wait.toUpperCase() + " page never loaded");
       if (R.wait === "records-idle" && !(await poll("import('/src/render/pages/lazy.js').then((m)=>!!m.get('records'))", 10000))) { L.fail(base, "the RECORDS page never loaded through lazy.idle()"); L.close(base); continue; } // never want(): the page's own idle load
+      if (R.usb && !(await poll("!!window.__GAME__.ctl&&window.__GAME__.ctl.sw2().shown", 10000))) warn("the CONNECT row never showed (switch2.js usbReach)");
       if (R.pad) { await ev(PAD(true)); await P.adv(100); }
       for (const st of [].concat(R.ctl || [])) { await ev(`(window.__GAME__.app.controls.${st},true)`); await P.adv(50); } // the page's own reducer calls, by name
       await shoot(s, R.settle || 600);

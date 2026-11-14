@@ -8,7 +8,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { SCREEN } from "../src/app/menuapp.js";
 import { mountFrames } from "../src/app/frameloop.js";
-import { mountControls, preloadControls } from "../src/app/controlswire.js";
+import { mountControls, preloadControls, preloadSwitch2 } from "../src/app/controlswire.js";
 import { mountUpdate, updVisible } from "../src/app/update.js";
 import { ANALYTICS_KEY, GA_HOST, cardVisible, mountAnalytics } from "../src/app/analytics.js";
 import { CFG } from "../src/core/config.js";
@@ -20,6 +20,7 @@ import { DEF_CONTROLS } from "../src/app/controls.js";
 import { hints, setHints } from "../src/render/hintcopy.js";
 import { createLocalPair } from "../src/net/localpair.js";
 await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
+await preloadSwitch2(); // the Switch 2 waker (Task 3), lazy too: in, so a mount where usbReach is true builds it at once
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -1178,6 +1179,115 @@ for (const via of ["LATER", "the backdrop"]) {
   m.gpr.list = [mkPad()]; m.tick(2);
   check("on MENU: no toast, the note as before", !m.app.padToast && /^CONTROLLER READY/.test(m.app.padNote), J([m.app.padToast, m.app.padNote]));
   setHints(null);
+}
+
+// ---- Task 3: the CONNECT row (SW2), a Switch 2 Pro Controller woken over WebUSB from CONTROLS ----
+{
+  const { SW2_WORDS } = await import("../src/app/controlspage.js");
+  const J = (v) => JSON.stringify(v);
+  const flush = () => new Promise((r) => setImmediate(r));
+  /* a fake navigator.usb recording every call; res() answers requestDevice (default: the chooser stays open) */
+  const fakeUsb = () => { const u = { req: 0, got: 0, L: {}, res: null, devs: [], requestDevice() { u.req++; return u.res ? u.res() : new Promise(() => {}); }, getDevices() { u.got++; return Promise.resolve(u.devs); }, addEventListener(t, f) { u.L[t] = f; }, removeEventListener(t) { delete u.L[t]; } }; return u; };
+  const dev = (o = {}) => ({ vendorId: 0x057e, productId: 0x2069, opened: false, configuration: null, open() { if (o.open) return Promise.reject(new Error("x")); this.opened = true; return Promise.resolve(); }, selectConfiguration() { this.configuration = 1; return Promise.resolve(); }, claimInterface() { return o.claim ? Promise.reject(new Error("x")) : Promise.resolve(); }, transferOut() { return Promise.resolve({ status: "ok" }); }, releaseInterface: () => Promise.resolve(), close: () => Promise.resolve() });
+  const withNav = (usb, platform, fn) => { const had = Object.getOwnPropertyDescriptor(navigator, "usb"), hd = Object.getOwnPropertyDescriptor(navigator, "userAgentData"); navigator.usb = usb; navigator.userAgentData = { platform };
+    const back = () => { if (had) Object.defineProperty(navigator, "usb", had); else delete navigator.usb; if (hd) Object.defineProperty(navigator, "userAgentData", hd); else delete navigator.userAgentData; };
+    let r; try { r = fn(); } catch (e) { back(); throw e; } if (r && typeof r.then === "function") return r.finally(back); back(); return r; }; // an async fn keeps the stubs until it settles
+  const keyDown = (code) => (L.keydown || []).forEach((f) => f({ code, key: code, repeat: false, preventDefault: noop }));
+  const toCtl = (g) => { g.app.screen = SCREEN.SETTINGS; g.app.cabinetSeen = true; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.lastDev = "key"; g.app.confirm(); g.app.controls.tab("pad"); g.tick(1); };
+  const on7 = (g) => { g.app.controls.pick(7); return g.app.controls.view(g.app.ctlT); };
+
+  /* usbReach false: a platform not measured, no WebUSB at all */
+  for (const [nm, usb, plat] of [["Windows", fakeUsb(), "Windows"], ["no WebUSB", undefined, "macOS"]]) withNav(usb, plat, () => {
+    const g = mk({ noPad: true }); toCtl(g);
+    const v = g.app.controls.view(g.app.ctlT);
+    check(`usbReach false (${nm}): no CONNECT row on either tab, ctl.sw2().shown false, nothing throws`, g.ctl.sw2().shown === false && v.sw2.shown === false && (() => { g.app.controls.pick(7); return g.app.controls.view(g.app.ctlT).row === 7; })() && !g.app.controls.pick(8) && (g.app.controls.tab("key"), !g.app.controls.pick(8)), J(g.ctl.sw2()));
+    g.tick(2); setHints(null);
+  });
+
+  /* usbReach true, no controller: walkable in the NO CONTROLLER body; Enter, a click and a touch tap (on its pointerup) call request() once each */
+  await withNav(fakeUsb(), "macOS", async () => {
+    const u = navigator.usb, g = mk({ noPad: true }); toCtl(g);
+    check("usbReach true: ctl.sw2() shown, idle; the page view carries it", J(g.ctl.sw2()) === J({ shown: true, state: "idle" }) && g.app.controls.view(g.app.ctlT).sw2.shown === true, J(g.ctl.sw2()));
+    const v = on7(g);
+    check("no controller: the row is walkable (the eighth of nine), its status the help line", v.pad.state === "none" && v.row === 7, J([v.pad.state, v.row]));
+    keyDown("Enter");
+    check("Enter on CONNECT calls request() inside the keydown itself (no frame between)", u.req === 1, u.req);
+    keyDown("Enter");
+    check("a second Enter while the chooser is open opens no second one", u.req === 1, u.req);
+    g.tick(2);
+    /* the chooser answers: cancelled */
+    let rej; u.res = () => new Promise((ok, no) => { rej = no; });
+    const g2 = mk({ noPad: true }); toCtl(g2); on7(g2);
+    (L.pointerdown || []).forEach((f) => f({ pointerType: "mouse", button: 0 })); // the window's capture listener: a mouse press is a key-like press
+    g2.ctl.tap({ row: 7 }, "mouse");
+    check("a click on CONNECT calls request() on the press (a mouse pointerdown carries activation)", u.req === 2, u.req);
+    rej(Object.assign(new Error("none"), { name: "NotFoundError" })); await flush(); await flush();
+    check("cancelled: NOT CONNECTED · TRY AGAIN", g2.app.controls.view(g2.app.ctlT).status === SW2_WORDS.cancel && g2.ctl.sw2().state === "cancelled", g2.app.controls.view(g2.app.ctlT).status);
+    (L.pointerdown || []).forEach((f) => f({ pointerType: "touch" }));
+    g2.ctl.tap({ row: 7 }, "touch");
+    check("a touch pointerdown on CONNECT calls nothing (no activation), and focuses the row", u.req === 2 && g2.app.controls.view(g2.app.ctlT).row === 7, u.req);
+    g2.ctl.tapUp({ row: 6 });
+    check("its pointerup on another row: still nothing", u.req === 2, u.req);
+    g2.ctl.tap({ row: 7 }, "touch"); g2.ctl.tapUp(null);
+    check("a cancelled pointer: nothing", u.req === 2, u.req);
+    g2.ctl.tap({ row: 7 }, "touch"); g2.ctl.tapUp({ row: 7 });
+    check("a touch tap's pointerup on CONNECT calls request() once", u.req === 3, u.req);
+    /* each result shows its word */
+    for (const [res, k, mkRes] of [["woken", "ok", () => Promise.resolve(dev())], ["busy", "busy", () => Promise.resolve(dev({ claim: 1 }))], ["failed", "failed", () => Promise.resolve(dev({ open: 1 }))], ["blocked", "blocked", () => Promise.reject(Object.assign(new Error("x"), { name: "SecurityError" }))], ["cancelled", "cancel", () => Promise.reject(Object.assign(new Error("x"), { name: "NotFoundError" }))]]) {
+      u.res = mkRes;
+      const h = mk({ noPad: true }); toCtl(h); on7(h);
+      keyDown("Enter");
+      for (let i = 0; i < 20 && h.ctl.sw2().state !== res; i++) await flush();
+      check(`request() ${res}: the page shows ${SW2_WORDS[k]}`, h.ctl.sw2().state === res && h.app.controls.view(h.app.ctlT).status === SW2_WORDS[k], J([h.ctl.sw2().state, h.app.controls.view(h.app.ctlT).status]));
+      h.tick(1);
+    }
+    setHints(null);
+  });
+
+  /* a controller press is no user activation: SOUTH on CONNECT shows the words and calls nothing */
+  withNav(fakeUsb(), "macOS", () => {
+    const u = navigator.usb, g = menu();
+    g.app.screen = SCREEN.SETTINGS; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); tap(g, "S");
+    check("SOUTH opens CONTROLS on the CONTROLLER tab", g.app.screen === SCREEN.CONTROLS && g.app.ctlTab === "pad");
+    for (let i = 0; i < 6; i++) tap(g, "dD");
+    const v = g.app.controls.view(g.app.ctlT);
+    check("the D-PAD walks onto CONNECT (after VIBRATION)", v.row === 7, v.row);
+    tap(g, "S");
+    check("SOUTH on CONNECT: no request(), the page says PRESS ENTER OR CLICK", u.req === 0 && g.app.controls.view(g.app.ctlT).status === SW2_WORDS.pad && !g.app.capturing, J([u.req, g.app.controls.view(g.app.ctlT).status]));
+    tap(g, "E");
+    check("EAST still backs out", g.app.screen === SCREEN.SETTINGS, g.app.screen);
+    setHints(null);
+  });
+
+  /* auto() at the title, once, through the injected defer / idle; a pad already showing is left alone (switch2.js) */
+  {
+    const u = fakeUsb(); u.devs = [dev()];
+    const q = [];
+    let idleNow = false;
+    const app = { screen: SCREEN.INTRO, introStage: 0, pauseView: 0, ctlT: 0, lastDev: "key", wake: noop, _feel: noop, onControls: () => false, get capturing() { return false; }, ctlBtn: () => false, ctlKey: () => false };
+    const c = mountControls({ win: null, doc: null, input: new Input(null), app, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => [], store: null, defer: (f) => q.push(f), idle: () => idleNow, art: null, usb: u, platform: "macOS", policy: null });
+    check("auto() is deferred: nothing asked of the browser at mount", u.got === 0 && q.length >= 1, J([u.got, q.length]));
+    const runQ = async () => { for (let i = 0; i < 6 && q.length; i++) q.shift()(); await flush(); await flush(); };
+    await runQ();
+    check("not idle (the show or a run): it waits, asks nothing", u.got === 0, u.got);
+    idleNow = true;
+    await runQ();
+    check("idle at the title: auto() runs once (getDevices, no chooser) before MENU", u.got === 1 && u.req === 0 && app.screen === SCREEN.INTRO && !!u.L.connect, J([u.got, u.req]));
+    for (let i = 0; i < 4; i++) { q.push(q.length ? q.shift() : noop); await runQ(); }
+    check("and never again", u.got === 1, u.got);
+    c.dispose();
+    check("dispose stops listening for a plugged pad", !u.L.connect);
+    const u2 = fakeUsb(), q2 = [];
+    mountControls({ win: null, doc: null, input: new Input(null), app, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => [], store: null, defer: (f) => q2.push(f), idle: () => true, art: null, usb: u2, platform: "Windows", policy: null });
+    for (let i = 0; i < 4 && q2.length; i++) q2.shift()();
+    await flush(); await flush();
+    check("a platform not measured: no auto(), no row", u2.got === 0, u2.got);
+    const u3 = fakeUsb(), q3 = [];
+    mountControls({ win: null, doc: null, input: new Input(null), app, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => [], store: null, defer: (f) => q3.push(f), idle: () => true, art: null, usb: u3, platform: "macOS", policy: { allowsFeature: (f) => f !== "usb" } });
+    for (let i = 0; i < 4 && q3.length; i++) q3.shift()();
+    await flush(); await flush();
+    check("the page not allowed WebUSB (permissions policy): no auto(), no row", u3.got === 0, u3.got);
+  }
 }
 
 delete globalThis.window; delete globalThis.location;

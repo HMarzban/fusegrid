@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { createControlsPage } from "../src/app/controlspage.js";
+import { createControlsPage, SW2_WORDS } from "../src/app/controlspage.js";
 import { DEF_CONTROLS, clampControls, bindBtn } from "../src/app/controls.js";
 
 let pass = 0, fail = 0;
@@ -8,7 +8,8 @@ const J = JSON.stringify;
 const CANCEL = "CANCELLED · NOTHING CHANGED";
 function rig(o) {
   const r = { c: (o && o.c) || DEF_CONTROLS, writes: [], flags: [], said: [], pv: { state: "ready", name: "CONTROLLER 1", rumble: true, ...(o && o.pv) } };
-  r.p = createControlsPage({ get: () => r.c, set: (c, f) => { r.c = c; r.writes.push(c); r.flags.push(f || {}); }, padView: () => r.pv, say: (s) => r.said.push(s) });
+  r.sw = (o && o.sw) || null;
+  r.p = createControlsPage({ get: () => r.c, set: (c, f) => { r.c = c; r.writes.push(c); r.flags.push(f || {}); }, padView: () => r.pv, say: (s) => r.said.push(s), ...(o && o.sw ? { sw2: () => r.sw } : {}) });
   return r;
 }
 const row = (r, i) => { while (r.p.view(0).row !== i) r.p.walk(1, 1); };
@@ -18,7 +19,7 @@ const open = (dev, o) => { const r = rig(o); r.p.open(dev); return r; };
 {
   const r = open("key");
   const v = r.p.view(0);
-  check("view() has the mock's S shape", J(Object.keys(v).sort()) === J(["armed", "binds", "capture", "device", "dead", "echo", "key", "names", "pad", "reads", "drift", "vib", "row", "status", "stick", "stickVal", "swap", "tab"].sort()), J(Object.keys(v)));
+  check("view() has the mock's S shape", J(Object.keys(v).sort()) === J(["armed", "binds", "capture", "device", "dead", "echo", "key", "names", "pad", "reads", "drift", "vib", "row", "status", "stick", "stickVal", "swap", "sw2", "tab"].sort()), J(Object.keys(v)));
   check("view values", v.tab === "key" && v.device === "key" && v.row === 1 && v.key === r.c.key && v.binds === r.c.pad && v.stick === "L" && v.dead === 25 && v.vib === 2 && v.armed === false && v.swap === null && v.status === "" && v.capture === null && v.echo === null && J(v.stickVal) === J([0, 0]) && v.pad.state === "ready" && v.pad.name === "CONTROLLER 1");
   check("open says one sentence", J(r.said) === J(["Controls, keyboard."]));
   check("opens on the last-used tab", open("pad").p.view(0).tab === "pad" && open("touch").p.view(0).tab === "pad" && open("touch").p.view(0).device === "touch");
@@ -457,6 +458,38 @@ for (const state of ["none", "lost"]) {
   check("vibration says low", on.said.at(-1) === "Vibration, low. No menu buzz. Left and right change it. 7 of 8.", on.said.at(-1));
   on.c = { ...on.c, vib: 0 }; on.p.pick(1); on.p.pick(6);
   check("vibration says off", on.said.at(-1) === "Vibration off. No buzz at all. 7 of 8.", on.said.at(-1));
+}
+
+/* ---- Task 3: the CONNECT row (SW2) on the CONTROLLER tab, after VIBRATION, before RESET; only where the wire's waker exists (usbReach) ---- */
+{
+  check("SW2_WORDS: the app-side literal (pinned equal to words.js in words.test)", J(SW2_WORDS) === J({ row: "SWITCH 2 CONTROLLER", door: "CONNECT", ok: "CONNECTED", cancel: "NOT CONNECTED · TRY AGAIN", busy: "IN USE BY ANOTHER APP", failed: "COULD NOT START IT HERE", blocked: "NOT ALLOWED ON THIS PAGE", pad: "PRESS ENTER OR CLICK", vib: "ALLOW VIBRATION", help: "It needs a USB cable. Your browser asks once which controller, and once more for vibration." }) && Object.isFrozen(SW2_WORDS));
+  const off = open("pad");
+  check("no waker (usbReach false): no SW2 row, eight rows on the CONTROLLER tab, the view says not shown", off.p.view(0).sw2.shown === false && (() => { off.p.pick(7); return off.said.at(-1).endsWith("8 of 8."); })(), off.said.at(-1));
+  const hid = open("pad", { sw: { shown: false, state: "idle" } });
+  hid.p.walk(-1, 1);
+  check("a waker that is not shown: still eight rows (↑ from BOMB wraps nowhere near a ninth)", hid.p.view(0).row === 0 && (() => { hid.p.walk(-1, 1); return hid.p.view(0).row === 7; })());
+  const r = open("pad", { sw: { shown: true, state: "idle" }, pv: { state: "none" } });
+  check("shown: the view carries it", J(r.p.view(0).sw2) === J({ shown: true, state: "idle" }));
+  r.said.length = 0; r.p.walk(-1, 1); r.p.walk(-1, 1); r.p.walk(-1, 1); // BOMB -> MOVE -> (wrap) RESET -> SW2
+  check("shown, no controller: nine rows, SW2 the eighth (after VIBRATION, before RESET), walked onto with its words", r.p.view(0).row === 7 && r.said.at(-1) === "Switch 2 controller, CONNECT. 8 of 9.", J([r.p.view(0).row, r.said.at(-1)]));
+  check("shown, no controller: Enter on SW2 is the wire's ('sw2'), never refused by the NO CONTROLLER rule", r.p.confirm(0) === "sw2" && !r.p.capturing && r.writes.length === 0);
+  r.p.walk(1, 1);
+  check("RESET is still the last row (9 of 9), and with no controller it stays refused", r.p.view(0).row === 8 && r.p.confirm(0) === false);
+  r.p.pick(7);
+  r.p.sw2Said("pad");
+  check("a pad press on SW2: the page shows PRESS ENTER OR CLICK", r.p.view(0).status === SW2_WORDS.pad && r.said.at(-1) === SW2_WORDS.pad, r.p.view(0).status);
+  for (const [res, k] of [["woken", "ok"], ["cancelled", "cancel"], ["busy", "busy"], ["failed", "failed"], ["blocked", "blocked"]]) { r.p.sw2Said(res); check("request() " + res + ": the page shows " + SW2_WORDS[k], r.p.view(0).status === SW2_WORDS[k], r.p.view(0).status); }
+  const n = r.p.view(0).status; r.p.sw2Said("waking");
+  check("an unknown result writes nothing", r.p.view(0).status === n);
+  const k = open("key", { sw: { shown: true, state: "idle" } });
+  k.p.pick(7);
+  check("the KEYBOARD tab has no SW2 row (still eight)", k.said.at(-1).endsWith("8 of 8."), k.said.at(-1));
+  const t = open("pad", { sw: { shown: true, state: "idle" } }); t.p.pick(7); t.p.tab("key");
+  check("from SW2 to the KEYBOARD tab: onto PAUSE (the other tab has no SW2)", t.p.view(0).row === 4);
+  const w = open("pad", { sw: { shown: false, state: "idle" } }); w.p.pick(7); w.p.confirm(0); w.p.tick(1, false);
+  check("RESET armed", w.p.view(1).armed === true && w.p.view(1).row === 7);
+  w.sw = { shown: true, state: "idle" }; w.p.tick(2, false);
+  check("the row appears while the page is open: the focus stays on RESET by id (never slides onto SW2), the arm drops", w.p.view(2).row === 8 && w.p.view(2).armed === false, J([w.p.view(2).row, w.p.view(2).armed]));
 }
 
 console.log("\n  CONTROLS PAGE RESULT: " + pass + " PASS / " + fail + " FAIL");

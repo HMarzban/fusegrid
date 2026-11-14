@@ -4,7 +4,7 @@
    Expectations come from README "How to play", AGENTS.md and the on-screen
    foot hints in menudraw.js — not from reading the handlers back. */
 import { createGame } from "../src/main.js";
-import { preloadControls } from "../src/app/controlswire.js";
+import { preloadControls, preloadSwitch2 } from "../src/app/controlswire.js";
 import { loadControlsArt } from "../src/render/shellview.js";
 import "../src/core/board3.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
@@ -31,6 +31,7 @@ import { endFacts, endGeom } from "../src/render/pages/endgeom.js";
 (await import("../src/render/pages/lazy.js"))._set("level", await import("../src/render/pages/level.js")); // LEVEL SELECT is a lazy page (Task 9.14): in as if its import had landed
 lazyPages._set("endlose", endLose); // GAME OVER is a lazy page (v202 Task 5.4)
 await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
+await preloadSwitch2(); // the Switch 2 waker (Task 3): in, so a game booted with a stubbed navigator.usb shows the CONNECT row at once
 const RECP = await (await import("../src/render/pages/lazy.js")).want("records"); // RECORDS is a lazy page (R20): in before its taps
 
 let pass = 0, fail = 0;
@@ -1385,6 +1386,7 @@ for (const code of ["Space", "Enter"]) {
   const rowTo = (g, i) => { for (let k = 0; k < i; k++) tap(g, "dD"); };
   const pOpt = () => { const g = pMenu(); rowTo(g, ITEMS.indexOf("SETTINGS")); tap(g, "S"); return g; };
   const pCtl = () => { const g = pOpt(); rowTo(g, optAt(g, "CONTROLS")); tap(g, "S"); return g; };
+  const view0 = (g) => g.app.controls.view(g.app.ctlT).row;
 
   { const g = pk();
     check("pad: the title waits for a press", g.app.screen === SCREEN.INTRO && g.app.introStage === 0);
@@ -1773,6 +1775,42 @@ for (const code of ["Space", "Enter"]) {
     check("SOUTH then START between frames pauses and stays paused", g.world.state === "PAUSE", g.world.state);
     g.pad.set("S", false); g.tick(2);
     check("and the released SOUTH confirms nothing", g.world.state === "PAUSE", g.world.state); }
+  /* Task 3: the CONNECT row (SW2) on CONTROLS and in PAUSE view 3, where switch2.js reaches (a stubbed WebUSB on macOS). Enter opens the chooser inside
+     its keydown; SOUTH is no user activation, so it shows PRESS ENTER OR CLICK and opens nothing; EAST and Esc back out as on every row. */
+  { const u = { req: 0, got: 0, L: {}, requestDevice() { u.req++; return new Promise(() => {}); }, getDevices() { u.got++; return Promise.resolve([]); }, addEventListener(t, f) { u.L[t] = f; }, removeEventListener() {} };
+    navigator.usb = u; navigator.userAgentData = { platform: "macOS" };
+    try {
+      const view = (g) => g.app.controls.view(g.app.ctlT), sw2W = "PRESS ENTER OR CLICK";
+      { const g = pCtl(); rowTo(g, 6);
+        check("CONNECT on CONTROLS: the D-PAD walks onto it, after VIBRATION (the eighth of nine)", view(g).row === 7 && view(g).sw2.shown === true && g.ctl.sw2().shown === true, view(g).row);
+        tap(g, "S");
+        check("CONNECT on CONTROLS: SOUTH opens no chooser and shows " + sw2W, u.req === 0 && view(g).status === sw2W && !g.app.capturing, view(g).status);
+        down("Enter");
+        check("CONNECT on CONTROLS: Enter opens the chooser inside its keydown", u.req === 1, u.req);
+        up("Enter"); g.tick(2);
+        check("CONNECT on CONTROLS: Enter starts no capture and stays on the page", !g.app.capturing && g.app.screen === SCREEN.CONTROLS);
+        tap(g, "E");
+        check("CONNECT on CONTROLS: EAST backs out onto the CONTROLS door", g.app.screen === SCREEN.SETTINGS && g.app.optLabel() === "CONTROLS", g.app.screen); }
+      { const g = pCtl(); rowTo(g, 6); press(g, "Escape");
+        check("CONNECT on CONTROLS: Esc backs out", g.app.screen === SCREEN.SETTINGS && g.app.optLabel() === "CONTROLS", g.app.screen); }
+      for (const [LK, blob] of LOOKS) withSettings(blob, () => {
+        const h = pPause(); rowTo(h, PAUSE_ITEMS.indexOf("SETTINGS")); tap(h, "S"); rowTo(h, optAt(h, "CONTROLS")); tap(h, "S"); rowTo(h, 6);
+        check("CONNECT in PAUSE view 3 (" + LK + "): focused, the run paused", h.app.pauseView === 3 && h.world.state === "PAUSE" && view(h).row === 7, view(h).row);
+        const r0 = u.req;
+        tap(h, "S");
+        check("CONNECT in PAUSE view 3 (" + LK + "): SOUTH shows " + sw2W + ", no chooser", u.req === r0 && view(h).status === sw2W, view(h).status);
+        down("Enter");
+        check("CONNECT in PAUSE view 3 (" + LK + "): Enter opens the chooser inside its keydown", u.req === r0 + 1, u.req);
+        up("Enter"); h.tick(2);
+        check("CONNECT in PAUSE view 3 (" + LK + "): still paused, on the page", h.app.pauseView === 3 && h.world.state === "PAUSE" && !h.app.capturing);
+        tap(h, "E");
+        check("CONNECT in PAUSE view 3 (" + LK + "): EAST steps back to SETTINGS on the door", h.app.pauseView === 1 && h.app.optLabel() === "CONTROLS", h.app.pauseView);
+        const k = pPause(); rowTo(k, PAUSE_ITEMS.indexOf("SETTINGS")); tap(k, "S"); rowTo(k, optAt(k, "CONTROLS")); tap(k, "S"); rowTo(k, 6); press(k, "Escape");
+        check("CONNECT in PAUSE view 3 (" + LK + "): Esc steps back to SETTINGS", k.app.pauseView === 1 && k.world.state === "PAUSE", k.app.pauseView);
+      });
+    } finally { delete navigator.usb; delete navigator.userAgentData; }
+    const n = pCtl();
+    check("no WebUSB: no CONNECT row (the D-PAD from BOMB wraps at RESET, the eighth row)", n.ctl.sw2().shown === false && (rowTo(n, 7), view0(n) === 0), view0(n)); }
   { const g = pk(); // no pad press, keys only: the pad layer changes nothing
     g.gpr.list[0] = null; g.tick();
     press(g, "KeyA"); g.tick(15); press(g, "Enter");
