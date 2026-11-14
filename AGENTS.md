@@ -1165,8 +1165,8 @@ not shell screens. Do not add them as `SCREEN` values.
   the consent card (a stray button must not consent; an unanswered SETTINGS ANALYTICS row is inert on a pad and says
   `ANSWER THE CARD WITH Y OR N`), the STATS wipe or the camera reset, on purpose. Disconnect pauses only with the pad last
   used in GAME PLAY (`CONTROLLER LOST`), never resumes. Pad name `CONTROLLER 1 · STANDARD` (`BUTTONS 0-N` non-standard); the device
-  id is never printed or stored. A pad the browser hands over in its own HID order (mapping "") that `gamepad.js` `KNOWN` lists is
-  put back in the standard order before anything reads it (`asStandard` / `standardPads`, applied once in `controlswire`; the id is matched,
+  id is never printed or stored. A pad the browser hands over in its own HID order (mapping "") that `gamepad.js` `KNOWN` lists (by id and
+  by its button and axis counts, 21 / 6) is put back in the standard order before anything reads it (`asStandard` / `standardPads`, applied once in `controlswire`; the id is matched,
   never printed or stored): today the Switch 2 Pro Controller (057e:2069; D-PAD from its buttons 8-11, Y axes flipped, its 12-bit sticks
   scaled 1.37). Browsers see that pad only after a USB start-up sequence (report format 09), which nothing in the game sends yet; it gives
   Chrome no vibration actuator (2026-11-14, owner's own pad). Keyboard diagonals stay about 1.41x while a pad is 4-way, disclosed. **The owner has

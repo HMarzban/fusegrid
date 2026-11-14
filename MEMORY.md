@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — Switch 2 Pro layout fix committed
+- On branch `feature/every-controller` (worktree `.claude/worktrees/every-controller`): `KNOWN` / `asStandard` / `standardPads` now also require the 21-button, 6-axis shape; architecture line restored. No cache bump yet (no player can wake the pad until the plan's CONNECT task). Plan: `docs/superpowers/plans/2026-11-14-every-controller-and-keyboard.md`, under HoE and staff review.
+
 ## 2026-11-14 — v215: the game repairs a broken offline copy; faster update checks
 - Owner's Safari showed COULD NOT LOAD THE GAME on live v214 (RETRY looped), then it cleared on its own before the console could be read: trigger not captured (likely a stale offline copy from v201 or one saved during the deploy). Fresh WebKit, iOS 27 Simulator Safari and the v201 -> v214 upgrade path boot clean. Found while testing: WebKit reports a module link error with no filename, so the loader ignored it and sat on SLOW CONNECTION. v215: boot HEAL (unregister + delete fusegrid-shell-v* + reload, once a session by itself, every RETRY, never offline), the filename-less SyntaxError catch, update checks every 5 min visible / 1 min on return (owner kept the card). Verified by poisoning main.js in the offline copy (WebKit, Chromium). 725 tests.
 

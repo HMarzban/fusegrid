@@ -347,3 +347,32 @@ test("name never contains the device id", () => {
   assert.ok(!/Zed|99 /.test(t.name) || t.name.includes("0-9"));
   assert.equal(padName({ connected: false }), "");
 });
+
+test("Switch 2 Pro Controller in its own button order reads as a standard pad", async () => {
+  const { standardPads } = await import("../src/app/gamepad.js");
+  const ids = ["Switch 2 Pro Controller (Vendor: 057e Product: 2069)", "057e-2069-Switch 2 Pro Controller"];
+  for (const id of ids) {
+    const at = (b, axes) => [mk({ id, mapping: "", n: 21, b, axes: axes || [0, 0, 0, 0, 0, 0] })];
+    const st = { pads: at({}) };
+    const pad = createPad({ getGamepads: standardPads(() => st.pads) });
+    assert.equal(pad.poll(0).mapping, "standard", id);
+    const one = (src, want, t) => { st.pads = at({ [src]: 1 }); const s = pad.poll(t); assert.ok(s.down.has(want), id + " src " + src + " -> " + want); st.pads = at({}); pad.poll(t + 0.5); };
+    [[0, "S"], [1, "E"], [2, "W"], [3, "N"], [12, "SHL"], [4, "SHR"], [13, "TRL"], [5, "TRR"], [14, "SELECT"], [6, "START"], [11, "dU"], [8, "dD"], [10, "dL"], [9, "dR"]].forEach(([s, w], i) => one(s, w, 10 + i));
+    st.pads = at({}, [0, 0.7, 0, 0, 0, 0]);
+    assert.ok(pad.poll(40).dir.up, id + " stick up");
+    st.pads = at({}, [0, -0.7, 0, 0, 0, 0]);
+    pad.poll(41);
+    assert.ok(pad.poll(42).dir.down, id + " stick down");
+  }
+});
+
+test("a pad already in the standard order is left as it is, whatever its id", async () => {
+  const { standardPads } = await import("../src/app/gamepad.js");
+  const g = mk({ id: "Switch 2 Pro Controller (bridge) (STANDARD GAMEPAD Vendor: 057e Product: 2069)", b: { 12: 1 } });
+  const out = standardPads(() => [g])();
+  assert.equal(out[0], g);
+  const other = mk({ id: "Vendor 1234 Product abcd", mapping: "", b: { 3: 1 } });
+  assert.equal(standardPads(() => [other])()[0], other);
+  const counts = mk({ id: "Switch 2 Pro Controller (Vendor: 057e Product: 2069)", mapping: "", n: 17, b: { 11: 1 } });
+  assert.equal(standardPads(() => [counts])()[0], counts, "another button count is another mapping: left alone");
+});

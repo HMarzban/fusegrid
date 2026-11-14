@@ -250,6 +250,9 @@ its own held axes and latches, OR-merged with keys. A held key beats the pad on 
   SENSITIVITY has five levels (MIN 60, LOW 40, MEDIUM 25, HIGH 15, MAX 8 percent), each with its own release and turn
   (1.40x to 1.10x). No response curve: `step()` gets -1, 0 or 1, so stick distance never reaches the sim. On a menu the
   first engage takes vertical unless x leads y by 1.25x. A pad the browser passes in its own HID order (no `standard`
+  mapping) that `gamepad.js` `KNOWN` lists by id and by its button and axis counts, today the Switch 2 Pro Controller,
+  is put back in the standard order before anything reads it, so its D-PAD, triggers and sticks land where every other
+  pad's do. A pad the browser passes in its own HID order (no `standard`
   mapping) that `gamepad.js` knows, today the Switch 2 Pro Controller, is put back in the standard order before anything
   reads it, so its D-PAD, triggers and sticks land where every other pad's do.
 - [`padroute.js`](../src/app/padroute.js) decides what a press means on the current screen. A press in one

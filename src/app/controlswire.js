@@ -1,6 +1,6 @@
 // The seam that wires CONTROLS into main, frameloop and unlock. Plan: docs/superpowers/plans/2026-11-02-controls-feature.md T11.
 import { VIB_LEVELS, clampControls, loadControls, saveControls } from "./controls.js";
-import { createPad, padInfo, routesOf } from "./gamepad.js";
+import { createPad, padInfo, routesOf, standardPads } from "./gamepad.js";
 import { createPadRouter } from "./padroute.js";
 import { createHintDev, keyPress, pointerPress, wordsOf } from "./hints.js";
 import { deferRegister } from "../pwa/register.js";
@@ -34,7 +34,7 @@ export const preloadControls = (art) => Promise.all([loadPage(), loadArt(art), l
 export function mountControls({ win, doc, input, app, SCREEN, world, onPause, getGamepads, store, audio, unlock, setHints, art, idle, defer, importRumble }) {
   const W = win !== undefined ? win : typeof window !== "undefined" ? window : null;
   const D = doc !== undefined ? doc : typeof document !== "undefined" ? document : null;
-  const gp = getGamepads || padsOf();
+  const gp = standardPads(getGamepads || padsOf());
   let c = loadControls(store), everSeen = false, lastT = 0, wasDir = false, wasPause = false;
   let pending = "", shownT = null, wasLost = false, wordDev = null, wordC = null, writing = false, keysAs = null;
   let held = false, tickT = -Infinity, didReset = false;

@@ -34,12 +34,29 @@ export function resolveStick(prev, x, y, dead, rel, bias, flip = flipOf(dead)) {
   return { ax: a, sx, sy, on: true, dir };
 }
 
-/** The neutral pad name; the device id is never read. */
+/** The neutral pad name; the device id is never printed (asStandard matches it, nothing else reads it). */
 export function padName(snap) {
   if (!snap || !snap.connected) return "";
   if (snap.mapping === "standard") return "CONTROLLER 1";
   return "CONTROLLER 1 · BUTTONS 0-" + Math.max(0, (snap.nb || 1) - 1);
 }
+
+/* Pads a browser hands over in their own HID order (mapping ""), put back in the standard one. nb / na: the button and axis counts it comes with (another count is another mapping, left alone); b: standard index -> the pad's; a: [axis, sign], Y up is high on these sticks; k: their 12-bit travel reaches about 0.73. Matched on the id, never printed or stored. */
+const KNOWN = [
+  { re: /057e\W+(product:\s*)?2069/i, nb: 21, na: 6, b: [0, 1, 2, 3, 12, 4, 13, 5, 14, 6, 15, 7, 11, 8, 10, 9, 16], a: [[0, 1], [1, -1], [3, 1], [5, -1]], k: 1.37 },
+];
+const clamp1 = (v) => Math.max(-1, Math.min(1, v));
+/** One pad in the standard order where it is a known pad in its own; anything else as it came. */
+export function asStandard(g) {
+  if (!g || g.mapping === "standard" || typeof g.id !== "string") return g;
+  const m = KNOWN.find((r) => r.re.test(g.id) && (g.buttons || []).length === r.nb && (g.axes || []).length === r.na);
+  if (!m) return g;
+  const bs = g.buttons || [], ax = g.axes || [];
+  const off = { pressed: false, touched: false, value: 0 };
+  return { id: g.id, index: g.index, connected: g.connected, timestamp: g.timestamp, mapping: "standard", buttons: m.b.map((i) => bs[i] || off), axes: m.a.map(([i, s]) => clamp1(num(ax[i]) * s * m.k)), vibrationActuator: g.vibrationActuator || null, hapticActuators: g.hapticActuators || [] };
+}
+/** getGamepads with every known pad put in the standard order. */
+export const standardPads = (get) => (get ? () => Array.from(get() || [], asStandard) : get);
 
 const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 const fresh = () => ({ down: new Set(), order: [], st: null, mst: null });
