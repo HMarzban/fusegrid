@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v217 on 2026-11-14.
+shell v218 on 2026-11-14.
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -957,6 +957,14 @@ board on a computer, which puts the cabinet's near corners back on screen withou
 camera. The controller note moved over the score row, the same place on a computer and a phone. A last capture of all
 three together caught one honest side effect: while the note covers the score row, the hearts it covers cannot be
 measured for contrast, so the check now says why instead of quietly skipping.
+
+## 2026-11-14: tying off v217 (shell v218)
+
+The wider REAL 3D stage left four small debts, and v218 pays them. Tile tips beside it may wrap to a third line, so none
+falls back to its short form; the wheel and right-drag answer over the new side strips; the first load draws its stage as
+wide as REAL 3D's, so nothing jumps at the hand-off. The fourth was older: the checks behind the run ends had nothing to
+measure on world 8, where every level is won and none is left ahead. Rather than excuse it, the page now declares the marks a
+player actually reads there, the check on a won level and the crack on the one you fell on, and both clear the bar easily.
 
 ---
 

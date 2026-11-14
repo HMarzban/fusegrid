@@ -15,6 +15,23 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v218 · 2026-11-14
+
+The loose ends from v217, tied off.
+
+### Fixed
+
+- **Floor-tile tips keep their whole words in REAL 3D.** Beside the wider stage they wrap to a third line instead of
+  falling back to their short form.
+- **The mouse wheel and right-drag work over REAL 3D's side strips**, not only over the board itself.
+- **No jump on the first load with REAL 3D saved.** The loading screen's stage is already as wide as REAL 3D's, so the
+  title takes over without the frame stepping outward.
+
+### Notes
+
+- The checks behind GAME OVER and the finale now measure the marks a player reads on the level course (the check on a
+  won level, the crack on the level you fell on), so world 8 is checked like every other world.
+
 ## shell v217 · 2026-11-14
 
 Three looks the owner picked from side-by-side captures.
@@ -33,6 +50,7 @@ Three looks the owner picked from side-by-side captures.
 
 - In REAL 3D on a computer a few floor-tile tips show their short line, because the column beside the wider stage is narrower.
 - A cold first load with REAL 3D saved may jump from the board's box to the wider stage as it starts.
+
 
 ## shell v216 · 2026-11-14
 
