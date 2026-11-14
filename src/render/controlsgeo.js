@@ -76,7 +76,7 @@ export function rowsOf(s) {
   const tail = () => [
     { id: "SENSITIVITY", gap: 1, text: SENS_LEVELS[sensIdx(dead)].name, off, changed: dead !== DEF_DEAD, bar: [sensIdx(dead) + 1, SENS_LEVELS.length] },
     noBuzz(s) ? { id: "VIBRATION", text: "NONE", off, none: 1 } : { id: "VIBRATION", text: VIB_LEVELS[vibOf(s)], off, changed: vibOf(s) !== DEF_VIB, bar: [vibOf(s), VIB_LEVELS.length - 1] },
-    ...(s.sw2 && s.sw2.shown ? [{ id: "SW2", gap: 1, label: SW2_WORDS.row, door: s.sw2.vib ? SW2_WORDS.vib : s.sw2.state === "woken" && p.state !== "none" && p.state !== "lost" ? SW2_WORDS.ok : SW2_WORDS.door }] : []), // never off: it is how a controller arrives
+    ...(s.sw2 && s.sw2.shown ? [{ id: "SW2", gap: 1, label: SW2_WORDS.row, door: s.sw2.vib ? SW2_WORDS.vib : s.sw2.seen ? SW2_WORDS.ok : SW2_WORDS.door }] : []), // never off: it is how a controller arrives
     { id: "RESET", gap: 1, label: "RESET CONTROLLER", reset: 1, off },
   ];
   if (p.state === "nonstd") {
@@ -96,11 +96,13 @@ export function rowsOf(s) {
     ...tail(),
   ];
 }
+/** The CONNECT row's help: the vibration clause only where the browser has WebHID (the wire's sw2.hid). */
+export const sw2Help = (s) => (s && s.sw2 && s.sw2.hid ? SW2_WORDS.helpVib : SW2_WORDS.help);
 /** The pane's rule line: a result first, then this row's rule. */
 export function statusOf(s, row) {
   if (s.status) return s.status;
   if (s.armed) return "PRESS AGAIN TO RESET THIS TAB";
-  if (row.id === "SW2") return SW2_WORDS.help;
+  if (row.id === "SW2") return sw2Help(s);
   if (padOff(s)) return s.pad && s.pad.state === "lost" ? "PLUG IT BACK IN OR PRESS ANY BUTTON" : s.device === "touch" ? "PAIR ONE AND PRESS ANY BUTTON" : "IT WAKES ON ITS FIRST PRESS · USB OR BLUETOOTH";
   if (row.fixed) return "ENTER AND ESC STAY PUT SO YOU CAN ALWAYS GET BACK";
   if (row.reset) return "BACK TO THE DEFAULTS · THIS TAB ONLY";
@@ -123,7 +125,7 @@ export function footItems(s, row, words, short) {
   const w = words || {}, padTab = s.tab === "pad", gone = padOff(s), nonstd = padTab && s.pad && s.pad.state === "nonstd";
   if (s.device === "touch") return null;
   const adjusts = padTab && !gone && (row.id === "SENSITIVITY" || (row.id === "VIBRATION" && !noBuzz(s)));
-  const sw2 = row.id === "SW2", verb = sw2 ? SW2_WORDS.door : gone || row.fixed || (padTab && row.id === "VIBRATION" && noBuzz(s)) ? null : row.reset ? CW.RESET : CW.CHANGE;
+  const sw2 = row.id === "SW2", verb = sw2 ? (s.sw2 && s.sw2.vib ? SW2_WORDS.allow : SW2_WORDS.door) : gone || row.fixed || (padTab && row.id === "VIBRATION" && noBuzz(s)) ? null : row.reset ? CW.RESET : CW.CHANGE;
   const onPad = (s.device || s.tab) === "pad" && !gone;
   /* ←→ is taken on a value row, so the line names the other way to the tab; on SENSITIVITY the stick is under test, so a pad's line names the D-PAD. */
   const lr = [["lf"], ["rt"]], it = [{ t: CW.ROW, caps: [["up"], ["dn"]] }];

@@ -170,6 +170,7 @@ check("POWER (the pickup) is POWER BOMB in POWER[].name, still the one source", 
       lines[2] === "BESTS · NO " + W.LABEL.MODIFIERS + " · " + W.speedTag(0) + " · " + W.diffTag(0) + " 1840/" + W.LABEL.LEVEL + " 5 · " + W.diffTag(1) + " 2210/" + W.LABEL.LEVEL + " 4 · " + W.diffTag(2) + " — · " + W.LABEL.LEVEL + " 1 " + W.diffTag(0) + " BEST TIME 0:38.9", J(lines));
 }
 check("daily.js share line (what C copies at a daily WIN / LOSE) says LEVEL n", dailyStamp("2026-11-10", 3, 1840) === "DAILY 2026-11-10 · " + W.LABEL.LEVEL + " 3 · 1840 · https://hmarzban.github.io/fusegrid/", dailyStamp("2026-11-10", 3, 1840));
+check("SW2_WORDS (Task 7): ALLOW on the ALLOW VIBRATION row's foot, the help line plain and with the vibration clause", W.SW2_WORDS.vib === "ALLOW VIBRATION" && W.SW2_WORDS.allow === "ALLOW" && W.SW2_WORDS.help === "It needs a USB cable. Your browser asks once which controller." && W.SW2_WORDS.helpVib === "It needs a USB cable. Your browser asks once which controller, and once more for vibration.", J(W.SW2_WORDS));
 check("controlspage.js SW2_WORDS (the CONNECT row, Task 3) = words.js SW2_WORDS, both frozen", J(SW2_APP) === J(W.SW2_WORDS) && Object.isFrozen(W.SW2_WORDS) && Object.isFrozen(SW2_APP) && W.SW2_WORDS.row === "SWITCH 2 CONTROLLER", J([SW2_APP, W.SW2_WORDS]));
 check("gfx.js lock line names ART STYLE and SETTINGS", LOCK_3D === "REAL 3D ONLY · CHANGE " + W.LABEL.ART_STYLE + " IN " + W.LABEL.SETTINGS, LOCK_3D);
 

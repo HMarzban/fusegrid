@@ -295,5 +295,6 @@ test("auto() restores the HID device the player allowed before it looks at the p
   const w = createWaker({ usb: usbOf(), pads: () => [PRO], hid, clock: fakeClock() });
   assert.equal(await w.auto(), 0, "the pad already plays: nothing to wake");
   assert.ok(d.opened && w.actuator() !== null && hid.asked === 0);
+  assert.ok(w.state() === "idle" && w.seen() === true, "never woken here, yet seen: the door reads CONNECTED");
   w.stop();
 });

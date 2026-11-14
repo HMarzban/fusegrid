@@ -18,6 +18,7 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-14 — Switch 2 vibration over WebHID (plan Task 7)
 - `switch2.js` `rumblePacket` (the trial page's felt HD-rumble encoder) and a `dual-rumble` stand-in actuator (12 ms stream, one zero at the end / reset / hidden / pagehide / HID disconnect); `standardPads(get, actuatorFor)` puts it on a Switch 2 Pro with none; the CONNECT row's door reads ALLOW VIBRATION where WebHID is present and none is allowed. Cache bump and the owner check (Step 5) are open, batched by the lead.
+- Fix round (lead rulings): the door reads CONNECTED whenever a Switch 2 is in getGamepads (`sw2.seen`, both door sites), the foot reads ALLOW ENTER on ALLOW VIBRATION (`SW2_WORDS.allow`), the help names the vibration prompt only with WebHID (`help` / `helpVib`, `controlsgeo` `sw2Help`); one HID device per waker noted in the `switch2.js` header.
 
 ## 2026-11-14 — pad probe and the controller matrix (plan Task 4)
 - `tools/pads/probe.html` (dev-only, not in SRC) walks a pad and prints its `KNOWN` row; `docs/controllers.md` is the matrix, seeded from three real measurements, all else not measured. Step 3 (owner runs the probe on every pad) is open.

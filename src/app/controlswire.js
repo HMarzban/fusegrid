@@ -72,7 +72,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     return waker;
   };
   const sw2Want = () => (waker || !usbNow() ? Promise.resolve(waker) : loadSw2(importSwitch2).then(sw2Build, () => null));
-  const sw2View = () => ({ shown: !!waker, state: waker ? waker.state() : "idle", vib: !!waker && waker.vibOffer() }); // vib: the door reads ALLOW VIBRATION
+  const sw2View = () => ({ shown: !!waker, state: waker ? waker.state() : "idle", vib: !!waker && waker.vibOffer(), seen: !!waker && waker.seen(), hid: !!hidNow() }); // vib: the door reads ALLOW VIBRATION; seen: CONNECTED; hid: the help names the vibration prompt
   const connect = () => {
     if (!waker || !page) return false;
     if (!upAct && app.lastDev !== "key") { page.sw2Said("pad"); app._feel("deny"); return false; } // no user activation: the page says what does open it

@@ -1207,7 +1207,7 @@ for (const via of ["LATER", "the backdrop"]) {
   /* usbReach true, no controller: walkable in the NO CONTROLLER body; Enter, a click and a touch tap (on its pointerup) call request() once each */
   await withNav(fakeUsb(), "macOS", async () => {
     const u = navigator.usb, g = mk({ noPad: true }); toCtl(g);
-    check("usbReach true: ctl.sw2() shown, idle; the page view carries it", J(g.ctl.sw2()) === J({ shown: true, state: "idle", vib: false }) && g.app.controls.view(g.app.ctlT).sw2.shown === true, J(g.ctl.sw2()));
+    check("usbReach true: ctl.sw2() shown, idle; the page view carries it", J(g.ctl.sw2()) === J({ shown: true, state: "idle", vib: false, seen: false, hid: false }) && g.app.controls.view(g.app.ctlT).sw2.shown === true, J(g.ctl.sw2()));
     const v = on7(g);
     check("no controller: the row is walkable (the eighth of nine), its status the help line", v.pad.state === "none" && v.row === 7, J([v.pad.state, v.row]));
     keyDown("Enter");
@@ -1308,6 +1308,7 @@ for (const via of ["LATER", "the backdrop"]) {
   await withNav(usb(), null, async () => {
     const g = mk(), v = open(g);
     check("no WebHID: the CONNECT row never offers ALLOW VIBRATION", v.sw2.shown === true && v.sw2.vib === false && g.ctl.sw2().vib === false, J(v.sw2));
+    check("no WebHID, a Switch 2 playing: the door reads CONNECTED, the help keeps no vibration clause", v.sw2.seen === true && v.sw2.hid === false && (await import("../src/render/controlsgeo.js")).statusOf({ ...v, status: "" }, { id: "SW2" }) === SW2_WORDS.help, J(v.sw2));
     setHints(null);
   });
 
@@ -1323,6 +1324,9 @@ for (const via of ["LATER", "the backdrop"]) {
     await flush(); g.tick(1);
     const w = g.app.controls.view(g.app.ctlT);
     check("allowed: the device is open, the row says CONNECTED, the offer is gone", pick.opened && w.status === SW2_WORDS.ok && w.sw2.vib === false, J([pick.opened, w.status, w.sw2]));
+    const door = (await import("../src/render/controlsgeo.js")).rowsOf(w).find((q) => q.id === "SW2").door;
+    check("a pad already playing (never woken here, state idle), then ALLOW VIBRATION allowed: the door and the note both read CONNECTED", w.sw2.state === "idle" && w.sw2.seen === true && door === SW2_WORDS.ok && w.status === SW2_WORDS.ok, J([w.sw2, door, w.status]));
+    check("WebHID: the view says so, so the help names the vibration prompt", w.sw2.hid === true && (await import("../src/render/controlsgeo.js")).statusOf({ ...w, status: "" }, { id: "SW2" }) === SW2_WORDS.helpVib);
     check("the pad now offers dual-rumble (the stand-in) and VIBRATION reads available", g.ctl.rumbleInfo().route === "dual-rumble" && w.pad.rumble === true, J([g.ctl.rumbleInfo(), w.pad.rumble]));
     check("allowing played one test buzz over HID report 0x02", pick.sent.length >= 1 && pick.sent.every(([id]) => id === 0x02), pick.sent.length);
     g.ctl.dispose();

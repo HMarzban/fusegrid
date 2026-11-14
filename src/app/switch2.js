@@ -2,7 +2,8 @@
    The start-up packets and their order come from SDL (src/joystick/hidapi/SDL_hidapi_switch2.c, zlib licence), with the
    report-format packet at 09 instead of SDL's 05: in 09 the pad sends HID report 0x09, which the browser maps to a gamepad and
    gamepad.js KNOWN puts in the standard order (measured on the owner's pad, Chrome on macOS, 2026-11-14). Nothing here reads a
-   global: usb and the pad list are injected. The device id is matched, never printed or stored. */
+   global: usb and the pad list are injected. The device id is matched, never printed or stored. Vibration holds ONE allowed HID device
+   per waker: two Switch 2 Pros at once share one stand-in actuator and buzz through that one device (only one pad measured). */
 export const SW2_VENDOR = 0x057e;
 export const SW2_USB = Object.freeze([0x2069]);
 const SEEN = /057e\W+(product:\s*)?2069/i;
@@ -186,6 +187,8 @@ export function createWaker({ usb, pads, hid, win, doc, clock }) {
     actuator: (g) => (dev && (g === undefined || (g && typeof g.id === "string" && SEEN.test(g.id))) ? stand : null),
     /** True where ALLOW VIBRATION is worth a press: WebHID here, no device allowed yet, a Switch 2 Pro in the pad list. */
     vibOffer: () => !!hid && !dev && playing(),
+    /** True while a Switch 2 Pro is in the pad list, whoever woke it: the CONNECT row's door then reads CONNECTED. */
+    seen: playing,
     stop() {
       if (onConnect) usb.removeEventListener("connect", onConnect);
       onConnect = null;
