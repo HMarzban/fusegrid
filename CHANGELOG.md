@@ -15,9 +15,13 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
-## shell v214 · 2026-11-12
+## shell v214 · 2026-11-14
 
 The menus centre, CONTROLS joins the world, the first load builds the title, and every overlay is sharp.
+
+**Live 2026-11-14 (GitHub release v2.5.0).** This is the first build since v201 to reach players, so it carries
+everything in v202 to v206 below as well: those were built and tested on 2026-11-12 but never went live on their own.
+Coming from v201, read v202 to v214 together; the NEW VERSION READY card brings an installed copy over.
 
 ### Added
 
@@ -31,19 +35,17 @@ The menus centre, CONTROLS joins the world, the first load builds the title, and
   to CROWN, in a hand-pixelled cabinet with the PIXEL logo on a hanging sign and the difficulty names the game uses.
 - **Search and link previews use the game's own words:** the three art styles, NORMAL / HARD / EXPERT, eight levels and
   keyboard, touch or controller, in place of the old Heat CORE / PLUS / MAX and rooms.
-- **A lighter first visit:** LEVEL SELECT now downloads after the title, in the same quiet moment as SETTINGS, GUIDE and RECORDS, so the first load is about 60 KB smaller (21 KB compressed). If you open it before it has arrived you see a short LOADING plate; the arrow keys and START already work.
+- **A lighter first visit:** LEVEL SELECT now downloads after the title, in the same quiet moment as SETTINGS, GUIDE and RECORDS, so the menus add about 60 KB less (21 KB compressed) to the first load than they did at v203. If you open it before it has arrived you see a short LOADING plate; the arrow keys and START already work.
 - **The title stands in the middle:** the FUSE/GRID plate is centred on the board instead of hugging its top, with PRESS ANY KEY OR BUTTON (TAP TO START) right under it, in all three looks; the first load builds the title in the same place.
-- **Rebinding on CONTROLS** now shows the target button's callout (THROW over NOW WEST) and the approved note, BUTTON
-  ALREADY IN USE?, with the swap line the page would say; a phone shows the short note beside the controller. PAUSE's
-  CONTROLS view on a phone uses the top of the screen it no longer keeps clear. The parts SETTINGS and CONTROLS share
-  (meter cell, marks, wall course, pane slab) moved into the kit, so the CONTROLS page no longer imports the SETTINGS
-  page; SETTINGS draws exactly as before. 1024-wide windows still draw the drawings without leaders: they need a 556 px
-  wide art box and the pane holds 420.
+- **Rebinding on CONTROLS** shows the target button's callout (THROW over NOW WEST) and a BUTTON ALREADY IN USE? note
+  with the swap line the page would say; a phone shows the short note beside the controller. PAUSE's CONTROLS view on a
+  phone uses the top of the screen too. In a window about 1024 px wide the drawings have no callout lines; the rows still
+  name every button.
 - **A new first load:** while the game loads, the title builds itself where it will stand: the level's floor fills in cell by cell, the FUSE/GRID logo sits on its plate and its fuse lights up toward the tip as the files arrive, then the title takes over without a jump. A slow connection or a failure says so in a card under the logo, with RETRY.
 - **Loading PIXEL or REAL 3D** shows the same world-kit card: an outlined plate, a brick-green bar and readable words, in place of the small grey one; the strip at the top while a look loads from SETTINGS reads at the same size.
 - Menu pages sit centred in a tall window (the old top margin is now the minimum), and the room behind them is drawn at the board's size in a run, its floor and walls continuing to the window's edges instead of zooming in.
 - **CONTROLS joins the world:** the controller page is on the level's own kit like every other menu: KEYBOARD and CONTROLLER as brick tabs, your binds as keys with their button shapes, SENSITIVITY and VIBRATION as steppers with a meter, and beside them a big drawing of the controller or keyboard with every action called out, the button you are on ringed. Rebinding listens right in the drawing, with no time limit. On a phone it is one column with 44 px rows, paged where they do not fit.
-- On a portrait phone, PAUSE (and its SETTINGS, GRAPHICS and CONTROLS views), LEVEL CLEAR, the finale and GAME OVER use the whole screen under the HUD instead of the board's box, so they no longer page or squeeze into two columns; the board stays visible under the veil. GAME OVER's MENU / COPY RESULT / COPY MAP keys hold their words whole at large text (stacked, or a label broken once at its space where there is no room to stack).
+- On a portrait phone, PAUSE (and its SETTINGS, GRAPHICS and CONTROLS views), LEVEL CLEAR, the finale and GAME OVER use the whole screen under the HUD instead of the board's box; the board stays visible under the veil. GAME OVER's MENU / COPY RESULT / COPY MAP keys hold their words whole at large text (stacked, or a label broken once at its space where there is no room to stack).
 
 ### Fixed
 
@@ -52,38 +54,23 @@ The menus centre, CONTROLS joins the world, the first load builds the title, and
   your screen's full resolution, as sharp as the menus.
 - **REAL 3D: the cabinet stays a straight rampart when you pull the camera back.** Its near corners no longer lean in,
   so at WIDE, FAR or a full zoom-out the board's frame is a plain box, not a bent, flared tray.
-- **LEVEL CLEAR, the finale and GAME OVER sit in the middle of the board.** They kept a strip clear at the top for the old
-  on-board HUD, which moved off the board in v206, so their plates sat low.
-- **CONTROLS no longer says DID NOT LOAD after an update.** The game's offline cache kept its old name while files changed, so a
-  returning browser mixed old cached files with new ones: the CONTROLS page failed to start and some menus kept their old,
-  off-centre layout. The cache has a new name, so the NEW VERSION READY card appears; press RELOAD.
 - **A link straight into a run waits for its look.** Opening a run link (`?play=1`, a challenge code) with PIXEL or REAL 3D saved
   no longer starts the run in CLASSIC 2D while the look is still on its way: the run holds, frozen, behind PREPARING and starts
   once the look is on screen. P or Escape while it waits goes back to the menu.
-- **A saved art style that fails to load at start-up stays saved.** You see CLASSIC 2D for this visit, and the next visit tries
+- **A saved art style that fails to load at start-up stays saved.** v201 could forget it. You see CLASSIC 2D for this visit, and the next visit tries
   your pick again; ART STYLE says it did not load, and Enter on it tries again.
-- **The FLOOR TILES card has a way out.** If the floor tiles cannot load before a run, the card now offers RETRY and BACK TO
-  MENU (Escape, EAST or a tap), and P or Escape while they load goes back to the menu too.
-- **The FLOOR TILES card no longer points at ART STYLE.** Changing the art style does not help floor tiles load, so the
-  card now just says to check your connection and retry.
-- **CONTROLS never traps you on DID NOT LOAD.** If the CONTROLS page fails to load, a tap or click off its plate goes back
-  (on the plate it does nothing); while it is still loading, taps wait instead of hitting the buttons of a page that is not
-  drawn yet. The same in PAUSE.
-- **Changing ANTI-ALIAS or SHADOWS while another art style loads is no longer lost.** The change waits for that load to end and
-  then applies.
-- **Offline caching finishes reliably.** The game's offline copy of the PIXEL and REAL 3D files now fills only while the browser
-  keeps the service worker awake, picks up where it stopped, and an old copy of the game can no longer bring back a cache a
-  newer one deleted.
-- **Controller vibration recovers from a failed download.** If the vibration code did not load, the next controller press (or
-  opening CONTROLS with a controller in) tries again, so the VIBRATION test buzz works.
 
 ### Notes
 
-- **One release for a day of fixes.** Shell v207 to v213 were local builds for the owner's own checks and were never
-  released; everything since v206 ships together as v214.
+- **One release for two days of work.** Shell v202 to v213 were local builds and never went live on their own; v214 is the
+  first build after v201 that players get, and it carries all of them.
+- **Fixed before anyone saw them.** These repaired v202–v213 builds and never reached a v201 player: CONTROLS reading DID
+  NOT LOAD after an update (a stale offline cache), the run ends sitting low under a HUD strip that had moved, the FLOOR
+  TILES card's way back and its wording, CONTROLS leavable once it fails to load, ANTI-ALIAS or SHADOWS changes made while
+  a look loads, the offline copy finishing reliably, and the vibration code retrying after a failed download.
 - **Rollback:** revert the release commit and bump `CACHE_NAME` (and `REV` in `sw.js`) again, so installed copies update.
 
-## shell v206 · 2026-11-12
+## shell v206 · 2026-11-12 · not released on its own, live in v214
 
 The HUD leaves the board and joins the world.
 
@@ -94,8 +81,8 @@ The HUD leaves the board and joins the world.
   TIME shows the room clock in every run.
 - **A phone touch strip.** The D-PAD as four keys, BOMB as the one yellow key, THROW and REMOTE keys while you hold them,
   and a PAUSE key that reads RESUME while paused, every key at least 44 px.
-- **Floor-tile tips beside the board.** The first time you step on a tile its tip appears beside the board on a leader,
-  never over the play.
+- **Floor-tile tips move beside the board.** The first time you step on a tile its tip appears beside the board on a leader,
+  instead of over the play.
 
 ### Changed
 
@@ -107,7 +94,7 @@ The HUD leaves the board and joins the world.
 - **Checks were trimmed for this cut** (owner's call): PLAY and the HUD captured and gated in CLASSIC 2D, world 1, on a desktop
   and a phone only. The other looks and worlds, the headed perf run and the walk-through are deferred to the owner's device checks (U15).
 
-## shell v205 · 2026-11-12
+## shell v205 · 2026-11-12 · not released on its own, live in v214
 
 CONTROLS draws your real controls, and the title logo follows your art style.
 
@@ -123,7 +110,7 @@ CONTROLS draws your real controls, and the title logo follows your art style.
 - **Checks were trimmed for this cut** (owner's call): title, MENU and the CONTROLS captures in CLASSIC 2D, world 1, on a
   desktop and a phone only. PIXEL / REAL 3D looks, the full matrix and the headed checks are deferred to the owner's device checks (U12–U13).
 
-## shell v204 · 2026-11-12
+## shell v204 · 2026-11-12 · not released on its own, live in v214
 
 Pause and the end of a run move into the world too.
 
@@ -150,7 +137,7 @@ Pause and the end of a run move into the world too.
   desktop and a phone only. The full look x world x box matrix, the headed perf run and the walk-through are deferred to the
   owner's device checks (U8–U11).
 
-## shell v203 · 2026-11-12
+## shell v203 · 2026-11-12 · not released on its own, live in v214
 
 The menus move into the world you're about to play.
 
@@ -162,32 +149,35 @@ The menus move into the world you're about to play.
 - **A next-run card on MENU.** It shows the level, difficulty, speed and modifiers PLAY will start, and your best there.
 - **RECORDS.** One door for SCORES, STATS and MEDALS, three tabs you can walk with ←/→, Q / E, a controller or a tap.
   SCORES filters by difficulty. STATS keeps its two-step reset, and the confirm says exactly what goes and what stays.
-- **FLOOR in GUIDE.** Every floor tile at each difficulty, with its rule.
+- **GUIDE's FLOOR page joins the new look:** every floor tile at each difficulty, with its rule.
 
 ### Changed
 
-- **Names you already know.** OPTIONS is SETTINGS, ROOM is LEVEL, CORE / PLUS / MAX are NORMAL / HARD / EXPERT
-  difficulty, EASY / NORM / HARD are SLOW / NORMAL / FAST game speed, PACT is MODIFIERS, RENDER is ART STYLE, and ITEMS
-  are POWER-UPS. Your saved records keep every value.
-- **MENU is seven rows:** PLAY, LEVEL SELECT, DAILY, RECORDS, SETTINGS, GUIDE, SOURCE.
+- **Names you already know.** OPTIONS is SETTINGS, ROOM is LEVEL, HEAT is DIFFICULTY and CORE / PLUS / MAX are NORMAL /
+  HARD / EXPERT, PACE is GAME SPEED and EASY / NORM / HARD are SLOW / NORMAL / FAST, MODES are MODIFIERS (IRON, BARE, THIN
+  and TIME are ONE LIFE, NO FLOOR ITEMS, FEWER ITEMS and TIME TRIAL), RENDER is ART STYLE, ITEMS are POWER-UPS and HIGH
+  SCORES is SCORES. Your saved records keep every value.
+- **MENU is seven rows:** PLAY, LEVEL SELECT, DAILY, RECORDS, SETTINGS, GUIDE, SOURCE. HIGH SCORES and STATS moved into RECORDS.
 - **LEVEL SELECT is a list of rows.** ↑↓ walks LEVEL, DIFFICULTY, GAME SPEED, MODIFIERS and START; ←→ changes the row you're on.
-- **SETTINGS shows CAMERA and BRIGHTNESS only in REAL 3D.** The pause menu reads RESUME, SETTINGS, RESTART, QUIT TO MENU.
+- **SETTINGS shows CAMERA and BRIGHTNESS only in REAL 3D.** The pause menu reads RESUME, SETTINGS, RESTART, QUIT TO MENU, so down then Enter opens SETTINGS instead of restarting.
 - **Phones.** Every page keeps its words and buttons at a readable, tappable size: on a landscape phone a long page
   turns into pages (▲ / ▼) instead of shrinking.
 - **The cards** (analytics, NEW VERSION READY, the loading card) use the menu's own type.
 
 ### Fixed
 
-- No confetti on a loss.
+- No confetti on a loss or a level clear: only a finale throws it, and never with REDUCE FLASH or reduced motion.
 
 ### Notes
 
 - **Rollback:** revert the release commit and bump `CACHE_NAME` (and `REV` in `sw.js`) again, so installed copies update.
-- **Boot size is an owner decision before the push.** The pages that open first (the menu kit, MENU, LEVEL SELECT and the
-  CLASSIC logo) add about 222 KB raw (about 86 KB gzip) to what the first visit downloads, against the plan's 60 KB. One
-  option: load LEVEL SELECT later, in the idle after MENU paints (about 58 KB raw, 20 KB gzip).
+- **Boot size.** The pages that open first (the menu kit, MENU, LEVEL SELECT and the CLASSIC logo) added about 222 KB raw
+  (about 86 KB gzip) to the first visit at this cut, against the plan's 60 KB. Settled in v214: LEVEL SELECT loads after the
+  title. As shipped in v214 the startup files are about 128 KB raw (55 KB gzip) heavier than live v201's, plus 9 KB gzip
+  in `index.html`, and the whole offline copy about 309 KB gzip. (The 222 / 86 KB figures here and a later "+109 KB" were
+  measured against the delivery branch before v202, not against v201.)
 
-## shell v202 · 2026-11-12
+## shell v202 · 2026-11-12 · not released on its own, live in v214
 
 The game starts sooner, and a new look switches in only when it's ready.
 

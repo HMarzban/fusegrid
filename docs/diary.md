@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v214 on 2026-11-12.
+shell v214, live on 2026-11-14.
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -911,8 +911,8 @@ after the test file's own exit, runs now. Nothing is pushed: the owner's phone a
 
 The open size call got settled the practical way. LEVEL SELECT, about 60 KB of code, now loads right after the title
 like SETTINGS and GUIDE do, so a first visit downloads about 21 KB less (gzip). Measuring it honestly also corrected an
-old number: the new menus had grown since R1, so the first visit is about 109 KB (gzip) heavier than v201, not the 86
-KB written down at R1. Opened before it arrives, LEVEL SELECT shows the shared LOADING plate for a moment.
+old number: the new menus had grown since R1, so they add about 109 KB (gzip) over the delivery work they were built on,
+not the 86 KB written down at R1. Opened before it arrives, LEVEL SELECT shows the shared LOADING plate for a moment.
 
 The share card got the same treatment as everything else: a real capture, not a drawing. The owner picked the bold
 one of three, "C, three looks": the same moment in CLASSIC 2D, PIXEL and REAL 3D side by side, the first card that
@@ -922,6 +922,19 @@ the owner picked "D4, eight worlds", eight stripes of real boards from JUNGLE to
 the middle (shell v213). One more turn: "another D4 version with pixlated world and design and with custom art design".
 The eight boards came back as real PIXEL captures on one crisp grid, framed in a hand-pixelled cabinet with the logo hung
 as a sign, and the owner took it ("yes p2", shell v214). Every other card went to the marketing kit.
+
+## 2026-11-14: the upgrade goes live (shell v214, release v2.5.0)
+
+The owner said "let's push the all changes in the local to the prod", and two days of local builds went out at once. The
+tests ran again (723 pass), the history was checked for anything that belongs in the marketing kit (none), and `main` moved
+forward from v201 to v214 in one push: the lighter loading of v202, the four UI upgrade cuts and every fix since. Players
+never saw v202 to v213 on their own; they go straight from v201 to v214, and the NEW VERSION READY card brings them over.
+The deploy's tests passed, the live service worker reads v214, and GitHub release v2.5.0 tells the whole story in one
+note. Writing the release note turned up one more correction: every size above was measured against the delivery branch, not
+the v201 players had. Against v201 itself the startup files are about 64 KB (gzip) heavier and the whole offline copy
+about 309 KB; the note and the changelog now say so, and they list only the fixes a v201 player could ever have hit. The owner re-uploaded the share card to the repo's social preview and went to try the game on other controllers. The
+honest leftover is the same as before the push: the real phone and controller checks, and three looks the owner may still
+veto.
 
 ---
 

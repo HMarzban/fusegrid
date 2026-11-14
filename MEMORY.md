@@ -16,6 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — Release note audit, branch tidy
+- Owner asked for "a cohesive and reliable and accountable release note". An independent audit of v2.5.0 against v201 (`e3bf4a3`) and HEAD found: the "+109 KB" (and R1's "+86") boot growth was measured against the delivery branch `c4e7598`, not live v201; against v201 the boot JS is +128 KB raw / +55 KB gzip, +9 KB gzip index.html, precache +309 KB gzip. GUIDE FLOOR already existed in v201; v201 screens said MODES, not PACT; eight of v214's Fixed lines repaired never-live v202–v213 builds. CHANGELOG (v214 dated 2026-11-14, v202–v206 headings "not released on its own, live in v214", Fixed split, renames, PAUSE order, confetti), AGENTS release states, diary and the GitHub release body corrected; the dated perf record keeps its old "shell v201 code" label (records are never rewritten).
+- Branches: 33 merged ones deleted with `git branch -d` (incl. feature/ui-upgrade; checkout on main). 25 rebased lane/task branches, feature/controls, feature/delivery and ui-upgrade-pre-rebase need `-D` (denied to Claude): the owner's call. Owner re-uploaded og.png to Social preview.
+
 ## 2026-11-14 — v202 + v214 are LIVE
 - Owner: "push the all changes in the local to the prod". 723 tests green; `origin/main` fast-forwarded `e3bf4a3..0e47f7b` (v202 delivery squash, then the UI upgrade through v214; history checked free of promotion text). Pages CI green (test + deploy), live `sw.js` / `CACHE_NAME` read v214, og.png served. GitHub release v2.5.0 (shell v201 → v214) cut the same day. Open: Social preview re-upload, device checks, three vetoes, the stale-branch delete.
 
