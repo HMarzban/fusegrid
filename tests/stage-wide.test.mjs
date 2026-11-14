@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as THREE from "../vendor/three.module.js";
 import { CFG, BIOMES } from "../src/core/config.js";
+import { TILE_NAME, tileTip, featProfile } from "../src/core/feat.js";
 import { createWorld, loadLevel } from "../src/core/world.js";
 import { GL_WIDE, glBox, fitBox, hudGeo, mountFit } from "../src/app/fit.js";
 import { createRenderer3D, projBoard } from "../src/render/three/wrapper.js";
@@ -163,15 +164,17 @@ test("the frame: #gl wears the glow on the wider stage, index.html drops #c's fr
   const el2 = { style: { boxShadow: "keep" } }; stageGlow(el2, null); assert.equal(el2.style.boxShadow, "keep", "null only takes back a glow it put on");
 });
 
-test("HUD: in REAL 3D the tile tip and its leader's knee clear the wider stage; other looks keep today's column", () => {
-  for (const [W0, H0] of [[1366, 768], [1280, 720]]) {
-    const geo = hudGeo(W0, H0, 600, 520, "d", true), w = play(), st = hudState(w, { time: { t: 3 } });
-    st.tip = { s: "CONVEYOR · It carries you along.", short: "", a: 1, t: [13, 6] };
+test("HUD: in REAL 3D every real tile tip (8 kinds, CORE and MAX) stays beside the board, clear of the wider stage, its knee too; other looks keep today's column", () => {
+  for (const [W0, H0] of [[1366, 768], [1280, 720]]) for (const k of Object.keys(TILE_NAME)) for (const heat of [0, 2]) {
+    const geo = hudGeo(W0, H0, 600, 520, "d", true), w = play();
+    w.heat = heat;
+    const st = hudState(w, { time: { t: 3 } }), pr = featProfile(w);
+    st.tip = { s: tileTip(k, pr), short: tileTip(k, pr, true), a: 1, t: [13, 6] };
     const at = [geo.stage.x + 13.5 * CFG.TILE * geo.s, geo.stage.y + 6.5 * CFG.TILE * geo.s];
     const G3 = hudGeom(rec().ctx, geo, st, { w: W0, h: H0, at, gx: geo.gx }), G2 = hudGeom(rec().ctx, geo, st, { w: W0, h: H0, at });
     const left = geo.stage.x, right = left + geo.stage.w, side = (b, gx) => Math.abs(b.x - (right + gx + 30)) < 1e-6 || Math.abs(b.x + b.w - (left - gx - 30)) < 1e-6; // beside the board, either side
-    assert.ok(G3.tip && side(G3.tip.box, geo.gx), W0 + " 3d tip " + JSON.stringify(G3.tip && G3.tip.box) + " stage " + left + ".." + right + " gx " + geo.gx);
-    assert.ok(G2.tip && side(G2.tip.box, 0), W0 + " 2d tip unchanged");
+    assert.ok(G3.tip && side(G3.tip.box, geo.gx), W0 + " " + k + " " + heat + " 3d tip " + JSON.stringify(G3.tip && G3.tip.box) + " stage " + left + ".." + right + " gx " + geo.gx);
+    assert.ok(G2.tip && side(G2.tip.box, 0), W0 + " " + k + " 2d tip unchanged");
     const knee = G3.tip.lead && G3.tip.lead.length > 2 ? G3.tip.lead[1][0] : null;
     if (knee != null) assert.ok(knee >= right + geo.gx || knee <= left - geo.gx, "knee off the 3D strip");
   }
