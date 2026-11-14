@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — REAL 3D screens gated
+- The v2.5.0 gap "REAL 3D's new screens not checked" is closed: 36 REAL 3D captures (title, menu, controls, capture, play, hud, pause, win, lose; worlds 1 and 8; desk and phone) on the committed v216, 0 FAIL. 4 skips at world 8 (finale chosen/info, phone GAME OVER info) appear in CLASSIC 2D too: `screens.mjs` exemption gap, left open. Release note's Known line updated.
+
 ## 2026-11-14 — v215 live; v216 scopes the self-repair
 - v215 pushed on the owner's "Yes, push v215" (Pages CI green). An automated security review then found the heal unregistered EVERY service worker on the shared `hmarzban.github.io` origin (the owner's other Pages projects too) and the error match used a bare origin prefix (a look-alike host passed) plus a loose message regex. v216: unregister only `scope === base`, filename must sit under the game's folder, a filename-less error must be a `SyntaxError`; tests first, re-verified by poisoning main.js in WebKit and Chromium (scope equals the folder in both), 725 tests. Build tag examples in AGENTS / README / architecture moved to v216. Pushed on the owner's "Yes, push v216"; Pages CI green, live `sw.js` v216.
 
