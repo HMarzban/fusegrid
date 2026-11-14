@@ -15,6 +15,47 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v219 · 2026-11-14 · not released yet
+
+Every controller and every keyboard, read the way you hold them.
+
+### Added
+
+- **The Switch 2 Pro Controller plays over a USB cable** in Chrome on macOS. Open **SETTINGS › CONTROLS**, go to the
+  CONTROLLER tab and press **CONNECT** on the SWITCH 2 CONTROLLER row: Chrome asks once which controller, and from then on
+  the game wakes it by itself whenever you plug it in, and on every visit, a shared link straight into a run included. The
+  row shows only where this was measured (Chrome on macOS).
+- **Vibration on the Switch 2 Pro Controller.** Once it is connected, the same row offers **ALLOW VIBRATION**: Chrome asks
+  once more, and the controller buzzes like any other, at your VIBRATION level.
+
+### Changed
+
+- **Button names follow your controller.** An Xbox controller reads A, B, X, Y, LB, RB, LT, RT, VIEW and MENU; a
+  PlayStation controller draws ✕, ○, □ and △ and reads L1, R1, L2, R2, CREATE and OPTIONS; a Nintendo controller reads
+  B, A, Y, X, L, R, ZL, ZR, − and +. The CONTROLS page and its drawing, PAUSE, the menu foot, the run ends, RECORDS and
+  the CONTROLLER READY note use them. Any other controller keeps the position names (SOUTH, EAST, WEST, NORTH), as before.
+- **Keys follow your keyboard layout.** CONTROLS and every hint print the letter on your key (an AZERTY player sees
+  their own Z and Q). In Chrome and Edge that is true from the first frame; in other browsers a key shows its own letter
+  once you have pressed it. Y / N on the privacy card, U on the update card and the other letter shortcuts (R, C, B, M, T,
+  Q and E) answer the key that prints that letter, wherever it sits. A shortcut letter held with Ctrl, Cmd or Alt answers
+  no card, and a key you move or play with is never one of R, Y, N, C, B, M, T or U: on Colemak your S key moves you
+  down, it never resets the camera or wipes your stats.
+
+### Notes
+
+- Standard controllers play exactly as before. Any other controller can still be set up on **SETTINGS › CONTROLS** by
+  rebinding its buttons.
+- Chrome remembers the USB and HID permissions, not the game. [Privacy](docs/privacy.md#controller-access) says how to take
+  them back.
+
+### Known
+
+- Over Bluetooth, the Switch 2 Pro Controller is not seen by the browser; use the cable.
+- A controller seen through Steam Input or DS4Windows reads as an Xbox controller, because that is what it tells the browser.
+- Two Switch 2 Pro Controllers at once share one vibration: the second buzzes through the first.
+- On Colemak your R sits on the default MOVE DOWN key, so it moves you: the camera reset has no key there until you move
+  MOVE DOWN elsewhere on **SETTINGS › CONTROLS**, and STATS' RESET answers a click.
+
 ## shell v218 · 2026-11-14
 
 The loose ends from v217, tied off.

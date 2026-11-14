@@ -2,8 +2,8 @@
 
 > **What the game sends, and how to switch it off.**
 
-Fusegrid has no accounts and no server. Your scores, bests, stats and settings
-stay in your own browser's local storage.
+Fusegrid has no accounts and no server. Your scores, bests, stats, settings and
+controller binds stay in your own browser's local storage.
 
 ## Play stats (Google Analytics), only if you allow it
 
@@ -45,3 +45,28 @@ from PAUSE. Switching it off stops sending at once and deletes the game's
 Google Analytics cookies. **RESET DEFAULTS** and the STATS reset keep your
 choice; clearing the site's data in your browser forgets it, and the game will
 ask again.
+
+## Controller access
+
+Most controllers need nothing: the browser hands the game their buttons, and
+that's all. The Switch 2 Pro Controller is the exception. On **SETTINGS ›
+CONTROLS**, **CONNECT** asks Chrome to let the page talk to it over USB, and
+**ALLOW VIBRATION** asks once more for HID, which is how the game makes it buzz.
+Chrome shows its own prompt each time, and nothing happens unless you pick the
+controller there.
+
+- **Chrome keeps the grant, not the game.** After one yes, the game finds that
+  controller on its own whenever you plug it in, with no new prompt.
+- **The grant is per site.** It belongs to `hmarzban.github.io`, and that site
+  also hosts other pages by the same author, which could use the same
+  device without asking you again.
+- **Take it back at any time:** open
+  `chrome://settings/content/usbDevices` and `chrome://settings/content/hidDevices`
+  and remove the site, or click the padlock next to the address bar, open the
+  site's settings and reset the USB and HID permissions.
+
+The game stores nothing about your controller beyond the binds you set on
+CONTROLS (they stay in your browser, like your settings). Which kind of
+controller you hold and what your keyboard prints are read fresh each visit and
+never saved. None of it is sent anywhere: the play stats carry no field
+about a controller or a keyboard.

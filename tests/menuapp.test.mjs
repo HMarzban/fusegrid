@@ -1815,7 +1815,7 @@ check("menuapp's DEF_MOVE is controls.js DEF_KEY.MOVE", JSON.stringify(createMen
   }
   // Consent ruling: a pad can never turn analytics on from an unanswered state.
   {
-    const ANA = optRows(false).indexOf("ANALYTICS"), NOTE = "ANSWER THE CARD WITH Y OR N";
+    const ANA = optRows(false).indexOf("ANALYTICS"), NOTE = "ANSWER THE CARD · Y OR N KEY";
     const mk = (open, dev) => {
       const calls = [];
       const a = createMenuApp({ onAnalytics: (v) => calls.push(v), anaOpen: () => open.v });

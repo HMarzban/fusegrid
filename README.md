@@ -56,7 +56,14 @@ No install needed, no account, no server. Just press start.
 | R, R *(STATS)* | none | Reset my cabinet (two presses; any other key cancels) |
 
 Menus run on the arrows, Enter and Esc, or on the D-PAD or stick, SOUTH or START, and EAST.
-Buttons are named by position. Powers marked `*` in the in-game HOW TO need their power-up first.
+The table names buttons by position; in the game they wear your controller's own names (A on an Xbox
+controller, ✕ on a PlayStation one, B on a Nintendo one), and any other controller keeps the position names.
+Keys and letter shortcuts follow the letters printed on your own keyboard. Powers marked `*` in the in-game
+HOW TO need their power-up first.
+
+**Switch 2 Pro Controller:** plug it in with a USB cable and press **CONNECT** on **SETTINGS → CONTROLS**
+(Chrome on macOS), then **ALLOW VIBRATION** for its buzz. What Chrome remembers, and how to take it back, is in
+[Privacy](docs/privacy.md#controller-access).
 
 **Your binds, your call.** **SETTINGS → CONTROLS** rebinds both devices. The table
 shows the defaults. Arrows, Esc, Enter, the D-PAD and START stay put, so you can always get back.
@@ -206,7 +213,7 @@ NORMAL ×1, HARD ×2, EXPERT ×3.
   5 minutes, and if it ever fails to start, it clears its offline copy and
   reloads once by itself (never while you're offline).
 - **Know your build.** The main menu shows which version you're running
-  (for example `v218`), so you can tell when an update has landed.
+  (for example `v219`), so you can tell when an update has landed.
 
 Everything the game remembers lives in your browser's local storage. There is
 no account, no server and no global ranking. The game asks once whether to

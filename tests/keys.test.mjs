@@ -4,11 +4,12 @@
    Expectations come from README "How to play", AGENTS.md and the on-screen
    foot hints in menudraw.js — not from reading the handlers back. */
 import { createGame } from "../src/main.js";
-import { preloadControls } from "../src/app/controlswire.js";
+import { preloadControls, preloadSwitch2 } from "../src/app/controlswire.js";
 import { loadControlsArt } from "../src/render/shellview.js";
 import "../src/core/board3.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS, IDLE_T, FEELS } from "../src/app/menuapp.js";
+import { mountAnalytics, GA_HOST } from "../src/app/analytics.js";
 import { PACT } from "../src/core/pact.js";
 import { GFX_ROWS, DEMO_T } from "../src/app/gfx.js";
 import { graphicsGeom, layout as menuLayout, modeFocusOf } from "../src/render/menudraw.js";
@@ -31,6 +32,7 @@ import { endFacts, endGeom } from "../src/render/pages/endgeom.js";
 (await import("../src/render/pages/lazy.js"))._set("level", await import("../src/render/pages/level.js")); // LEVEL SELECT is a lazy page (Task 9.14): in as if its import had landed
 lazyPages._set("endlose", endLose); // GAME OVER is a lazy page (v202 Task 5.4)
 await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
+await preloadSwitch2(); // the Switch 2 waker (Task 3): in, so a game booted with a stubbed navigator.usb shows the CONNECT row at once
 const RECP = await (await import("../src/render/pages/lazy.js")).want("records"); // RECORDS is a lazy page (R20): in before its taps
 
 let pass = 0, fail = 0;
@@ -1385,6 +1387,7 @@ for (const code of ["Space", "Enter"]) {
   const rowTo = (g, i) => { for (let k = 0; k < i; k++) tap(g, "dD"); };
   const pOpt = () => { const g = pMenu(); rowTo(g, ITEMS.indexOf("SETTINGS")); tap(g, "S"); return g; };
   const pCtl = () => { const g = pOpt(); rowTo(g, optAt(g, "CONTROLS")); tap(g, "S"); return g; };
+  const view0 = (g) => g.app.controls.view(g.app.ctlT).row;
 
   { const g = pk();
     check("pad: the title waits for a press", g.app.screen === SCREEN.INTRO && g.app.introStage === 0);
@@ -1516,6 +1519,14 @@ for (const code of ["Space", "Enter"]) {
     g.app.pact = 0; }
   { const g = page("LEVEL SELECT")(); g.app.pactUnlocked = false; tap(g, "TRR"); tap(g, "N");
     check("T14: MODES stay shut before the first CLEAR", g.app.modeCur === -1 && g.app.pact === 0); }
+  /* final re-review: a tap or a controller press carries no printed key, so its shortcut stands on a code bound to play (Dvorak may bind KeyR, KeyC) */
+  { mem["nb.controls.v1"] = JSON.stringify({ v: 1, key: { BOMB: "KeyR", THROW: "KeyC", REMOTE: "KeyQ", PAUSE: "KeyP", MOVE: ["KeyW", "KeyD", "KeyS", "KeyA"] }, pad: { BOMB: "S", THROW: "W", REMOTE: "E", PAUSE: "SELECT" }, stick: "L", dead: 25, vib: 2 });
+    const g = page("RECORDS", (g) => tap(g, "dR"))(), c0 = clip.length; delete mem["nb.controls.v1"];
+    tap(g, "W"); await flush(); g.tick();
+    check("STATS, THROW bound to KeyC: WEST (a synthetic KeyC, no key) still copies the stats", g.app.screen === SCREEN.STATS && clip.length === c0 + 1, clip.length - c0);
+    g.input.onUiKey("KeyR"); g.tick();
+    check("STATS, BOMB bound to KeyR: the RESET tap (a synthetic KeyR, no key) still arms the reset", g.app.screen === SCREEN.STATS && g.app.resetArm === true, g.app.resetArm);
+    g.app.resetArm = false; }
   { const g = page("RECORDS", (g) => tap(g, "dR"))(), c0 = clip.length; tap(g, "W"); await flush(); g.tick();
     check("T14: STATS WEST copies the stats, with the same note", g.app.screen === SCREEN.STATS && clip.length === c0 + 1 && g.app.toast.s === "COPIED" && g.app.toast.t > 0, g.app.toast.s);
     clipMode = "no"; tap(g, "W"); await flush(); g.tick(); clipMode = "ok";
@@ -1773,6 +1784,42 @@ for (const code of ["Space", "Enter"]) {
     check("SOUTH then START between frames pauses and stays paused", g.world.state === "PAUSE", g.world.state);
     g.pad.set("S", false); g.tick(2);
     check("and the released SOUTH confirms nothing", g.world.state === "PAUSE", g.world.state); }
+  /* Task 3: the CONNECT row (SW2) on CONTROLS and in PAUSE view 3, where switch2.js reaches (a stubbed WebUSB on macOS). Enter opens the chooser inside
+     its keydown; SOUTH is no user activation, so it shows PRESS ENTER OR CLICK and opens nothing; EAST and Esc back out as on every row. */
+  { const u = { req: 0, got: 0, L: {}, requestDevice() { u.req++; return new Promise(() => {}); }, getDevices() { u.got++; return Promise.resolve([]); }, addEventListener(t, f) { u.L[t] = f; }, removeEventListener() {} };
+    navigator.usb = u; navigator.userAgentData = { platform: "macOS" };
+    try {
+      const view = (g) => g.app.controls.view(g.app.ctlT), sw2W = "PRESS ENTER OR CLICK";
+      { const g = pCtl(); rowTo(g, 6);
+        check("CONNECT on CONTROLS: the D-PAD walks onto it, after VIBRATION (the eighth of nine)", view(g).row === 7 && view(g).sw2.shown === true && g.ctl.sw2().shown === true, view(g).row);
+        tap(g, "S");
+        check("CONNECT on CONTROLS: SOUTH opens no chooser and shows " + sw2W, u.req === 0 && view(g).status === sw2W && !g.app.capturing, view(g).status);
+        down("Enter");
+        check("CONNECT on CONTROLS: Enter opens the chooser inside its keydown", u.req === 1, u.req);
+        up("Enter"); g.tick(2);
+        check("CONNECT on CONTROLS: Enter starts no capture and stays on the page", !g.app.capturing && g.app.screen === SCREEN.CONTROLS);
+        tap(g, "E");
+        check("CONNECT on CONTROLS: EAST backs out onto the CONTROLS door", g.app.screen === SCREEN.SETTINGS && g.app.optLabel() === "CONTROLS", g.app.screen); }
+      { const g = pCtl(); rowTo(g, 6); press(g, "Escape");
+        check("CONNECT on CONTROLS: Esc backs out", g.app.screen === SCREEN.SETTINGS && g.app.optLabel() === "CONTROLS", g.app.screen); }
+      for (const [LK, blob] of LOOKS) withSettings(blob, () => {
+        const h = pPause(); rowTo(h, PAUSE_ITEMS.indexOf("SETTINGS")); tap(h, "S"); rowTo(h, optAt(h, "CONTROLS")); tap(h, "S"); rowTo(h, 6);
+        check("CONNECT in PAUSE view 3 (" + LK + "): focused, the run paused", h.app.pauseView === 3 && h.world.state === "PAUSE" && view(h).row === 7, view(h).row);
+        const r0 = u.req;
+        tap(h, "S");
+        check("CONNECT in PAUSE view 3 (" + LK + "): SOUTH shows " + sw2W + ", no chooser", u.req === r0 && view(h).status === sw2W, view(h).status);
+        down("Enter");
+        check("CONNECT in PAUSE view 3 (" + LK + "): Enter opens the chooser inside its keydown", u.req === r0 + 1, u.req);
+        up("Enter"); h.tick(2);
+        check("CONNECT in PAUSE view 3 (" + LK + "): still paused, on the page", h.app.pauseView === 3 && h.world.state === "PAUSE" && !h.app.capturing);
+        tap(h, "E");
+        check("CONNECT in PAUSE view 3 (" + LK + "): EAST steps back to SETTINGS on the door", h.app.pauseView === 1 && h.app.optLabel() === "CONTROLS", h.app.pauseView);
+        const k = pPause(); rowTo(k, PAUSE_ITEMS.indexOf("SETTINGS")); tap(k, "S"); rowTo(k, optAt(k, "CONTROLS")); tap(k, "S"); rowTo(k, 6); press(k, "Escape");
+        check("CONNECT in PAUSE view 3 (" + LK + "): Esc steps back to SETTINGS", k.app.pauseView === 1 && k.world.state === "PAUSE", k.app.pauseView);
+      });
+    } finally { delete navigator.usb; delete navigator.userAgentData; }
+    const n = pCtl();
+    check("no WebUSB: no CONNECT row (the D-PAD from BOMB wraps at RESET, the eighth row)", n.ctl.sw2().shown === false && (rowTo(n, 7), view0(n) === 0), view0(n)); }
   { const g = pk(); // no pad press, keys only: the pad layer changes nothing
     g.gpr.list[0] = null; g.tick();
     press(g, "KeyA"); g.tick(15); press(g, "Enter");
@@ -1789,6 +1836,98 @@ for (const code of ["Space", "Enter"]) {
     got.push([scr, scr === SCREEN.SCORES ? one === "" : r === true && one === UM, recPlays.length === n0]); // SCORES: one page on this box, so its step moves nothing and stays silent
   }
   check("a page-key tap sounds one uiMove on SETTINGS, GUIDE, ENEMIES and LEVEL SELECT, and a key with no page (or a RECORDS tab with one page) is silent", got.every((q) => q[1] && q[2]), JSON.stringify(got));
+}
+
+// ---- Task 6: a letter shortcut is the letter printed on the key, wherever it sits; movement and the binds stay physical (code) ----
+{
+  const downK = (code, key, o) => (L.keydown || []).forEach((f) => f({ code, key, repeat: false, preventDefault: noop, ...(o || {}) }));
+  const upK = (code, key) => (L.keyup || []).forEach((f) => f({ code, key, preventDefault: noop }));
+  const pressK = (g, code, key, hold = 3) => { downK(code, key); g.tick(hold); upK(code, key); g.tick(2); };
+  const g = menu(); toRow(g, ITEMS.indexOf("RECORDS")); press(g, "Enter"); press(g, "ArrowRight");
+  pressK(g, "KeyR", "p");
+  check("STATS: Dvorak's KeyR prints P, so it arms nothing", g.app.screen === SCREEN.STATS && g.app.resetArm === false);
+  pressK(g, "KeyO", "r");
+  check("STATS: the key printed R (Dvorak KeyO) arms the reset", g.app.resetArm === true);
+  const rl = reloads;
+  downK("KeyO", "r", { shiftKey: true }); g.tick(2); upK("KeyO", "r"); g.tick(2);
+  check("STATS: a chorded printed R disarms and never erases", g.app.resetArm === false && reloads === rl, reloads - rl);
+  const c0 = clip.length;
+  pressK(g, "KeyC", "j"); await flush();
+  check("STATS: a KeyC printing J copies nothing", clip.length === c0, clip.length - c0);
+  pressK(g, "KeyI", "c"); await flush();
+  check("STATS: the key printed C (Dvorak KeyI) copies the stats", clip.length === c0 + 1);
+  g.input.onUiKey("KeyC"); await flush();
+  check("STATS: a synthetic C with no key (a tap, a controller's WEST) still copies", clip.length === c0 + 2);
+  pressK(g, "KeyK", "t");
+  check("STATS: the key printed T (Dvorak KeyK) opens MEDALS", g.app.screen === SCREEN.TROPHIES);
+  pressK(g, "KeyO", "q");
+  check("RECORDS: the key printed Q steps the tab back", g.app.screen === SCREEN.STATS, g.app.screen);
+  const r = run(); press(r, "KeyP");
+  pressK(r, "KeyM", ",");
+  check("PAUSE: AZERTY's KeyM prints a comma, so it quits nothing", r.app.screen === SCREEN.GAME && r.world.state === "PAUSE");
+  pressK(r, "Semicolon", "m");
+  check("PAUSE: the key printed M (AZERTY Semicolon) quits to MENU", r.app.screen === SCREEN.MENU, r.app.screen);
+  const mv = menu(); toRow(mv, 2);
+  pressK(mv, "KeyW", "z");
+  check("MENU: AZERTY's KeyW (printed Z) still walks up: MOVE stays physical", mv.app.cursor === 1, mv.app.cursor);
+  const p = run();
+  downK("KeyW", "z"); p.tick(1); const upHeld = p.input.input.up; upK("KeyW", "z"); p.tick(1);
+  downK("KeyZ", "w"); p.tick(1); const zHeld = p.input.input.up; upK("KeyZ", "w"); p.tick(1);
+  check("a run: AZERTY's KeyW (printed Z) is MOVE UP; the key printed W (KeyZ) is not: the binds stay physical", upHeld === true && zHeld === false, upHeld + "/" + zHeld);
+}
+
+// ---- final review 1 / 5: a key bound to play (MOVE, BOMB, THROW, REMOTE, PAUSE) is never a shortcut letter, whatever its layout prints on it
+// (Colemak's MOVE DOWN KeyS prints r, Workman's THROW KeyE prints r); a free key still is, and Q / E, RECORDS' tab keys, stay on QWERTY's own binds ----
+{
+  const downK = (code, key) => (L.keydown || []).forEach((f) => f({ code, key, repeat: false, preventDefault: noop }));
+  const upK = (code, key) => (L.keyup || []).forEach((f) => f({ code, key, preventDefault: noop }));
+  const pressK = (g, code, key, hold = 3) => { downK(code, key); g.tick(hold); upK(code, key); g.tick(2); };
+  const camSet = (g) => { g.cam.zoom = 2; g.cam.x = 40; g.rig.dist = 1600; };
+  const camKept = (g) => g.cam.zoom === 2 && g.cam.x === 40 && g.rig.dist === 1600;
+  const p = run(); camSet(p);
+  downK("KeyS", "r"); p.tick(1); const downHeld = p.input.input.down; upK("KeyS", "r"); p.tick(2);
+  check("a run: Colemak's KeyS (MOVE DOWN, printed R) moves down and leaves the camera alone", downHeld === true && camKept(p), downHeld + " " + JSON.stringify(p.cam) + "/" + p.rig.dist);
+  camSet(p); pressK(p, "KeyE", "r");
+  check("a run: Workman's KeyE (THROW, printed R) leaves the camera alone", camKept(p), JSON.stringify(p.cam) + "/" + p.rig.dist);
+  camSet(p); pressK(p, "KeyO", "r");
+  check("a run: the free key printed R (Dvorak KeyO) still resets the camera", p.cam.zoom === 1 && p.rig.dist !== 1600, JSON.stringify(p.cam));
+  const m = menu(); pressK(m, "KeyS", "r", 0);
+  check("MENU: a Colemak KeyS tap (printed R, down and up inside one frame) walks the cursor down", m.app.cursor === 1, m.app.cursor);
+  const pz = run(); press(pz, "KeyP"); const pc0 = pz.app.pauseCursor; pressK(pz, "KeyS", "r", 0);
+  check("PAUSE: a Colemak KeyS tap (printed R, down and up inside one frame) walks the list down", pz.world.state === "PAUSE" && pz.app.pauseCursor === pc0 + 1, pz.app.pauseCursor);
+  const g = menu(); toRow(g, ITEMS.indexOf("RECORDS")); press(g, "Enter"); press(g, "ArrowRight");
+  pressK(g, "KeyE", "r");
+  check("STATS: Workman's KeyE (THROW, printed R) arms no reset", g.app.screen === SCREEN.STATS && g.app.resetArm === false, g.app.screen + "/" + g.app.resetArm);
+  pressK(g, "KeyS", "r");
+  check("STATS: Colemak's KeyS (MOVE DOWN, printed R) arms no reset: on Colemak a bound key is never the reset letter", g.app.screen === SCREEN.STATS && g.app.resetArm === false, g.app.resetArm);
+  pressK(g, "KeyO", "r");
+  check("STATS: the free key printed R still arms the reset", g.app.resetArm === true);
+  const rl = reloads; pressK(g, "KeyE", "r");
+  check("STATS: armed, a bound key printed R disarms and never erases", g.app.resetArm === false && reloads === rl, g.app.resetArm + "/" + (reloads - rl));
+  const q = menu(); toRow(q, ITEMS.indexOf("RECORDS")); press(q, "Enter");
+  pressK(q, "KeyE", "e");
+  const onStats = q.app.screen === SCREEN.STATS;
+  pressK(q, "KeyQ", "q");
+  check("RECORDS: QWERTY's KeyE / KeyQ (THROW / REMOTE) still step the tabs", onStats && q.app.screen === SCREEN.SCORES, q.app.screen);
+  mem["nb.controls.v1"] = JSON.stringify({ v: 1, key: { BOMB: "KeyR", THROW: "KeyE", REMOTE: "KeyQ", PAUSE: "KeyP", MOVE: ["KeyW", "KeyD", "KeyS", "KeyA"] }, pad: { BOMB: "S", THROW: "W", REMOTE: "E", PAUSE: "SELECT" }, stick: "L", dead: 25, vib: 2 });
+  const b = run(); camSet(b);
+  pressK(b, "KeyR", "p");
+  check("a run: BOMB on Dvorak's KeyR (printed P) plants and never resets the camera", camKept(b) && live(b.world) === 1, JSON.stringify(b.cam) + "/" + live(b.world));
+  delete mem["nb.controls.v1"];
+  /* the privacy card (analytics.js) reads the real app's binds: THROW on KeyZ (bound on QWERTY, where it prints Z), then a QWERTZ layout prints Y on it */
+  mem["nb.controls.v1"] = JSON.stringify({ v: 1, key: { BOMB: "Space", THROW: "KeyZ", REMOTE: "KeyQ", PAUSE: "KeyP", MOVE: ["KeyW", "KeyD", "KeyS", "KeyA"] }, pad: { BOMB: "S", THROW: "W", REMOTE: "E", PAUSE: "SELECT" }, stick: "L", dead: 25, vib: 2 });
+  const a = run(); delete mem["nb.controls.v1"];
+  const WL = [], body = [], amem = new Map();
+  const mkEl = () => { const kids = {}; return { hidden: false, attrs: {}, setAttribute() {}, addEventListener() {}, querySelector(sel) { return (kids[sel] = kids[sel] || mkEl()); } }; };
+  const ga = mountAnalytics({ id: "G-TEST1234", store: { getItem: (k) => (amem.has(k) ? amem.get(k) : null), setItem: (k, v) => amem.set(k, String(v)) },
+    win: { addEventListener: (t, f, cap) => WL.push({ t, f, cap }) }, doc: { body: { appendChild: (el) => body.push(el), dataset: { lay: "d" } }, head: { appendChild() {} }, createElement: mkEl, cookie: "" },
+    loc: { hostname: GA_HOST, pathname: "/fusegrid/index.html" }, get: () => ({ app: a.app, SCREEN }) });
+  ga.tick();
+  const akey = (code, k) => { const ev = { code, key: k, repeat: false, stopped: false, stopImmediatePropagation() { this.stopped = true; } }; WL.filter((l) => l.t === "keydown" && l.cap === true).forEach((l) => l.f(ev)); return ev; };
+  const by = akey("KeyZ", "y");
+  check("a run, the privacy card up: THROW's key printing Y (QWERTZ KeyZ) does not consent and passes on to the game", !by.stopped && ga.consent === -1 && !amem.has("nb.analytics.v1"), ga.consent);
+  const fy = akey("KeyO", "y");
+  check("a run, the privacy card up: a free key printing Y (Colemak KeyO) still answers ALLOW", fy.stopped && ga.consent === 1, ga.consent);
 }
 
 delete globalThis.window; delete globalThis.location; delete navigator.clipboard;

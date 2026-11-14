@@ -28,6 +28,13 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
   };
   const offBox = (cv, x, y) => !!cv.over && (y < 0 || y > cv.height); // over #sh's HUD band or its safe area: no part of the over box, inert
   const ended = () => app.screen === SCREEN.GAME && (world.state === "WIN" || world.state === "LOSE");
+  /* CONTROLS (the screen, or PAUSE view 3): the hit under a pointer, on the canvas the page is drawn on; null where none is open */
+  const ctlAt = (ev) => {
+    if (app.screen === SCREEN.GAME && world.state === "PAUSE" && app.pauseView === 3) { const cv = over() || canvas, [px, py] = at(ev, cv); return offBox(cv, px, py) ? null : controlsHit(app.controls.view(app.ctlT), px, py, cv, kind(), true); }
+    if (app.screen !== SCREEN.CONTROLS) return null;
+    const cv = (ev.currentTarget !== canvas && fit && fit.box()) || canvas, r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width);
+    return controlsHit(app.controls.view(app.ctlT), (ev.clientX - r.left) * k, (ev.clientY - r.top) * k, cv, kind(), false);
+  };
   const onDown = (ev) => {
     if (app.screen === SCREEN.GAME) {
       const cv = over() || canvas;
@@ -38,8 +45,8 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
          never #gl's Retina drawing buffer, which the wrapper owns. */
       const [px, py] = at(ev, cv);
       if (offBox(cv, px, py)) return;
+      if (app.pauseView === 3) return void ctl().tap(ctlAt(ev), ev.pointerType); // the CONNECT row waits for a touch's pointerup
       const B = overlayBox(kind(), cv);
-      if (app.pauseView === 3) return void ctl().tap(controlsHit(app.controls.view(app.ctlT), px, py, cv, kind(), true));
       if (app.pauseView) {
         /* the PAUSE view's box: overlayBox at the box's CSS scale (the touch floors; #c's, or the over box's free of the HUD band), paused and the focused row (its page is the one on screen) */
         const g2 = app.pauseView === 2, PL = { ...menuLayout(B.w, B.h, undefined, cv.over ? cv.css : dims(canvas, kind()).css), paused: true, ...(B.free ? { free: true } : {}), focus: g2 ? app.gfxRow : app.optRow };
@@ -66,7 +73,7 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       return;
     }
     if (app.screen === SCREEN.INTRO) app.skipShow();
-    else if (app.screen === SCREEN.CONTROLS) { const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width); ctl().tap(controlsHit(app.controls.view(app.ctlT), (ev.clientX - r.left) * k, (ev.clientY - r.top) * k, cv, kind(), false)); }
+    else if (app.screen === SCREEN.CONTROLS) ctl().tap(ctlAt(ev), ev.pointerType);
     else if (app.screen === SCREEN.SETTINGS || app.screen === SCREEN.MENU || app.screen === SCREEN.GRAPHICS || app.screen === SCREEN.GUIDE) {
       /* One rule with PAUSE: tap a row = Enter on it; off the rows a page
          backs out and a root list (MENU, the PAUSE list) does nothing. Client px map through
@@ -128,12 +135,13 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
   for (const el of [canvas, fit && fit.sh]) if (el) {
     el.addEventListener("pointerdown", onDown);
     el.addEventListener("pointerup", (ev) => {
+      if (ctl() && ctl().tapUp) ctl().tapUp(ctlAt(ev)); // a touch tap on CONTROLS' CONNECT row: the chooser needs the up's activation
       if (statsC && app.screen === SCREEN.STATS) input.onUiKey("KeyC");
       statsC = false;
       const k = endK; endK = null;
       if (k && ended() && el === (over() ? fit.sh : canvas) && endHit(...at(ev)) === k) input.onUiKey(END_KEY[k]); // the canvas the run end is drawn on
     });
-    for (const t of ["pointercancel", "pointerleave"]) el.addEventListener(t, () => { statsC = false; endK = null; }); // a cancelled C touch never copies on a later pointerup
+    for (const t of ["pointercancel", "pointerleave"]) el.addEventListener(t, () => { statsC = false; endK = null; if (ctl() && ctl().tapUp) ctl().tapUp(null); }); // a cancelled C touch never copies on a later pointerup; nor a CONNECT tap
     if (el !== canvas) el.addEventListener("contextmenu", (e) => e.preventDefault()); // #c's camera controls swallow it there; on #sh a right-click confirms a row as it did on #c, with no browser menu
   }
 }

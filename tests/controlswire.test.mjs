@@ -8,7 +8,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { SCREEN } from "../src/app/menuapp.js";
 import { mountFrames } from "../src/app/frameloop.js";
-import { mountControls, preloadControls } from "../src/app/controlswire.js";
+import { mountControls, preloadControls, preloadSwitch2 } from "../src/app/controlswire.js";
 import { mountUpdate, updVisible } from "../src/app/update.js";
 import { ANALYTICS_KEY, GA_HOST, cardVisible, mountAnalytics } from "../src/app/analytics.js";
 import { CFG } from "../src/core/config.js";
@@ -20,6 +20,7 @@ import { DEF_CONTROLS } from "../src/app/controls.js";
 import { hints, setHints } from "../src/render/hintcopy.js";
 import { createLocalPair } from "../src/net/localpair.js";
 await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
+await preloadSwitch2(); // the Switch 2 waker (Task 3), lazy too: in, so a mount where usbReach is true builds it at once
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -1177,6 +1178,342 @@ for (const via of ["LATER", "the backdrop"]) {
   m.app.screen = SCREEN.MENU; m.app.cabinetSeen = true; m.tick(1);
   m.gpr.list = [mkPad()]; m.tick(2);
   check("on MENU: no toast, the note as before", !m.app.padToast && /^CONTROLLER READY/.test(m.app.padNote), J([m.app.padToast, m.app.padNote]));
+  setHints(null);
+}
+
+// ---- Task 3: the CONNECT row (SW2), a Switch 2 Pro Controller woken over WebUSB from CONTROLS ----
+{
+  const { SW2_WORDS } = await import("../src/app/controlspage.js");
+  const J = (v) => JSON.stringify(v);
+  const flush = () => new Promise((r) => setImmediate(r));
+  /* a fake navigator.usb recording every call; res() answers requestDevice (default: the chooser stays open) */
+  const fakeUsb = () => { const u = { req: 0, got: 0, L: {}, res: null, devs: [], requestDevice() { u.req++; return u.res ? u.res() : new Promise(() => {}); }, getDevices() { u.got++; return Promise.resolve(u.devs); }, addEventListener(t, f) { u.L[t] = f; }, removeEventListener(t) { delete u.L[t]; } }; return u; };
+  const dev = (o = {}) => ({ vendorId: 0x057e, productId: 0x2069, opened: false, configuration: null, open() { if (o.open) return Promise.reject(new Error("x")); this.opened = true; return Promise.resolve(); }, selectConfiguration() { this.configuration = 1; return Promise.resolve(); }, claimInterface() { return o.claim ? Promise.reject(new Error("x")) : Promise.resolve(); }, transferOut() { return Promise.resolve({ status: "ok" }); }, releaseInterface: () => Promise.resolve(), close: () => Promise.resolve() });
+  const withNav = (usb, platform, fn) => { const had = Object.getOwnPropertyDescriptor(navigator, "usb"), hd = Object.getOwnPropertyDescriptor(navigator, "userAgentData"); navigator.usb = usb; navigator.userAgentData = { platform };
+    const back = () => { if (had) Object.defineProperty(navigator, "usb", had); else delete navigator.usb; if (hd) Object.defineProperty(navigator, "userAgentData", hd); else delete navigator.userAgentData; };
+    let r; try { r = fn(); } catch (e) { back(); throw e; } if (r && typeof r.then === "function") return r.finally(back); back(); return r; }; // an async fn keeps the stubs until it settles
+  const keyDown = (code) => (L.keydown || []).forEach((f) => f({ code, key: code, repeat: false, preventDefault: noop }));
+  const toCtl = (g) => { g.app.screen = SCREEN.SETTINGS; g.app.cabinetSeen = true; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.lastDev = "key"; g.app.confirm(); g.app.controls.tab("pad"); g.tick(1); };
+  const on7 = (g) => { g.app.controls.pick(7); return g.app.controls.view(g.app.ctlT); };
+
+  /* usbReach false: a platform not measured, no WebUSB at all */
+  for (const [nm, usb, plat] of [["Windows", fakeUsb(), "Windows"], ["no WebUSB", undefined, "macOS"]]) withNav(usb, plat, () => {
+    const g = mk({ noPad: true }); toCtl(g);
+    const v = g.app.controls.view(g.app.ctlT);
+    check(`usbReach false (${nm}): no CONNECT row on either tab, ctl.sw2().shown false, nothing throws`, g.ctl.sw2().shown === false && v.sw2.shown === false && (() => { g.app.controls.pick(7); return g.app.controls.view(g.app.ctlT).row === 7; })() && !g.app.controls.pick(8) && (g.app.controls.tab("key"), !g.app.controls.pick(8)), J(g.ctl.sw2()));
+    g.tick(2); setHints(null);
+  });
+
+  /* usbReach true, no controller: walkable in the NO CONTROLLER body; Enter, a click and a touch tap (on its pointerup) call request() once each */
+  await withNav(fakeUsb(), "macOS", async () => {
+    const u = navigator.usb, g = mk({ noPad: true }); toCtl(g);
+    check("usbReach true: ctl.sw2() shown, idle; the page view carries it", J(g.ctl.sw2()) === J({ shown: true, state: "idle", vib: false, seen: false, hid: false }) && g.app.controls.view(g.app.ctlT).sw2.shown === true, J(g.ctl.sw2()));
+    const v = on7(g);
+    check("no controller: the row is walkable (the eighth of nine), its status the help line", v.pad.state === "none" && v.row === 7, J([v.pad.state, v.row]));
+    keyDown("Enter");
+    check("Enter on CONNECT calls request() inside the keydown itself (no frame between)", u.req === 1, u.req);
+    keyDown("Enter");
+    check("a second Enter while the chooser is open opens no second one", u.req === 1, u.req);
+    g.tick(2);
+    /* the chooser answers: cancelled */
+    let rej; u.res = () => new Promise((ok, no) => { rej = no; });
+    const g2 = mk({ noPad: true }); toCtl(g2); on7(g2);
+    (L.pointerdown || []).forEach((f) => f({ pointerType: "mouse", button: 0 })); // the window's capture listener: a mouse press is a key-like press
+    g2.ctl.tap({ row: 7 }, "mouse");
+    check("a click on CONNECT calls request() on the press (a mouse pointerdown carries activation)", u.req === 2, u.req);
+    rej(Object.assign(new Error("none"), { name: "NotFoundError" })); await flush(); await flush();
+    check("cancelled: NOT CONNECTED · TRY AGAIN", g2.app.controls.view(g2.app.ctlT).status === SW2_WORDS.cancel && g2.ctl.sw2().state === "cancelled", g2.app.controls.view(g2.app.ctlT).status);
+    (L.pointerdown || []).forEach((f) => f({ pointerType: "touch" }));
+    g2.ctl.tap({ row: 7 }, "touch");
+    check("a touch pointerdown on CONNECT calls nothing (no activation), and focuses the row", u.req === 2 && g2.app.controls.view(g2.app.ctlT).row === 7, u.req);
+    g2.ctl.tapUp({ row: 6 });
+    check("its pointerup on another row: still nothing", u.req === 2, u.req);
+    g2.ctl.tap({ row: 7 }, "touch"); g2.ctl.tapUp(null);
+    check("a cancelled pointer: nothing", u.req === 2, u.req);
+    g2.ctl.tap({ row: 7 }, "touch"); g2.ctl.tapUp({ row: 7 });
+    check("a touch tap's pointerup on CONNECT calls request() once", u.req === 3, u.req);
+    /* each result shows its word */
+    for (const [res, k, mkRes] of [["woken", "ok", () => Promise.resolve(dev())], ["busy", "busy", () => Promise.resolve(dev({ claim: 1 }))], ["failed", "failed", () => Promise.resolve(dev({ open: 1 }))], ["blocked", "blocked", () => Promise.reject(Object.assign(new Error("x"), { name: "SecurityError" }))], ["cancelled", "cancel", () => Promise.reject(Object.assign(new Error("x"), { name: "NotFoundError" }))]]) {
+      u.res = mkRes;
+      const h = mk({ noPad: true }); toCtl(h); on7(h);
+      keyDown("Enter");
+      for (let i = 0; i < 20 && h.ctl.sw2().state !== res; i++) await flush();
+      check(`request() ${res}: the page shows ${SW2_WORDS[k]}`, h.ctl.sw2().state === res && h.app.controls.view(h.app.ctlT).status === SW2_WORDS[k], J([h.ctl.sw2().state, h.app.controls.view(h.app.ctlT).status]));
+      h.tick(1);
+    }
+    setHints(null);
+  });
+
+  /* a controller press is no user activation: SOUTH on CONNECT shows the words and calls nothing */
+  withNav(fakeUsb(), "macOS", () => {
+    const u = navigator.usb, g = menu();
+    g.app.screen = SCREEN.SETTINGS; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); tap(g, "S");
+    check("SOUTH opens CONTROLS on the CONTROLLER tab", g.app.screen === SCREEN.CONTROLS && g.app.ctlTab === "pad");
+    for (let i = 0; i < 6; i++) tap(g, "dD");
+    const v = g.app.controls.view(g.app.ctlT);
+    check("the D-PAD walks onto CONNECT (after VIBRATION)", v.row === 7, v.row);
+    tap(g, "S");
+    check("SOUTH on CONNECT: no request(), the page says PRESS ENTER OR CLICK", u.req === 0 && g.app.controls.view(g.app.ctlT).status === SW2_WORDS.pad && !g.app.capturing, J([u.req, g.app.controls.view(g.app.ctlT).status]));
+    tap(g, "E");
+    check("EAST still backs out", g.app.screen === SCREEN.SETTINGS, g.app.screen);
+    setHints(null);
+  });
+
+  /* auto() once, at the first deferred slot after mount, idle or not (it needs no activation: a ?play=1 / ?code= deep link is never idle before a
+     pause); a pad already showing is left alone (switch2.js) */
+  {
+    const u = fakeUsb(); u.devs = [dev()];
+    const q = [];
+    const idleNow = false;
+    const app = { screen: SCREEN.INTRO, introStage: 0, pauseView: 0, ctlT: 0, lastDev: "key", wake: noop, _feel: noop, onControls: () => false, get capturing() { return false; }, ctlBtn: () => false, ctlKey: () => false };
+    const c = mountControls({ win: null, doc: null, input: new Input(null), app, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => [], store: null, defer: (f) => q.push(f), idle: () => idleNow, art: null, usb: u, platform: "macOS", policy: null });
+    check("auto() is deferred: nothing asked of the browser at mount", u.got === 0 && q.length >= 1, J([u.got, q.length]));
+    const runQ = async () => { for (let i = 0; i < 6 && q.length; i++) q.shift()(); await flush(); await flush(); };
+    await runQ();
+    check("not idle (the show or a deep-linked run): auto() still runs once at the first deferred slot (getDevices, no chooser)", u.got === 1 && u.req === 0 && app.screen === SCREEN.INTRO && !!u.L.connect, J([u.got, u.req]));
+    for (let i = 0; i < 4; i++) { q.push(q.length ? q.shift() : noop); await runQ(); }
+    check("and never again", u.got === 1, u.got);
+    c.dispose();
+    check("dispose stops listening for a plugged pad", !u.L.connect);
+    const u2 = fakeUsb(), q2 = [];
+    mountControls({ win: null, doc: null, input: new Input(null), app, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => [], store: null, defer: (f) => q2.push(f), idle: () => true, art: null, usb: u2, platform: "Windows", policy: null });
+    for (let i = 0; i < 4 && q2.length; i++) q2.shift()();
+    await flush(); await flush();
+    check("a platform not measured: no auto(), no row", u2.got === 0, u2.got);
+    const u3 = fakeUsb(), q3 = [];
+    mountControls({ win: null, doc: null, input: new Input(null), app, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => [], store: null, defer: (f) => q3.push(f), idle: () => true, art: null, usb: u3, platform: "macOS", policy: { allowsFeature: (f) => f !== "usb" } });
+    for (let i = 0; i < 4 && q3.length; i++) q3.shift()();
+    await flush(); await flush();
+    check("the page not allowed WebUSB (permissions policy): no auto(), no row", u3.got === 0, u3.got);
+  }
+}
+
+// ---- Task 6: keyNames, the keys in the player's own layout (session only: the layout map, re-read on focus, and each plain keydown) ----
+{
+  const flush = () => new Promise((r) => setImmediate(r)), J = (v) => JSON.stringify(v);
+  const rig = (keyboard) => {
+    const w = createWorld(1, 1), inp = new Input(null), WL = {}, r = { words: null, wakes: 0 };
+    const app = { screen: SCREEN.MENU, pauseView: 0, ctlT: 0, lastDev: "key", wake: () => { r.wakes++; }, onControls: () => false, get capturing() { return false; }, ctlBtn: () => false, ctlKey: () => false };
+    const win = { addEventListener: (t, f) => { (WL[t] = WL[t] || []).push(f); }, removeEventListener: noop };
+    r.c = mountControls({ win, doc: null, input: inp, app, SCREEN, world: w, onPause: noop, getGamepads: () => null, store: null, keyboard, setHints: (x) => { r.words = x; } });
+    r.app = app; r.focus = () => (WL.focus || []).forEach((f) => f({}));
+    r.down = (code, key, mods) => { inp._onKey({ code, key, repeat: false, preventDefault: noop, ...(mods || {}) }); inp._onKeyUp({ code, key, preventDefault: noop }); };
+    return r;
+  };
+  const map = (o) => ({ getLayoutMap: () => Promise.resolve(new Map(Object.entries(o))) });
+  const a = rig(map({ KeyW: "z", KeyA: "q", KeyS: "s", KeyD: "d", Digit1: "&", KeyM: ",", Semicolon: "m" }));
+  await flush();
+  check("AZERTY layout map: MOVE reads ZQSD, its caps Z Q S D", a.words.move === "ZQSD" && J(a.words.moveCaps) === J(["Z", "Q", "S", "D"]), J(a.words));
+  check("SPACE, ARROWS, ENTER and ESC keep their fixed words", a.words.bomb === "SPACE" && a.words.moveAlt === "ARROWS" && a.words.ok === "ENTER" && a.words.back === "ESC" && a.words.pause === "P");
+  check("keyNames holds printable ASCII only, letters upper-cased: AZERTY's KeyM prints , and its 1 key &", J(a.c.keyNames()) === J({ KeyW: "Z", KeyA: "Q", KeyS: "S", KeyD: "D", Digit1: "&", KeyM: ",", Semicolon: "M" }), J(a.c.keyNames()));
+  check("a layout that changes a name wakes the shell", a.wakes > 0);
+  check("the CONTROLS page is seeded with the names", a.app.controls.view(0).names.KeyW === "Z" && a.app.controls.view(0).names.KeyA === "Q", J(a.app.controls.view(0).names));
+  const n = rig(null);
+  await flush();
+  check("no layout map: WASD as today, no names", n.words.move === "WASD" && J(n.c.keyNames()) === "{}" && n.words.remote === "Q");
+  const fa = rig(map({ KeyW: "ص", KeyA: "ش" })), ru = rig(map({ KeyW: "ц" }));
+  await flush();
+  check("a Persian or Cyrillic layout map is ignored: W stays", fa.words.move === "WASD" && ru.words.move === "WASD" && J(fa.c.keyNames()) === "{}" && J(ru.c.keyNames()) === "{}", fa.words.move + " " + ru.words.move);
+  const rj = rig({ getLayoutMap: () => Promise.reject(new Error("no")) }), th = rig({ getLayoutMap: () => { throw new Error("no"); } });
+  await flush();
+  check("a rejected or throwing layout map is caught: WASD", rj.words.move === "WASD" && th.words.move === "WASD");
+  const k = rig(null);
+  k.down("KeyQ", "a");
+  check("a keydown KeyQ printing a makes REMOTE print A", k.words.remote === "A" && k.c.keyNames().KeyQ === "A", k.words.remote);
+  k.down("Digit1", "1", { shiftKey: true });
+  k.down("KeyW", "Z", { shiftKey: true });
+  k.down("KeyE", "€", { altKey: true });
+  k.down("KeyD", "d", { getModifierState: (m) => m === "AltGraph" });
+  check("Shift + Digit1 learns nothing, nor any key under Shift, Alt or AltGraph", J(k.c.keyNames()) === J({ KeyQ: "A" }), J(k.c.keyNames()));
+  k.down("Space", " "); k.down("Escape", "Escape"); k.down("ArrowUp", "ArrowUp"); k.down("Numpad7", "7");
+  check("Space, Escape, the arrows and a numpad key (NUM 7 stays) learn nothing", J(k.c.keyNames()) === J({ KeyQ: "A" }) && k.words.bomb === "SPACE", J(k.c.keyNames()));
+  let m = { KeyW: "z" };
+  const f = rig({ getLayoutMap: () => Promise.resolve(new Map(Object.entries(m))) });
+  await flush();
+  m = { KeyW: "ц" }; f.focus(); await flush();
+  check("focus reads the layout again: a switch to Cyrillic gives W back", f.words.move === "WASD" && J(f.c.keyNames()) === "{}", f.words.move);
+  m = { KeyW: "w", KeyY: "z", KeyZ: "y" }; f.focus(); await flush();
+  check("a later QWERTZ read names Y and Z by their printed letters", J(f.c.keyNames()) === J({ KeyW: "W", KeyY: "Z", KeyZ: "Y" }), J(f.c.keyNames()));
+  check("keyNames is a copy: writing it changes nothing", (() => { const x = f.c.keyNames(); x.KeyQ = "!"; return f.c.keyNames().KeyQ === undefined; })());
+  check("never stored: the names write no key", !Object.keys(mem).some((q) => /name|layout/i.test(q)), Object.keys(mem).join());
+}
+// ---- Task 6: U is the letter printed on the key (Dvorak's U is the code KeyF, its KeyU prints G) ----
+{
+  const el = () => { const e = { L: {}, hidden: true, dataset: {}, style: {}, setAttribute: noop, appendChild: noop, addEventListener(t, f) { (e.L[t] = e.L[t] || []).push(f); }, querySelector: () => el() }; return e; };
+  const docL = {};
+  globalThis.document = { body: el(), createElement: el, addEventListener: (t, f) => { (docL[t] = docL[t] || []).push(f); } };
+  let posts = 0;
+  const reg = { waiting: { postMessage: () => { posts++; } } };
+  const app = { screen: SCREEN.MENU, capturing: false };
+  const u = mountUpdate(() => ({ app, world: { state: "PLAY" }, isRunEnd: () => false, SCREEN }), {
+    idle: (f) => f(), top: null, self: null, href: "http://127.0.0.1/index.html", location: { reload: noop },
+    navigator: { serviceWorker: { controller: {}, addEventListener: noop, register: () => Promise.resolve(reg) } } });
+  await new Promise((r) => setImmediate(r));
+  u.tick();
+  const key = (code, k, mods) => (docL.keydown || []).forEach((f) => f({ code, key: k, repeat: false, ...(mods || {}) }));
+  for (const m of ["ctrlKey", "metaKey", "altKey"]) key("KeyU", "u", { [m]: true });
+  key("KeyU", "u", { getModifierState: (q) => q === "AltGraph" });
+  check("a chorded U (Ctrl, Cmd, Alt, AltGraph) reloads nothing", posts === 0, posts);
+  key("KeyU", "g");
+  check("Dvorak: the key printed G (code KeyU) reloads nothing", u.shown === true && posts === 0, posts);
+  key("KeyF", "u");
+  check("Dvorak: the key printed U (code KeyF) reloads", posts === 1, posts);
+  delete globalThis.document;
+}
+// ---- Task 7: ALLOW VIBRATION on the CONNECT row, a Switch 2 Pro's vibration over WebHID ----
+{
+  const { SW2_WORDS } = await import("../src/app/controlspage.js");
+  const J = (v) => JSON.stringify(v);
+  const flush = () => new Promise((r) => setImmediate(r));
+  const usb = () => ({ req: 0, requestDevice() { this.req++; return new Promise(() => {}); }, getDevices: () => Promise.resolve([]), addEventListener: noop, removeEventListener: noop });
+  const hidDev = () => { const d = { vendorId: 0x057e, productId: 0x2069, opened: false, sent: [], open() { d.opened = true; return Promise.resolve(); }, sendReport(id, p) { d.sent.push([id, Array.from(p)]); return Promise.resolve(); } }; return d; };
+  const fakeHid = (pick) => ({ asked: 0, requestDevice() { this.asked++; return Promise.resolve(pick ? [pick] : []); }, getDevices: () => Promise.resolve([]), addEventListener: noop, removeEventListener: noop });
+  const sw2Pad = () => ({ id: "Switch 2 Pro Controller (Vendor: 057e Product: 2069)", connected: true, mapping: "", timestamp: 0, axes: [0, 0, 0, 0, 0, 0], buttons: Array.from({ length: 21 }, () => ({ pressed: false, value: 0 })), vibrationActuator: null, hapticActuators: [] });
+  const withNav = async (u, h, fn) => { const keep = ["usb", "hid", "userAgentData"].map((k) => [k, Object.getOwnPropertyDescriptor(navigator, k)]);
+    navigator.usb = u; navigator.userAgentData = { platform: "macOS" }; if (h) navigator.hid = h; else delete navigator.hid;
+    try { return await fn(); } finally { for (const [k, d] of keep) { if (d) Object.defineProperty(navigator, k, d); else delete navigator[k]; } } };
+  const keyDown = (code) => (L.keydown || []).forEach((f) => f({ code, key: code, repeat: false, preventDefault: noop }));
+  const open = (g) => { g.gpr.list = [sw2Pad()]; g.tick(2); g.app.screen = SCREEN.SETTINGS; g.app.cabinetSeen = true; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.lastDev = "key"; g.app.confirm(); g.app.controls.tab("pad"); g.tick(1); g.app.controls.pick(7); return g.app.controls.view(g.app.ctlT); };
+
+  await withNav(usb(), null, async () => {
+    const g = mk(), v = open(g);
+    check("no WebHID: the CONNECT row never offers ALLOW VIBRATION", v.sw2.shown === true && v.sw2.vib === false && g.ctl.sw2().vib === false, J(v.sw2));
+    check("no WebHID, a Switch 2 playing: the door reads CONNECTED, the help keeps no vibration clause", v.sw2.seen === true && v.sw2.hid === false && (await import("../src/render/controlsgeo.js")).statusOf({ ...v, status: "" }, { id: "SW2" }) === SW2_WORDS.help, J(v.sw2));
+    setHints(null);
+  });
+
+  const pick = hidDev();
+  await withNav(usb(), fakeHid(pick), async () => {
+    const u = navigator.usb, h = navigator.hid, g = mk(), v = open(g);
+    check("WebHID, a Switch 2 Pro playing, none allowed: the CONNECT row offers ALLOW VIBRATION", v.sw2.vib === true && v.row === 7 && g.ctl.rumbleInfo().route === null, J([v.sw2, v.row, g.ctl.rumbleInfo().route]));
+    g.app.lastDev = "pad"; g.app.confirm();
+    check("a controller press on ALLOW VIBRATION opens no chooser: PRESS ENTER OR CLICK", h.asked === 0 && u.req === 0 && g.app.controls.view(g.app.ctlT).status === SW2_WORDS.pad, J([h.asked, g.app.controls.view(g.app.ctlT).status]));
+    keyDown("Enter");
+    check("Enter on ALLOW VIBRATION asks for the HID device inside the keydown, never the USB chooser", h.asked === 1 && u.req === 0, J([h.asked, u.req]));
+    for (let i = 0; i < 10 && !pick.opened; i++) await flush();
+    await flush(); g.tick(1);
+    const w = g.app.controls.view(g.app.ctlT);
+    check("allowed: the device is open, the row says CONNECTED, the offer is gone", pick.opened && w.status === SW2_WORDS.ok && w.sw2.vib === false, J([pick.opened, w.status, w.sw2]));
+    const door = (await import("../src/render/controlsgeo.js")).rowsOf(w).find((q) => q.id === "SW2").door;
+    check("a pad already playing (never woken here, state idle), then ALLOW VIBRATION allowed: the door and the note both read CONNECTED", w.sw2.state === "idle" && w.sw2.seen === true && door === SW2_WORDS.ok && w.status === SW2_WORDS.ok, J([w.sw2, door, w.status]));
+    check("WebHID: the view says so, so the help names the vibration prompt", w.sw2.hid === true && (await import("../src/render/controlsgeo.js")).statusOf({ ...w, status: "" }, { id: "SW2" }) === SW2_WORDS.helpVib);
+    check("the pad now offers dual-rumble (the stand-in) and VIBRATION reads available", g.ctl.rumbleInfo().route === "dual-rumble" && w.pad.rumble === true, J([g.ctl.rumbleInfo(), w.pad.rumble]));
+    check("allowing played one test buzz over HID report 0x02", pick.sent.length >= 1 && pick.sent.every(([id]) => id === 0x02), pick.sent.length);
+    g.ctl.dispose();
+    setHints(null);
+  });
+
+  await withNav(usb(), fakeHid(null), async () => {
+    const h = navigator.hid, g = mk(); open(g);
+    keyDown("Enter");
+    await flush(); await flush(); g.tick(1);
+    const w = g.app.controls.view(g.app.ctlT);
+    check("the vibration chooser closed: no NOT CONNECTED note, the row still offers ALLOW VIBRATION", h.asked === 1 && w.status !== SW2_WORDS.cancel && w.sw2.vib === true, J([h.asked, w.status, w.sw2]));
+    setHints(null);
+  });
+}
+// ---- R-LABELS (owner 2026-11-14): the hints name the controller in hand's buttons; one family switch re-lays them once ----
+{
+  const g = mk();
+  g.pad.id = "Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 0b13)";
+  tap(g, "S"); g.tick(60);
+  check("an Xbox pad: the hints read A to confirm, B to go back, BOMB A", hints().dev === "pad" && hints().ok === "A" && hints().back === "B" && hints().bomb === "A" && g.app.padFamily === "xbox", JSON.stringify(hints()));
+  const seen = [];
+  const watch = (n) => { for (let i = 0; i < n; i++) { g.tick(); if (seen[seen.length - 1] !== hints()) seen.push(hints()); } };
+  seen.push(hints());
+  g.gpr.list = [null]; watch(10);
+  check("unplugged: the words stay the last pad's, nothing re-laid", seen.length === 1 && hints().ok === "A", seen.length);
+  const ps = mkPad(); ps.id = "054c-0ce6-DualSense Wireless Controller";
+  g.gpr.list = [ps]; g.pad = ps; watch(10);
+  check("a PlayStation pad plugged in: the hints re-lay once and read CROSS / CIRCLE, with the word said", seen.length === 2 && hints().ok === "CROSS" && hints().back === "CIRCLE", JSON.stringify([seen.length, hints().ok]));
+  const gen = mkPad();
+  g.gpr.list = [gen]; g.pad = gen; watch(10);
+  check("a generic pad after it: once more, and the words are the positions exactly as before", seen.length === 3 && JSON.stringify(hints()) === JSON.stringify({ dev: "pad", ok: "SOUTH", back: "EAST", tab: "SHOULDERS", pause: "START", bomb: "SOUTH", throw: "WEST", remote: "EAST", move: "D-PAD", moveAlt: "L-STICK", moveCaps: null, tapPage: false }), JSON.stringify(hints()));
+  const ns = mkPad(); ns.id = "Xbox 360 Controller (Vendor: 045e Product: 028e)"; ns.mapping = "";
+  g.gpr.list = [ns]; g.pad = ns; watch(10);
+  check("a non-standard Xbox pad: its own order, so the positions, not the family's letters", hints().ok === "SOUTH", hints().ok);
+}
+
+// ---- fix round C (2026-11-14): honest activation (M2), no switch2.js fetch off macOS (M4), a throwing layout handler caught (K3) ----
+{
+  const J = (v) => JSON.stringify(v), flush = () => new Promise((r) => setImmediate(r));
+  const fakeUsb = () => ({ req: 0, requestDevice() { this.req++; return new Promise(() => {}); }, getDevices: () => Promise.resolve([]), addEventListener: noop, removeEventListener: noop });
+  const withUa = async (ua, fn) => { const keep = ["usb", "userAgentData", "userActivation"].map((k) => [k, Object.getOwnPropertyDescriptor(navigator, k)]);
+    navigator.usb = fakeUsb(); navigator.userAgentData = { platform: "macOS" }; if (ua) navigator.userActivation = ua; else delete navigator.userActivation;
+    try { return await fn(navigator.usb); } finally { for (const [k, d] of keep) { if (d) Object.defineProperty(navigator, k, d); else delete navigator[k]; } } };
+  const keyDown = (code) => (L.keydown || []).forEach((f) => f({ code, key: code, repeat: false, preventDefault: noop }));
+  const toSw2 = (g) => { g.app.screen = SCREEN.SETTINGS; g.app.cabinetSeen = true; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.lastDev = "key"; g.app.confirm(); g.app.controls.tab("pad"); g.tick(1); g.app.controls.pick(7); };
+  const ua = { isActive: false };
+  await withUa(ua, async (u) => {
+    const g = mk({ noPad: true }); toSw2(g);
+    keyDown("Enter");
+    check("M2: the browser says no user activation (a synthetic key): Enter on CONNECT opens no chooser", u.req === 0, u.req);
+    ua.isActive = true;
+    g.app.lastDev = "pad"; g.app.confirm();
+    check("M2: a controller press inside a live activation window still opens no chooser, and says PRESS ENTER OR CLICK", u.req === 0, u.req);
+    keyDown("Enter");
+    check("M2: the browser says active: Enter on CONNECT opens the chooser once", u.req === 1, u.req);
+    setHints(null);
+  });
+  await withUa(null, async (u) => {
+    const g = mk({ noPad: true }); toSw2(g);
+    keyDown("Enter");
+    check("M2: no navigator.userActivation: today's rule (a key press is activation)", u.req === 1, u.req);
+    setHints(null);
+  });
+
+  /* M4: a fresh wire instance per mount (its switch2.js slot empty) with a spy import: off macOS, or where the policy refuses WebUSB, never fetched */
+  const W2 = await import("../src/app/controlswire.js?m4");
+  let fresh = 0;
+  const { usbReach } = await import("../src/app/switch2.js");
+  const mount = async (platform, policy) => {
+    const Wi = await import("../src/app/controlswire.js?m4-" + ++fresh);
+    const r = { calls: 0, q: [] };
+    const app = { screen: SCREEN.MENU, introStage: 0, pauseView: 0, ctlT: 0, lastDev: "key", wake: noop, _feel: noop, onControls: () => false, get capturing() { return false; }, ctlBtn: () => false, ctlKey: () => false };
+    r.c = Wi.mountControls({ win: null, doc: null, input: new Input(null), app, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => [], store: null, defer: (f) => r.q.push(f), idle: () => true, art: null,
+      usb: fakeUsb(), platform, policy, importSwitch2: () => { r.calls++; return import("../src/app/switch2.js"); } });
+    r.app = app;
+    return r;
+  };
+  const drain = async (r) => { for (let i = 0; i < 6 && r.q.length; i++) r.q.shift()(); r.app.controls.open("pad"); await flush(); await flush(); };
+  for (const [nm, plat, pol] of [["Windows", "Windows", null], ["Linux", "Linux", null], ["Android", "Android", null], ["macOS, the policy refusing usb", "macOS", { allowsFeature: (f) => f !== "usb" }]]) {
+    const r = await mount(plat, pol); await drain(r);
+    check(`M4: ${nm}: switch2.js is never fetched (idle warm-up nor CONTROLS opening), no row`, r.calls === 0 && r.c.sw2().shown === false, r.calls);
+    r.c.dispose();
+  }
+  const mac = await mount("macOS", null); await drain(mac);
+  check("M4: macOS with WebUSB allowed: fetched once, the row shows", mac.calls === 1 && mac.c.sw2().shown === true, J([mac.calls, mac.c.sw2()]));
+  mac.c.dispose();
+  const pol = { allowsFeature: (f) => f !== "usb" };
+  check("M4: the wire's pre-check is usbReach's rule", [["macOS", null], ["macOS", pol], ["Windows", null], ["", null]].every(([p, q]) => W2._sw2Could({ usb: {}, policy: q, platform: p }) === usbReach({ usb: {}, policy: q, platform: p })) && W2._sw2Could({ usb: null, policy: null, platform: "macOS" }) === false);
+  check("M4: the platform from client hints, else a Mac OS X user agent", W2._platformOf({ userAgentData: { platform: "Windows" }, userAgent: "Mac OS X" }) === "Windows" && W2._platformOf({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", platform: "" }) === "macOS" && W2._platformOf({ userAgent: "Mozilla/5.0 (X11; Linux x86_64)", platform: "Linux x86_64" }) !== "macOS");
+
+  /* K2: the wire hands the page one names object until a name changes (copy on write, namesV) */
+  {
+    let m = { KeyW: "z" };
+    const app = { screen: SCREEN.MENU, pauseView: 0, ctlT: 0, lastDev: "key", wake: noop, onControls: () => false, get capturing() { return false; }, ctlBtn: () => false, ctlKey: () => false };
+    const WL = {}, win = { addEventListener: (t, f) => { (WL[t] = WL[t] || []).push(f); }, removeEventListener: noop };
+    const c = mountControls({ win, doc: null, input: new Input(null), app, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => null, store: null, keyboard: { getLayoutMap: () => Promise.resolve(new Map(Object.entries(m))) } });
+    await flush();
+    const a = app.controls.view(0).names, b = app.controls.view(1).names;
+    check("K2: two steady frames: one names object from the wire", a === b && a.KeyW === "Z", J(a));
+    m = { KeyW: "w", KeyY: "z" }; (WL.focus || []).forEach((f) => f({})); await flush();
+    const d = app.controls.view(2).names;
+    check("K2: a layout change: a new names object, the old one untouched", d !== a && d.KeyY === "Z" && a.KeyW === "Z" && app.controls.view(3).names === d, J([a, d]));
+    c.dispose();
+  }
+
+  /* K3: a throw inside the layout map's success handler (syncWords / setHints) is caught, never an unhandled rejection */
+  let unh = 0;
+  const onUnh = () => { unh++; };
+  process.on("unhandledRejection", onUnh);
+  let n = 0;
+  const app = { screen: SCREEN.MENU, pauseView: 0, ctlT: 0, lastDev: "key", wake: noop, onControls: () => false, get capturing() { return false; }, ctlBtn: () => false, ctlKey: () => false };
+  mountControls({ win: null, doc: null, input: new Input(null), app, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => null, store: null,
+    keyboard: { getLayoutMap: () => Promise.resolve(new Map([["KeyW", "z"]])) }, setHints: () => { if (++n > 1) throw new Error("boom"); } });
+  await flush(); await flush(); await flush();
+  process.off("unhandledRejection", onUnh);
+  check("K3: setHints throwing inside the layout handler: caught, no unhandled rejection", n >= 2 && unh === 0, J([n, unh]));
   setHints(null);
 }
 

@@ -16,6 +16,54 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — final whole-branch review fixes (every-controller)
+- Re-review regression fixed: `shortcutOf` judges binds only for a real keystroke (a key string); a tap or controller press (`onUiKey(code)`, no key) keeps KeyR / KeyC / KeyT / KeyB on a bound code. menuapp `boundKey` reads the wire's live `controls.key`, no view per keydown.
+- A key bound to play (MOVE, BOMB THROW REMOTE PAUSE) is never a shortcut letter R Y N C B M T U whatever its layout prints (`controls.js` `shortcutOf`, menuapp `boundKey`; main, menuapp, analytics, update, wire chord guard): Colemak S moves, never resets the camera or STATS; silent J / X aliases left out so Colemak / Workman keep an N for NO THANKS. Switch 2 `auto()` at the first deferred slot, not the first idle (deep links wake); connect() `.catch`; CHANGELOG / AGENTS truthful; 779 tests.
+
+## 2026-11-14 — CONTROLS fix round C (review minors)
+- Chooser activation is `navigator.userActivation.isActive` where present (a pad press never), switch2.js never fetched off macOS / policy-refused WebUSB (wire pre-check = usbReach's rule), status/rule lines step down by whole words keeping the full stop, PAUSE view 3 taps through `ctlAt`, names copy-on-write so a steady CONTROLS frame allocates no names (padart `legSig` memo too), layout-map handler throws caught.
+- Follow-up (lead ruling): a line whose first sentence will not fit whole drops (never a shortened rule). Capture plate (no room for the drawing, e.g. a landscape phone #c): its `·` separators t2 (CONST.off was 4.46-4.48 on bedB), a chosen pair (lit vs quiet button), foot cap fills; screens.mjs CTL_ROW exempts info / touch / gap where no tab rect is recorded.
+
+## 2026-11-14 — R-LABELS review fixes (round B)
+- `familyOf` reads Firefox macOS's unpadded ids (`54c-9cc-`) and memoizes per id; LEVEL SELECT's pad help names LT RT / L2 R2 / ZL ZR; `refuseBtnFor` names START per family (capture never reaches it: START cancels); hints' unread `say` gone; `GLYPH_CHAR` / `FAMILY_LABEL` pinned in words.test; ANALYTICS pad note now `ANSWER THE CARD · Y OR N KEY` (fits one line at 600x520 as before); kit `runW` / `runText` draw glyphs only with the caller's `ps` flag (PAUSE foot, HUD toast) and restore textAlign / textBaseline.
+
+## 2026-11-14 — switch2 fix A (Task 7 review minors)
+- `switch2.js`: halt writes a zero only after a buzz (quiet at OFF), stop() closes the HID device and wins over auto()/adopt, playEffect with no device resolves complete, dead `cur.me`/`token` removed; four tests.
+
+## 2026-11-14 — v219 prepared: every controller and keyboard (plan Task 8)
+- Merged main (v218) into `feature/every-controller` (3 conflicts: hud.js tip fit, screens.mjs padtoast, MEMORY), bumped `CACHE_NAME` / `REV` to v219; CHANGELOG (not released yet), privacy.md Controller access (per-site USB / HID grant, revoke paths), AGENTS CONTROLS (waker, CONNECT / ALLOW VIBRATION, stand-in actuator, letter rule, SDL credit), architecture input seam, README controls; `analytics.test` pins no controller field in events or user properties. 770 tests. Captures `--strict`: desk clean; phone `controlscapture` fails text 4.48 (the cancel line's `·` on the capture plate) + 5 skips when a controller is the last device (a real state: phone, rebind THROW with a pad), same on the pre-merge branch. Open: that gap, owner acceptance (Step 4, batched), the merge to main and push.
+
+## 2026-11-14 — button labels for the controller in your hands (R-LABELS, plan Task 9)
+- `src/app/padfamily.js` `familyOf` + `FAMILY_LABEL` (words.js `PAD_FAMILY_WORDS` twin); hints, CONTROLS, PAUSE, MENU foot, run ends, RECORDS, LEVEL SELECT help and the update card read A / ✕ / B; a generic pad unchanged. Kit `glyph` cross/circle/square/triangle; fix round 1: PAUSE's foot and the HUD toast paint the glyph inline too (kit `runText`), the live region keeps the word. Cache bump and owner check open (batched).
+
+## 2026-11-14 — Task 6 rulings: refusal by printed letter, ASCII names
+- `refuseKey` judges R Y N C B M T U by the printed letter when known (QWERTZ KeyY binds, KeyZ refused), the code otherwise; stored binds are checked by place only, never dropped. `layoutName` takes any printable ASCII (AZERTY KeyM prints ","), so no letter prints twice.
+
+## 2026-11-14 — keyboard in the player's own layout (plan Task 6)
+- Printed keys follow the layout (controlswire `keyNames()`: layout map + plain keydowns, session only, A-Z/0-9) through `wordsOf(dev, c, names)`, the CONTROLS page and the keyboard drawing; letter shortcuts (R C T Q E M B Y N U) fire on the printed letter (`controls.js` `letterOf`), binds and movement stay on `code`; a key printing a shortcut letter is refused as a bind too. Cache bump and the AZERTY owner check are left to the batch.
+
+## 2026-11-14 — Switch 2 vibration over WebHID (plan Task 7)
+- `switch2.js` `rumblePacket` (the trial page's felt HD-rumble encoder) and a `dual-rumble` stand-in actuator (12 ms stream, one zero at the end / reset / hidden / pagehide / HID disconnect); `standardPads(get, actuatorFor)` puts it on a Switch 2 Pro with none; the CONNECT row's door reads ALLOW VIBRATION where WebHID is present and none is allowed. Cache bump and the owner check (Step 5) are open, batched by the lead.
+- Fix round (lead rulings): the door reads CONNECTED whenever a Switch 2 is in getGamepads (`sw2.seen`, both door sites), the foot reads ALLOW ENTER on ALLOW VIBRATION (`SW2_WORDS.allow`), the help names the vibration prompt only with WebHID (`help` / `helpVib`, `controlsgeo` `sw2Help`); one HID device per waker noted in the `switch2.js` header.
+
+## 2026-11-14 — pad probe review fixes
+- `tools/pads/probe.html`: incomplete rows print as a commented INCOMPLETE block, two buttons in one step redo it, `re` only from a real vendor/product pair, button beats hat, stick hint says release.
+
+## 2026-11-14 — pad probe and the controller matrix (plan Task 4)
+- `tools/pads/probe.html` (dev-only, not in SRC) walks a pad and prints its `KNOWN` row; `docs/controllers.md` is the matrix, seeded from three real measurements, all else not measured. Step 3 (owner runs the probe on every pad) is open.
+
+## 2026-11-14 — CONNECT row rulings applied (plan Task 3)
+- SW2_WORDS.help is "It needs a USB cable. Your browser asks once which controller." (Task 7 extends it); DESK_SHORT now only for a desk already at 0.8 <= u < 1, so no window changes form (a 648-664 tall touch shell box had flipped phone -> desk).
+
+## 2026-11-14 — CONTROLS: the CONNECT row (plan Task 3)
+- SW2 row (SWITCH 2 CONTROLLER · CONNECT) on the CONTROLLER tab after VIBRATION, only where switch2.js usbReach is true (wire loads it in idle / on open; `auto()` once at the title; `ctl.sw2()`). Enter / click / touch pointerup open the chooser; a pad press shows PRESS ENTER OR CLICK. Desk give-way `DESK_SHORT` keeps 1366x657 at u 1; help sits in the pane's rule; a phone drawing under `LOCK_MIN` drops the locked body. Captures `controlsconnect` + `usb` recipe, gates strict 0 fail. No cache bump (batched).
+
+## 2026-11-14 — switch2.js, the WebUSB waker (plan Task 2)
+- `src/app/switch2.js` (lazy, in SRC / LATER / loadbar LAZY; pwa off-boot count 24 -> 25): `initPackets` (SDL's start-up, format 09), `wake` (claim 1, send, release, close), `usbReach` (WebUSB + policy + macOS only), `createWaker` (`auto` skips a pad already playing, `request` the chooser with cancelled / busy / failed / blocked). 9 tests, 734 pass. Not wired to any screen yet (Task 3, waits on the owner's R-NAME ruling). Whether the pad stays awake after `close()` is Task 1b, still open.
+
+## 2026-11-14 — Switch 2 Pro layout fix committed
+- On branch `feature/every-controller` (worktree `.claude/worktrees/every-controller`): `KNOWN` / `asStandard` / `standardPads` now also require the 21-button, 6-axis shape; architecture line restored. No cache bump yet (no player can wake the pad until the plan's CONNECT task). Plan: `docs/superpowers/plans/2026-11-14-every-controller-and-keyboard.md`, under HoE and staff review.
+
 ## 2026-11-14 — Docs sweep to the live v218
 - Owner: "update all memories and changelogs and also all related docs". Player README (toast over the score row, REAL 3D's wider desktop stage, floor-only menu room, 5-minute update checks and the self-repair), architecture (toast place, the wider stage), docs/README (README's facts and the voice rule in the game's words), CONTRIBUTING and the bug-report template (art style, level and difficulty, modifiers and game speed), AGENTS (the three vetoes ruled in v217). CHANGELOG already carries v215-v218. Auto-memory: a feedback note on accountable release notes; the controls note points at the separate every-controller session.
 

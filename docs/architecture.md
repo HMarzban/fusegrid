@@ -50,7 +50,7 @@ START) beside the same card. On a phone both become one column, and on a
 landscape phone a grid of tiles. Any teaser built from your record (a top
 score, a best time) reads only runs you played, never placeholders.
 
-The build you're running is named on the main menu (`v218` today): at the end
+The build you're running is named on the main menu (`v219` today): at the end
 of the desktop foot, or on the SOURCE row's teaser on a phone. SETTINGS shows
 it as its `BUILD` kicker and the NEW VERSION READY card says which build you're on.
 There is one source for it: `shellview.js` and `update.js` both derive it
@@ -239,7 +239,7 @@ chip plate during play, giving the touch strip a bigger thumb area below. The
 geometry is a pure function tested in Node; how it feels in the hand still
 needs a real phone.
 
-### The input seam: keys, fingers and pads (shell v201)
+### The input seam: keys, fingers and pads (shell v201, every controller v219)
 
 **The sim never knows a pad exists.** `step()` gets the same `{move, fire, firePrev, shift, remote}` it
 always got, so replays and hashes hold. A pad is one more writer into [`input.js`](../src/input.js), with
@@ -250,8 +250,34 @@ its own held axes and latches, OR-merged with keys. A held key beats the pad on 
   SENSITIVITY has five levels (MIN 60, LOW 40, MEDIUM 25, HIGH 15, MAX 8 percent), each with its own release and turn
   (1.40x to 1.10x). No response curve: `step()` gets -1, 0 or 1, so stick distance never reaches the sim. On a menu the
   first engage takes vertical unless x leads y by 1.25x. A pad the browser passes in its own HID order (no `standard`
-  mapping) that `gamepad.js` knows, today the Switch 2 Pro Controller, is put back in the standard order before anything
-  reads it, so its D-PAD, triggers and sticks land where every other pad's do.
+  mapping) that `gamepad.js` `KNOWN` lists by id and by its button and axis counts, today the Switch 2 Pro Controller,
+  is put back in the standard order before anything reads it, so its D-PAD, triggers and sticks land where every other
+  pad's do.
+- [`switch2.js`](../src/app/switch2.js) (shell v219, lazy) wakes a Switch 2 Pro Controller over WebUSB, because the
+  browser lists that pad only after a USB start-up sequence. The packets are ported from
+  [SDL](https://github.com/libsdl-org/SDL) (`src/joystick/hidapi/SDL_hidapi_switch2.c`, zlib licence) and altered: the
+  report-format packet asks for format 09, not SDL's 05, so the pad sends the HID report the browser maps to a gamepad.
+  The HD rumble encoder behind its vibration is SDL's too. The CONNECT row on CONTROLS opens Chrome's chooser inside the
+  press (a controller press carries no user activation, so the row asks for Enter or a click); after one grant the game
+  wakes the pad by itself on every plug-in. The row shows only on macOS with WebUSB, the one platform measured. The pad
+  offers no vibration actuator, so ALLOW VIBRATION asks for its HID device and the waker hands `gamepad.js` a stand-in
+  `dual-rumble` actuator that streams rumble reports; `rumble.js` cannot tell it from a real one. Trade-off: one HID device
+  per page, so two Switch 2 Pros share one buzz; Bluetooth is not seen at all. What Chrome remembers is in
+  [privacy.md](privacy.md#controller-access).
+- [`padfamily.js`](../src/app/padfamily.js) reads the controller's vendor id (else its name) and names its
+  buttons the way the player's controller prints them: Xbox A / B / X / Y, PlayStation ✕ ○ □ △ (painted as glyphs, the
+  word kept for screen readers), Nintendo B / A / Y / X, and the old position names (SOUTH, EAST...) for anything else.
+  Binds and the store stay positions, so a rebind never depends on the family. The id is matched there only: never
+  printed, stored or sent to analytics. Steam Input and DS4Windows present themselves as Xbox pads, so they read as one.
+- The keyboard speaks the player's layout. [`controlswire.js`](../src/app/controlswire.js) builds a session-only map
+  from code to printed letter (the browser's layout map plus each plain keypress), so CONTROLS and every hint print the
+  player's own keys; the letter shortcuts (Y / N on the privacy card, U on the update card, R, C, B, M, T, Q, E) answer the
+  printed letter through `controls.js` `letterOf`, while binds and movement stay on the physical key. A key bound to play
+  is never a shortcut letter that no bind may print (R, Y, N, C, B, M, T, U; `shortcutOf`): Colemak's MOVE DOWN prints r and
+  stays a move, never a camera reset or a STATS wipe. A chorded letter answers no card.
+- [`docs/controllers.md`](controllers.md) is the matrix of pads and browsers actually measured, filled from
+  [`tools/pads/probe.html`](../tools/pads/probe.html), a dev page that walks one pad and prints its `KNOWN` row. A pad
+  whose D-PAD arrives as a hat axis is parked until one is captured.
 - [`padroute.js`](../src/app/padroute.js) decides what a press means on the current screen. A press in one
   layer is spent there, so SOUTH that starts a run plants nothing.
 - [`controls.js`](../src/app/controls.js) holds the binds and their rules (`nb.controls.v1`, kept by a cabinet
@@ -281,7 +307,8 @@ after the title, so CONTROLS can open on the kit's LOADING plate. Its taps follo
 while the files are on their way, and once they have failed (the plate reads DID NOT LOAD) a tap off the plate backs out,
 so nobody is stuck on it. Keyboard diagonals stay about 1.41x while a pad is 4-way, because changing keys would alter feel
 and old bests. Every pad test uses a fake pad. The owner has played on a real controller and reports it works; the details
-are not in yet, so the human checks stay open, and nobody has yet confirmed vibration felt on real hardware. The
+are not in yet, so the human checks stay open. The owner felt the VIBRATION row's test buzz on a real controller
+(2026-11-03) and the Switch 2 encoder on a trial page (2026-11-14); the in-run patterns are not reported yet. The
 [record](superpowers/specs/2026-11-06-controls-built.md) has the rulings and the go/no-go list.
 
 ## 🧱 The board look (shell v185)

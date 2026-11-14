@@ -12,7 +12,7 @@ import { PACT } from "../src/core/pact.js";
 import { POWER, FOES } from "../src/core/entities.js";
 import { TILE_HELP, TILE_NAME, tileTip, FEAT_PROFILE } from "../src/core/feat.js";
 import { SCREEN, ITEMS, OPT_ROWS, PAUSE_ITEMS, GUIDE_ROWS, LEVEL_ROWS, optRows, createMenuApp } from "../src/app/menuapp.js";
-import { createControlsPage } from "../src/app/controlspage.js";
+import { createControlsPage, SW2_WORDS as SW2_APP } from "../src/app/controlspage.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
 import { wordsOf } from "../src/app/hints.js";
 import { statsRows, statsNotes, statsPayload, clampStats } from "../src/app/stats.js";
@@ -170,6 +170,8 @@ check("POWER (the pickup) is POWER BOMB in POWER[].name, still the one source", 
       lines[2] === "BESTS · NO " + W.LABEL.MODIFIERS + " · " + W.speedTag(0) + " · " + W.diffTag(0) + " 1840/" + W.LABEL.LEVEL + " 5 · " + W.diffTag(1) + " 2210/" + W.LABEL.LEVEL + " 4 · " + W.diffTag(2) + " — · " + W.LABEL.LEVEL + " 1 " + W.diffTag(0) + " BEST TIME 0:38.9", J(lines));
 }
 check("daily.js share line (what C copies at a daily WIN / LOSE) says LEVEL n", dailyStamp("2026-11-10", 3, 1840) === "DAILY 2026-11-10 · " + W.LABEL.LEVEL + " 3 · 1840 · https://hmarzban.github.io/fusegrid/", dailyStamp("2026-11-10", 3, 1840));
+check("SW2_WORDS (Task 7): ALLOW on the ALLOW VIBRATION row's foot, the help line plain and with the vibration clause", W.SW2_WORDS.vib === "ALLOW VIBRATION" && W.SW2_WORDS.allow === "ALLOW" && W.SW2_WORDS.help === "It needs a USB cable. Your browser asks once which controller." && W.SW2_WORDS.helpVib === "It needs a USB cable. Your browser asks once which controller, and once more for vibration.", J(W.SW2_WORDS));
+check("controlspage.js SW2_WORDS (the CONNECT row, Task 3) = words.js SW2_WORDS, both frozen", J(SW2_APP) === J(W.SW2_WORDS) && Object.isFrozen(W.SW2_WORDS) && Object.isFrozen(SW2_APP) && W.SW2_WORDS.row === "SWITCH 2 CONTROLLER", J([SW2_APP, W.SW2_WORDS]));
 check("gfx.js lock line names ART STYLE and SETTINGS", LOCK_3D === "REAL 3D ONLY · CHANGE " + W.LABEL.ART_STYLE + " IN " + W.LABEL.SETTINGS, LOCK_3D);
 
 /* ---- the old words ---- */
@@ -467,6 +469,9 @@ const SRC_ALLOW = [
   ["src/core/pact.js", /^export const PACT_NAME=/, /^(BARE|THIN)$/], ["src/render/scenes.js", /chip\(314, 64, "LV"/, /^LV$/],
   ["src/render/fx.js", /cap=\(v,m\)=>|CFG\.MAX_SPEED\?/, /^MAX$/], ["src/app/gfx.js", /^\s*fps: Object\.freeze\(\["30", "60", "MAX"\]\)/, /^MAX$/],
   ["src/app/controls.js", /^export const SENS_LEVELS = /, /^MAX$/], ["src/render/controlsgeo.js", /^export const SENS_LEVELS = /, /^MAX$/],
+  /* R-LABELS (owner 2026-11-14): a controller's own button names are what the player's pad prints, not the old level / settings words: L1 R1 L2 R2
+     and OPTIONS on a PlayStation pad, PLUS (said for Nintendo's +), in the one family table and its src/app twin */
+  ["src/app/padfamily.js", /^\s*(playstation|nintendo): \{/, /^([LR][12]|OPTIONS|PLUS)$/], ["src/render/words.js", /^\s*(playstation|nintendo): famRow\(/, /^([LR][12]|OPTIONS|PLUS)$/],
 ];
 const OLD_CAPS = new RegExp(OLD.source);
 /* a level / heat / pace shorthand built at runtime: a literal that ends in a lone L, R or LV just before a "+", or a template
@@ -495,7 +500,7 @@ check("source grep (tripwire): no string literal in src/ carries an old word out
     ["BACK", /probe\.rect\("BACK"|name: "BACK"|\["BACK", /], ["PAGE UP", /"PAGE UP"/], ["PAGE DOWN", /"PAGE DOWN"/], // probe rect names (tools/ui/lib/screens.mjs)
     ...["BLOOM", "GLIDE", "BELT", "STREAM", "PLATE", "QUICK", "PORTAL", "GATE"].map((k) => [k, /^export const FLOOR_ROWS = /]), // TILE_NAME's keys (core/feat.js)
     ["ICE", /b\.name === "ICE"/], // a BIOMES name key (core/config.js)
-    ...["MOVE", "BOMB", "THROW", "REMOTE", "PAUSE", "CONFIRM", "SENSITIVITY", "VIBRATION", "RESET"].map((k) => [k, /^export const GROUP = |\.id === "/]), // the CONTROLS row ids (controlsgeo rowsOf; the labels come from it), Task 6.3
+    ...["MOVE", "BOMB", "THROW", "REMOTE", "PAUSE", "CONFIRM", "SENSITIVITY", "VIBRATION", "SW2", "RESET"].map((k) => [k, /^export const GROUP = |\.id === "/]), // the CONTROLS row ids (controlsgeo rowsOf; the labels come from it), Task 6.3; SW2 the CONNECT row, every-controller Task 3
     ["LOSE", /w\.state === "LOSE"/], ["WIN", /w\.state === "WIN"/], // world.state values (core/sim.js), read by the run ends' mode (endgeom endMode)
   ]);
   const hits = [];
@@ -519,6 +524,18 @@ check("source grep (tripwire): no string literal in src/ carries an old word out
     kc.BACK_TAP === W.BACK_TAP && kc.FOOT_TAP === W.FOOT_TAP && kc.LOAD_WORDS === W.LOAD_WORDS && gp.BACK_TAP === W.BACK_TAP && settingsPage.COPY === W.SETTINGS_WORDS && kp.pageLabel(1, 3) === W.PAGE + " 2 " + W.OF + " 3" &&
     kc.LOOK_NAME.px === W.ART_STYLES[1] && kc.LOOK_NAME["3d"] === W.ART_STYLES[2]);
   check("HOW TO's touch note names the touch D-PAD (never PAD alone: a controller is CONTROLLER)", W.GUIDE_WORDS.NOTE_TAP === "TOUCH · D-PAD MOVES · RIGHT BUTTON BOMBS" && !/(^|[^-])\bPAD\b/.test(W.GUIDE_WORDS.NOTE_TAP));
+}
+
+/* ---- R-LABELS fix round B (2026-11-14): the family tables in src/app pinned to their render twins; the family-aware lines ---- */
+{
+  const PF = await import("../src/app/padfamily.js"), MA = await import("../src/app/menuapp.js");
+  check("padfamily FAMILY_LABEL is words.js PAD_FAMILY_WORDS word for word", J(PF.FAMILY_LABEL) === J(W.PAD_FAMILY_WORDS), J(PF.FAMILY_LABEL));
+  check("padfamily GLYPH_CHAR is words.js PAD_GLYPH_CHAR, and its words are the kit's painted glyph words", J(PF.GLYPH_CHAR) === J(W.PAD_GLYPH_CHAR) && J(Object.keys(W.PAD_GLYPH_CHAR)) === J(Object.keys((await import("../src/render/kit/paint.js")).PAD_GLYPH)), J(PF.GLYPH_CHAR));
+  const ph = (f) => W.padHelp(f);
+  check("LEVEL SELECT's pad help names the triggers the controller in hand prints; a generic pad reads TRIGGERS as before",
+    ph("xbox") === "LT RT pick a modifier, Y toggles it." && ph("playstation") === "L2 R2 pick a modifier, TRIANGLE toggles it." && ph("nintendo") === "ZL ZR pick a modifier, X toggles it." && ph("generic") === W.LEVEL_WORDS.PAD_HELP && ph() === "TRIGGERS pick a modifier, NORTH toggles it.", J(["xbox", "playstation", "nintendo"].map(ph)));
+  check("the capture refusal for START: generic as before, every family its own START word", PF.refuseBtnFor("START", "generic") === "START IS PAUSE · PICK ANOTHER" && ["xbox", "playstation", "nintendo"].every((f) => PF.refuseBtnFor("START", f) === W.padWord("START", f) + " IS PAUSE · PICK ANOTHER"));
+  check("SETTINGS' ANALYTICS pad note names the keyboard (an Xbox pad has its own Y), menuapp's literal is words.js ANA_NOTE", MA.ANA_NOTE === W.SETTINGS_WORDS.ana && /\bKEY\b/.test(W.SETTINGS_WORDS.ana) && /\bY\b/.test(W.SETTINGS_WORDS.ana) && /\bN\b/.test(W.SETTINGS_WORDS.ana), MA.ANA_NOTE);
 }
 
 /* ---- analytics: event names and params byte-identical to v202 before the renames (captured at 4677b8e) ---- */

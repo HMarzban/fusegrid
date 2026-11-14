@@ -60,6 +60,7 @@ import { clampPace } from "./core/pace.js";
 import { mountUpdate } from "./app/update.js";
 import { mountAnalytics } from "./app/analytics.js";
 import { mountControls } from "./app/controlswire.js";
+import { shortcutOf } from "./app/controls.js";
 import { mountPointer } from "./app/pointer.js";
 import { Input } from "./input.js";
 import { mountTouch } from "./touch.js";
@@ -409,7 +410,8 @@ export function createGame(canvas, opts = {}) {
   if (typeof document !== "undefined") guardLoadCard(document, () => { app.resetArm = false; }); // the inline load card's answers cancel an armed reset
   /* UI key side-channel: ALWAYS routed to the shell; M-in-PAUSE records the
      score then quits to MENU (spec §4 table). Machine self-gates elsewhere. */
-  input.onUiKey = (code) => {
+  input.onUiKey = (raw, key) => {
+    const code = shortcutOf(raw, key, (c) => app.boundKey(c)); // a letter shortcut is the printed letter, wherever it sits (Task 6), never on a key bound to play (Colemak's MOVE DOWN prints r); a synthetic press has no key: its raw code. The binds read raw
     if (code !== "KeyR" && code !== "Escape" && code !== "Backspace") app.resetArm = false; // Esc / Backspace reach back(), which closes an armed reset first
     if (code === "KeyR" && app.screen !== SCREEN.STATS && app.screen !== SCREEN.INTRO && app.screen !== SCREEN.ATTRACT) {
       if (app.screen === SCREEN.GAME) {
@@ -430,7 +432,7 @@ export function createGame(canvas, opts = {}) {
       }
       return;
     }
-    app.key(code);
+    app.key(raw, key);
   };
 
   const onPause = () => {

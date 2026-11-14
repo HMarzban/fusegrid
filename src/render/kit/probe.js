@@ -28,6 +28,9 @@
 export const PAIR_KINDS = Object.freeze(["chosen", "band", "ring", "info", "locked"]);
 export const ROLES = Object.freeze(["primary", "secondary", "hud", "body"]);
 export const CAP_N = 2048;
+/** True while tools/ui/shots.mjs draws a capture's text-hidden twin (window.__uiNoText, the probe on): a glyph that stands for a word (a PlayStation
+    face button's keycap, R-LABELS) hides with the text, so the contrast gate measures it against the cap's own face. */
+export const noText = () => probe.on && !!globalThis.__uiNoText;
 export const probe = { on: false, page: "", box: null, rects: [], texts: [], pairs: [], frames: 0, overflow: false, fault: null, at: null };
 
 /* every throw is a fault the record keeps (the first one, until setOn) */

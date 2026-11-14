@@ -873,3 +873,69 @@ test("gameplay magnitudes after scaling, typed in: [weak, strong] per motor step
     got.forEach((g, i) => assert.ok(close(g[0], byLv[k][i][0]) && close(g[1], byLv[k][i][1]), n + " L" + v + " step " + i + " " + g));
   });
 });
+
+// ---- Task 7: the Switch 2 Pro's WebHID stand-in, through standardPads, as the wire builds it ----
+import { createWaker } from "../src/app/switch2.js";
+import { createPad, standardPads } from "../src/app/gamepad.js";
+const SW2_ID = "Switch 2 Pro Controller (Vendor: 057e Product: 2069)";
+const btn = (on) => ({ pressed: on, touched: on, value: on ? 1 : 0 });
+/* The pad as Chrome hands it after the wake: 21 buttons, 6 axes, mapping "", no actuator. */
+const sw2Raw = (o = {}) => ({ id: SW2_ID, index: 0, connected: true, mapping: "", timestamp: 0, buttons: Array.from({ length: 21 }, (_, i) => btn(i === o.press)), axes: [0, 0, 0, 0, 0, 0], vibrationActuator: o.act || null, hapticActuators: [] });
+const xbox = (calls, o = {}) => ({ id: "Xbox 360 Controller (STANDARD GAMEPAD Vendor: 045e Product: 028e)", index: 1, connected: true, mapping: "standard", timestamp: 0, buttons: Array.from({ length: 17 }, (_, i) => btn(i === o.press)), axes: [0, 0, 0, 0], vibrationActuator: actuator(calls), hapticActuators: [] });
+const swRig = async (o = {}) => {
+  const sent = [], dev = { vendorId: 0x057e, productId: 0x2069, opened: true, sendReport: (id, p) => { sent.push(Array.from(p)); return Promise.resolve(); } };
+  const hid = { getDevices: async () => [dev], requestDevice: async () => [], addEventListener() {}, removeEventListener() {} };
+  const clock = { t: 0, now: () => clock.t, every: () => 1, cancel() {} };
+  const waker = createWaker({ usb: { addEventListener() {}, removeEventListener() {}, getDevices: async () => [] }, pads: () => [], hid, clock });
+  await waker.restore();
+  const raw = { list: o.list || [sw2Raw()] };
+  const gp = standardPads(() => raw.list, (g) => waker.actuator(g));
+  const pad = createPad({ getGamepads: gp });
+  pad.poll(0);
+  const opts = { level: o.level ?? 3 };
+  const r = createRumble({ level: () => opts.level, gamepad: () => { const i = pad.snap().index; return i === null ? null : gp()[i] || null; }, playing: () => true, state: () => "PLAY" });
+  return { r, sent, raw, gp, pad, opts, waker, on: () => sent.filter((p) => p[5] || (p[4] & 0xc0) || (p[3] & 0x0f) || (p[2] & 0xfc)).length };
+};
+
+test("Switch 2 stand-in: the VIBRATION row's test pulse and a run's blast reach it as HID report 0x02", async () => {
+  const a = await swRig();
+  assert.equal(routesOf(a.gp()[0])[0].kind, "dual-rumble", "the pad now offers dual-rumble");
+  assert.equal(a.r.supported(), true);
+  assert.equal(a.r.test(0), true);
+  assert.ok(a.on() >= 1, "the test pulse drove the motor");
+  const b = await swRig();
+  b.r.feed([{ t: "boom", x: P.x + 10, y: P.y }], 0, P);
+  assert.ok(b.on() >= 1, "the blast drove the motor");
+});
+
+test("Switch 2 stand-in: OFF makes zero HID calls on every path", async () => {
+  const a = await swRig({ level: 0 });
+  a.r.test(0); a.r.feed([{ t: "boom", x: P.x, y: P.y }, { t: "hurt" }, { t: "lose" }], 0, P); a.r.menu("move", 0); run(a.r, 0, 600);
+  assert.equal(a.sent.length, 0); // stop() resets as on every route; the wire never calls it at OFF (stopRumble checks vib)
+});
+
+test("a pad with a real actuator never gets the stand-in; a standard pad never does either", async () => {
+  const calls = [], own = actuator(calls);
+  const a = await swRig({ list: [sw2Raw({ act: own })] });
+  assert.equal(a.gp()[0].vibrationActuator, own);
+  a.r.test(0);
+  assert.equal(a.sent.length, 0);
+  assert.equal(plays(calls).length, 1, "its own actuator buzzed");
+  const x = xbox([]), b = await swRig({ list: [x] });
+  assert.equal(b.gp()[0], x, "a standard pad passes through untouched");
+  assert.notEqual(b.gp()[0].vibrationActuator, b.waker.actuator());
+});
+
+test("two pads: only the active one buzzes", async () => {
+  const calls = [], a = await swRig({ list: [sw2Raw({ press: 0 }), xbox(calls)] });
+  a.pad.poll(1);
+  assert.equal(a.pad.snap().index, 0, "the Switch 2 pressed last: active");
+  a.r.test(0);
+  assert.ok(a.on() >= 1 && plays(calls).length === 0, "the stand-in buzzed, the other pad did not");
+  const calls2 = [], b = await swRig({ list: [sw2Raw(), xbox(calls2)] });
+  b.raw.list = [sw2Raw(), xbox(calls2, { press: 0 })];
+  b.pad.poll(1);
+  assert.equal(b.pad.snap().index, 1, "the other pad pressed last: active");
+  b.r.test(0);
+  assert.ok(b.sent.length === 0 && plays(calls2).length === 1, "the other pad buzzed, the stand-in sent nothing");
+});

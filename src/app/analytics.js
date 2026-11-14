@@ -11,6 +11,7 @@
    OFF sets ga-disable, denies consent and drops the _ga cookies. src/app
    never calls Date, so main injects `now` for gtag's js stamp. */
 import { defaultStore } from "./store.js";
+import { shortcutOf } from "./controls.js";
 
 export const ANALYTICS_KEY = "nb.analytics.v1";
 export const GA_PLACEHOLDER = "G-XXXXXXXXXX";
@@ -159,11 +160,11 @@ export function mountAnalytics(env) {
     doc.body.appendChild(card);
     /* Y / N answer while it shows; every other key goes on to the game */
     win.addEventListener("keydown", (ev) => {
-      const g = e.get && e.get();
-      if (!shown() || ev.repeat || (ev.code !== "KeyY" && ev.code !== "KeyN") || (g && g.app && g.app.capturing)) return;
+      const g = e.get && e.get(), app = g && g.app, L = shortcutOf(ev.code, ev.key, (c) => !!(app && typeof app.boundKey === "function" && app.boundKey(c))); // the letter printed on the key, wherever it sits (QWERTZ's Y is the code KeyZ), never on a key bound to play: a stray move must not consent
+      if (!shown() || ev.repeat || ev.ctrlKey || ev.metaKey || ev.altKey || (typeof ev.getModifierState === "function" && ev.getModifierState("AltGraph")) || (L !== "KeyY" && L !== "KeyN") || (g && g.app && g.app.capturing)) return; // a chord is the browser's (Ctrl+Y, Alt+N), never an answer; Shift+Y still prints Y
       ev.stopImmediatePropagation();
       if (g && g.app) g.app.resetArm = false;
-      set(ev.code === "KeyY" ? 1 : 0);
+      set(L === "KeyY" ? 1 : 0);
     }, true);
   };
   const tick = () => {

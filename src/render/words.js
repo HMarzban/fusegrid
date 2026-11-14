@@ -97,6 +97,10 @@ export const CONTROLS_WORDS = Object.freeze({ NONE: "NO CONTROLLER", CONNECT: "C
   ROW, TAB: "TAB", CHANGE, ADJUST: "ADJUST", RESET: "RESET", BACK, CANCELS: " CANCELS", KEEPS: " KEEPS IT",
   /* listening (Task 9.10, the -capture frames): the target's callout reads the action over NOW and its input; the in-use plaque (the phone's short head) */
   NOW: "NOW", WAS: "WAS", IN_USE: "BUTTON ALREADY IN USE?", IN_USE_KEY: "KEY ALREADY IN USE?", SWAPS: "The two actions swap, and the page says which one moved:", IN_USE_SHORT: "IN USE? THEY SWAP:" });
+/* The CONNECT row on CONTROLS (Task 3, every-controller plan): a Switch 2 Pro Controller woken over a USB cable (src/app/switch2.js); its name, the
+   door, each chooser result, the refusal a controller press gets (no user activation), the vibration ask (Task 7) and the help line. Owner ruling
+   R-LABELS: the row names the one controller it is for. src/app/controlspage.js keeps the literal, pinned equal in tests/words.test.mjs. */
+export const SW2_WORDS = Object.freeze({ row: "SWITCH 2 CONTROLLER", door: "CONNECT", ok: "CONNECTED", cancel: "NOT CONNECTED · TRY AGAIN", busy: "IN USE BY ANOTHER APP", failed: "COULD NOT START IT HERE", blocked: "NOT ALLOWED ON THIS PAGE", pad: "PRESS ENTER OR CLICK", vib: "ALLOW VIBRATION", allow: "ALLOW", help: "It needs a USB cable. Your browser asks once which controller.", helpVib: "It needs a USB cable. Your browser asks once which controller, and once more for vibration." });
 /* The next-run card (v202 Task 3.2, MENU; LEVEL SELECT reuses it): its kicker, the level's mark (level 1, a finale, the last one), its
    section labels and its stat cells. ENEMIES counts the kinds when their names do not fit (the GUIDE page's word). */
 export const CARD_WORDS = Object.freeze({
@@ -128,6 +132,7 @@ export const SETTINGS_WORDS = Object.freeze({
   on3d: "CAMERA and BRIGHTNESS are on the list while REAL 3D is your art style.",
   of: OF, row: ROW, change: CHANGE, back: BACK, tapRow: TAP_ROW, build: "BUILD", perf: "PERFORMANCE · BATTERY", on: ON, off: OFF,
   cam: Object.freeze(["STANDARD", "WIDE", "FAR"]), vib: "VIBRATION",
+  ana: "ANSWER THE CARD · Y OR N KEY", // ANALYTICS' pad note (menuapp ANA_NOTE, pinned): the keyboard's keys, never an Xbox pad's own Y
 });
 /* GUIDE (v202 Task 3.5, pages/guide.js): the page titles, the doors' teasers, HOW TO's rules, controls and note, the foot's verbs, ENEMIES'
    points words, hint and tooltip, FLOOR's head and its placeholder lines. */
@@ -204,3 +209,23 @@ export const HUD_WORDS = Object.freeze({ PAUSE: "PAUSE", RESUME: "RESUME", BOMB:
 export const PAD_TOAST = Object.freeze({ READY: MENU_WORDS.PAD_READY, BACK: MENU_WORDS.PAD_BACK, LOST: CONTROLS_WORDS.LOST, LOST_BODY: "THE KEYS STILL WORK",
   body: (move, bomb) => MENU_WORDS.MOVE + "\u00a0" + move + " · " + HUD_WORDS.BOMB + "\u00a0" + bomb, // a no-break space: a wrapped toast never parts an action from its button
   SHORT: CONTROLS_WORDS.CONTROLLER }); // a slot too narrow for the whole title (the landscape gutters): CONTROLLER, its state leading the line under it
+/* R-LABELS (owner 2026-11-14): the words a controller's buttons wear, by the family in the player's hands (src/app/padfamily.js FAMILY_LABEL, pinned
+   equal in tests/words.test.mjs: src/app never imports this file). w printed, s short, a the live region's word. PlayStation's four faces print as
+   the words where only text fits; a painted keycap draws them as the ✕ ○ □ △ glyphs (kit/paint.js). A generic pad reads its positions as before. */
+const famRow = (o) => Object.freeze(Object.fromEntries(Object.entries(o).map(([id, [w, s, a]]) => [id, Object.freeze({ w, s: s || w, a: a || w })])));
+export const PAD_FAMILY_WORDS = Object.freeze({
+  xbox: famRow({ S: ["A"], E: ["B"], W: ["X"], N: ["Y"], SHL: ["LB"], SHR: ["RB"], TRL: ["LT"], TRR: ["RT"], SELECT: ["VIEW"], START: ["MENU"] }),
+  playstation: famRow({ S: ["CROSS"], E: ["CIRCLE"], W: ["SQUARE"], N: ["TRIANGLE"], SHL: ["L1"], SHR: ["R1"], TRL: ["L2"], TRR: ["R2"], SELECT: ["CREATE"], START: ["OPTIONS"] }),
+  nintendo: famRow({ S: ["B"], E: ["A"], W: ["Y"], N: ["X"], SHL: ["L"], SHR: ["R"], TRL: ["ZL"], TRR: ["ZR"], SELECT: ["−", "−", "MINUS"], START: ["+", "+", "PLUS"] }),
+  generic: famRow({ S: ["SOUTH"], E: ["EAST"], W: ["WEST"], N: ["NORTH"], SHL: ["L SHOULDER", "L SHLDR"], SHR: ["R SHOULDER", "R SHLDR"], TRL: ["L TRIGGER", "L TRIG"], TRR: ["R TRIGGER", "R TRIG"], SELECT: ["SELECT"], START: ["START"] }),
+});
+/** The printed word for a controller position on this family; a position the table does not hold (or an unknown family) keeps the id given. */
+export const padWord = (id, family) => { const t = PAD_FAMILY_WORDS[family] || PAD_FAMILY_WORDS.generic; return t[id] ? t[id].w : id; };
+/** A page's word for a position from the hint words in force: the family's when a controller of one drives (hints wordsOf carries family), else the position's. */
+export const padWordIn = (id, words) => padWord(id, words && words.family);
+/** CONTROLS' pad rule in the words of the controller in hand: its own SOUTH, START and EAST (a generic pad: the rule as written). */
+export const rulePad = (family) => (family && family !== "generic" && PAD_FAMILY_WORDS[family] ? CONTROLS_WORDS.RULE_PAD.replace("SOUTH", padWord("S", family)).replace("START", padWord("START", family)).replace("EAST", padWord("E", family)) : CONTROLS_WORDS.RULE_PAD);
+/** LEVEL SELECT's controller shortcut line in the words of the controller in hand (its triggers and its NORTH). */
+export const padHelp = (family) => (family && family !== "generic" && PAD_FAMILY_WORDS[family] ? LEVEL_WORDS.PAD_HELP.replace("TRIGGERS", padWord("TRL", family) + " " + padWord("TRR", family)).replace("NORTH", padWord("N", family)) : LEVEL_WORDS.PAD_HELP);
+/** PlayStation's four face words as the characters a DOM keycap shows (src/app/padfamily.js GLYPH_CHAR, pinned equal; the kit paints them, kit/paint.js PAD_GLYPH). */
+export const PAD_GLYPH_CHAR = Object.freeze({ CROSS: "✕", CIRCLE: "○", SQUARE: "□", TRIANGLE: "△" });

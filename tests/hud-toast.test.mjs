@@ -66,3 +66,25 @@ test("the toast takes the slot over a tile tip; off PLAY there is none", () => {
 test("the fade rides the tip's alpha", () => {
   assert.equal(geomOf("d", 1366, 768, W0(), { padToast: { ...READY, a: 0.4 } }).st.tip.a, 0.4);
 });
+
+/* R-LABELS fix round 1 (controller ruling 2026-11-14): a PlayStation pad's toast paints BOMB ✕, the glyph inline at the run's cap height; the text
+   the probe and the live region read keeps the word, and the fit counts the glyph's own width */
+test("a PlayStation pad's toast paints BOMB with the cross glyph inline, never the word", async () => {
+  const { drawHud } = await import("../src/render/hud.js");
+  const { worldTokens } = await import("../src/render/kit/tokens.js");
+  const { runW } = await import("../src/render/kit/paint.js");
+  const { T } = await import("../src/render/kit/type.js");
+  const PS = { ...READY, bomb: "CROSS" };
+  for (const [lay, W, H] of [["d", 1366, 768], ["p", 393, 852]]) {
+    const { st, G } = geomOf(lay, W, H, W0(), { padToast: PS });
+    assert.ok(G.tip && G.tip.body === "whole", lay);
+    assert.ok(G.tip.lines.some((l) => /BOMB CROSS/.test(l)), "the plan keeps the word: " + JSON.stringify(G.tip.lines));
+    const r = rec();
+    drawHud(r.ctx, G, st, worldTokens(3), { rec: false });
+    const ts = r.texts.map((t) => t.s);
+    assert.ok(!ts.some((s) => /CROSS/.test(s)), "no CROSS written: " + JSON.stringify(ts));
+    assert.ok(ts.some((s) => /BOMB $/.test(s)), "BOMB, then the glyph: " + JSON.stringify(ts));
+  }
+  const c = rec().ctx, f = T.body(18);
+  assert.ok(runW(c, f, "BOMB CROSS", true) < runW(c, f, "BOMB SOUTH", true), "the fit counts the glyph's width, not the word's");
+});

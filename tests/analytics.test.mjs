@@ -13,6 +13,7 @@ import {
   mountAnalytics,
 } from "../src/app/analytics.js";
 import { SCREEN, OPT_ROWS, createMenuApp } from "../src/app/menuapp.js";
+import { readFileSync, readdirSync } from "node:fs";
 
 let pass = 0,
   fail = 0;
@@ -51,8 +52,8 @@ const mkDom = (cookie, lay) => {
     set cookie(v) { writes.push(v); },
   };
   const win = { addEventListener: (t, f, cap) => WL.push({ t, f, cap }) };
-  const key = (code, repeat) => {
-    const ev = { code, repeat: !!repeat, stopped: false, stopImmediatePropagation() { this.stopped = true; } };
+  const key = (code, repeat, k, mods) => {
+    const ev = { code, key: k, repeat: !!repeat, stopped: false, stopImmediatePropagation() { this.stopped = true; }, ...(mods || {}) };
     WL.filter((l) => l.t === "keydown" && l.cap === true).forEach((l) => l.f(ev));
     return ev;
   };
@@ -168,6 +169,39 @@ check("cookiePath keeps the cookies on the game's own directory",
   check("N = NO THANKS: saved 0, no script, no dataLayer, events dropped",
     st.m.get(ANALYTICS_KEY) === "0" && D.head.length === 0 && D.win.dataLayer === undefined && D.card().hidden);
 }
+// ---- Task 6: Y and N are the letters printed on the keys, wherever they sit (QWERTZ swaps Y and Z) ----
+{
+  const D = mkDom(), st = mkStore();
+  const ga = mountAnalytics({ id: ID, store: st, win: D.win, doc: D.doc, loc: LOC, ...atMenu(SCREEN.MENU) });
+  ga.tick();
+  const chords = [["ctrlKey"], ["metaKey"], ["altKey"]].map(([m]) => D.key("KeyY", false, "y", { [m]: true })).concat(D.key("KeyN", false, "n", { ctrlKey: true }), D.key("KeyY", false, "y", { getModifierState: (q) => q === "AltGraph" }));
+  check("a chorded Y or N (Ctrl, Cmd, Alt, AltGraph) answers nothing and passes on to the browser", chords.every((ev) => !ev.stopped) && ga.consent === -1 && !st.m.has(ANALYTICS_KEY), ga.consent);
+  const z = D.key("KeyY", false, "z");
+  check("QWERTZ: the key printed Z (code KeyY) answers nothing and passes on", !z.stopped && ga.consent === -1 && !st.m.has(ANALYTICS_KEY) && !D.card().hidden, ga.consent);
+  const y = D.key("KeyZ", false, "y");
+  check("QWERTZ: the key printed Y (code KeyZ) answers ALLOW", y.stopped && ga.consent === 1 && st.m.get(ANALYTICS_KEY) === "1", ga.consent);
+}
+{
+  const D = mkDom(), st = mkStore();
+  const ga = mountAnalytics({ id: ID, store: st, win: D.win, doc: D.doc, loc: LOC, ...atMenu(SCREEN.MENU) });
+  ga.tick();
+  const n = D.key("KeyB", false, "n");
+  check("the key printed N answers NO THANKS wherever it sits (Dvorak's N is the code KeyB)", n.stopped && ga.consent === 0 && st.m.get(ANALYTICS_KEY) === "0", ga.consent);
+  const D2 = mkDom(), st2 = mkStore(), g2 = mountAnalytics({ id: ID, store: st2, win: D2.win, doc: D2.doc, loc: LOC, ...atMenu(SCREEN.MENU) });
+  g2.tick();
+  const cy = D2.key("KeyN", false, "т");
+  check("another script: the code's own letter still answers (KeyN printing т is N)", cy.stopped && g2.consent === 0, g2.consent);
+}
+// ---- final review 1: a key bound to play is never Y or N, whatever its layout prints on it: a stray move or bomb must not consent ----
+{
+  const D = mkDom(), st = mkStore();
+  const ga = mountAnalytics({ id: ID, store: st, win: D.win, doc: D.doc, loc: LOC, get: () => ({ app: { screen: SCREEN.GAME, boundKey: (c) => c === "KeyZ" || c === "KeyS" }, SCREEN }) });
+  ga.tick();
+  const by = D.key("KeyZ", false, "y"), bn = D.key("KeyS", false, "n");
+  check("GAME: a bound key printing Y or N answers nothing and passes on to the game", !by.stopped && !bn.stopped && ga.consent === -1 && !st.m.has(ANALYTICS_KEY), ga.consent);
+  const fy = D.key("KeyO", false, "y");
+  check("GAME: a free key printing Y still answers ALLOW", fy.stopped && ga.consent === 1, ga.consent);
+}
 // ---- touch: the card waits out a run (the bomb button owns that corner) ----
 {
   const D = mkDom("", "p"), st = mkStore();
@@ -257,6 +291,37 @@ for (const how of ["KeyY", "KeyN", ".yes", ".no"]) {
   ga.tick();
   D.card().fire("pointerdown", ptr());
   check("armed STATS: a tap on the consent card's body or Privacy link cancels the reset and answers nothing", app.resetArm === false && ga.consent !== 0 && ga.consent !== 1, app.resetArm + "/" + ga.consent);
+}
+
+// ---- v219 privacy: no event param and no user property carries anything about a controller (docs/privacy.md, controller access) ----
+{
+  const PAD = /family|vendor|product|sw2|hid|usb|pad|controller|gamepad|rumble|vib|^id$|Id$|_id$/i;
+  const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(d + "/" + e.name) : /\.js$/.test(e.name) ? [d + "/" + e.name] : []));
+  const files = walk(new URL("../src", import.meta.url).pathname);
+  const keysOf = (obj) => [...obj.matchAll(/(?:^|[{,])\s*([A-Za-z_$][\w$]*)\s*:/g)].map((m) => m[1]);
+  const calls = [];
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    for (const m of src.matchAll(/\bga\.event\(\s*"([a-z_]+)"\s*,\s*(\{[^}]*\})/g)) calls.push({ f: f.replace(/.*\/src\//, "src/"), name: m[1], keys: keysOf(m[2]) });
+    if (/gtag\(\s*"event"/.test(src) && !/\/app\/analytics\.js$/.test(f)) calls.push({ f, name: "gtag", keys: ["<direct gtag event>"] });
+  }
+  const names = calls.map((c) => c.name).sort().join();
+  check("controller privacy: the only analytics events are run_start and run_end, both sent from src/main.js", names === "run_end,run_start" && calls.every((c) => c.f === "src/main.js"), JSON.stringify(calls.map((c) => c.f + ":" + c.name)));
+  const ALLOWED = new Set(["mode", "room", "heat", "pact", "pace", "result", "score", "secs"]);
+  const bad = calls.flatMap((c) => c.keys.filter((k) => !ALLOWED.has(k) || PAD.test(k)).map((k) => c.name + "." + k));
+  check("controller privacy: every event param is a run fact (mode, room, heat, pact, pace, result, score, secs), none a controller field", bad.length === 0 && calls.every((c) => c.keys.length > 0), bad.join());
+  const asrc = readFileSync(new URL("../src/app/analytics.js", import.meta.url), "utf8");
+  const up = asrc.match(/gtag\("set",\s*"user_properties",\s*(\{[^;]*\})\);/);
+  check("controller privacy: the user properties in the source are days_played and look only", !!up && keysOf(up[1]).sort().join() === "days_played,look", up && up[1]);
+  const imps = [...asrc.matchAll(/^import\s*\{([^}]*)\}\s*from\s*"([^"]+)"/gm)].map((m) => m[2] + ":" + m[1].trim());
+  check("controller privacy: analytics.js reads no controller module (only the store and controls.js shortcutOf, the printed Y / N off the keys bound to play)", imps.join("|") === "./store.js:defaultStore|./controls.js:shortcutOf", imps.join("|"));
+  const D = mkDom(), st = mkStore();
+  const ga = mountAnalytics({ id: ID, store: st, win: D.win, doc: D.doc, loc: LOC, now: () => "NOW", days: 3, look: () => "3d", ...atMenu(SCREEN.MENU) });
+  ga.tick(); D.key("KeyY");
+  ga.event("run_start", { mode: "run", room: 1, heat: 0, pact: 0, pace: 0 });
+  const q = dl(D.win), props = q.filter((c) => c[0] === "set" && c[1] === "user_properties").map((c) => Object.keys(c[2]).sort().join());
+  const sent = q.flatMap((c) => c.filter((x) => x && typeof x === "object").flatMap((x) => Object.keys(x)));
+  check("controller privacy, live: one user_properties set, days_played and look only; nothing sent names a controller", props.join("|") === "days_played,look" && !sent.some((k) => /family|vendor|product|sw2|hid|usb|pad|controller|gamepad/i.test(k)), props.join("|") + " / " + sent.join());
 }
 
 console.log("\n  ANALYTICS RESULT: " + pass + " PASS / " + fail + " FAIL");

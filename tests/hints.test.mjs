@@ -189,6 +189,24 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   check("setHints(null) restores the keyboard words", hints().dev === "key" && tapMode(true) === true);
 }
 
+/* ---- Task 6: the keys in the player's own layout (controlswire keyNames handed as wordsOf's names) ---- */
+{
+  const AZ = { KeyW: "Z", KeyA: "Q" }, az = wordsOf("key", DEF_CONTROLS, AZ);
+  check("names: MOVE reads ZQSD, its caps Z Q S D", az.move === "ZQSD" && J(az.moveCaps) === J(["Z", "Q", "S", "D"]), J(az));
+  check("names: SPACE, ARROWS, ENTER, ESC keep their fixed words; E Q P unchanged", az.bomb === "SPACE" && az.moveAlt === "ARROWS" && az.ok === "ENTER" && az.back === "ESC" && az.throw === "E" && az.remote === "Q" && az.pause === "P");
+  check("names: no map, or an empty one, reads WASD as today", J(wordsOf("key", DEF_CONTROLS, {})) === J(wordsOf("key", DEF_CONTROLS)) && wordsOf("key", DEF_CONTROLS, null).move === "WASD");
+  check("names: REMOTE prints the learned A", wordsOf("key", DEF_CONTROLS, { KeyQ: "A" }).remote === "A");
+  check("names: a pad's words never read them", J(wordsOf("pad", DEF_CONTROLS, AZ)) === J(PAD));
+  setHints(az);
+  const how = paint(PAGES.HOWTO(false)), g = paint((c) => md.drawGuide(c, md.layout(1366, 768, 200, 1), 9, 0, "2d", false));
+  setHints(wordsOf("key", DEF_CONTROLS, { KeyQ: "A" }));
+  const st = (await import("../src/render/hud.js")).hudState({ state: "PLAY", lives: 3, level: 1, players: [{ remote: true, throw: true }] }, { time: { t: 1 } });
+  setHints(null);
+  check("HOW TO's MOVE keycap reads ZQSD", how.has("ZQSD") && !how.has("WASD"), how.strs().join("|"));
+  check("the GUIDE door's preview (MENU's GUIDE) reads MOVE [ZQSD]", g.has("ZQSD") && !g.has("WASD"), g.strs().join("|"));
+  check("the HUD's REMOTE chip cap reads A", (st.ab.find((e) => e.k === "remote") || {}).cap === "A", J(st.ab));
+}
+
 /* ---- default copy, byte for byte ---- */
 {
   const WANT = [
@@ -303,6 +321,12 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   }
   paint(menu(0, false, "v99"));
   check("pad: MENU foot = MOVE D-PAD · START SOUTH | v99 (label first, keycap last)", footOf() === "MOVE [D-PAD] · START [SOUTH] | v99", footOf());
+  /* R-LABELS (owner 2026-11-14): the controller in hand names START's key; a PlayStation cap paints its glyph, so the plan still carries the word */
+  for (const [fam, ok] of [["xbox", "A"], ["playstation", "CROSS"], ["nintendo", "B"]]) {
+    setHints(wordsOf("pad", DEF_CONTROLS, undefined, fam)); paint(menu(0, false, "v99"));
+    check("pad (" + fam + "): MENU foot = MOVE D-PAD · START " + ok + " | v99", footOf() === "MOVE [D-PAD] · START [" + ok + "] | v99", footOf());
+  }
+  setHints(PAD);
   paint(menu(6, false, "v99"));
   check("pad: MENU foot on SOURCE says it needs a click or Enter, with no SOUTH keycap (never a claim the press keeps)", footOf() === "MOVE [D-PAD] · NEEDS A CLICK OR ENTER | v99", footOf());
   const lv = paint(PAGES.LEVEL(false));

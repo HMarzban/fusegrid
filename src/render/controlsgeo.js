@@ -1,7 +1,7 @@
 // CONTROLS page geometry and copy, shared by draw, tap and the page reducer. Pure. BTN, DEF_KEY, DEF_PAD, VIB_LEVELS, SENS_LEVELS, keyName, moveLabel and softAliasesOf are local copies of src/app/controls.js (render never reads src/app), pinned equal in tests/controlsdraw.test.mjs.
 import { VIB_LEVELS, vibWord } from "./menudraw.js";
 import { KB_AT, KB_KEYS, KB_W, KB_H, PART_AT, PART_R, BUMP, padBox, keyRect, kbBox } from "./padart.js";
-import { CONTROLS_WORDS } from "./words.js";
+import { CONTROLS_WORDS, SW2_WORDS, PAD_FAMILY_WORDS } from "./words.js";
 const CW = CONTROLS_WORDS;
 
 const dpad = { g: "dpad", v: "all", w: "D-PAD" };
@@ -12,6 +12,12 @@ export const BTN = Object.freeze({
   dU: { g: "dpad", v: "U", w: "D-PAD UP" }, dD: { g: "dpad", v: "D", w: "D-PAD DOWN" }, dL: { g: "dpad", v: "L", w: "D-PAD LEFT" }, dR: { g: "dpad", v: "R", w: "D-PAD RIGHT" },
   dpad, LS: { g: "stick", v: "L", w: "L-STICK" }, RS: { g: "stick", v: "R", w: "R-STICK" },
 });
+/* R-LABELS: the controller in hand names its buttons (s.pad.family, src/app/padfamily.js); a generic or non-standard pad reads the positions. */
+const famOf = (s) => (s && s.pad && s.pad.family && s.pad.state !== "nonstd" && PAD_FAMILY_WORDS[s.pad.family] ? s.pad.family : "generic");
+/** The word a position reads on the pad in this view: its family's, else BTN's. */
+export const btnWordOf = (s, id) => { const q = PAD_FAMILY_WORDS[famOf(s)][id]; return q ? q.w : BTN[id] ? BTN[id].w : id; };
+/* a row's value part: BTN's own object on a generic pad (the call log stays as it was), else a copy wearing the family's word (fam) and its spoken word (a) */
+const famBtn = (s, id) => { const f = famOf(s), q = PAD_FAMILY_WORDS[f][id]; return f === "generic" || !q ? BTN[id] : { ...BTN[id], w: q.w, a: q.a, fam: f }; };
 export const DEF_KEY = Object.freeze({ BOMB: "Space", THROW: "KeyE", REMOTE: "KeyQ", PAUSE: "KeyP", MOVE: Object.freeze(["KeyW", "KeyD", "KeyS", "KeyA"]) });
 export const DEF_PAD = Object.freeze({ BOMB: "S", THROW: "W", REMOTE: "E", PAUSE: "SELECT" });
 export { VIB_LEVELS, vibWord }; // in menudraw.js since v202: the OPTIONS door reads them before this file loads
@@ -60,7 +66,7 @@ const vibOf = (s) => (s.vib == null ? DEF_VIB : s.vib);
 export function rowsOf(s) {
   const p = s.pad || { state: "none" }, k = s.key || DEF_KEY, b = s.binds || DEF_PAD, dead = s.dead == null ? DEF_DEAD : s.dead;
   if (s.tab === "key") {
-    const al = softAliasesOf(k).map((q) => q.slice(3)), nm = (q) => nameOf(q, s.names);
+    const nm = (q) => nameOf(q, s.names), al = softAliasesOf(k).map(nm);
     return [
       { id: "MOVE", val: [{ cap: moveLabel(k.MOVE, s.names) }, { cap: "ARROWS" }], changed: k.MOVE.join() !== DEF_KEY.MOVE.join() },
       { id: "BOMB", val: [{ cap: nm(k.BOMB) }], note: al.length === 2 ? al.join(" · ") + " ALSO WORK" : al.length ? al[0] + " ALSO WORKS" : "", changed: k.BOMB !== DEF_KEY.BOMB },
@@ -76,6 +82,7 @@ export function rowsOf(s) {
   const tail = () => [
     { id: "SENSITIVITY", gap: 1, text: SENS_LEVELS[sensIdx(dead)].name, off, changed: dead !== DEF_DEAD, bar: [sensIdx(dead) + 1, SENS_LEVELS.length] },
     noBuzz(s) ? { id: "VIBRATION", text: "NONE", off, none: 1 } : { id: "VIBRATION", text: VIB_LEVELS[vibOf(s)], off, changed: vibOf(s) !== DEF_VIB, bar: [vibOf(s), VIB_LEVELS.length - 1] },
+    ...(s.sw2 && s.sw2.shown ? [{ id: "SW2", label: SW2_WORDS.row, door: s.sw2.vib ? SW2_WORDS.vib : s.sw2.seen ? SW2_WORDS.ok : SW2_WORDS.door }] : []), // never off: it is how a controller arrives
     { id: "RESET", gap: 1, label: "RESET CONTROLLER", reset: 1, off },
   ];
   if (p.state === "nonstd") {
@@ -88,21 +95,24 @@ export function rowsOf(s) {
   const stick = s.stick === "R" ? BTN.RS : BTN.LS;
   return [
     { id: "MOVE", val: [BTN.dpad, stick], off, changed: s.stick === "R" },
-    { id: "BOMB", val: [BTN[b.BOMB]], off, changed: ch("BOMB") },
-    { id: "THROW", val: [BTN[b.THROW]], off, changed: ch("THROW") },
-    { id: "REMOTE", val: [BTN[b.REMOTE]], off, changed: ch("REMOTE") },
-    { id: "PAUSE", val: [BTN.START, BTN[b.PAUSE]], off, changed: ch("PAUSE") },
+    { id: "BOMB", val: [famBtn(s, b.BOMB)], off, changed: ch("BOMB") },
+    { id: "THROW", val: [famBtn(s, b.THROW)], off, changed: ch("THROW") },
+    { id: "REMOTE", val: [famBtn(s, b.REMOTE)], off, changed: ch("REMOTE") },
+    { id: "PAUSE", val: [famBtn(s, "START"), famBtn(s, b.PAUSE)], off, changed: ch("PAUSE") },
     ...tail(),
   ];
 }
+/** The CONNECT row's help: the vibration clause only where the browser has WebHID (the wire's sw2.hid). */
+export const sw2Help = (s) => (s && s.sw2 && s.sw2.hid ? SW2_WORDS.helpVib : SW2_WORDS.help);
 /** The pane's rule line: a result first, then this row's rule. */
 export function statusOf(s, row) {
   if (s.status) return s.status;
   if (s.armed) return "PRESS AGAIN TO RESET THIS TAB";
+  if (row.id === "SW2") return sw2Help(s);
   if (padOff(s)) return s.pad && s.pad.state === "lost" ? "PLUG IT BACK IN OR PRESS ANY BUTTON" : s.device === "touch" ? "PAIR ONE AND PRESS ANY BUTTON" : "IT WAKES ON ITS FIRST PRESS · USB OR BLUETOOTH";
   if (row.fixed) return "ENTER AND ESC STAY PUT SO YOU CAN ALWAYS GET BACK";
   if (row.reset) return "BACK TO THE DEFAULTS · THIS TAB ONLY";
-  const ok = s.device === "pad" ? "SOUTH" : s.device === "touch" ? "TAP" : "ENTER";
+  const ok = s.device === "pad" ? btnWordOf(s, "S") : s.device === "touch" ? "TAP" : "ENTER";
   if (s.tab === "key") {
     if (row.id === "MOVE") return "ARROWS ALWAYS MOVE · " + ok + " REBINDS " + moveLabel((s.key || DEF_KEY).MOVE, s.names);
     if (row.id === "PAUSE") return "ESC ALWAYS PAUSES · " + ok + " REBINDS THE SECOND KEY";
@@ -112,7 +122,7 @@ export function statusOf(s, row) {
   if (row.id === "SENSITIVITY") return sensIdx(s.dead == null ? DEF_DEAD : s.dead) >= 3 ? SENS_WORN : RULE.SENSITIVITY;
   if (s.pad.state === "nonstd") return "NON-STANDARD BUTTONS · TEST EACH ONE · REBIND IF WRONG";
   if (row.id === "MOVE") return "D-PAD ALWAYS MOVES · " + ok + " SWITCHES THE STICK";
-  if (row.id === "PAUSE") return "START ALWAYS PAUSES · " + ok + " REBINDS THE SECOND BUTTON";
+  if (row.id === "PAUSE") return btnWordOf(s, "START") + " ALWAYS PAUSES · " + ok + " REBINDS THE SECOND BUTTON";
   return RULE[row.id] || "";
 }
 /** The foot's items, label first and keycap last: [{t, caps}], a cap a word or ["up"] / ["dn"] / ["lf"] / ["rt"] (an arrow glyph); null on a touch
@@ -121,16 +131,17 @@ export function footItems(s, row, words, short) {
   const w = words || {}, padTab = s.tab === "pad", gone = padOff(s), nonstd = padTab && s.pad && s.pad.state === "nonstd";
   if (s.device === "touch") return null;
   const adjusts = padTab && !gone && (row.id === "SENSITIVITY" || (row.id === "VIBRATION" && !noBuzz(s)));
-  const verb = gone || row.fixed || (padTab && row.id === "VIBRATION" && noBuzz(s)) ? null : row.reset ? CW.RESET : CW.CHANGE;
+  const sw2 = row.id === "SW2", verb = sw2 ? (s.sw2 && s.sw2.vib ? SW2_WORDS.allow : SW2_WORDS.door) : gone || row.fixed || (padTab && row.id === "VIBRATION" && noBuzz(s)) ? null : row.reset ? CW.RESET : CW.CHANGE;
   const onPad = (s.device || s.tab) === "pad" && !gone;
   /* ←→ is taken on a value row, so the line names the other way to the tab; on SENSITIVITY the stick is under test, so a pad's line names the D-PAD. */
   const lr = [["lf"], ["rt"]], it = [{ t: CW.ROW, caps: [["up"], ["dn"]] }];
   if (adjusts) {
     it.push({ t: CW.ADJUST, caps: row.id === "SENSITIVITY" && onPad && !nonstd ? ["D-PAD"] : lr });
-    if (!short) it.push({ t: CW.TAB, caps: !onPad ? ["[", "]"] : nonstd ? ["BUTTON 4", "BUTTON 5"] : ["L", "R"] });
+    if (!short) it.push({ t: CW.TAB, caps: !onPad ? ["[", "]"] : nonstd ? ["BUTTON 4", "BUTTON 5"] : famOf(s) !== "generic" ? [btnWordOf(s, "SHL"), btnWordOf(s, "SHR")] : ["L", "R"] });
   } else it.push({ t: CW.TAB, caps: lr });
   let ok = w.ok || "ENTER", back = w.back || "ESC";
-  if (onPad) { ok = nonstd ? "BUTTON 0" : "SOUTH"; back = nonstd ? "BUTTON 1" : "EAST"; }
+  if (onPad) { ok = nonstd ? "BUTTON 0" : btnWordOf(s, "S"); back = nonstd ? "BUTTON 1" : btnWordOf(s, "E"); }
+  if (sw2) ok = "ENTER"; // a controller press opens no chooser (no user activation): the keyboard's own key, whatever drives
   if (verb) it.push({ t: verb, caps: [ok] });
   it.push({ t: CW.BACK, caps: [back] });
   return it;
@@ -159,7 +170,7 @@ export function padLabels(s) {
 export function padCallouts(s) {
   const L = padLabels(s), out = [];
   out.push(s.stick === "R" ? { grp: "MOVE", act: "MOVE", parts: ["dpad", "RS"], pos: ["D-PAD", "R-STICK"] } : { grp: "MOVE", act: "MOVE", parts: ["LS", "dpad"], pos: ["L-STICK", "D-PAD"] });
-  for (const id in L) if (id !== "dpad" && id !== "LS" && id !== "RS") out.push({ grp: id, act: L[id], pos: [BTN[id].w], tag: id === "START" });
+  for (const id in L) if (id !== "dpad" && id !== "LS" && id !== "RS") out.push({ grp: id, act: L[id], pos: [btnWordOf(s, id)], tag: id === "START" });
   return out;
 }
 /* Leaders (round 7 rules, appendix 9.2): plain orthogonal lines from a dot on the button out to a gutter label, ACTION over the position. Right gutter
@@ -267,7 +278,7 @@ export function keyCallouts(s) {
   return out.filter((q) => KB_AT[q.grp]);
 }
 const ACTS = ["BOMB", "THROW", "REMOTE", "PAUSE"];
-const inputOf = (s, a) => (s.tab === "key" ? (s.key || DEF_KEY)[a] : (s.binds || DEF_PAD)[a]), wordOf = (s, q) => (s.tab === "key" ? nameOf(q, s.names) : BTN[q] ? BTN[q].w : q);
+const inputOf = (s, a) => (s.tab === "key" ? (s.key || DEF_KEY)[a] : (s.binds || DEF_PAD)[a]), wordOf = (s, q) => (s.tab === "key" ? nameOf(q, s.names) : BTN[q] ? btnWordOf(s, q) : q);
 /** Listening for one action (the -capture frames): the one callout on its input, the action over NOW and the input it has now; none for a MOVE
     set (four keys, no single target) or an input the drawing does not have. */
 export function capCallouts(s, id) {

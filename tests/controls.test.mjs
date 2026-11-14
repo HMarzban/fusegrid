@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import {
   ACTIONS, MOVE_ORDER, DEF_KEY, DEF_PAD, DEF_CONTROLS, PAD_IDX, BTN, CONTROLS_KEY,
   clampControls, loadControls, saveControls, refuseKey, refuseBtn, bindKey, bindMoveSet, bindBtn,
-  resetDevice, keyName, moveLabel, softAliases, boundKeys, VIB_LEVELS, SENS_LEVELS, stepVib, stepSens,
+  resetDevice, keyName, moveLabel, softAliases, boundKeys, VIB_LEVELS, SENS_LEVELS, stepVib, stepSens, letterOf, layoutName,
 } from "../src/app/controls.js";
 
 let pass = 0, fail = 0;
@@ -24,6 +24,29 @@ const refused = ["Escape", "Enter", "NumpadEnter", "Backspace", "ArrowUp", "Arro
 check("refuses each listed key with a non-empty line, allows KeyE/KeyK/Period",
   refused.every((k) => refuseKey(k) !== "") && ["KeyE", "KeyK", "Period", "KeyP", "Digit6", "Digit0", "Space", "Slash"].every((k) => refuseKey(k) === ""),
   refused.filter((k) => !refuseKey(k)).join());
+
+// ---- Task 6: a letter shortcut is the printed letter, the binds stay physical ----
+check("letterOf: the printed Latin letter wherever it sits (QWERTZ KeyY prints z, KeyZ prints y; AZERTY M on Semicolon)",
+  letterOf("KeyY", "z") === "KeyZ" && letterOf("KeyZ", "y") === "KeyY" && letterOf("Semicolon", "m") === "KeyM" && letterOf("KeyR", "R") === "KeyR");
+check("letterOf: no key, a named key or another script keeps the code; a letter key printing punctuation is no letter",
+  letterOf("KeyC") === "KeyC" && letterOf("KeyU", "KeyU") === "KeyU" && letterOf("Enter", "Enter") === "Enter" && letterOf("KeyN", "т") === "KeyN" && letterOf("KeyM", ",") === "" &&
+  letterOf("Digit1", "&") === "Digit1" && letterOf("BracketLeft", "ü") === "BracketLeft" && letterOf("Space", " ") === "Space" && letterOf("ArrowUp", "ArrowUp") === "ArrowUp");
+check("layoutName: one printable ASCII character, letters upper-cased; another script, an accented letter, a dead key or space is no name",
+  layoutName("z") === "Z" && layoutName("7") === "7" && layoutName(",") === "," && layoutName(";") === ";" && layoutName("`") === "`" && layoutName("\\") === "\\" && layoutName("&") === "&" &&
+  layoutName("ص") === "" && layoutName("ц") === "" && layoutName("λ") === "" && layoutName("é") === "" && layoutName("ü") === "" && layoutName("Dead") === "" && layoutName(" ") === "" && layoutName(undefined) === "");
+check("refuseKey, QWERTZ both ways: the key printed Y (KeyZ) is refused, the key printed Z (KeyY) binds",
+  refuseKey("KeyZ", "y") === "Y AND N ANSWER THE PRIVACY CARD · PICK ANOTHER" && refuseKey("KeyY", "z") === "" && refuseKey("KeyY", "Z") === "", refuseKey("KeyY", "z"));
+check("refuseKey: the printed letter decides when it is known (AZERTY's Semicolon prints M; its KeyM prints , and binds; Dvorak's KeyR prints P)",
+  refuseKey("Semicolon", "m") === refuseKey("KeyM") && refuseKey("KeyM", ",") === "" && refuseKey("KeyR", "p") === "" && refuseKey("KeyO", "r") === refuseKey("KeyR"));
+check("refuseKey: no key, or a key of another script, falls back to the code (no-map behaviour unchanged)",
+  refuseKey("KeyY") === "Y AND N ANSWER THE PRIVACY CARD · PICK ANOTHER" && refuseKey("KeyR", "к") === refuseKey("KeyR") && refuseKey("KeyZ") === "" && refuseKey("KeyZ", "z") === "" && refuseKey("Escape", "x") === refuseKey("Escape") && refuseKey("Digit1", "&") === refuseKey("Digit1"));
+check("bindKey reads the printed letter through names", bindKey(D, "BOMB", "KeyZ", { KeyZ: "Y" }).kind === "refused" && bindKey(D, "BOMB", "KeyY", { KeyY: "Z" }).kind === "set" && bindKey(D, "BOMB", "KeyY").kind === "refused" &&
+  bindMoveSet(D, ["KeyI", "KeyL", "KeyK", "KeyJ"], { KeyL: "R" }).line === refuseKey("KeyR"));
+{
+  const qz = bindKey(D, "BOMB", "KeyY", { KeyY: "Z" }).c, st = mem(); saveControls(qz, st);
+  check("a bind made on QWERTZ's KeyY (printed Z) is saved and loads back, never dropped", loadControls(st).key.BOMB === "KeyY" && J(loadControls(st).key) === J(qz.key), J(loadControls(st).key));
+  check("a stored bind on any letter place loads (the layout is not known at load); fixed keys still reset the block", clampControls({ ...D, key: { ...DEF_KEY, BOMB: "KeyR" } }).key.BOMB === "KeyR" && J(clampControls({ ...D, key: { ...DEF_KEY, BOMB: "Escape" } }).key) === J(DEF_KEY));
+}
 
 let r = bindKey(D, "REMOTE", "KeyE");
 check("swap within one device, line = \"E WAS THROW · THROW NOW Q\"", r.kind === "swap" && r.other === "THROW" && r.c.key.REMOTE === "KeyE" && r.c.key.THROW === "KeyQ" && r.line === "E WAS THROW · THROW NOW Q", r.line);

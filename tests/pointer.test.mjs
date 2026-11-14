@@ -54,9 +54,10 @@ function rig(o = {}) {
   const world = { state: o.state || "PLAY" }, canvas = o.canvas || mkEl(600, 520), H = mkHit(o.over);
   let kind = o.kind || "2d", ctl = null;
   mountPointer({ canvas, fit: o.fit === undefined ? null : o.fit, input, app, world, kind: () => kind, ctl: () => ctl, hit: H.hit });
-  ctl = { tap: (v) => taps.push(v) }; // assigned after the mount, as main's const ctl is
+  const ups = [], pts = [];
+  ctl = { tap: (v, pt) => { taps.push(v); pts.push(pt); }, tapUp: (v) => ups.push(v) }; // assigned after the mount, as main's const ctl is
   const down = (x, y, ev = {}) => canvas.fire("pointerdown", { clientX: x, clientY: y, ...ev });
-  return { app, input, world, canvas, H, log, taps, down, setKind: (k) => { kind = k; } };
+  return { app, input, world, canvas, H, log, taps, ups, pts, down, setKind: (k) => { kind = k; } };
 }
 const J = (v) => JSON.stringify(v);
 const spot = (pred, W = 600, H = 520) => { for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) if (pred(x, y)) return { x, y }; return null; };
@@ -170,6 +171,21 @@ for (const [pv, fn, other, field, row, R] of [[1, "settingsHit", "graphicsHit", 
   r.down(54, 58);
   const c = r.H.last("controlsHit");
   check("CONTROLS: ctl.tap(controlsHit(app.controls.view(app.ctlT), x, y, cv, kind, false))", r.taps[0] === SENT && c.a[0].view === 2 && c.a[1] === 100 && c.a[2] === 100 && c.a[3] === cv && c.a[4] === "2d" && c.a[5] === false && r.log.length === 0 && r.input._intent.fire === false, J(c.a.slice(0, 3)));
+}
+
+// ---- Task 3: CONTROLS' CONNECT row: the pointer's type reaches ctl.tap (a touch acts on its pointerup), and every pointerup / cancel reaches tapUp ----
+for (const [nm, o] of [["CONTROLS", { app: { screen: SCREEN.CONTROLS, ctlT: 2 } }], ["PAUSE view 3", { app: { screen: SCREEN.GAME, pauseView: 3, ctlT: 2 }, state: "PAUSE" }]]) {
+  const cv = mkEl(600, 520), r = rig({ ...o, canvas: cv, over: { controlsHit: () => SENT } });
+  r.down(30, 40, { pointerType: "touch" });
+  cv.fire("pointerup", { clientX: 30, clientY: 40, pointerType: "touch", currentTarget: cv });
+  check(`${nm}: the pointerdown hands ctl.tap its pointer type, the pointerup hands ctl.tapUp the hit under it (controlsHit)`, r.pts[0] === "touch" && r.taps[0] === SENT && r.ups.length === 1 && r.ups[0] === SENT, J([r.pts, r.ups.length]));
+  cv.fire("pointercancel", {}); cv.fire("pointerleave", {});
+  check(`${nm}: pointercancel and pointerleave hand tapUp null (a cancelled CONNECT tap opens nothing)`, r.ups.length === 3 && r.ups[1] === null && r.ups[2] === null, J(r.ups.length));
+}
+{
+  const cv = mkEl(600, 520), r = rig({ app: { screen: SCREEN.MENU }, canvas: cv });
+  cv.fire("pointerup", { clientX: 30, clientY: 40, pointerType: "touch", currentTarget: cv });
+  check("off CONTROLS a pointerup hands tapUp null (no hit is measured)", r.ups.length === 1 && r.ups[0] === null && !r.H.of("controlsHit").length);
 }
 
 // ---- a page key (R1 cohesion 9): every page answers the kit's {k: "page", d, to}; the pointer's ONE branch is app.pageKey(d, to), nothing confirmed or backed ----

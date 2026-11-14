@@ -1119,7 +1119,7 @@ function check(name, cond, detail) {
   }
   // Q11: the ANALYTICS row says why it did nothing, whole, on its own row
   {
-    const a = mk("ready", { anaOpen: () => true }), NOTE = "ANSWER THE CARD WITH Y OR N";
+    const a = mk("ready", { anaOpen: () => true }), NOTE = "ANSWER THE CARD · Y OR N KEY";
     a.screen = SCREEN.SETTINGS; a.lastDev = "pad"; a.optRow = a.optRows().indexOf("ANALYTICS");
     check("no note before the press", !has(draw(a, PLAY), NOTE));
     a.optCycle();

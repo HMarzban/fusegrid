@@ -10,7 +10,9 @@
    band   the focused row's band with its 2 px inner outline.  focusBomb  the game's bomb body, bare (R8: no cord, spark, pulse or clock), x = the left of its
           size x size box (a row puts it 8 px in), cy = the row's centre (the box top sits 46 % of size above it).
    glyph  a row's small mark in col, top-left x y, s px square: chev (a door's chevron), ext (a link out), up / dn (the arrow keycaps' legends),
-          flag (a finale level's mark, appendix 7.2 mark()).
+          flag (a finale level's mark, appendix 7.2 mark()), cross / circle / square / triangle (a PlayStation pad's face buttons, R-LABELS).
+   PAD_GLYPH  the four PlayStation face words a keycap draws as their glyphs (key's label, cap): the hint words stay the words, so a line of
+          text still reads CROSS; capW sizes a glyph cap as the narrowest cap.
    plaque the foot's sign plaque (radius 8, outline, hard 4 px drop, bed, keyhi strip).  rpath rfill  the rounded-rect path and its fill.
    wallCell floorCell brickCell  the board's own cell painters (wallart, floorart, sprites paintBrick) on tok.biome, scaled to s. Hard edges only.
    A painter scales the caller's globalAlpha and leaves it as it found it. A missing tok (or focusBomb size) throws a named error; a degenerate size
@@ -20,7 +22,8 @@ import {wallShapes, paintShapes} from "../wallart.js";
 import {railOf, bossOf} from "../frameart.js";
 import {paintFloor} from "../floorart.js";
 import {CONST, rgba} from "./tokens.js";
-import {T, DEV, measure, textScale} from "./type.js";
+import {T, DEV, measure, textScale, text as kitText} from "./type.js";
+import {noText} from "./probe.js";
 
 const OL = CONST.ol;
 export const KINDS = Object.freeze({
@@ -54,7 +57,40 @@ const FACE = {
   },
 };
 const ring = (c, x, y, w, h) => { c.strokeStyle = CONST.ink; c.lineWidth = 3; c.beginPath(); sp(c, x - 4.5, y - 4.5, w + 9, h + 9, 10.5); c.stroke(); };
-const legend = (c, s, cx, cy, font, col) => { c.font = font; c.fillStyle = col; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(s, cx, cy); };
+export const PAD_GLYPH = Object.freeze({CROSS: "cross", CIRCLE: "circle", SQUARE: "square", TRIANGLE: "triangle"});
+const pxOf = (font) => { const m = /(\d+(?:\.\d+)?)px/.exec(font); return m ? +m[1] : 16; };
+const legend = (c, s, cx, cy, font, col) => {
+  const g = PAD_GLYPH[s];
+  if (g) { const z = Math.round(pxOf(font) * 1.05); if (!noText()) glyph(c, g, cx - z / 2, cy - z / 2, z, col); return; } // a PlayStation face button: its glyph, at the legend's cap size (hidden with the text in a capture's text-hidden twin)
+  c.font = font; c.fillStyle = col; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(s, cx, cy);
+};
+
+/* a painted text run (a foot line, a toast line) that names a PlayStation face button draws its glyph inline, at the run's cap height, ONLY when the caller
+   says the run carries a PlayStation pad's words (ps): copy that merely holds an uppercase CROSS stays text on every other pad. The word stays in the
+   text the probe and the live region read. A run without ps, or with no such word, is the plain kit text, call for call. */
+const GLYPH_RE = /\b(CROSS|CIRCLE|SQUARE|TRIANGLE)\b/;
+/** True when s holds a PlayStation face word a painted run would draw as its glyph (the caller still decides, runW / runText's ps). */
+export const hasPadGlyph = (s) => GLYPH_RE.test(String(s));
+const runZ = (font) => Math.round(pxOf(font) * 1.1);
+const parts = (s) => String(s).split(GLYPH_RE).reduce((a, p) => (p === "" ? a : [...a, p]), []);
+/** The drawn width of a text run in font: measure() itself unless ps (a PlayStation pad's words) and it holds a glyph word, else its words plus each glyph's width. */
+export function runW(c, font, s, ps) {
+  if (!ps || !hasPadGlyph(s)) return measure(c, font, s);
+  return parts(s).reduce((w, p) => w + (PAD_GLYPH[p] ? runZ(font) : measure(c, font, p)), 0);
+}
+/** Paints a text run at x y (middle baseline, align left / center / right); with ps each PlayStation face word is its glyph, and the context's
+    textAlign / textBaseline are left as found. No ps, or no such word: kit text(). */
+export function runText(c, s, x, y, font, col, align, ps) {
+  if (!ps || !hasPadGlyph(s)) return kitText(c, s, x, y, font, col, align);
+  const w = runW(c, font, s, ps), z = runZ(font), ta = c.textAlign, tb = c.textBaseline;
+  let at = align === "center" ? x - w / 2 : align === "right" ? x - w : x;
+  for (const p of parts(s)) {
+    if (PAD_GLYPH[p]) { if (!noText()) glyph(c, PAD_GLYPH[p], at, y - z / 2, z, col); at += z; continue; }
+    kitText(c, p, at, y, font, col, "left");
+    at += measure(c, font, p);
+  }
+  c.textAlign = ta; c.textBaseline = tb;
+}
 
 export function key(c, x, y, w, h, kind, o = {}) {
   const K = KINDS[kind], t = o.tok, y0 = y, d = dev(o);
@@ -78,7 +114,7 @@ export function key(c, x, y, w, h, kind, o = {}) {
   if (o.ring) ring(c, x, y, w, h);
 }
 
-export const capW = (c, s, o = {}) => { const d = dev(o); return Math.max(d.capw, Math.ceil(measure(c, T.label(d.sec), String(s))) + 20); };
+export const capW = (c, s, o = {}) => { const d = dev(o); return PAD_GLYPH[s] ? d.capw : Math.max(d.capw, Math.ceil(measure(c, T.label(d.sec), String(s))) + 20); };
 export function cap(c, x, y, s, o = {}) {
   const d = dev(o), w = capW(c, s, o), h = d.caph;
   if (o.main) { rf(c, x, y + 3, w, h, 6, "#6a4a08"); rf(c, x, y, w, h, 6, OL); rf(c, x + 2, y + 2, w - 4, h - 4, 4, CONST.yelInk); }
@@ -141,6 +177,10 @@ export function glyph(c, name, x, y, s, col) {
   else if (name === "ext") { c.lineWidth = 2; c.moveTo(9, 2); c.lineTo(14, 2); c.lineTo(14, 7); c.moveTo(14, 2); c.lineTo(7, 9); c.moveTo(12, 10); c.lineTo(12, 14); c.lineTo(2, 14); c.lineTo(2, 4); c.lineTo(6, 4); c.stroke(); }
   else if (name === "up") { c.moveTo(3, 11); c.lineTo(8, 5); c.lineTo(13, 11); c.closePath(); c.fill(); }
   else if (name === "dn") { c.moveTo(3, 5); c.lineTo(8, 11); c.lineTo(13, 5); c.closePath(); c.fill(); }
+  else if (name === "cross") { c.lineWidth = 2.4; c.moveTo(4, 4); c.lineTo(12, 12); c.moveTo(12, 4); c.lineTo(4, 12); c.stroke(); }
+  else if (name === "circle") { c.lineWidth = 2.2; c.arc(8, 8, 5, 0, Math.PI * 2); c.stroke(); }
+  else if (name === "square") { c.lineWidth = 2.2; c.rect(3.5, 3.5, 9, 9); c.stroke(); }
+  else if (name === "triangle") { c.lineWidth = 2.2; c.moveTo(8, 2.8); c.lineTo(13.4, 12.6); c.lineTo(2.6, 12.6); c.closePath(); c.stroke(); }
   else if (name === "flag") { c.lineWidth = 2; c.moveTo(4, 15); c.lineTo(4, 2); c.stroke(); c.beginPath(); c.moveTo(4, 2.5); c.lineTo(13, 2.5); c.lineTo(10.5, 5.5); c.lineTo(13, 8.5); c.lineTo(4, 8.5); c.closePath(); c.fill(); }
   c.restore();
 }

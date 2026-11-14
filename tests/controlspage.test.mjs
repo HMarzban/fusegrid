@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { createControlsPage } from "../src/app/controlspage.js";
+import { createControlsPage, SW2_WORDS } from "../src/app/controlspage.js";
 import { DEF_CONTROLS, clampControls, bindBtn } from "../src/app/controls.js";
 
 let pass = 0, fail = 0;
@@ -8,7 +8,8 @@ const J = JSON.stringify;
 const CANCEL = "CANCELLED · NOTHING CHANGED";
 function rig(o) {
   const r = { c: (o && o.c) || DEF_CONTROLS, writes: [], flags: [], said: [], pv: { state: "ready", name: "CONTROLLER 1", rumble: true, ...(o && o.pv) } };
-  r.p = createControlsPage({ get: () => r.c, set: (c, f) => { r.c = c; r.writes.push(c); r.flags.push(f || {}); }, padView: () => r.pv, say: (s) => r.said.push(s) });
+  r.sw = (o && o.sw) || null;
+  r.p = createControlsPage({ get: () => r.c, set: (c, f) => { r.c = c; r.writes.push(c); r.flags.push(f || {}); }, padView: () => r.pv, say: (s) => r.said.push(s), ...(o && o.sw ? { sw2: () => r.sw } : {}) });
   return r;
 }
 const row = (r, i) => { while (r.p.view(0).row !== i) r.p.walk(1, 1); };
@@ -18,7 +19,7 @@ const open = (dev, o) => { const r = rig(o); r.p.open(dev); return r; };
 {
   const r = open("key");
   const v = r.p.view(0);
-  check("view() has the mock's S shape", J(Object.keys(v).sort()) === J(["armed", "binds", "capture", "device", "dead", "echo", "key", "names", "pad", "reads", "drift", "vib", "row", "status", "stick", "stickVal", "swap", "tab"].sort()), J(Object.keys(v)));
+  check("view() has the mock's S shape", J(Object.keys(v).sort()) === J(["armed", "binds", "capture", "device", "dead", "echo", "key", "names", "pad", "reads", "drift", "vib", "row", "status", "stick", "stickVal", "swap", "sw2", "tab"].sort()), J(Object.keys(v)));
   check("view values", v.tab === "key" && v.device === "key" && v.row === 1 && v.key === r.c.key && v.binds === r.c.pad && v.stick === "L" && v.dead === 25 && v.vib === 2 && v.armed === false && v.swap === null && v.status === "" && v.capture === null && v.echo === null && J(v.stickVal) === J([0, 0]) && v.pad.state === "ready" && v.pad.name === "CONTROLLER 1");
   check("open says one sentence", J(r.said) === J(["Controls, keyboard."]));
   check("opens on the last-used tab", open("pad").p.view(0).tab === "pad" && open("touch").p.view(0).tab === "pad" && open("touch").p.view(0).device === "touch");
@@ -377,7 +378,11 @@ for (const state of ["none", "lost"]) {
   check("still held, still swallowed", r.p.feedKey("KeyZ", "z", 330) === true);
   r.p.tick(340, false);
   check("released, the key is ordinary again", r.p.feedKey("KeyZ", "z", 350) === false);
-  check("a printed name is kept for the chips", r.p.view(350).names.KeyZ === "z");
+  check("a printed name is kept for the chips, upper-cased (the wire's rule, fix round 1)", r.p.view(350).names.KeyZ === "Z", r.p.view(350).names.KeyZ);
+  const cy = open("key");
+  cy.p.confirm(0); arm(cy, 10);
+  cy.p.feedKey("KeyG", "п", 300);
+  check("a capture on a Cyrillic key keeps the code's letter on the page (no non-ASCII name)", cy.c.key.BOMB === "KeyG" && cy.p.view(300).status === "BOMB NOW G" && cy.p.view(300).names.KeyG === undefined, cy.p.view(300).status + " " + J(cy.p.view(300).names));
   const f = open("key");
   f.p.confirm(0); arm(f, 10);
   f.p.feedKey("KeyQ", "a", 300);
@@ -391,13 +396,21 @@ for (const state of ["none", "lost"]) {
   const m = open("key");
   row(m, 0); m.p.confirm(0);
   let tm = arm(m, 10);
-  for (const [c, k] of [["KeyI", "z"], ["KeyL", "y"], ["KeyK", "x"]]) { m.p.feedKey(c, k, tm); tm = arm(m, tm + 1) + 1; m.p.tick(tm, false); }
+  for (const [c, k] of [["KeyI", "z"], ["KeyL", "q"], ["KeyK", "x"]]) { m.p.feedKey(c, k, tm); tm = arm(m, tm + 1) + 1; m.p.tick(tm, false); } // q, not y: a key printing Y answers the privacy card (Task 6)
   m.p.feedKey("KeyJ", "v", tm);
-  check("B4: a MOVE set reads through names", m.p.view(tm).status === "MOVE NOW ZVXY", m.p.view(tm).status);
+  check("B4: a MOVE set reads through names", m.p.view(tm).status === "MOVE NOW ZVXQ", m.p.view(tm).status);
   const g = open("key");
   g.p.confirm(0); arm(g, 10);
-  g.p.feedKey("KeyR", "k", 300);
-  check("a refused key leaves no name behind", g.p.view(300).names.KeyR === undefined);
+  g.p.feedKey("KeyO", "r", 300); // Task 6 ruling 1: the printed R is refused, wherever it sits
+  check("a refused key leaves no name behind", g.p.view(300).names.KeyO === undefined && g.c.key.BOMB === "Space");
+  const q = open("key");
+  q.p.confirm(0); arm(q, 10);
+  q.p.feedKey("KeyY", "z", 300);
+  check("QWERTZ: the key printed Z (code KeyY) binds", q.c.key.BOMB === "KeyY" && q.p.view(300).status === "BOMB NOW Z", q.p.view(300).status);
+  const y = open("key");
+  y.p.confirm(0); arm(y, 10);
+  y.p.feedKey("KeyZ", "y", 300);
+  check("QWERTZ: the key printed Y (code KeyZ) is refused", y.c.key.BOMB === "Space" && y.p.view(300).capture && /PRIVACY CARD/.test(y.p.view(300).capture.sub), J(y.p.view(300).capture));
   check("outside capture an unrelated key is not taken", r.p.feedKey("KeyG", "g", 360) === false);
 }
 {
@@ -457,6 +470,64 @@ for (const state of ["none", "lost"]) {
   check("vibration says low", on.said.at(-1) === "Vibration, low. No menu buzz. Left and right change it. 7 of 8.", on.said.at(-1));
   on.c = { ...on.c, vib: 0 }; on.p.pick(1); on.p.pick(6);
   check("vibration says off", on.said.at(-1) === "Vibration off. No buzz at all. 7 of 8.", on.said.at(-1));
+}
+
+/* ---- Task 3: the CONNECT row (SW2) on the CONTROLLER tab, after VIBRATION, before RESET; only where the wire's waker exists (usbReach) ---- */
+{
+  check("SW2_WORDS: the app-side literal (pinned equal to words.js in words.test)", J(SW2_WORDS) === J({ row: "SWITCH 2 CONTROLLER", door: "CONNECT", ok: "CONNECTED", cancel: "NOT CONNECTED · TRY AGAIN", busy: "IN USE BY ANOTHER APP", failed: "COULD NOT START IT HERE", blocked: "NOT ALLOWED ON THIS PAGE", pad: "PRESS ENTER OR CLICK", vib: "ALLOW VIBRATION", allow: "ALLOW", help: "It needs a USB cable. Your browser asks once which controller.", helpVib: "It needs a USB cable. Your browser asks once which controller, and once more for vibration." }) && Object.isFrozen(SW2_WORDS));
+  const off = open("pad");
+  check("no waker (usbReach false): no SW2 row, eight rows on the CONTROLLER tab, the view says not shown", off.p.view(0).sw2.shown === false && (() => { off.p.pick(7); return off.said.at(-1).endsWith("8 of 8."); })(), off.said.at(-1));
+  const hid = open("pad", { sw: { shown: false, state: "idle" } });
+  hid.p.walk(-1, 1);
+  check("a waker that is not shown: still eight rows (↑ from BOMB wraps nowhere near a ninth)", hid.p.view(0).row === 0 && (() => { hid.p.walk(-1, 1); return hid.p.view(0).row === 7; })());
+  const r = open("pad", { sw: { shown: true, state: "idle" }, pv: { state: "none" } });
+  check("shown: the view carries it", J(r.p.view(0).sw2) === J({ shown: true, state: "idle", vib: false, seen: false, hid: false }));
+  r.said.length = 0; r.p.walk(-1, 1); r.p.walk(-1, 1); r.p.walk(-1, 1); // BOMB -> MOVE -> (wrap) RESET -> SW2
+  check("shown, no controller: nine rows, SW2 the eighth (after VIBRATION, before RESET), walked onto with its words", r.p.view(0).row === 7 && r.said.at(-1) === "Switch 2 controller, CONNECT. 8 of 9.", J([r.p.view(0).row, r.said.at(-1)]));
+  check("shown, no controller: Enter on SW2 is the wire's ('sw2'), never refused by the NO CONTROLLER rule", r.p.confirm(0) === "sw2" && !r.p.capturing && r.writes.length === 0);
+  r.p.walk(1, 1);
+  check("RESET is still the last row (9 of 9), and with no controller it stays refused", r.p.view(0).row === 8 && r.p.confirm(0) === false);
+  r.p.pick(7);
+  r.p.sw2Said("pad");
+  check("a pad press on SW2: the page shows PRESS ENTER OR CLICK", r.p.view(0).status === SW2_WORDS.pad && r.said.at(-1) === SW2_WORDS.pad, r.p.view(0).status);
+  for (const [res, k] of [["woken", "ok"], ["cancelled", "cancel"], ["busy", "busy"], ["failed", "failed"], ["blocked", "blocked"]]) { r.p.sw2Said(res); check("request() " + res + ": the page shows " + SW2_WORDS[k], r.p.view(0).status === SW2_WORDS[k], r.p.view(0).status); }
+  for (const [sw, word] of [[{ shown: true, state: "woken" }, "CONNECT"], [{ shown: true, state: "idle", seen: true }, "CONNECTED"], [{ shown: true, state: "cancelled", seen: true }, "CONNECTED"], [{ shown: true, state: "idle", seen: true, vib: true }, "ALLOW VIBRATION"]]) {
+    const q = open("pad", { sw }); q.p.pick(7);
+    check("the door in speech by the wire's one predicate (" + JSON.stringify(sw) + "): " + word, q.said.at(-1) === "Switch 2 controller, " + word + ". 8 of 9.", q.said.at(-1));
+  }
+  const n = r.p.view(0).status; r.p.sw2Said("waking");
+  check("an unknown result writes nothing", r.p.view(0).status === n);
+  const k = open("key", { sw: { shown: true, state: "idle" } });
+  k.p.pick(7);
+  check("the KEYBOARD tab has no SW2 row (still eight)", k.said.at(-1).endsWith("8 of 8."), k.said.at(-1));
+  const t = open("pad", { sw: { shown: true, state: "idle" } }); t.p.pick(7); t.p.tab("key");
+  check("from SW2 to the KEYBOARD tab: onto PAUSE (the other tab has no SW2)", t.p.view(0).row === 4);
+  const w = open("pad", { sw: { shown: false, state: "idle" } }); w.p.pick(7); w.p.confirm(0); w.p.tick(1, false);
+  check("RESET armed", w.p.view(1).armed === true && w.p.view(1).row === 7);
+  w.sw = { shown: true, state: "idle" }; w.p.tick(2, false);
+  check("the row appears while the page is open: the focus stays on RESET by id (never slides onto SW2), the arm drops", w.p.view(2).row === 8 && w.p.view(2).armed === false, J([w.p.view(2).row, w.p.view(2).armed]));
+  const z = open("pad", { sw: { shown: false, state: "idle" } }); z.p.pick(7); z.p.tick(1, false);
+  z.sw = { shown: true, state: "idle" }; z.p.open("pad"); z.p.tick(2, false);
+  check("the row appears while the page is shut: re-opened, the focus is BOMB (row 1), not the old visit's row", z.p.view(2).row === 1, z.p.view(2).row);
+}
+
+// ---- fix round C (K2): view().names is one object a steady frame, a new one only when a name changes ----
+{
+  let seedObj = { KeyW: "Z" }, v = 0;
+  const r = { c: DEF_CONTROLS };
+  const p = createControlsPage({ get: () => r.c, set: (c) => { r.c = c; }, padView: () => ({ state: "ready", name: "C", rumble: true }), say() {}, names: () => seedObj, namesV: () => v });
+  p.open("key");
+  const a = p.view(0).names, b = p.view(16).names;
+  check("K2: two steady frames share one names object", a === b && a.KeyW === "Z", J(a));
+  seedObj = { KeyW: "Z", KeyA: "Q" }; v++;
+  const c = p.view(32).names;
+  check("K2: the wire's names move on (namesV): a new object with the new name", c !== a && c.KeyA === "Q" && p.view(48).names === c, J(c));
+  p.confirm(0); p.tick(10, false); p.tick(210, false);
+  p.feedKey("KeyZ", "z", 300);
+  const d = p.view(310).names;
+  check("K2: a name the capture learned: a new object holding it, then steady again", d !== c && d.KeyZ === "Z" && d.KeyW === "Z" && p.view(320).names === d, J(d));
+  const plain = createControlsPage({ get: () => DEF_CONTROLS, set() {}, padView: () => ({ state: "ready" }), say() {} });
+  check("K2: no wire names: still one object a steady frame", plain.view(0).names === plain.view(1).names);
 }
 
 console.log("\n  CONTROLS PAGE RESULT: " + pass + " PASS / " + fail + " FAIL");

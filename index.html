@@ -296,7 +296,7 @@
      #loadsay (outside #load, which hides) speaks stages only, never counts; a failure
      card speaks through #loadmsg's alert. Enter answers a failure card with RETRY,
      Escape with the other button, the keyboard twin of a pad's SOUTH and EAST. -->
-<script id="loadjs" data-files="120">
+<script id="loadjs" data-files="121">
 (function(w,d){
   var $=function(i){return d.getElementById(i)},E=$("load"),bar=$("loadbar"),fill=$("loadfill"),msg=$("loadmsg"),act=$("loadact"),retry=$("loadretry"),keep=$("loadkeep"),retryW=$("loadretryw"),keepW=$("loadkeepw"),retryK=$("loadretryk"),keepK=$("loadkeepk");
   var SLOW=10000,STALL=30000,say0=$("loadsay"),jobs={},cur=null,failed=null,drop=null,again=null,dl="USE CLASSIC 2D",shown=null,words=false,iv=0,base=new URL("./",d.baseURI).href;
@@ -536,6 +536,7 @@
 <link rel="modulepreload" href="./src/app/menuapp.js">
 <link rel="modulepreload" href="./src/app/pacestore.js">
 <link rel="modulepreload" href="./src/app/pactstore.js">
+<link rel="modulepreload" href="./src/app/padfamily.js">
 <link rel="modulepreload" href="./src/app/padroute.js">
 <link rel="modulepreload" href="./src/app/perf.js">
 <link rel="modulepreload" href="./src/app/plaques.js">

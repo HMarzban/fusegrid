@@ -1,8 +1,10 @@
-// Controller and keyboard diagrams and the position glyphs, on the menu kit's colours: vector only, no images, no maker shapes. Ids are positions.
+// Controller and keyboard diagrams and the position glyphs, on the menu kit's colours: vector only, no images, no maker shapes (the face legends follow the
+// controller in hand, R-LABELS). Ids are positions.
 import { TEXT, MUTED, sans } from "./menudraw.js";
 import { rr } from "./icons.js";
 import { CONST } from "./kit/tokens.js";
-import { wallCell } from "./kit/paint.js";
+import { wallCell, glyph as kitGlyph, PAD_GLYPH } from "./kit/paint.js";
+import { PAD_FAMILY_WORDS } from "./words.js";
 import { layer, canMake } from "./kit/cache.js";
 
 
@@ -137,7 +139,18 @@ function bumper(c, W, m, t, on) {
   c.lineCap = "butt";
 }
 /* the static drawing: triggers, bumpers, the body, then the inputs in the appendix's order */
-function paintPad(c, W, t, on, lock, grips) {
+/* R-LABELS: the face buttons' legends in the family of the controller in hand (words.js PAD_FAMILY_WORDS: a letter, or a kit glyph where the word is one);
+   a generic pad has none, as before. The body stays the generic twin-grip one. */
+function faceLegends(c, W, t, on, fam) {
+  const T = PAD_FAMILY_WORDS[fam], r = PADG.br * W;
+  if (!T || fam === "generic") return;
+  for (const id of ["N", "E", "S", "W"]) {
+    const [x, y] = [PART_AT[id][0] * W, PART_AT[id][1] * W], s = T[id].w, col = on[id] ? OL : CONST.ink, g = PAD_GLYPH[s];
+    if (g) { const z = r * 1.15; kitGlyph(c, g, x - z / 2, y - z / 2, z, col); continue; }
+    c.font = sans(Math.round(r * 1.1), "800"); c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = col; c.fillText(s, x, y + 0.5);
+  }
+}
+function paintPad(c, W, t, on, lock, grips, fam) {
   const lip = 0.026 * W, top = lock ? t.rule : t.band, y0 = 0.03 * W, y1 = 0.648 * W, clip = typeof c.clip === "function";
   trigger(c, W, 1, t, on.TRL); trigger(c, W, 0, t, on.TRR); bumper(c, W, 1, t, on.SHL); bumper(c, W, 0, t, on.SHR);
   bodyPath(c, W, 0.03 * W); alpha(c, 0.5, () => { c.fillStyle = BK; c.fill(); }); // the drop: a hard offset fill, never a blur
@@ -165,6 +178,7 @@ function paintPad(c, W, t, on, lock, grips) {
   stick(c, ...at("LS"), W, PADG.LS[2] * W, t, on.LS); dpad(c, ...at("dpad"), W, t, on.dpad); stick(c, ...at("RS"), W, PADG.RS[2] * W, t, on.RS);
   for (const id of ["N", "E", "S", "W"]) face(c, ...at(id), W, t, on[id]);
   pill(c, ...at("SELECT"), W, t, on.SELECT); pill(c, ...at("START"), W, t, on.START);
+  if (fam && !lock) faceLegends(c, W, t, on, fam);
 }
 /** The drawing's reach past its W x 0.648 W body box (the triggers above, the drop below), in px from the body box's top-left. */
 export const padBox = (W) => ({ x0: -3, y0: -0.06 * W - 3, x1: W + 3, y1: 0.68 * W + 3 });
@@ -174,12 +188,12 @@ const devScale = (c) => { const m = typeof c.getTransform === "function" ? c.get
 /** The controller at body width W, its body box's top-left at x y. o: {tok, lit:{id:true}, lock, ring:id, press:id, grips, reduced}. The static drawing
     is one kit/cache.js layer keyed by world, W, dpr and the lit set (painted straight where no layer canvas can be made); the ring and a press draw live. */
 export function drawPad(c, x, y, W, o) {
-  const q = o || {}, t = q.tok, lock = !!q.lock, on = lock ? {} : q.lit || {}, grips = !!q.grips && !lock, B = padBox(W);
+  const q = o || {}, t = q.tok, lock = !!q.lock, on = lock ? {} : q.lit || {}, grips = !!q.grips && !lock, B = padBox(W), fam = q.fam && q.fam !== "generic" && PAD_FAMILY_WORDS[q.fam] ? q.fam : null;
   if (canMake() && typeof c.drawImage === "function") {
-    const dpr = devScale(c), sig = (lock ? "L" : "") + (grips ? "G" : "") + Object.keys(on).filter((k) => on[k]).sort().join(","), w = Math.ceil((B.x1 - B.x0) * dpr), h = Math.ceil((B.y1 - B.y0) * dpr);
-    const cv = layer({ layer: "pad", biome: t.name, level: sig, W: Math.round(W * 100) / 100, H: 0, dpr, look: "2d", textScale: 1 }, w, h, (g) => { g.scale(dpr, dpr); g.translate(-B.x0, -B.y0); paintPad(g, W, t, on, lock, grips); });
+    const dpr = devScale(c), sig = (lock ? "L" : "") + (grips ? "G" : "") + (fam && !lock ? fam + ":" : "") + Object.keys(on).filter((k) => on[k]).sort().join(","), w = Math.ceil((B.x1 - B.x0) * dpr), h = Math.ceil((B.y1 - B.y0) * dpr);
+    const cv = layer({ layer: "pad", biome: t.name, level: sig, W: Math.round(W * 100) / 100, H: 0, dpr, look: "2d", textScale: 1 }, w, h, (g) => { g.scale(dpr, dpr); g.translate(-B.x0, -B.y0); paintPad(g, W, t, on, lock, grips, fam); });
     c.drawImage(cv, x + B.x0, y + B.y0, w / dpr, h / dpr);
-  } else { c.save(); c.translate(x, y); paintPad(c, W, t, on, lock, grips); c.restore(); }
+  } else { c.save(); c.translate(x, y); paintPad(c, W, t, on, lock, grips, fam); c.restore(); }
   const p = q.press && !lock && q.press.length === 1 && PART_AT[q.press];
   if (p) { // a live press: the face drops 2 px and flashes (REDUCE FLASH: the drop only)
     const fx = x + p[0] * W, fy = y + p[1] * W + 2, r = PADG.br * W;
@@ -249,12 +263,19 @@ const rrect = (c, x, y, w, h, r) => { // corners as arcs (the drawing's own art,
 };
 /** The legend size at pitch k and text scale ts (desktop 15.8, never under the 10 px floor: 0 = no print). */
 export const kbLegend = (k, ts = 1) => { const px = Math.min(15.8 * ts, 0.5 * k); return px >= 10 && k - Math.max(2, 0.1 * k) - 0.22 * k >= px * 0.75 + 2 ? px : 0; };
+/** A key's legend in the player's own layout: names (code to printed letter, the wire's keyNames) replace a one-character legend; ESC, TAB, the
+    F-row, ⌫ and the arrows keep theirs. */
+export const legOf = (q, names) => (names && names[q.id] && q.leg.length === 1 && q.id !== "Backspace" ? String(names[q.id]).toUpperCase() : q.leg);
+/* the legends names change, as a layer key part: "" with none, so a default board keeps its key; one slot by identity (the wire hands a new names
+   object only when a name changes), so a steady frame walks no KB_KEYS */
+let lsOf = null, lsSig = "";
+const legSig = (names) => { if (names !== lsOf) { lsOf = names; lsSig = names ? KB_KEYS.filter((q) => legOf(q, names) !== q.leg).map((q) => q.id + "=" + legOf(q, names)).join() : ""; } return lsSig; };
 /** Which legends print at pitch k: a legend wider than its top face is left off (a lit key gets the face's whole width), the F-row prints all or
-    none, and with no legend size at all only the arrow glyphs print (the rows name every key). mw(s, px) measures. */
-export function kbPrints(k, lit, mw, ts = 1) {
+    none, and with no legend size at all only the arrow glyphs print (the rows name every key). mw(s, px) measures; names as legOf. */
+export function kbPrints(k, lit, mw, ts = 1, names) {
   const px = kbLegend(k, ts), out = {};
   if (!px) return out;
-  const fits = (q) => { const f = faceOf(keyRect(q, k), k); return q.id === "Backspace" ? f.w >= 24 : mw(q.leg, px) <= f.w - (lit[q.id] ? 0 : 4); };
+  const fits = (q) => { const f = faceOf(keyRect(q, k), k); return q.id === "Backspace" ? f.w >= 24 : mw(legOf(q, names), px) <= f.w - (lit[q.id] ? 0 : 4); };
   const F = KB_KEYS.filter((q) => q.f), fAll = F.every(fits);
   for (const q of KB_KEYS) if (q.leg && (q.f ? fAll : fits(q))) out[q.id] = true;
   return out;
@@ -265,7 +286,7 @@ function arrowGlyph(c, id, cx, cy, s, col) {
   const d = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[id], [dx, dy] = d;
   c.fillStyle = col; c.beginPath(); c.moveTo(cx + dx * s, cy + dy * s); c.lineTo(cx - dx * s * 0.7 + dy * s, cy - dy * s * 0.7 + dx * s); c.lineTo(cx - dx * s * 0.7 - dy * s, cy - dy * s * 0.7 - dx * s); c.closePath(); c.fill();
 }
-function paintKeys(c, k, t, lit, prints, px) {
+function paintKeys(c, k, t, lit, prints, px, names) {
   const dk = 0.38 * k, W = KB_W * k + 2 * dk, H = KB_H * k + 2 * dk;
   rrect(c, -dk, -dk + 0.3 * k, W, H, 0.32 * k); alpha(c, 0.55, () => { c.fillStyle = BK; c.fill(); }); // the deck's drop: a hard offset fill, never a soft shadow
   rrect(c, -dk, -dk, W, H, 0.32 * k); c.fillStyle = lin(c, -dk, H - dk, [[0, mix(t.band, WH, 0.2)], [0.3, t.band], [1, mix(t.band, BK, 0.3)]], t.band); c.fill();
@@ -281,18 +302,19 @@ function paintKeys(c, k, t, lit, prints, px) {
     const ink = on ? CONST.dk : CONST.off, cx = f.x + f.w / 2, cy = f.y + f.h / 2;
     if (!q.leg) arrowGlyph(c, q.id, cx, cy, Math.min(f.w, f.h) * 0.28, ink);
     else if (prints[q.id] && q.id === "Backspace") { c.strokeStyle = ink; c.lineWidth = 2.2; c.lineCap = "round"; c.lineJoin = "round"; c.beginPath(); c.moveTo(cx + 10, cy); c.lineTo(cx - 7, cy); c.moveTo(cx - 3, cy - 4.5); c.lineTo(cx - 8, cy); c.lineTo(cx - 3, cy + 4.5); c.stroke(); c.lineCap = "butt"; }
-    else if (prints[q.id]) { c.fillStyle = ink; c.font = sans(px, "700"); c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(q.leg, cx, cy + 0.5); }
+    else if (prints[q.id]) { c.fillStyle = ink; c.font = sans(px, "700"); c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(legOf(q, names), cx, cy + 0.5); }
   }
 }
-/** The keyboard at pitch k, its 18.5 x 6.5 k box's top-left at x y. o: {tok, lit:{code:true}, ring:code, prints:{code:true}, px}: the static board
-    is one kit/cache.js layer keyed by world, k, dpr, the lit set and the printed set; the focus ring draws live, 3 px cream at offset 3. */
+/** The keyboard at pitch k, its 18.5 x 6.5 k box's top-left at x y. o: {tok, lit:{code:true}, ring:code, prints:{code:true}, px, names}: the static
+    board is one kit/cache.js layer keyed by world, k, dpr, the lit set, the printed set and the legends names change; the focus ring draws live,
+    3 px cream at offset 3. */
 export function drawKeys(c, x, y, k, o) {
-  const q = o || {}, t = q.tok, lit = q.lit || {}, prints = q.prints || {}, px = q.px || 0, B = kbBox(k);
+  const q = o || {}, t = q.tok, lit = q.lit || {}, prints = q.prints || {}, px = q.px || 0, names = q.names, B = kbBox(k), ns = legSig(names);
   if (canMake() && typeof c.drawImage === "function") {
-    const dpr = devScale(c), sig = Object.keys(lit).filter((i) => lit[i]).sort().join(",") + "|" + Object.keys(prints).length + "|" + px, w = Math.ceil((B.x1 - B.x0) * dpr), h = Math.ceil((B.y1 - B.y0) * dpr);
-    const cv = layer({ layer: "keys", biome: t.name, level: sig, W: Math.round(k * 100) / 100, H: 0, dpr, look: "2d", textScale: 1 }, w, h, (g) => { g.scale(dpr, dpr); g.translate(-B.x0, -B.y0); paintKeys(g, k, t, lit, prints, px); });
+    const dpr = devScale(c), sig = Object.keys(lit).filter((i) => lit[i]).sort().join(",") + "|" + Object.keys(prints).length + "|" + px + (ns ? "|" + ns : ""), w = Math.ceil((B.x1 - B.x0) * dpr), h = Math.ceil((B.y1 - B.y0) * dpr);
+    const cv = layer({ layer: "keys", biome: t.name, level: sig, W: Math.round(k * 100) / 100, H: 0, dpr, look: "2d", textScale: 1 }, w, h, (g) => { g.scale(dpr, dpr); g.translate(-B.x0, -B.y0); paintKeys(g, k, t, lit, prints, px, names); });
     c.drawImage(cv, x + B.x0, y + B.y0, w / dpr, h / dpr);
-  } else { c.save(); c.translate(x, y); paintKeys(c, k, t, lit, prints, px); c.restore(); }
+  } else { c.save(); c.translate(x, y); paintKeys(c, k, t, lit, prints, px, names); c.restore(); }
   const r = q.ring && KB_AT[q.ring] && keyRect(KB_AT[q.ring], k);
   if (r) {
     alpha(c, 0.7, () => { rrect(c, x + r.x - 4.5, y + r.y - 4.5, r.w + 9, r.h + 9, 0.16 * k + 4.5); c.strokeStyle = OL; c.lineWidth = 5; c.stroke(); });
