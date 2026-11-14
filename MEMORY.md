@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — CONNECT row rulings applied (plan Task 3)
+- SW2_WORDS.help is "It needs a USB cable. Your browser asks once which controller." (Task 7 extends it); DESK_SHORT now only for a desk already at 0.8 <= u < 1, so no window changes form (a 648-664 tall touch shell box had flipped phone -> desk).
+
 ## 2026-11-14 — CONTROLS: the CONNECT row (plan Task 3)
 - SW2 row (SWITCH 2 CONTROLLER · CONNECT) on the CONTROLLER tab after VIBRATION, only where switch2.js usbReach is true (wire loads it in idle / on open; `auto()` once at the title; `ctl.sw2()`). Enter / click / touch pointerup open the chooser; a pad press shows PRESS ENTER OR CLICK. Desk give-way `DESK_SHORT` keeps 1366x657 at u 1; help sits in the pane's rule; a phone drawing under `LOCK_MIN` drops the locked body. Captures `controlsconnect` + `usb` recipe, gates strict 0 fail. No cache bump (batched).
 

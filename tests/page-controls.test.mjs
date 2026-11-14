@@ -320,6 +320,11 @@ const CW9 = (await import("../src/render/words.js")).CONTROLS_WORDS;
     for (const [W, H] of DESKS.filter(([W]) => W > 1024 && (ts === 1 || W === 1366))) { const r = rec(); P.drawControlsPage(r.ctx, { W, H }, swV({ row: 7 }), { level: 1, tap: false }); const rl = P._dbg.last.Pl.rule2.map((q) => q.s); check(`desk ${W}x${H} @${ts} (1366 and 1280 wide at 1, 1366 at 1.25; a narrower pane keeps the first sentence): the help sentence whole in the pane's rule on the CONNECT row (drawn), the menus rule on every other row`, rl.join(" ") === SW2.help && rl.every((q) => r.texts.some((t) => t.s === q)) && (() => { const k = rec(); P.drawControlsPage(k.ctx, { W, H }, swV({ row: 6 }), { level: 1, tap: false }); return !k.texts.some((t) => t.s === rl[0]); })(), J(rl)); }
   }
   setTextScale(1);
+  /* DESK_SHORT only for a desk that would scale (0.8 <= u < 1): a touch shell box on the phone form (816 x 648, 1.25: 864 x 664) stays the phone
+     form, and keyboard 1024 x 600 keeps the desk with closer gaps (u 0.9588 -> 0.9872 at 1) */
+  for (const [ts, W, H] of [[1, 816, 648], [1.25, 864, 664]]) { setTextScale(ts); for (const v of [padV(), swV()]) { const G = P.controlsGeom({ W, H, touch: true, shell: true, css: 1 }, v); check(`DESK_SHORT never moves a box off its form: touch ${W}x${H} @${ts}${v.sw2 ? " +CONNECT" : ""} stays the phone form`, G.mode === "phone", G.mode); } }
+  setTextScale(1);
+  { const G = P.controlsGeom({ W: 1024, H: 600 }, padV()); check("DESK_SHORT: keyboard 1024x600 stays the desk, its gaps closed, u 0.9872 (was 0.9588)", G.mode === "desk" && Math.abs(G.u - 0.9872) < 5e-4, G.u); }
   /* the ninth row takes the 393 x 852 phone's drawing under LOCK_MIN with no controller: the locked body is not drawn (too small to read as locked;
      the gates' lip under 4 CSS px), the NO CONTROLLER plaque stands alone; the eight-row page keeps its body */
   { const g = shellGeo(393, 852, 600, 520), F = { W: g.w, H: g.h, touch: true, shell: true, css: g.s };

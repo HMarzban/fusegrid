@@ -166,7 +166,7 @@ export function controlsGeom(F, s) {
   if (G) return G;
   const portrait = !paused && shell && touchy && F.H > F.W * 1.3, fl = touchy ? {h: TOUCH.h / css, g: TOUCH.g / css} : null;
   let d = portrait || (touchy && !shell) ? null : paused ? null : desk(F, ids, ts, fl);
-  if (d && d.u < 1) { const e = desk(F, ids, ts, fl, true); if (e.u > d.u + 1e-9) d = e; } // only where it buys scale: a width-bound box keeps its gaps
+  if (d && d.u < 1 && d.u >= DESK_U) { const e = desk(F, ids, ts, fl, true); if (e.u > d.u + 1e-9) d = e; } // only a desk that would scale, where it buys scale: a width-bound box keeps its gaps, and a box on the phone or col form never turns desk
   if (!d || d.u < DESK_U) d = touchy ? phone(F, ids, ts, cue) : col(F, ids, ts);
   /* a touch board canvas too small for even MIN_ROWS rows a page at its CSS scale (a 568 x 320 phone): the column scales as one piece, the one give-way left */
   const bot = paused ? pauseBand(F)[1] : F.H;
