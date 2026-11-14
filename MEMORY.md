@@ -17,7 +17,7 @@ append an entry when it makes a non-trivial change.
 ## Log
 
 ## 2026-11-14 — v217: the three veto picks
-- Owner picked from the contact sheets: veto 1 D (floor-only room behind menus), veto 2 D (REAL 3D wider desktop stage, built by a worktree agent, merged d8d3e0b), veto 3 B (toast over the chip plate). Also closed issues #2, #3, #4 and commented #5 on the owner's word. A combined capture found the toast hid the HUD's one info pair (the hearts); padtoast now exempts info only where the LIVES chip is covered. 735 tests; v217 committed locally, push awaits the owner.
+- Owner picked from the contact sheets: veto 1 D (floor-only room behind menus), veto 2 D (REAL 3D wider desktop stage, built by a worktree agent, merged d8d3e0b), veto 3 B (toast over the chip plate). Also closed issues #2, #3, #4 and commented #5 on the owner's word. A combined capture found the toast hid the HUD's one info pair (the hearts); padtoast now exempts info only where the LIVES chip is covered. 735 tests; Pushed on the owner's "Yes, push v217"; Pages CI green, live `sw.js` v217.
 
 ## 2026-11-14 — REAL 3D's wider desktop stage (veto 2, option D)
 - On `d`, `#gl` is 1.12 x the board box (fit.js `glBox`), frame and buffer widened in the wrapper, rig/lens/rim/presets untouched: the near corners land on screen (bezel 1.0746 -> 0.9594), board pixels unchanged (`tests/stage-wide.test.mjs`, three.test §4b-wide). `#gl` wears the frame; `fit.wash` carries veils and the flash over the strips; the HUD tile tip clears them. Not bumped (lead bumps CACHE_NAME). Open: a wheel over a strip does not dolly; the 0.18 s close-call border stays the board box's.
