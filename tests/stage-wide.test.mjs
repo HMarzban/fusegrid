@@ -181,3 +181,26 @@ test("HUD: in REAL 3D every real tile tip (8 kinds, CORE and MAX) stays beside t
     if (knee != null) assert.ok(knee >= right + geo.gx || knee <= left - geo.gx, "knee off the 3D strip");
   }
 });
+
+/* 2026-11-14: the wider stage's side strips show #gl past #c's box (the strip canvases take no pointer); a wheel there dollies and a right-click
+   there is swallowed, as on the board */
+test("REAL 3D orbit controls answer on #gl's side strips too", async () => {
+  const { mountOrbitCtl } = await import("../src/render/three/camrig.js");
+  const mk = () => { const on = {}; return { on, width: 600, height: 520, getBoundingClientRect: () => ({ left: 0, top: 0, width: 600, height: 520 }), addEventListener(t, f) { on[t] = f; }, removeEventListener(t) { delete on[t]; } }; };
+  const c = mk(), gl = mk(), rig = createRig(), d0 = rig.dist;
+  const ctl = mountOrbitCtl({ canvas: c, also: gl, camrig: rig, getActive: () => true, getDolly: () => true });
+  let prevented = 0;
+  gl.on.wheel({ deltaY: 40, preventDefault: () => prevented++ });
+  assert.ok(rig.dist > d0 && prevented === 1, "a wheel over a strip dollies: " + d0 + " -> " + rig.dist);
+  gl.on.contextmenu({ preventDefault: () => prevented++ });
+  assert.equal(prevented, 2, "a right-click over a strip is swallowed");
+  ctl.detach();
+  assert.ok(!gl.on.wheel && !gl.on.contextmenu && !gl.on.pointerdown, "detach unbinds the strips too");
+  const c2 = mk(), st = mk(), rig2 = createRig(), d1 = rig2.dist;
+  mountOrbitCtl({ canvas: c2, also: st, camrig: rig2, getActive: () => true, getDolly: () => true });
+  const ev = { target: c2, deltaY: 40, preventDefault() {} };
+  c2.on.wheel(ev); st.on.wheel(ev);
+  const once = rig2.dist;
+  st.on.wheel({ target: {}, deltaY: 40, preventDefault() {} });
+  assert.ok(once > d1 && rig2.dist > once && Math.abs((rig2.dist - once) - (once - d1)) < 1e-6, "an event on #c that bubbles to the stage counts once; one on the strip counts");
+});
