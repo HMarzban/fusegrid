@@ -51,8 +51,8 @@ const mkDom = (cookie, lay) => {
     set cookie(v) { writes.push(v); },
   };
   const win = { addEventListener: (t, f, cap) => WL.push({ t, f, cap }) };
-  const key = (code, repeat, k) => {
-    const ev = { code, key: k, repeat: !!repeat, stopped: false, stopImmediatePropagation() { this.stopped = true; } };
+  const key = (code, repeat, k, mods) => {
+    const ev = { code, key: k, repeat: !!repeat, stopped: false, stopImmediatePropagation() { this.stopped = true; }, ...(mods || {}) };
     WL.filter((l) => l.t === "keydown" && l.cap === true).forEach((l) => l.f(ev));
     return ev;
   };
@@ -173,6 +173,8 @@ check("cookiePath keeps the cookies on the game's own directory",
   const D = mkDom(), st = mkStore();
   const ga = mountAnalytics({ id: ID, store: st, win: D.win, doc: D.doc, loc: LOC, ...atMenu(SCREEN.MENU) });
   ga.tick();
+  const chords = [["ctrlKey"], ["metaKey"], ["altKey"]].map(([m]) => D.key("KeyY", false, "y", { [m]: true })).concat(D.key("KeyN", false, "n", { ctrlKey: true }), D.key("KeyY", false, "y", { getModifierState: (q) => q === "AltGraph" }));
+  check("a chorded Y or N (Ctrl, Cmd, Alt, AltGraph) answers nothing and passes on to the browser", chords.every((ev) => !ev.stopped) && ga.consent === -1 && !st.m.has(ANALYTICS_KEY), ga.consent);
   const z = D.key("KeyY", false, "z");
   check("QWERTZ: the key printed Z (code KeyY) answers nothing and passes on", !z.stopped && ga.consent === -1 && !st.m.has(ANALYTICS_KEY) && !D.card().hidden, ga.consent);
   const y = D.key("KeyZ", false, "y");

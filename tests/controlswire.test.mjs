@@ -1352,7 +1352,10 @@ for (const via of ["LATER", "the backdrop"]) {
     navigator: { serviceWorker: { controller: {}, addEventListener: noop, register: () => Promise.resolve(reg) } } });
   await new Promise((r) => setImmediate(r));
   u.tick();
-  const key = (code, k) => (docL.keydown || []).forEach((f) => f({ code, key: k, repeat: false }));
+  const key = (code, k, mods) => (docL.keydown || []).forEach((f) => f({ code, key: k, repeat: false, ...(mods || {}) }));
+  for (const m of ["ctrlKey", "metaKey", "altKey"]) key("KeyU", "u", { [m]: true });
+  key("KeyU", "u", { getModifierState: (q) => q === "AltGraph" });
+  check("a chorded U (Ctrl, Cmd, Alt, AltGraph) reloads nothing", posts === 0, posts);
   key("KeyU", "g");
   check("Dvorak: the key printed G (code KeyU) reloads nothing", u.shown === true && posts === 0, posts);
   key("KeyF", "u");

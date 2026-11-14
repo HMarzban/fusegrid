@@ -1,5 +1,5 @@
 // The CONTROLS page reducer.
-import { BTN, PAD_IDX, SENS_LEVELS, VIB_LEVELS, bindBtn, bindKey, bindMoveSet, clampControls, keyName, moveLabel, resetDevice, softAliases, stepSens, stepVib } from "./controls.js";
+import { BTN, PAD_IDX, SENS_LEVELS, VIB_LEVELS, bindBtn, bindKey, bindMoveSet, clampControls, keyName, layoutName, moveLabel, resetDevice, softAliases, stepSens, stepVib } from "./controls.js";
 import { createCapture } from "./capture.js";
 import { resolveStick } from "./gamepad.js";
 
@@ -138,7 +138,7 @@ export function createControlsPage({ get, set, padView, say, device, sw2, names:
   const feed = (kind, id, t, key) => {
     const spec = cap.view(), r = cap.feed(kind, id, t, key);
     fed = r.kind;
-    if (typeof key === "string" && key.length === 1 && key !== " " && (r.kind === "step" || r.kind === "commit")) learned[id] = key;
+    if (layoutName(key) && (r.kind === "step" || r.kind === "commit")) learned[id] = layoutName(key); // the wire's rule: printable ASCII only, so another script keeps the code's letter
     if (r.kind === "cancel") note(r.line);
     else if (r.kind === "refused") say(r.line);
     else if (r.kind === "step") say(cap.view().prompt + ".");

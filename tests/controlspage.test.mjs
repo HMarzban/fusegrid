@@ -378,7 +378,11 @@ for (const state of ["none", "lost"]) {
   check("still held, still swallowed", r.p.feedKey("KeyZ", "z", 330) === true);
   r.p.tick(340, false);
   check("released, the key is ordinary again", r.p.feedKey("KeyZ", "z", 350) === false);
-  check("a printed name is kept for the chips", r.p.view(350).names.KeyZ === "z");
+  check("a printed name is kept for the chips, upper-cased (the wire's rule, fix round 1)", r.p.view(350).names.KeyZ === "Z", r.p.view(350).names.KeyZ);
+  const cy = open("key");
+  cy.p.confirm(0); arm(cy, 10);
+  cy.p.feedKey("KeyG", "п", 300);
+  check("a capture on a Cyrillic key keeps the code's letter on the page (no non-ASCII name)", cy.c.key.BOMB === "KeyG" && cy.p.view(300).status === "BOMB NOW G" && cy.p.view(300).names.KeyG === undefined, cy.p.view(300).status + " " + J(cy.p.view(300).names));
   const f = open("key");
   f.p.confirm(0); arm(f, 10);
   f.p.feedKey("KeyQ", "a", 300);

@@ -161,7 +161,7 @@ export function mountAnalytics(env) {
     /* Y / N answer while it shows; every other key goes on to the game */
     win.addEventListener("keydown", (ev) => {
       const g = e.get && e.get(), L = letterOf(ev.code, ev.key); // the letter printed on the key, wherever it sits (QWERTZ's Y is the code KeyZ)
-      if (!shown() || ev.repeat || (L !== "KeyY" && L !== "KeyN") || (g && g.app && g.app.capturing)) return;
+      if (!shown() || ev.repeat || ev.ctrlKey || ev.metaKey || ev.altKey || (typeof ev.getModifierState === "function" && ev.getModifierState("AltGraph")) || (L !== "KeyY" && L !== "KeyN") || (g && g.app && g.app.capturing)) return; // a chord is the browser's (Ctrl+Y, Alt+N), never an answer; Shift+Y still prints Y
       ev.stopImmediatePropagation();
       if (g && g.app) g.app.resetArm = false;
       set(L === "KeyY" ? 1 : 0);
