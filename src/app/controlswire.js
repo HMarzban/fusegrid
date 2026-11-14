@@ -4,8 +4,9 @@ import { createPad, padInfo, routesOf, standardPads } from "./gamepad.js";
 import { createPadRouter } from "./padroute.js";
 import { createHintDev, keyPress, pointerPress, wordsOf } from "./hints.js";
 import { deferRegister } from "../pwa/register.js";
+import { nameOf } from "./padfamily.js"; // the notes and the toast name the family in hand (controller discovery, 2026-11-14)
 
-const LOST = "CONTROLLER LOST", BACK = "CONTROLLER BACK", READY = "CONTROLLER READY", NOTE_MS = 6000, TOAST_MS = 3000, TOAST_FADE = 400, TICK_GAP = 100, HELLO_QUIET = 300, ARM_MS = 1000;
+const LOST = "CONTROLLER LOST", READY = "CONTROLLER READY", ODD = "NON-STANDARD BUTTONS", NOTE_MS = 6000, TOAST_MS = 3000, TOAST_FADE = 400, TICK_GAP = 100, HELLO_QUIET = 300, ARM_MS = 1000;
 export const NO_SOUND = "NO SOUND YET · PRESS A KEY OR TAP";
 const on = (o, t, f, c) => { if (o && typeof o.addEventListener === "function") { o.addEventListener(t, f, c); return () => o.removeEventListener && o.removeEventListener(t, f, c); } return () => {}; };
 const anyOf = (d) => d.up || d.down || d.left || d.right;
@@ -101,10 +102,17 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
   };
   const sw2Want = () => (waker || !could() ? Promise.resolve(waker) : loadSw2(importSwitch2).then(sw2Build, () => null));
   const sw2View = () => ({ shown: !!waker, state: waker ? waker.state() : "idle", vib: !!waker && waker.vibOffer(), seen: !!waker && waker.seen(), hid: !!hidNow() }); // vib: the door reads ALLOW VIBRATION; seen: CONNECTED; hid: the help names the vibration prompt
+  const ask = () => waker.request();
+  /* The help card's CONNECT SWITCH 2 (controller discovery, 2026-11-14): the same chooser with no CONTROLS page; the card shows the result itself */
+  const sw2Connect = () => {
+    if (!waker) return Promise.resolve("none");
+    if (!activated()) return Promise.resolve("pad");
+    return Promise.resolve(ask()).then((r) => { if (app.wake) app.wake(); return r; }, () => "failed");
+  };
   const connect = () => {
     if (!waker || !page) return false;
     if (!activated()) { page.sw2Said("pad"); app._feel("deny"); return false; } // no user activation: the page says what does open it
-    const vib = waker.vibOffer(), p = vib ? waker.allow() : waker.request(); // a second chooser needs a press of its own: one chooser per activation
+    const vib = waker.vibOffer(), p = vib ? waker.allow() : ask(); // a second chooser needs a press of its own: one chooser per activation
     if (p !== reqP) { reqP = p; p.then((r) => { if (reqP === p) reqP = null; if (page) page.sw2Said(vib ? HID_SAY[r] : r); if (vib && r === "allowed" && c.vib > 0 && rum()) rumble.test(lastT); if (app.wake) app.wake(); }, noop).catch(noop); } // one note per chooser; vibration allowed buzzes once
     return true;
   };
@@ -313,7 +321,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     if (pending !== LOST && app.soundNote) shownT = null; // the sound note holds the foot: an unseen sign does not age
     else if (shownT === null) shownT = t;
     if (pending !== LOST && shownT !== null && t - shownT >= NOTE_MS) { pending = ""; shownT = null; app.padNote = ""; return; }
-    app.padNote = pending === READY && canBuzz() ? READY + " · VIBRATION " + VIB_LEVELS[c.vib] : pending;
+    app.padNote = / READY$/.test(pending) && canBuzz() ? pending + " · VIBRATION " + VIB_LEVELS[c.vib] : pending; // <NAME> READY names the level where it can buzz
   };
   /* The HUD's toast (owner 2026-11-12): a controller connected, back or lost while a run PLAYs, for TOAST_MS, fading out over its last TOAST_FADE
      (alpha in tenths, so the HUD repaints ten times, not every frame); off PLAY it waits unseen and its clock runs on. */
@@ -322,7 +330,8 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     const age = toast ? t - toast.t0 : 0;
     if (!toast || age >= TOAST_MS) { toast = null; if (app.padToast) app.padToast = null; return; }
     const w = wordsOf("pad", c, undefined, famNow()), a = Math.round(Math.min(1, (TOAST_MS - age) / TOAST_FADE) * 10) / 10, q = app.padToast;
-    if (!q || q.k !== toast.k || q.a !== a || q.move !== w.move || q.bomb !== w.bomb) app.padToast = { k: toast.k, move: w.move, bomb: w.bomb, a };
+    const name = toast.name || nameOf("generic"), odd = !!toast.odd;
+    if (!q || q.k !== toast.k || q.a !== a || q.move !== w.move || q.bomb !== w.bomb || q.name !== name || q.odd !== odd) app.padToast = { k: toast.k, move: w.move, bomb: w.bomb, a, name, odd };
   };
   syncWords();
   readLayout();
@@ -340,7 +349,8 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
       if (snap.found || pressed) wantRumble(); // a press retries a load that failed
       if (snap.found) {
         everSeen = true; shownT = null;
-        if (inRun) { toast = { k: wasLost ? "back" : "ready", t0: t }; pending = ""; } else pending = wasLost ? BACK : READY; // in a run the HUD's toast says it once; the menus' note does not repeat it
+        const odd = snap.mapping !== "standard", name = odd ? nameOf("generic") : nameOf(famNow()); // an unknown button order wears no family's name, and says so
+        if (inRun) { toast = { k: wasLost && !odd ? "back" : "ready", t0: t, name, odd }; pending = ""; } else pending = odd ? READY + " · " + ODD : name + (wasLost ? " BACK" : " READY"); // in a run the HUD's toast says it once; the menus' note does not repeat it
         wasLost = false;
       }
       if (snap.lost) {
@@ -398,6 +408,10 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     tapUp,
     /** The CONNECT row: shown only where switch2.js reaches (WebUSB, the page allowed, a measured platform); state is the waker's. */
     sw2: sw2View,
+    /** The help card's CONNECT SWITCH 2: "none" with no waker, "pad" with no user activation, else the chooser's result (switch2.js request). */
+    sw2Connect,
+    /** A controller is in the browser's list now. */
+    padIn() { return pad.snap().connected; },
     /** The printed key names this session knows, code to letter (a copy). */
     keyNames() { return { ...names }; },
     /** The device the hints name now. */

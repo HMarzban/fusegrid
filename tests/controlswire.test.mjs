@@ -1517,6 +1517,69 @@ for (const via of ["LATER", "the backdrop"]) {
   setHints(null);
 }
 
+// ---- controller discovery (2026-11-14): the notes and the toast name the family; a non-standard order says so; one CONNECT entry with no page ----
+{
+  const J = (v) => JSON.stringify(v), flush = () => new Promise((r) => setImmediate(r));
+  const XB = "Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 0b13)", PS = "DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)";
+  const withId = (id) => Object.assign(mkPad(), { id });
+  const odd = () => ({ id: XB, connected: true, mapping: "", axes: [0, 0, 0, 0], buttons: Array.from({ length: 20 }, () => ({ pressed: false, value: 0 })) });
+  const onMenu = () => { const g = mk({ noPad: true }); g.app.screen = SCREEN.MENU; g.app.cabinetSeen = true; g.tick(1); return g; };
+  {
+    const g = onMenu();
+    check("discovery: padIn is false with no controller", g.ctl.padIn() === false);
+    g.gpr.list = [withId(XB)]; g.tick(2);
+    check("note follows the family: an Xbox controller reads XBOX CONTROLLER READY", g.app.padNote === "XBOX CONTROLLER READY", g.app.padNote);
+    check("discovery: padIn is true once it is found", g.ctl.padIn() === true);
+    g.gpr.list = [null]; g.tick(2);
+    check("its loss stays CONTROLLER LOST", g.app.padNote === "CONTROLLER LOST", g.app.padNote);
+    g.gpr.list = [withId(PS)]; g.tick(2);
+    check("note follows the family: a PlayStation controller next reads PLAYSTATION CONTROLLER BACK", g.app.padNote === "PLAYSTATION CONTROLLER BACK", g.app.padNote);
+    setHints(null);
+  }
+  {
+    const g = onMenu();
+    g.gpr.list = [withId(XB)]; g.tick(2); g.gpr.list = [null]; g.tick(2); g.gpr.list = [withId(XB)]; g.tick(2);
+    check("back names the family: XBOX CONTROLLER BACK", g.app.padNote === "XBOX CONTROLLER BACK", g.app.padNote);
+    setHints(null);
+  }
+  {
+    const g = onMenu();
+    g.gpr.list = [odd()]; g.tick(2);
+    check("nonstd note is generic: CONTROLLER READY · NON-STANDARD BUTTONS, never a family's name", g.app.padNote === "CONTROLLER READY · NON-STANDARD BUTTONS", g.app.padNote);
+    setHints(null);
+  }
+  {
+    const g = onMenu(); g.app.startRun(); g.tick(2);
+    g.gpr.list = [withId(XB)]; g.tick(2);
+    const t = g.app.padToast;
+    check("toast carries name and odd: an Xbox controller in a run", t && t.name === "XBOX CONTROLLER" && t.odd === false && t.k === "ready", J(t));
+    g.gpr.list = [null]; g.tick(2); g.tick(60 * 4);
+    g.gpr.list = [odd()]; g.tick(2);
+    const u = g.app.padToast;
+    check("toast carries name and odd: a non-standard controller is CONTROLLER, odd", u && u.name === "CONTROLLER" && u.odd === true, J(u));
+    setHints(null);
+  }
+  {
+    const g = onMenu();
+    check("sw2Connect without a waker: none", (await g.ctl.sw2Connect()) === "none");
+    setHints(null);
+  }
+  const usb = () => ({ req: 0, rej: false, requestDevice() { this.req++; return this.rej ? Promise.reject(Object.assign(new Error("none"), { name: "NotFoundError" })) : new Promise(() => {}); }, getDevices: () => Promise.resolve([]), addEventListener: noop, removeEventListener: noop });
+  const keep = ["usb", "userAgentData", "userActivation"].map((k) => [k, Object.getOwnPropertyDescriptor(navigator, k)]);
+  const ua = { isActive: false };
+  navigator.usb = usb(); navigator.userAgentData = { platform: "macOS" }; navigator.userActivation = ua;
+  try {
+    await preloadSwitch2();
+    const u = navigator.usb, g = onMenu();
+    check("discovery: with switch2.js in, the waker is built at mount", g.ctl.sw2().shown === true, J(g.ctl.sw2()));
+    check("sw2Connect needs activation: none given, it says pad and asks Chrome nothing", (await g.ctl.sw2Connect()) === "pad" && u.req === 0, J([u.req]));
+    ua.isActive = true; u.rej = true;
+    const r = await g.ctl.sw2Connect();
+    check("sw2Connect with activation asks once and hands back the result", u.req === 1 && r === "cancelled", J([u.req, r]));
+    setHints(null);
+  } finally { for (const [k, d] of keep) { if (d) Object.defineProperty(navigator, k, d); else delete navigator[k]; } }
+}
+
 delete globalThis.window; delete globalThis.location;
 console.log("\n  CONTROLSWIRE RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
