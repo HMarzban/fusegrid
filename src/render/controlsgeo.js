@@ -82,7 +82,7 @@ export function rowsOf(s) {
   const tail = () => [
     { id: "SENSITIVITY", gap: 1, text: SENS_LEVELS[sensIdx(dead)].name, off, changed: dead !== DEF_DEAD, bar: [sensIdx(dead) + 1, SENS_LEVELS.length] },
     noBuzz(s) ? { id: "VIBRATION", text: "NONE", off, none: 1 } : { id: "VIBRATION", text: VIB_LEVELS[vibOf(s)], off, changed: vibOf(s) !== DEF_VIB, bar: [vibOf(s), VIB_LEVELS.length - 1] },
-    ...(s.sw2 && s.sw2.shown ? [{ id: "SW2", gap: 1, label: SW2_WORDS.row, door: s.sw2.vib ? SW2_WORDS.vib : s.sw2.seen ? SW2_WORDS.ok : SW2_WORDS.door }] : []), // never off: it is how a controller arrives
+    ...(s.sw2 && s.sw2.shown ? [{ id: "SW2", label: SW2_WORDS.row, door: s.sw2.vib ? SW2_WORDS.vib : s.sw2.seen ? SW2_WORDS.ok : SW2_WORDS.door }] : []), // never off: it is how a controller arrives
     { id: "RESET", gap: 1, label: "RESET CONTROLLER", reset: 1, off },
   ];
   if (p.state === "nonstd") {

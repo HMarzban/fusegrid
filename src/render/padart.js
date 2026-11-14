@@ -266,8 +266,10 @@ export const kbLegend = (k, ts = 1) => { const px = Math.min(15.8 * ts, 0.5 * k)
 /** A key's legend in the player's own layout: names (code to printed letter, the wire's keyNames) replace a one-character legend; ESC, TAB, the
     F-row, ⌫ and the arrows keep theirs. */
 export const legOf = (q, names) => (names && names[q.id] && q.leg.length === 1 && q.id !== "Backspace" ? String(names[q.id]).toUpperCase() : q.leg);
-/* the legends names change, as a layer key part: "" with none, so a default board keeps its key */
-const legSig = (names) => (names ? KB_KEYS.filter((q) => legOf(q, names) !== q.leg).map((q) => q.id + "=" + legOf(q, names)).join() : "");
+/* the legends names change, as a layer key part: "" with none, so a default board keeps its key; one slot by identity (the wire hands a new names
+   object only when a name changes), so a steady frame walks no KB_KEYS */
+let lsOf = null, lsSig = "";
+const legSig = (names) => { if (names !== lsOf) { lsOf = names; lsSig = names ? KB_KEYS.filter((q) => legOf(q, names) !== q.leg).map((q) => q.id + "=" + legOf(q, names)).join() : ""; } return lsSig; };
 /** Which legends print at pitch k: a legend wider than its top face is left off (a lit key gets the face's whole width), the F-row prints all or
     none, and with no legend size at all only the arrow glyphs print (the rows name every key). mw(s, px) measures; names as legOf. */
 export function kbPrints(k, lit, mw, ts = 1, names) {

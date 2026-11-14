@@ -45,8 +45,8 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
          never #gl's Retina drawing buffer, which the wrapper owns. */
       const [px, py] = at(ev, cv);
       if (offBox(cv, px, py)) return;
+      if (app.pauseView === 3) return void ctl().tap(ctlAt(ev), ev.pointerType); // the CONNECT row waits for a touch's pointerup
       const B = overlayBox(kind(), cv);
-      if (app.pauseView === 3) return void ctl().tap(controlsHit(app.controls.view(app.ctlT), px, py, cv, kind(), true), ev.pointerType); // the CONNECT row waits for a touch's pointerup
       if (app.pauseView) {
         /* the PAUSE view's box: overlayBox at the box's CSS scale (the touch floors; #c's, or the over box's free of the HUD band), paused and the focused row (its page is the one on screen) */
         const g2 = app.pauseView === 2, PL = { ...menuLayout(B.w, B.h, undefined, cv.over ? cv.css : dims(canvas, kind()).css), paused: true, ...(B.free ? { free: true } : {}), focus: g2 ? app.gfxRow : app.optRow };

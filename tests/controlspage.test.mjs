@@ -511,5 +511,24 @@ for (const state of ["none", "lost"]) {
   check("the row appears while the page is shut: re-opened, the focus is BOMB (row 1), not the old visit's row", z.p.view(2).row === 1, z.p.view(2).row);
 }
 
+// ---- fix round C (K2): view().names is one object a steady frame, a new one only when a name changes ----
+{
+  let seedObj = { KeyW: "Z" }, v = 0;
+  const r = { c: DEF_CONTROLS };
+  const p = createControlsPage({ get: () => r.c, set: (c) => { r.c = c; }, padView: () => ({ state: "ready", name: "C", rumble: true }), say() {}, names: () => seedObj, namesV: () => v });
+  p.open("key");
+  const a = p.view(0).names, b = p.view(16).names;
+  check("K2: two steady frames share one names object", a === b && a.KeyW === "Z", J(a));
+  seedObj = { KeyW: "Z", KeyA: "Q" }; v++;
+  const c = p.view(32).names;
+  check("K2: the wire's names move on (namesV): a new object with the new name", c !== a && c.KeyA === "Q" && p.view(48).names === c, J(c));
+  p.confirm(0); p.tick(10, false); p.tick(210, false);
+  p.feedKey("KeyZ", "z", 300);
+  const d = p.view(310).names;
+  check("K2: a name the capture learned: a new object holding it, then steady again", d !== c && d.KeyZ === "Z" && d.KeyW === "Z" && p.view(320).names === d, J(d));
+  const plain = createControlsPage({ get: () => DEF_CONTROLS, set() {}, padView: () => ({ state: "ready" }), say() {} });
+  check("K2: no wire names: still one object a steady frame", plain.view(0).names === plain.view(1).names);
+}
+
 console.log("\n  CONTROLS PAGE RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

@@ -1436,6 +1436,89 @@ for (const via of ["LATER", "the backdrop"]) {
   check("a non-standard Xbox pad: its own order, so the positions, not the family's letters", hints().ok === "SOUTH", hints().ok);
 }
 
+// ---- fix round C (2026-11-14): honest activation (M2), no switch2.js fetch off macOS (M4), a throwing layout handler caught (K3) ----
+{
+  const J = (v) => JSON.stringify(v), flush = () => new Promise((r) => setImmediate(r));
+  const fakeUsb = () => ({ req: 0, requestDevice() { this.req++; return new Promise(() => {}); }, getDevices: () => Promise.resolve([]), addEventListener: noop, removeEventListener: noop });
+  const withUa = async (ua, fn) => { const keep = ["usb", "userAgentData", "userActivation"].map((k) => [k, Object.getOwnPropertyDescriptor(navigator, k)]);
+    navigator.usb = fakeUsb(); navigator.userAgentData = { platform: "macOS" }; if (ua) navigator.userActivation = ua; else delete navigator.userActivation;
+    try { return await fn(navigator.usb); } finally { for (const [k, d] of keep) { if (d) Object.defineProperty(navigator, k, d); else delete navigator[k]; } } };
+  const keyDown = (code) => (L.keydown || []).forEach((f) => f({ code, key: code, repeat: false, preventDefault: noop }));
+  const toSw2 = (g) => { g.app.screen = SCREEN.SETTINGS; g.app.cabinetSeen = true; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.lastDev = "key"; g.app.confirm(); g.app.controls.tab("pad"); g.tick(1); g.app.controls.pick(7); };
+  const ua = { isActive: false };
+  await withUa(ua, async (u) => {
+    const g = mk({ noPad: true }); toSw2(g);
+    keyDown("Enter");
+    check("M2: the browser says no user activation (a synthetic key): Enter on CONNECT opens no chooser", u.req === 0, u.req);
+    ua.isActive = true;
+    g.app.lastDev = "pad"; g.app.confirm();
+    check("M2: a controller press inside a live activation window still opens no chooser, and says PRESS ENTER OR CLICK", u.req === 0, u.req);
+    keyDown("Enter");
+    check("M2: the browser says active: Enter on CONNECT opens the chooser once", u.req === 1, u.req);
+    setHints(null);
+  });
+  await withUa(null, async (u) => {
+    const g = mk({ noPad: true }); toSw2(g);
+    keyDown("Enter");
+    check("M2: no navigator.userActivation: today's rule (a key press is activation)", u.req === 1, u.req);
+    setHints(null);
+  });
+
+  /* M4: a fresh wire instance per mount (its switch2.js slot empty) with a spy import: off macOS, or where the policy refuses WebUSB, never fetched */
+  const W2 = await import("../src/app/controlswire.js?m4");
+  let fresh = 0;
+  const { usbReach } = await import("../src/app/switch2.js");
+  const mount = async (platform, policy) => {
+    const Wi = await import("../src/app/controlswire.js?m4-" + ++fresh);
+    const r = { calls: 0, q: [] };
+    const app = { screen: SCREEN.MENU, introStage: 0, pauseView: 0, ctlT: 0, lastDev: "key", wake: noop, _feel: noop, onControls: () => false, get capturing() { return false; }, ctlBtn: () => false, ctlKey: () => false };
+    r.c = Wi.mountControls({ win: null, doc: null, input: new Input(null), app, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => [], store: null, defer: (f) => r.q.push(f), idle: () => true, art: null,
+      usb: fakeUsb(), platform, policy, importSwitch2: () => { r.calls++; return import("../src/app/switch2.js"); } });
+    r.app = app;
+    return r;
+  };
+  const drain = async (r) => { for (let i = 0; i < 6 && r.q.length; i++) r.q.shift()(); r.app.controls.open("pad"); await flush(); await flush(); };
+  for (const [nm, plat, pol] of [["Windows", "Windows", null], ["Linux", "Linux", null], ["Android", "Android", null], ["macOS, the policy refusing usb", "macOS", { allowsFeature: (f) => f !== "usb" }]]) {
+    const r = await mount(plat, pol); await drain(r);
+    check(`M4: ${nm}: switch2.js is never fetched (idle warm-up nor CONTROLS opening), no row`, r.calls === 0 && r.c.sw2().shown === false, r.calls);
+    r.c.dispose();
+  }
+  const mac = await mount("macOS", null); await drain(mac);
+  check("M4: macOS with WebUSB allowed: fetched once, the row shows", mac.calls === 1 && mac.c.sw2().shown === true, J([mac.calls, mac.c.sw2()]));
+  mac.c.dispose();
+  const pol = { allowsFeature: (f) => f !== "usb" };
+  check("M4: the wire's pre-check is usbReach's rule", [["macOS", null], ["macOS", pol], ["Windows", null], ["", null]].every(([p, q]) => W2._sw2Could({ usb: {}, policy: q, platform: p }) === usbReach({ usb: {}, policy: q, platform: p })) && W2._sw2Could({ usb: null, policy: null, platform: "macOS" }) === false);
+  check("M4: the platform from client hints, else a Mac OS X user agent", W2._platformOf({ userAgentData: { platform: "Windows" }, userAgent: "Mac OS X" }) === "Windows" && W2._platformOf({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", platform: "" }) === "macOS" && W2._platformOf({ userAgent: "Mozilla/5.0 (X11; Linux x86_64)", platform: "Linux x86_64" }) !== "macOS");
+
+  /* K2: the wire hands the page one names object until a name changes (copy on write, namesV) */
+  {
+    let m = { KeyW: "z" };
+    const app = { screen: SCREEN.MENU, pauseView: 0, ctlT: 0, lastDev: "key", wake: noop, onControls: () => false, get capturing() { return false; }, ctlBtn: () => false, ctlKey: () => false };
+    const WL = {}, win = { addEventListener: (t, f) => { (WL[t] = WL[t] || []).push(f); }, removeEventListener: noop };
+    const c = mountControls({ win, doc: null, input: new Input(null), app, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => null, store: null, keyboard: { getLayoutMap: () => Promise.resolve(new Map(Object.entries(m))) } });
+    await flush();
+    const a = app.controls.view(0).names, b = app.controls.view(1).names;
+    check("K2: two steady frames: one names object from the wire", a === b && a.KeyW === "Z", J(a));
+    m = { KeyW: "w", KeyY: "z" }; (WL.focus || []).forEach((f) => f({})); await flush();
+    const d = app.controls.view(2).names;
+    check("K2: a layout change: a new names object, the old one untouched", d !== a && d.KeyY === "Z" && a.KeyW === "Z" && app.controls.view(3).names === d, J([a, d]));
+    c.dispose();
+  }
+
+  /* K3: a throw inside the layout map's success handler (syncWords / setHints) is caught, never an unhandled rejection */
+  let unh = 0;
+  const onUnh = () => { unh++; };
+  process.on("unhandledRejection", onUnh);
+  let n = 0;
+  const app = { screen: SCREEN.MENU, pauseView: 0, ctlT: 0, lastDev: "key", wake: noop, onControls: () => false, get capturing() { return false; }, ctlBtn: () => false, ctlKey: () => false };
+  mountControls({ win: null, doc: null, input: new Input(null), app, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => null, store: null,
+    keyboard: { getLayoutMap: () => Promise.resolve(new Map([["KeyW", "z"]])) }, setHints: () => { if (++n > 1) throw new Error("boom"); } });
+  await flush(); await flush(); await flush();
+  process.off("unhandledRejection", onUnh);
+  check("K3: setHints throwing inside the layout handler: caught, no unhandled rejection", n >= 2 && unh === 0, J([n, unh]));
+  setHints(null);
+}
+
 delete globalThis.window; delete globalThis.location;
 console.log("\n  CONTROLSWIRE RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

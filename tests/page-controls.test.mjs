@@ -338,5 +338,23 @@ const CW9 = (await import("../src/render/words.js")).CONTROLS_WORDS;
     check("393x852, no controller: eight rows keep the locked body; with the CONNECT row a drawing under LOCK_MIN gives way to the plaque alone (NO CONTROLLER and its line still drawn)", a8.W >= P.LOCK_MIN && !!a8.body && a9.W < P.LOCK_MIN && !a9.body && r9.texts.some((t) => t.s === "NO CONTROLLER") && r9.texts.some((t) => t.s === "Connect one and press a button."), J([a8.W, a9.W])); }
 }
 
+/* ---- fix round C (M3): a status or rule line that will not fit keeps whole words and ends with its full stop, never cut mid-line ---- */
+{
+  const { _lines } = await import("../src/render/pages/controls.js");
+  const c = { font: "", measureText: (t) => ({ width: t.length * 10 }) }, f = "10px m3";
+  const RULE = "In menus SOUTH or START confirms and EAST goes back. Those never change.";
+  const a = _lines(c, f, RULE, 300, 1);
+  check("M3: the first sentence too long for its lines: whole words, the full stop kept, within n lines and the width", a.length === 1 && a[0].endsWith(".") && RULE.startsWith(a[0].slice(0, -1) + " ") && a.every((q) => q.length * 10 <= 300), J(a));
+  const b = _lines(c, f, RULE, 300, 2);
+  check("M3: two lines: the first sentence whole with its full stop", J(b) === J(["In menus SOUTH or START", "confirms and EAST goes back."]), J(b));
+  const one = _lines(c, f, "Connect one and press a button.", 150, 1);
+  check("M3: a single sentence steps down to whole words with one full stop, never two", one.length === 1 && one[0].endsWith(".") && !one[0].endsWith("..") && one[0].length * 10 <= 150, J(one));
+  const dot = _lines(c, f, "TAB D-PAD · BACK EAST · COPY WEST", 60, 1);
+  check("M3: a · line steps down to whole words of its first part, no full stop added", dot.length === 1 && "TAB D-PAD".startsWith(dot[0]) && !dot[0].endsWith("."), J(dot));
+  const caps = _lines(c, f, "PRESS ENTER OR CLICK", 120, 1);
+  check("M3: a caps status with no sentence steps down by whole words and gains no full stop", J(caps) === J(["PRESS ENTER"]), J(caps));
+  check("M3: nothing fits (one word wider than the line): nothing drawn", J(_lines(c, f, "Unbreakableword here.", 50, 1)) === "[]");
+}
+
 console.log("\n  PAGE-CONTROLS RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

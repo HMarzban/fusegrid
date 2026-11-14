@@ -46,7 +46,7 @@ export const PHONE = deep({p: {top: 12, bot: 12, side: 12, pad: [12, 12, 14, 12]
   p125: {top: 10, bot: 10, side: 12, pad: [10, 12, 12, 12], grp: 10, tabs: 10, back: 124, below: 10, max: 600, art: [120, 300]}});
 export const COL_ART = 180; // col's compact drawing, at the head's right over the tabs (no callouts: the rows name every input)
 export const TOUCH = Object.freeze({h: 44, g: 8}), DESK_U = 0.8, GUT = 8, FOOT1 = 50, TROUGH = 11, TAB_GAP = 8, MIN_ROWS = 2;
-/* a wall course before each of these rows: actions · fixed or feel · connect (Task 3: shown only where switch2.js reaches) · reset */
+/* a wall course before each of these rows: actions · fixed or feel · reset */
 export const GROUP = Object.freeze(["CONFIRM", "SENSITIVITY", "RESET"]);
 const BACK_CHEV = 52; // BACK as its chevron alone (>= 44 CSS px), records' compact step-down
 const LAND_TIGHT = Object.freeze({top: 12, bot: 12, pad: Object.freeze([6, 12, 8, 12]), below: 8, tabs: 6});
@@ -321,8 +321,11 @@ function lines(c, f, s, w, n) {
   if (one) return one;
   const sep = String(s).includes(" · ") ? " · " : ". ", parts = String(s).split(sep), end = sep === ". " ? "." : "";
   for (let k = parts.length - 1; k >= 1; k--) { const q = wrap(c, f, parts.slice(0, k).join(sep) + end, w, n); if (q) return q; }
-  return wrap(c, f, parts[0], w, 99) ? wrap(c, f, parts[0], w, 99).slice(0, n) : [];
+  const stop = (end && parts.length > 1) || /\.$/.test(parts[0]) ? "." : "", ws = String(parts[0]).replace(/\.$/, "").split(" "); // the first part's words, its full stop kept: steps down by whole words, never a cut line
+  for (let k = ws.length; k >= 1; k--) { const q = wrap(c, f, ws.slice(0, k).join(" ") + stop, w, n); if (q) return q; }
+  return [];
 }
+export const _lines = lines; // test seam
 function nameWords(s) {
   const st = s.pad && s.pad.state;
   if (s.tab === "key") return [CW.KEYBOARD, CW.ALSO];
@@ -455,9 +458,12 @@ function padArt(c, s, row, A, tok, ui) {
   if (!off && !cap && ui.warm && !(row.id === "VIBRATION")) { const a = c.globalAlpha; c.globalAlpha = 0; drawPad(c, ox, oy, Wd, {tok, lit, grips: true, fam: famOf(s)}); c.globalAlpha = a; } // the grips layer made with the page, so a cursor move onto VIBRATION never misses
   return {plan: F.plan, W: Wd, none, body: off && !bare ? R(ox + 0.06 * Wd, oy + 0.42 * Wd, 0.18 * Wd, 0.14 * Wd) : null, ox, oy, ring: ring && PART_AT[ring] ? {x: ox + PART_AT[ring][0] * Wd, y: oy + PART_AT[ring][1] * Wd, r: ringR(ring, Wd)} : null};
 }
+/* the printed names' key, one slot by identity: the wire hands a new object only when a name changes (copy on write), so a steady frame stringifies none */
+let nsOf = null, nsSig = "";
+const namesSig = (o) => { if (o !== nsOf) { nsOf = o; nsSig = o && Object.keys(o).length ? JSON.stringify(o) : ""; } return nsSig; };
 function keyArt(c, s, row, A, tok, ui) {
   const lit = s.capture ? {} : keyStates(s), it = s.capture ? (ui.call ? capCallouts(s, row.id) : []) : keyCallouts(s), ts = textScale();
-  const ns = s.names && Object.keys(s.names).length ? JSON.stringify(s.names) : "", K = fitOnce(["key", A.w, A.h, ts, JSON.stringify(it), Object.keys(lit).sort().join(), ...(ns ? [ns] : [])].join("|"), () => { const m = metrics(c, ui.dv), F = kbFit(A.w, A.h, it, m); return {F, prints: kbPrints(F.k, lit, m.wOf, ts, s.names)}; });
+  const ns = namesSig(s.names), K = fitOnce(["key", A.w, A.h, ts, JSON.stringify(it), Object.keys(lit).sort().join(), ...(ns ? [ns] : [])].join("|"), () => { const m = metrics(c, ui.dv), F = kbFit(A.w, A.h, it, m); return {F, prints: kbPrints(F.k, lit, m.wOf, ts, s.names)}; });
   const {F, prints} = K, ox = A.x + F.ox, oy = A.y + F.oy, rk = ui.focus ? keyRing(s, row.id) : null;
   drawKeys(c, ox, oy, F.k, {tok, lit, ring: rk, prints, px: kbLegend(F.k, ts), names: s.names});
   if (F.plan) drawCallouts(c, ox, oy, F.plan, tok);
