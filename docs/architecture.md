@@ -252,9 +252,7 @@ its own held axes and latches, OR-merged with keys. A held key beats the pad on 
   first engage takes vertical unless x leads y by 1.25x. A pad the browser passes in its own HID order (no `standard`
   mapping) that `gamepad.js` `KNOWN` lists by id and by its button and axis counts, today the Switch 2 Pro Controller,
   is put back in the standard order before anything reads it, so its D-PAD, triggers and sticks land where every other
-  pad's do. A pad the browser passes in its own HID order (no `standard`
-  mapping) that `gamepad.js` knows, today the Switch 2 Pro Controller, is put back in the standard order before anything
-  reads it, so its D-PAD, triggers and sticks land where every other pad's do.
+  pad's do.
 - [`padroute.js`](../src/app/padroute.js) decides what a press means on the current screen. A press in one
   layer is spent there, so SOUTH that starts a run plants nothing.
 - [`controls.js`](../src/app/controls.js) holds the binds and their rules (`nb.controls.v1`, kept by a cabinet
