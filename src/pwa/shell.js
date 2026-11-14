@@ -12,6 +12,7 @@ const SRC = Object.freeze([
   "src/app/coach.js",
   "src/app/controls.js",
   "src/app/controlspage.js",
+  "src/app/switch2.js",
   "src/app/controlswire.js",
   "src/app/daily.js",
   "src/app/debughook.js",
@@ -223,7 +224,7 @@ const is3d = (p) =>
 /* Off the boot graph since v202 but needed soon (gen 3, the ATTRACT bot, the CONTROLS page, rumble) or on a flag
    (net, iso): the page fetches them after the title, so install caching them would download them in full; they lead the idle stage. */
 const LATER = new Set(["./src/core/board3.js", "./src/core/featplace.js", "./src/core/featchecks.js", "./src/app/demobot.js",
-  "./src/app/controlspage.js", "./src/app/capture.js", "./src/app/rumble.js", "./src/render/pages/controls.js",
+  "./src/app/controlspage.js", "./src/app/switch2.js", "./src/app/capture.js", "./src/app/rumble.js", "./src/render/pages/controls.js",
   "./src/render/controlsgeo.js", "./src/render/padart.js", "./src/net/localpair.js", "./src/net/lockstep.js",
   "./src/net/protocol.js", "./src/net/transport.js", "./src/render/r3d/scene3d.js",
   "./src/render/pages/settings.js", "./src/render/pages/guide.js", "./src/render/kit/parts.js",

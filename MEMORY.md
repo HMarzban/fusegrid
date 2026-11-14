@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — switch2.js, the WebUSB waker (plan Task 2)
+- `src/app/switch2.js` (lazy, in SRC / LATER / loadbar LAZY; pwa off-boot count 24 -> 25): `initPackets` (SDL's start-up, format 09), `wake` (claim 1, send, release, close), `usbReach` (WebUSB + policy + macOS only), `createWaker` (`auto` skips a pad already playing, `request` the chooser with cancelled / busy / failed / blocked). 9 tests, 734 pass. Not wired to any screen yet (Task 3, waits on the owner's R-NAME ruling). Whether the pad stays awake after `close()` is Task 1b, still open.
+
 ## 2026-11-14 — Switch 2 Pro layout fix committed
 - On branch `feature/every-controller` (worktree `.claude/worktrees/every-controller`): `KNOWN` / `asStandard` / `standardPads` now also require the 21-button, 6-axis shape; architecture line restored. No cache bump yet (no player can wake the pad until the plan's CONNECT task). Plan: `docs/superpowers/plans/2026-11-14-every-controller-and-keyboard.md`, under HoE and staff review.
 
