@@ -171,8 +171,8 @@ update.
 ## 🐛 Bugs and ideas
 
 Use the issue templates: **Bug report** or **Idea**. The best bug reports say
-which look (CLASSIC 2D, PIXEL or REAL 3D), which device and browser, which
-room and Heat, and what you pressed. A challenge code (`B` on the end screen)
+which art style (CLASSIC 2D, PIXEL or REAL 3D), which device and browser, which
+level and difficulty, and what you pressed. A challenge code (`B` on the end screen)
 lets anyone replay the exact board.
 
 Found a security problem? Don't open a public issue. Follow

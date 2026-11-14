@@ -13,7 +13,7 @@ something another doc owns, that's a bug. Replace the copy with a link.
 
 | Fact | Owner | Audience |
 |---|---|---|
-| What the game is, how to play, controls, rooms, Heat, Pact, scoring | [README.md](../README.md) | Players |
+| What the game is, how to play, controls, levels, difficulty, modifiers, scoring | [README.md](../README.md) | Players |
 | What changed in each release | [CHANGELOG.md](../CHANGELOG.md) | Players |
 | The story of how it was built | [diary.md](diary.md) | Players and contributors |
 | Setup, URL flags, tests, sending a change, shipping a release | [CONTRIBUTING.md](../CONTRIBUTING.md) | Contributors |
@@ -47,8 +47,8 @@ arcade. Under the voice, every fact stays exact.
 - **Talk to the reader.** Use "you" for players and contributors, active voice
   and short sentences. Use *they/them* for anyone whose pronouns you don't
   know.
-- **Lead with play.** Public copy leads with play-in-the-browser, REAL 3D ⇄
-  CLASSIC 2D and Heat. "Deterministic" is a word for contributors, not the
+- **Lead with play.** Public copy leads with play-in-the-browser, the three art
+  styles (CLASSIC 2D, PIXEL, REAL 3D) and NORMAL / HARD / EXPERT difficulty, in the game's own words. "Deterministic" is a word for contributors, not the
   storefront headline.
 - **No rivalry.** Fusegrid ranks you against your own past runs only. Never
   write copy about beating friends, climbing a global board, keeping a streak

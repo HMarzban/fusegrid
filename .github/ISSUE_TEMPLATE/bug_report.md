@@ -18,9 +18,9 @@ labels: bug
 3.
 
 **Where**
-- Look: CLASSIC 2D / PIXEL / REAL 3D
-- Room and Heat: <!-- e.g. room 3 FACTORY, PLUS -->
-- Pact / pace: <!-- if any -->
+- Art style: CLASSIC 2D / PIXEL / REAL 3D
+- Level and difficulty: <!-- e.g. level 3 FACTORY, HARD -->
+- Modifiers / game speed: <!-- if any -->
 - Device and browser: <!-- e.g. iPhone 15, Safari 18; Mac, Chrome 140 -->
 - Installed as an app (PWA)? yes / no
 - Challenge code: <!-- press B on the end screen; lets anyone replay the exact board -->

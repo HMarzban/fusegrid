@@ -116,9 +116,9 @@ viewport and clicked through: seven labelled chips in the level's frame above th
 board on a desktop, in a grid with the PAUSE key on a portrait phone and in the
 side gutters on a landscape one, never over the board. It paints only when what it
 shows changes, so a still frame costs no canvas calls. A controller plugged in, back or lost
-during a run shows for 3 s in the plate the floor-tile tips use (beside the board, under it on
-a portrait phone, in the left gutter on a landscape one), with that controller's MOVE and BOMB
-buttons; off a run the menus' note says it as before.
+during a run shows for 3 s in the plate the floor-tile tips use, over the chip plate on a desktop
+and a portrait phone (covering each chip whole, the PAUSE key clear; v217) and in the left gutter
+on a landscape one, with that controller's MOVE and BOMB buttons; off a run the menus' note says it as before.
 
 The 3D renderer works to a fixed budget of 500 draw calls, and the tests' fully
 populated room draws 141. Anything repeated is instanced, so cost doesn't grow
@@ -305,7 +305,10 @@ Shell v185 (2026-10-26) gives the board a new look in all three looks. It adds:
   ([`frameart.js`](../src/render/frameart.js), [`frame.js`](../src/render/frame.js)).
   In REAL 3D the bezel is one extruded rim ([`three/rimart.js`](../src/render/three/rimart.js)) whose outer edge is a plain
   rectangle: the near corners used to lean in to stay on screen at the default zoom, which read as a flared tray once the
-  camera pulled back (v214), so now they run off the bottom of the screen at the default zoom instead.
+  camera pulled back (v214). Since v217 a desktop's 3D stage (`#gl`) is 1.12 times the board box across
+  ([`fit.js`](../src/app/fit.js) `glBox`, centred, never past the window), so the near corners are on screen at the
+  default zoom while the board keeps its size and the camera is untouched; the wrapper maps its projection back into
+  the board box, `fit.wash` carries the board's veils over the two side strips, and on a phone the corners still run off.
 - **Depth**: cast and contact shadows, ambient occlusion, lower-value bricks
   ([`depth2d.js`](../src/render/depth2d.js), [`three/groundfx.js`](../src/render/three/groundfx.js)).
 - **Ambient motion** per world (motes, glints, steam, drift) from one

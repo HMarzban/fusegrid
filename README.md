@@ -60,8 +60,8 @@ Buttons are named by position. Powers marked `*` in the in-game HOW TO need thei
 
 **Your binds, your call.** **SETTINGS → CONTROLS** rebinds both devices. The table
 shows the defaults. Arrows, Esc, Enter, the D-PAD and START stay put, so you can always get back.
-Plug a controller in mid-run and a short CONTROLLER READY note beside the board names its MOVE
-and BOMB buttons.
+Plug a controller in mid-run and a short CONTROLLER READY note over the score row names its MOVE
+and BOMB buttons for 3 seconds.
 
 **On a phone or tablet,** a touch strip sits off the board: a D-PAD of four
 keys and a yellow BOMB key, every key at least 44 px. In portrait the strip docks
@@ -147,7 +147,8 @@ NORMAL ×1, HARD ×2, EXPERT ×3.
   before you see it.
 - **Three looks, one game.** **SETTINGS → ART STYLE** cycles CLASSIC 2D (Canvas),
   PIXEL (hand-drawn sprites over the same board) and REAL 3D (WebGL), live, no
-  reload. REAL 3D frames the whole board from one 3/4 camera; wheel or pinch to
+  reload. REAL 3D frames the whole board from one 3/4 camera (on a computer the stage is a little
+  wider than the board, so the whole cabinet shows); wheel or pinch to
   zoom, and zoom snaps back to your CAMERA preset every level. SETTINGS also
   holds music and SFX volume, the 3D camera preset, brightness, screen shake
   and reduce-flash.
@@ -192,7 +193,7 @@ NORMAL ×1, HARD ×2, EXPERT ×3.
 - **Help on the cabinet.** **GUIDE** (HOW TO PLAY, POWER-UPS, ENEMIES, FLOOR) and
   **SOURCE**, which opens this repository.
 - **Menus that wear the world.** MENU (PLAY, LEVEL SELECT, DAILY, RECORDS, SETTINGS,
-  GUIDE, SOURCE) and every page sit centred on the look of the level you picked, drawn
+  GUIDE, SOURCE) and every page sit centred over the floor of the level you picked, drawn
   at the size you play on, in its own colours, with a card showing the run PLAY starts.
   PAUSE and the end of a run are drawn at your screen's full resolution in every look. Keyboard, controller and touch
   all work everywhere; on a phone every row and key is at least 44 px.
@@ -201,7 +202,9 @@ NORMAL ×1, HARD ×2, EXPERT ×3.
 - **Updates on your timing.** When a new version is ready, a **NEW VERSION
   READY** card offers RELOAD (or `U`) on the menus or after a finished run,
   never in the middle of one. LATER hides it until your next run ends or
-  the next time you open the game.
+  the next time you open the game. An open game looks for a new version every
+  5 minutes, and if it ever fails to start, it clears its offline copy and
+  reloads once by itself (never while you're offline).
 - **Know your build.** The main menu shows which version you're running
   (for example `v218`), so you can tell when an update has landed.
 

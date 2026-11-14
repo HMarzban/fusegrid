@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — Docs sweep to the live v218
+- Owner: "update all memories and changelogs and also all related docs". Player README (toast over the score row, REAL 3D's wider desktop stage, floor-only menu room, 5-minute update checks and the self-repair), architecture (toast place, the wider stage), docs/README (README's facts and the voice rule in the game's words), CONTRIBUTING and the bug-report template (art style, level and difficulty, modifiers and game speed), AGENTS (the three vetoes ruled in v217). CHANGELOG already carries v215-v218. Auto-memory: a feedback note on accountable release notes; the controls note points at the separate every-controller session.
+
 ## 2026-11-14 — v2.5.0 release note covers v215 to v218
 - Owner: "update the release note for v2.5.0 with v215 to v218". The GitHub release body now spans shell v201 → v218 (the tag stays on v214's commit `952cf95`, said in the note): floor-only menu room, toast over the score row, REAL 3D's wider desktop stage, faster update checks, the self-repairing offline copy (own scope only), Safari's SLOW CONNECTION catch, v218's REAL 3D fixes; Known re-measured on v218 (startup +67 KB gzip, precache +313 KB vs v2.4.0; 736 tests; world 8 measured; phone REAL 3D corners still cut).
 
