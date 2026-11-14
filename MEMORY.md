@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — GitHub release v2.6.0
+- Cut on the owner's word: annotated tag `v2.6.0` on `ed63fe7` (live v219), marked Latest; notes from the v219 CHANGELOG plus the owner's hardware checks, SDL credited.
+
 ## 2026-11-14 — v219 is live
 - Pushed on the owner's "Push it" (`afbde56..c3a8dff`), Pages CI green (test, deploy), live `sw.js` v219; CHANGELOG and AGENTS release state marked live.
 
