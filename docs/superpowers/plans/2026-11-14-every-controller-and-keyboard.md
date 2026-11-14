@@ -23,9 +23,9 @@
 - Safari, Firefox, every iOS browser: no WebUSB / WebHID; a Switch 2 controller there needs an outside tool. The row is hidden.
 - Windows (needs a WinUSB driver on interface 1), Linux (needs a udev rule), Android (WebUSB, no WebHID), an itch.io iframe (permissions policy): the CONNECT row stays hidden until each is measured.
 
-## Owner rulings needed
+## Owner rulings
 
-- **R-NAME (blocks Task 3's copy):** AGENTS.md CONTROLS says "no maker's name anywhere". The CONNECT row must name the pad it is for. Options put to the owner: `SWITCH 2 CONTROLLER` (clear, breaks the rule; AGENTS records the exception) or a neutral label. Task 3 writes its copy from the ruling; until then `SW2_WORDS.row` is the ruling's placeholder and no copy ships.
+- **R-LABELS (2026-11-14, owner, verbatim):** "you know it might user connect the playstastion controller or xbox controller or other regular controller, so our system must be smart and detact true and show the users the right lable". This reverses AGENTS.md CONTROLS "Button names are by position only … no maker's name anywhere" for the words a player reads: the game names a button the way the connected controller prints it (Task 9). Positions (`S E W N …`) stay the internal ids, the binds and the store; an unknown pad keeps the position words. The CONNECT row reads `SWITCH 2 CONTROLLER` (it is for exactly that pad).
 
 ## Global Constraints
 
@@ -110,7 +110,7 @@ Owner session on the trial page (`.superpowers/sdd/2026-11-14-switch2-webusb-spi
 
 **Interfaces:**
 - Consumes: `createWaker`, `usbReach` (Task 2).
-- Produces: `ctl.sw2(): {shown: boolean, state: string}`; row id `SW2` on the CONTROLLER tab after VIBRATION, before RESET; `SW2_WORDS = {row: <R-NAME>, door: "CONNECT", ok: "CONNECTED", cancel: "NOT CONNECTED · TRY AGAIN", busy: "IN USE BY ANOTHER APP", failed: "COULD NOT START IT HERE", blocked: "NOT ALLOWED ON THIS PAGE", pad: "PRESS ENTER OR CLICK", vib: "ALLOW VIBRATION", help: "It needs a USB cable. Your browser asks once which controller, and once more for vibration."}`, mirrored as a literal in `src/app` and pinned.
+- Produces: `ctl.sw2(): {shown: boolean, state: string}`; row id `SW2` on the CONTROLLER tab after VIBRATION, before RESET; `SW2_WORDS = {row: "SWITCH 2 CONTROLLER", door: "CONNECT", ok: "CONNECTED", cancel: "NOT CONNECTED · TRY AGAIN", busy: "IN USE BY ANOTHER APP", failed: "COULD NOT START IT HERE", blocked: "NOT ALLOWED ON THIS PAGE", pad: "PRESS ENTER OR CLICK", vib: "ALLOW VIBRATION", help: "It needs a USB cable. Your browser asks once which controller, and once more for vibration."}`, mirrored as a literal in `src/app` and pinned.
 
 - [ ] **Step 1: Write the failing tests:**
   - `usbReach` false: no `SW2` row on either tab, `ctl.sw2().shown === false`, nothing throws.
@@ -189,9 +189,32 @@ Binds stay physical (`code`): WASD stays put on AZERTY. Two things are wrong tod
 - [ ] **Step 5:** Bump `CACHE_NAME` / `REV`; owner check: ALLOW VIBRATION once, the test buzz and blasts at LOW / MEDIUM / HIGH, OFF silent, switching tabs stops a buzz.
 - [ ] **Step 6:** Commit `switch2: vibration over WebHID`; MEMORY line.
 
+### Task 9: Button labels for the controller in your hands (R-LABELS)
+
+**Files:**
+- Create: `src/app/padfamily.js` (pure), `tests/padfamily.test.mjs`
+- Modify: `src/app/gamepad.js` (snap gains `family`), `src/app/hints.js` (`wordsOf(dev, c, names, family)`), `src/app/controls.js` (label lookup by family beside `BTN[...].w` / `.s`), `src/render/controlsgeo.js`, `src/render/pages/controls.js`, `src/render/padart.js` (the face buttons' legends and the callouts), `src/render/kit/paint.js` (`glyph` gains `cross`, `circle`, `square`, `triangle` shapes), `src/render/words.js` (`PAD_FAMILY_WORDS`), every place `hints()` words are printed (HUD toast, MENU note, pages' feet, PAUSE foot, run ends)
+- Test: `tests/padfamily.test.mjs`, `tests/hints*.test.mjs` or `controlswire.test.mjs`, `tests/page-controls.test.mjs`, `tests/padart.test.mjs`, `tests/words.test.mjs`, `tests/keys.test.mjs`
+
+**Interfaces:**
+- Produces:
+  - `export function familyOf(id): "xbox" | "playstation" | "nintendo" | "generic"`: from the vendor id in the gamepad id (`045e` xbox, `054c` playstation, `057e` nintendo; Chrome `Vendor: xxxx`, Firefox `xxxx-yyyy-`), else by name (`/xbox/i`, `/dualsense|dualshock|playstation/i`, `/pro controller|joy-con|switch/i`), else `generic`. Matched, never printed or stored.
+  - `export const FAMILY_LABEL`: per family, the printed word and short word for `S E W N SHL SHR TRL TRR SELECT START`:
+    - xbox: `A B X Y`, `LB RB LT RT`, `VIEW MENU`
+    - playstation: `CROSS CIRCLE SQUARE TRIANGLE` (drawn as the ✕ ○ □ △ glyphs wherever a keycap is painted; the word wherever only text fits and in the live region), `L1 R1 L2 R2`, `CREATE OPTIONS`
+    - nintendo: `B A Y X` (by position: Nintendo's B is SOUTH), `L R ZL ZR`, `− +` (words `MINUS PLUS` for the live region)
+    - generic: today's `SOUTH EAST WEST NORTH`, `L SHOULDER …`, `SELECT START`
+  - pad snap `family`; `hints()` words use it, so `MOVE D-PAD · BOMB SOUTH` reads `BOMB A` on an Xbox pad and `BOMB ✕` on a PlayStation pad.
+- [ ] **Step 1: Write the failing tests:** `familyOf` on real id strings (Chrome and Firefox forms for each vendor, the Switch 2 bridge id, an unknown pad); with an Xbox pad the MENU note, PAUSE foot and CONTROLS rows read `A` / `B`; with a PlayStation pad they read the glyphs (paint) and `CROSS` (live region); a Nintendo pad reads `B` for SOUTH; a generic pad reads `SOUTH` exactly as today (the existing pins unchanged); a family switch (unplug Xbox, plug PlayStation) re-lays every hint once.
+- [ ] **Step 2:** Run. Expected: FAIL.
+- [ ] **Step 3:** Implement; the controller drawing keeps its generic body, only its legends follow the family.
+- [ ] **Step 4:** `npm test`; CONTROLS / MENU / PAUSE captures with a fake Xbox and a fake PlayStation pad pass gates `--strict` (new `tools/ui/shots.mjs` recipes).
+- [ ] **Step 5:** Bump `CACHE_NAME` / `REV`; owner check with every pad at hand.
+- [ ] **Step 6:** Commit `controls: button labels for the controller in your hands`; AGENTS.md CONTROLS rewritten for R-LABELS; MEMORY line.
+
 ### Task 8: Release
 
 - [ ] **Step 1:** Renumber `CACHE_NAME` / `REV` to the next number free on `main`.
-- [ ] **Step 2:** AGENTS.md (CONTROLS: the waker, the row, R-NAME, the stand-in actuator, the hat, the names map and the letter rule), `docs/architecture.md` (SDL credit), CHANGELOG in player words of exactly what was measured (standard pads as before; the Switch 2 Pro over a USB cable in Chrome on macOS, CONNECT in CONTROLS; keys follow your keyboard layout; anything else: rebind on CONTROLS), `docs/privacy.md` (USB and HID grants are per site, and `hmarzban.github.io` hosts other pages; how to revoke them in Chrome's site settings; nothing about a controller is sent anywhere), with a test that no analytics event or user property carries a controller field.
+- [ ] **Step 2:** AGENTS.md (CONTROLS: the waker, the row, R-LABELS, the family labels, the stand-in actuator, the hat, the names map and the letter rule), `docs/architecture.md` (SDL credit), CHANGELOG in player words of exactly what was measured (standard pads as before; the Switch 2 Pro over a USB cable in Chrome on macOS, CONNECT in CONTROLS; keys follow your keyboard layout; anything else: rebind on CONTROLS), `docs/privacy.md` (USB and HID grants are per site, and `hmarzban.github.io` hosts other pages; how to revoke them in Chrome's site settings; nothing about a controller is sent anywhere), with a test that no analytics event or user property carries a controller field.
 - [ ] **Step 3:** `npm test`; CONTROLS captures and gates `--strict`.
 - [ ] **Step 4:** Owner acceptance on the hardware at hand, then the owner merges and pushes.
