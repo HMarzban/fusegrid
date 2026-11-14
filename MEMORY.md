@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — final whole-branch review fixes (every-controller)
+- A key bound to play (MOVE, BOMB THROW REMOTE PAUSE) is never a shortcut letter R Y N C B M T U whatever its layout prints (`controls.js` `shortcutOf`, menuapp `boundKey`; main, menuapp, analytics, update, wire chord guard): Colemak S moves, never resets the camera or STATS; silent J / X aliases left out so Colemak / Workman keep an N for NO THANKS. Switch 2 `auto()` at the first deferred slot, not the first idle (deep links wake); connect() `.catch`; CHANGELOG / AGENTS truthful; 779 tests.
+
 ## 2026-11-14 — CONTROLS fix round C (review minors)
 - Chooser activation is `navigator.userActivation.isActive` where present (a pad press never), switch2.js never fetched off macOS / policy-refused WebUSB (wire pre-check = usbReach's rule), status/rule lines step down by whole words keeping the full stop, PAUSE view 3 taps through `ctlAt`, names copy-on-write so a steady CONTROLS frame allocates no names (padart `legSig` memo too), layout-map handler throws caught.
 - Follow-up (lead ruling): a line whose first sentence will not fit whole drops (never a shortened rule). Capture plate (no room for the drawing, e.g. a landscape phone #c): its `·` separators t2 (CONST.off was 4.46-4.48 on bedB), a chosen pair (lit vs quiet button), foot cap fills; screens.mjs CTL_ROW exempts info / touch / gap where no tab rect is recorded.

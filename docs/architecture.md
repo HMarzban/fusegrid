@@ -272,8 +272,9 @@ its own held axes and latches, OR-merged with keys. A held key beats the pad on 
 - The keyboard speaks the player's layout. [`controlswire.js`](../src/app/controlswire.js) builds a session-only map
   from code to printed letter (the browser's layout map plus each plain keypress), so CONTROLS and every hint print the
   player's own keys; the letter shortcuts (Y / N on the privacy card, U on the update card, R, C, B, M, T, Q, E) answer the
-  printed letter through `controls.js` `letterOf`, while binds and movement stay on the physical key. A chorded letter
-  answers no card.
+  printed letter through `controls.js` `letterOf`, while binds and movement stay on the physical key. A key bound to play
+  is never a shortcut letter that no bind may print (R, Y, N, C, B, M, T, U; `shortcutOf`): Colemak's MOVE DOWN prints r and
+  stays a move, never a camera reset or a STATS wipe. A chorded letter answers no card.
 - [`docs/controllers.md`](controllers.md) is the matrix of pads and browsers actually measured, filled from
   [`tools/pads/probe.html`](../tools/pads/probe.html), a dev page that walks one pad and prints its `KNOWN` row. A pad
   whose D-PAD arrives as a hat axis is parked until one is captured.

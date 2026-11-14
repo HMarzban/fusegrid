@@ -39,6 +39,15 @@ export function letterOf(code, key) {
   if (/^[a-z]$/i.test(key)) return "Key" + key.toUpperCase();
   return /^Key[A-Z]$/.test(code) && !/\p{L}/u.test(key) ? "" : code;
 }
+/* The letters the shell answers that no bind may print (refuseKey): the camera / STATS reset, the privacy card, the run end's copies, the menus' M T U */
+const SHORTCUT = new Set(["KeyR", "KeyY", "KeyN", "KeyC", "KeyB", "KeyM", "KeyT", "KeyU"]);
+/** The shortcut a press reads: letterOf, except that a key the player plays with (bound(code): the MOVE set, BOMB THROW REMOTE PAUSE) is never one of
+    the SHORTCUT letters, though a layout change may print one on it (Colemak's MOVE DOWN KeyS prints r): "" then, never the raw code (Dvorak may bind
+    KeyR, which prints p). Q and E, RECORDS' tab keys, sit on QWERTY's own REMOTE and THROW by design and stay. */
+export function shortcutOf(code, key, bound) {
+  const L = letterOf(code, key);
+  return SHORTCUT.has(L) && typeof bound === "function" && bound(code) ? "" : L;
+}
 /** A printed name worth showing: one printable ASCII character (a letter upper-cased, a digit, punctuation such as AZERTY's , on KeyM); "" for
     anything else (another script, an accented letter, a dead key, space). */
 export const layoutName = (v) => (typeof v === "string" && /^[!-~]$/.test(v) ? v.toUpperCase() : "");
@@ -203,6 +212,8 @@ export function softAliases(c) {
   const used = new Set([...c.key.MOVE, ...ACTIONS.map((a) => c.key[a])]);
   return ["KeyJ", "KeyX"].filter((k) => !used.has(k));
 }
+/** The keys a player plays with: the MOVE set and the four actions (no silent alias: see shortcutOf's callers). */
+export const playKeys = (k) => new Set([...k.MOVE, ...ACTIONS.map((a) => k[a])]);
 /** Every key code the game owns, for preventDefault. */
 export function boundKeys(c) {
   return new Set([...c.key.MOVE, ...ACTIONS.map((a) => c.key[a]), ...softAliases(c)]);

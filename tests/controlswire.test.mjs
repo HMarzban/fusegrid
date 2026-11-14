@@ -1259,20 +1259,18 @@ for (const via of ["LATER", "the backdrop"]) {
     setHints(null);
   });
 
-  /* auto() at the title, once, through the injected defer / idle; a pad already showing is left alone (switch2.js) */
+  /* auto() once, at the first deferred slot after mount, idle or not (it needs no activation: a ?play=1 / ?code= deep link is never idle before a
+     pause); a pad already showing is left alone (switch2.js) */
   {
     const u = fakeUsb(); u.devs = [dev()];
     const q = [];
-    let idleNow = false;
+    const idleNow = false;
     const app = { screen: SCREEN.INTRO, introStage: 0, pauseView: 0, ctlT: 0, lastDev: "key", wake: noop, _feel: noop, onControls: () => false, get capturing() { return false; }, ctlBtn: () => false, ctlKey: () => false };
     const c = mountControls({ win: null, doc: null, input: new Input(null), app, SCREEN, world: createWorld(1, 1), onPause: noop, getGamepads: () => [], store: null, defer: (f) => q.push(f), idle: () => idleNow, art: null, usb: u, platform: "macOS", policy: null });
     check("auto() is deferred: nothing asked of the browser at mount", u.got === 0 && q.length >= 1, J([u.got, q.length]));
     const runQ = async () => { for (let i = 0; i < 6 && q.length; i++) q.shift()(); await flush(); await flush(); };
     await runQ();
-    check("not idle (the show or a run): it waits, asks nothing", u.got === 0, u.got);
-    idleNow = true;
-    await runQ();
-    check("idle at the title: auto() runs once (getDevices, no chooser) before MENU", u.got === 1 && u.req === 0 && app.screen === SCREEN.INTRO && !!u.L.connect, J([u.got, u.req]));
+    check("not idle (the show or a deep-linked run): auto() still runs once at the first deferred slot (getDevices, no chooser)", u.got === 1 && u.req === 0 && app.screen === SCREEN.INTRO && !!u.L.connect, J([u.got, u.req]));
     for (let i = 0; i < 4; i++) { q.push(q.length ? q.shift() : noop); await runQ(); }
     check("and never again", u.got === 1, u.got);
     c.dispose();

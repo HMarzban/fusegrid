@@ -1,5 +1,5 @@
 // The seam that wires CONTROLS into main, frameloop and unlock. Plan: docs/superpowers/plans/2026-11-02-controls-feature.md T11.
-import { VIB_LEVELS, clampControls, layoutName, letterOf, loadControls, saveControls } from "./controls.js";
+import { VIB_LEVELS, clampControls, layoutName, loadControls, saveControls, shortcutOf } from "./controls.js";
 import { createPad, padInfo, routesOf, standardPads } from "./gamepad.js";
 import { createPadRouter } from "./padroute.js";
 import { createHintDev, keyPress, pointerPress, wordsOf } from "./hints.js";
@@ -31,7 +31,7 @@ const loadArt = (art) => (!art ? Promise.resolve() : artP || (artP = Promise.res
 const loadRumble = (imp) => rumbleP || (rumbleP = (imp ? Promise.resolve(imp()) : import("./rumble.js")).then((m) => { rumbleMod = m; }, retry(() => { rumbleP = null; })));
 /** Every lazy CONTROLS part in; resolves once they are. Tests await it once, so their mounts build at once. */
 export const preloadControls = (art) => Promise.all([loadPage(), loadArt(art), loadRumble()]);
-/* The Switch 2 waker (switch2.js, Task 3): asked for only where usbReach could answer true (sw2Could, below: WebUSB, allowed, macOS), in idle after the title or when CONTROLS opens; its
+/* The Switch 2 waker (switch2.js, Task 3): asked for only where usbReach could answer true (sw2Could, below: WebUSB, allowed, macOS), at the first deferred slot after mount or when CONTROLS opens; its
    usbReach decides whether the CONNECT row shows at all. A module that is in stays in. */
 let sw2Mod = null, sw2P = null;
 const loadSw2 = (imp) => sw2P || (sw2P = (imp ? Promise.resolve(imp()) : import("./switch2.js")).then((m) => { sw2Mod = m; }, retry(() => { sw2P = null; })));
@@ -105,7 +105,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     if (!waker || !page) return false;
     if (!activated()) { page.sw2Said("pad"); app._feel("deny"); return false; } // no user activation: the page says what does open it
     const vib = waker.vibOffer(), p = vib ? waker.allow() : waker.request(); // a second chooser needs a press of its own: one chooser per activation
-    if (p !== reqP) { reqP = p; p.then((r) => { if (reqP === p) reqP = null; if (page) page.sw2Said(vib ? HID_SAY[r] : r); if (vib && r === "allowed" && c.vib > 0 && rum()) rumble.test(lastT); if (app.wake) app.wake(); }, noop); } // one note per chooser; vibration allowed buzzes once
+    if (p !== reqP) { reqP = p; p.then((r) => { if (reqP === p) reqP = null; if (page) page.sw2Said(vib ? HID_SAY[r] : r); if (vib && r === "allowed" && c.vib > 0 && rum()) rumble.test(lastT); if (app.wake) app.wake(); }, noop).catch(noop); } // one note per chooser; vibration allowed buzzes once
     return true;
   };
   const rum = () => rumble || (rumbleMod && (rumble = rumbleMod.createRumble({
@@ -207,9 +207,11 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     const warm = () => { if (page) return; if (idle && !idle()) later(warm); else want(); };
     later(warm);
   }
-  /* auto() once, in idle after the title: a pad the player already allowed wakes with no chooser, and one plugged in later wakes on connect */
+  /* auto() once, at the first deferred slot after mount (never the title's first paint; null in Node): it needs no user activation, so it does not
+     wait for idle, and a ?play=1 / ?code= deep link, which may never be idle before a pause, wakes a pad the player already allowed with no chooser;
+     one plugged in later wakes on connect */
   if (later && could()) {
-    const warmSw2 = () => { if (autoDone) return; if (idle && !idle()) return void later(warmSw2); sw2Want().then((w) => { if (w && !autoDone) { autoDone = true; w.auto().catch(noop); } }); };
+    const warmSw2 = () => { if (autoDone) return; sw2Want().then((w) => { if (w && !autoDone) { autoDone = true; return w.auto(); } }).catch(noop); };
     later(warmSw2);
   }
   input.gate = { canThrow: () => app.screen === SCREEN.GAME && world.state === "PLAY" && !!(world.players[0] && world.players[0].throw) };
@@ -220,7 +222,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     if (keyPress(e)) { app.lastDev = "key"; hintDev.key(e, app.ctlT); }
     if (!e.repeat && typeof e.key === "string" && e.key.length === 1 && e.key !== " " && plain(e) && nameSet(code, e.key)) syncWords();
     const cap = app.capturing;
-    if (letterOf(code, e.key) === "KeyR" && app.screen === SCREEN.STATS && (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey)) { app.resetArm = false; return true; } // only a plain R arms or erases
+    if (shortcutOf(code, e.key, (q) => typeof app.boundKey === "function" && app.boundKey(q)) === "KeyR" && app.screen === SCREEN.STATS && (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey)) { app.resetArm = false; return true; } // only a plain R arms or erases
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return cap;
     if (cap && !browserKey(code)) e.preventDefault();
     return app.ctlKey(code, e.key);

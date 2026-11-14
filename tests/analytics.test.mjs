@@ -192,6 +192,16 @@ check("cookiePath keeps the cookies on the game's own directory",
   const cy = D2.key("KeyN", false, "т");
   check("another script: the code's own letter still answers (KeyN printing т is N)", cy.stopped && g2.consent === 0, g2.consent);
 }
+// ---- final review 1: a key bound to play is never Y or N, whatever its layout prints on it: a stray move or bomb must not consent ----
+{
+  const D = mkDom(), st = mkStore();
+  const ga = mountAnalytics({ id: ID, store: st, win: D.win, doc: D.doc, loc: LOC, get: () => ({ app: { screen: SCREEN.GAME, boundKey: (c) => c === "KeyZ" || c === "KeyS" }, SCREEN }) });
+  ga.tick();
+  const by = D.key("KeyZ", false, "y"), bn = D.key("KeyS", false, "n");
+  check("GAME: a bound key printing Y or N answers nothing and passes on to the game", !by.stopped && !bn.stopped && ga.consent === -1 && !st.m.has(ANALYTICS_KEY), ga.consent);
+  const fy = D.key("KeyO", false, "y");
+  check("GAME: a free key printing Y still answers ALLOW", fy.stopped && ga.consent === 1, ga.consent);
+}
 // ---- touch: the card waits out a run (the bomb button owns that corner) ----
 {
   const D = mkDom("", "p"), st = mkStore();
@@ -304,7 +314,7 @@ for (const how of ["KeyY", "KeyN", ".yes", ".no"]) {
   const up = asrc.match(/gtag\("set",\s*"user_properties",\s*(\{[^;]*\})\);/);
   check("controller privacy: the user properties in the source are days_played and look only", !!up && keysOf(up[1]).sort().join() === "days_played,look", up && up[1]);
   const imps = [...asrc.matchAll(/^import\s*\{([^}]*)\}\s*from\s*"([^"]+)"/gm)].map((m) => m[2] + ":" + m[1].trim());
-  check("controller privacy: analytics.js reads no controller module (only the store and controls.js letterOf, the printed Y / N)", imps.join("|") === "./store.js:defaultStore|./controls.js:letterOf", imps.join("|"));
+  check("controller privacy: analytics.js reads no controller module (only the store and controls.js shortcutOf, the printed Y / N off the keys bound to play)", imps.join("|") === "./store.js:defaultStore|./controls.js:shortcutOf", imps.join("|"));
   const D = mkDom(), st = mkStore();
   const ga = mountAnalytics({ id: ID, store: st, win: D.win, doc: D.doc, loc: LOC, now: () => "NOW", days: 3, look: () => "3d", ...atMenu(SCREEN.MENU) });
   ga.tick(); D.key("KeyY");

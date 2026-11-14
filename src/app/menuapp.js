@@ -15,7 +15,7 @@ import { clampPact, PACT, togglePact } from "../core/pact.js";
 import { clampPace } from "../core/pace.js";
 import { FOES } from "../core/entities.js";
 import { clampSettings, DEFAULTS } from "./settings.js";
-import { letterOf } from "./controls.js";
+import { DEF_KEY, playKeys, shortcutOf } from "./controls.js";
 import { RENDER_KINDS, renderBits, renderVal } from "./renderkind.js";
 import { LOOK_LABEL } from "./jobs.js";
 import { SHOW_DUR, SKIP_GUARD, TITLE_IN } from "./intro.js";
@@ -308,7 +308,7 @@ export function createMenuApp(opts = {}) {
         this._lockHeld = false; // released: the next press may flash LEVEL SELECT's lock again
       }
     },
-    /* Discrete key tap (Enter/Esc/Backspace/M + arrows-as-tap fallback). key = what it prints: the letter shortcuts read it (letterOf), the binds the code. */
+    /* Discrete key tap (Enter/Esc/Backspace/M + arrows-as-tap fallback). key = what it prints: the letter shortcuts read it (shortcutOf: never on a key bound to play), the binds the code. */
     key(code, key) {
       if (this.capturing) return false; // the capture owns the key (controlspage.js)
       if (this.screen === SCREEN.ATTRACT) {
@@ -320,7 +320,7 @@ export function createMenuApp(opts = {}) {
       this.parked = false;
       const mi = this.moveKeys.indexOf(code); // UP RIGHT DOWN LEFT, live binds; ARROWS always work
       if (mi >= 0) return this._tapMove(mi === 1 || mi === 2 ? 1 : -1, mi === 1 || mi === 3);
-      const L = letterOf(code, key);
+      const L = shortcutOf(code, key, (c) => this.boundKey(c)); // a key bound to play is never a shortcut letter, whatever it prints
       switch (L) {
         case "Enter":
         case "NumpadEnter":
@@ -975,6 +975,10 @@ export function createMenuApp(opts = {}) {
     },
     get moveKeys() {
       return this.controls ? this.controls.view(this.ctlT).key.MOVE : DEF_MOVE;
+    },
+    /* true when the code is one the player plays with now (the MOVE set, BOMB THROW REMOTE PAUSE): such a key answers no shortcut letter (controls.js shortcutOf) */
+    boundKey(code) {
+      return playKeys(this.controls ? this.controls.view(this.ctlT).key : DEF_KEY).has(code);
     },
     ctlKey(code, key) {
       return this.onControls() ? this.controls.feedKey(code, key, this.ctlT) : false;
