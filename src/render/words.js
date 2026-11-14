@@ -165,6 +165,7 @@ export const RESET_GROUP = Object.freeze({
   "nb.highscores.v1": "score", "nb.bests.v1": "best", "nb.times.v1": "time", "nb.daily.v1": "daily try", "nb.ghost.v1": "ghost", "nb.medals.v1": "medal",
   "nb.plaques.v1": "badge", "nb.stats.v1": "stat", "nb.coach.v1": "tips", "nb.coach.v2": "tips", "nb.cabinet.v1": "tips", "nb.pact.v1": "locks",
   "nb.settings.v1": "settings", "nb.pace.v1": "game speed", "nb.analytics.v1": "analytics choice", "nb.controls.v1": "controls",
+  "nb.padhelp.v1": "controls", // the controller help card retired (controller discovery, 2026-11-14): kept with the controls
 });
 const ERASE_NOUNS = ["score", "best", "time", "daily try", "ghost", "medal", "badge", "stat"], KEEP_NOUNS = ["settings", "game speed", "analytics choice", "controls"];
 /* the two groups that are not nouns: how each reads when kept (fix round 1: every group prints in either list, or the sentence throws) */

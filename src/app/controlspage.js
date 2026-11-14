@@ -8,8 +8,10 @@ const ROWS = {
   key: ["MOVE", "BOMB", "THROW", "REMOTE", "PAUSE", "CONFIRM", "BACK", "RESET"],
   pad: ["MOVE", "BOMB", "THROW", "REMOTE", "PAUSE", "SENSITIVITY", "VIBRATION", "RESET"],
 };
-/* The CONNECT row's words (src/render/words.js SW2_WORDS, pinned equal in tests/words.test.mjs: src/app never imports src/render). */
-export const SW2_WORDS = Object.freeze({ row: "SWITCH 2 CONTROLLER", door: "CONNECT", ok: "CONNECTED", cancel: "NOT CONNECTED · TRY AGAIN", busy: "IN USE BY ANOTHER APP", failed: "COULD NOT START IT HERE", blocked: "NOT ALLOWED ON THIS PAGE", pad: "PRESS ENTER OR CLICK", vib: "ALLOW VIBRATION", allow: "ALLOW", help: "It needs a USB cable. Your browser asks once which controller.", helpVib: "It needs a USB cable. Your browser asks once which controller, and once more for vibration." });
+/* The CONNECT row's words (src/render/words.js SW2_WORDS, pinned equal in tests/words.test.mjs: src/app never imports src/render); padhelp.js owns them,
+   in the boot graph, since the help card shows the CONNECT results before this page is in (controller discovery, 2026-11-14). */
+import { SW2_WORDS } from "./padhelp.js";
+export { SW2_WORDS };
 const SW2_SAY = { pad: "pad", woken: "ok", cancelled: "cancel", busy: "busy", failed: "failed", blocked: "blocked" };
 const PAD_SW2 = [...ROWS.pad.slice(0, -1), "SW2", "RESET"];
 const NO_VIB = "NO VIBRATION ON THIS CONTROLLER OR BROWSER", NO_VIB_SAY = "Vibration, none. No vibration on this controller or browser.";
