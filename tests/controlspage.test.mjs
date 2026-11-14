@@ -462,14 +462,14 @@ for (const state of ["none", "lost"]) {
 
 /* ---- Task 3: the CONNECT row (SW2) on the CONTROLLER tab, after VIBRATION, before RESET; only where the wire's waker exists (usbReach) ---- */
 {
-  check("SW2_WORDS: the app-side literal (pinned equal to words.js in words.test)", J(SW2_WORDS) === J({ row: "SWITCH 2 CONTROLLER", door: "CONNECT", ok: "CONNECTED", cancel: "NOT CONNECTED · TRY AGAIN", busy: "IN USE BY ANOTHER APP", failed: "COULD NOT START IT HERE", blocked: "NOT ALLOWED ON THIS PAGE", pad: "PRESS ENTER OR CLICK", vib: "ALLOW VIBRATION", help: "It needs a USB cable. Your browser asks once which controller." }) && Object.isFrozen(SW2_WORDS));
+  check("SW2_WORDS: the app-side literal (pinned equal to words.js in words.test)", J(SW2_WORDS) === J({ row: "SWITCH 2 CONTROLLER", door: "CONNECT", ok: "CONNECTED", cancel: "NOT CONNECTED · TRY AGAIN", busy: "IN USE BY ANOTHER APP", failed: "COULD NOT START IT HERE", blocked: "NOT ALLOWED ON THIS PAGE", pad: "PRESS ENTER OR CLICK", vib: "ALLOW VIBRATION", help: "It needs a USB cable. Your browser asks once which controller, and once more for vibration." }) && Object.isFrozen(SW2_WORDS));
   const off = open("pad");
   check("no waker (usbReach false): no SW2 row, eight rows on the CONTROLLER tab, the view says not shown", off.p.view(0).sw2.shown === false && (() => { off.p.pick(7); return off.said.at(-1).endsWith("8 of 8."); })(), off.said.at(-1));
   const hid = open("pad", { sw: { shown: false, state: "idle" } });
   hid.p.walk(-1, 1);
   check("a waker that is not shown: still eight rows (↑ from BOMB wraps nowhere near a ninth)", hid.p.view(0).row === 0 && (() => { hid.p.walk(-1, 1); return hid.p.view(0).row === 7; })());
   const r = open("pad", { sw: { shown: true, state: "idle" }, pv: { state: "none" } });
-  check("shown: the view carries it", J(r.p.view(0).sw2) === J({ shown: true, state: "idle" }));
+  check("shown: the view carries it", J(r.p.view(0).sw2) === J({ shown: true, state: "idle", vib: false }));
   r.said.length = 0; r.p.walk(-1, 1); r.p.walk(-1, 1); r.p.walk(-1, 1); // BOMB -> MOVE -> (wrap) RESET -> SW2
   check("shown, no controller: nine rows, SW2 the eighth (after VIBRATION, before RESET), walked onto with its words", r.p.view(0).row === 7 && r.said.at(-1) === "Switch 2 controller, CONNECT. 8 of 9.", J([r.p.view(0).row, r.said.at(-1)]));
   check("shown, no controller: Enter on SW2 is the wire's ('sw2'), never refused by the NO CONTROLLER rule", r.p.confirm(0) === "sw2" && !r.p.capturing && r.writes.length === 0);

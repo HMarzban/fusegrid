@@ -98,8 +98,8 @@ BOXES.push(["tablet 1024x768 (touch shell)", { W: 1024, H: 768, touch: true, she
 BOXES.push(["short touch 1024x600 (touch shell)", { W: 1024, H: 600, touch: true, shell: true, css: 1 }], ["short touch 800x600 (touch shell)", { W: 800, H: 600, touch: true, shell: true, css: 1 }]); // lane lesson 1: short touch windows
 for (const ts of [1, 1.25]) {
   setTextScale(ts);
-  for (const [nm, F] of BOXES) for (const v0 of [padV(), keyV(), swV(), swV({ pad: { state: "none" } })]) {
-    const tg = `${nm} @${ts} ${v0.tab}${v0.sw2 ? " +CONNECT" + (v0.pad.state === "none" ? " (no controller)" : "") : ""}`, ids = P.controlsGeom(F, v0).order;
+  for (const [nm, F] of BOXES) for (const v0 of [padV(), keyV(), swV(), swV({ pad: { state: "none" } }), swV({ sw2: { shown: true, state: "idle", vib: true } })]) { // the last: ALLOW VIBRATION on the door (Task 7)
+    const tg = `${nm} @${ts} ${v0.tab}${v0.sw2 ? " +CONNECT" + (v0.pad.state === "none" ? " (no controller)" : "") + (v0.sw2.vib ? " ALLOW" : "") : ""}`, ids = P.controlsGeom(F, v0).order;
     let ok = true, drawnOk = true;
     ids.forEach((id, i) => {
       const v = { ...v0, row: i }, G = P.controlsGeom(F, v), r = G.rows[id], h = P.controlsHit(v, ...ctr(r), G);
@@ -305,6 +305,7 @@ const CW9 = (await import("../src/render/words.js")).CONTROLS_WORDS;
   check("NO CONTROLLER and LOST: the CONNECT row is live (never off), its door CONNECT", none && !none.off && lost && !lost.off && none.door === SW2.door, J(none));
   check("the door reads CONNECTED only once woken with a controller seen", rowsOf(swV({ sw2: { shown: true, state: "woken" } })).find((r) => r.id === "SW2").door === SW2.ok && rowsOf(swV({ sw2: { shown: true, state: "woken" }, pad: { state: "none" } })).find((r) => r.id === "SW2").door === SW2.door);
   const sr = (o) => rowsOf(swV(o)).find((r) => r.id === "SW2");
+  check("ALLOW VIBRATION: the door while the wire offers it (WebHID, a Switch 2 playing, none allowed), over CONNECTED", sr({ sw2: { shown: true, state: "idle", vib: true } }).door === SW2.vib && sr({ sw2: { shown: true, state: "woken", vib: true } }).door === SW2.vib && SW2.vib === "ALLOW VIBRATION");
   check("its status line: the help sentence; a result in its place once there is one, even with no controller", statusOf(swV({ pad: { state: "none" } }), sr({ pad: { state: "none" } })) === SW2.help && statusOf(swV({ status: SW2.cancel, pad: { state: "none" } }), sr()) === SW2.cancel);
   const fk = footText(footItems(swV({ row: 7, device: "key" }), sr(), {})), fp = footText(footItems(swV({ row: 7, device: "pad" }), sr(), {})), fn = footText(footItems(swV({ row: 7, device: "key", pad: { state: "none" } }), sr({ pad: { state: "none" } }), {}));
   check("its foot: CONNECT ENTER on keys, on a controller (SOUTH would not open the chooser) and with no controller", /CONNECT ENTER/.test(fk) && /CONNECT ENTER/.test(fp) && !/CONNECT SOUTH/.test(fp) && /CONNECT ENTER/.test(fn), J([fk, fp, fn]));
