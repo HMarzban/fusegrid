@@ -98,8 +98,8 @@ BOXES.push(["tablet 1024x768 (touch shell)", { W: 1024, H: 768, touch: true, she
 BOXES.push(["short touch 1024x600 (touch shell)", { W: 1024, H: 600, touch: true, shell: true, css: 1 }], ["short touch 800x600 (touch shell)", { W: 800, H: 600, touch: true, shell: true, css: 1 }]); // lane lesson 1: short touch windows
 for (const ts of [1, 1.25]) {
   setTextScale(ts);
-  for (const [nm, F] of BOXES) for (const v0 of [padV(), keyV(), swV(), swV({ pad: { state: "none" } })]) {
-    const tg = `${nm} @${ts} ${v0.tab}${v0.sw2 ? " +CONNECT" + (v0.pad.state === "none" ? " (no controller)" : "") : ""}`, ids = P.controlsGeom(F, v0).order;
+  for (const [nm, F] of BOXES) for (const v0 of [padV(), keyV(), swV(), swV({ pad: { state: "none" } }), swV({ sw2: { shown: true, state: "idle", vib: true } })]) { // the last: ALLOW VIBRATION on the door (Task 7)
+    const tg = `${nm} @${ts} ${v0.tab}${v0.sw2 ? " +CONNECT" + (v0.pad.state === "none" ? " (no controller)" : "") + (v0.sw2.vib ? " ALLOW" : "") : ""}`, ids = P.controlsGeom(F, v0).order;
     let ok = true, drawnOk = true;
     ids.forEach((id, i) => {
       const v = { ...v0, row: i }, G = P.controlsGeom(F, v), r = G.rows[id], h = P.controlsHit(v, ...ctr(r), G);
@@ -303,21 +303,26 @@ const CW9 = (await import("../src/render/words.js")).CONTROLS_WORDS;
   check("shown: SW2 after VIBRATION, before RESET, on the CONTROLLER tab only", P.controlsGeom({ W: 1366, H: 768 }, swV()).order.join() === "MOVE,BOMB,THROW,REMOTE,PAUSE,SENSITIVITY,VIBRATION,SW2,RESET" && !P.controlsGeom({ W: 1366, H: 768 }, keyV({ sw2: SW })).order.includes("SW2"));
   const none = rowsOf(swV({ pad: { state: "none" } })).find((r) => r.id === "SW2"), lost = rowsOf(swV({ pad: { state: "lost" } })).find((r) => r.id === "SW2");
   check("NO CONTROLLER and LOST: the CONNECT row is live (never off), its door CONNECT", none && !none.off && lost && !lost.off && none.door === SW2.door, J(none));
-  check("the door reads CONNECTED only once woken with a controller seen", rowsOf(swV({ sw2: { shown: true, state: "woken" } })).find((r) => r.id === "SW2").door === SW2.ok && rowsOf(swV({ sw2: { shown: true, state: "woken" }, pad: { state: "none" } })).find((r) => r.id === "SW2").door === SW2.door);
+  const dr = (sw2, pad) => rowsOf(swV({ sw2, ...(pad ? { pad } : {}) })).find((r) => r.id === "SW2").door;
+  check("the door reads CONNECTED whenever the wire sees a Switch 2 in the pad list (seen), whoever woke it; CONNECT otherwise, woken or not", dr({ shown: true, state: "idle", seen: true }) === SW2.ok && dr({ shown: true, state: "cancelled", seen: true }) === SW2.ok && dr({ shown: true, state: "woken" }) === SW2.door && dr({ shown: true, state: "woken" }, { state: "none" }) === SW2.door);
   const sr = (o) => rowsOf(swV(o)).find((r) => r.id === "SW2");
+  check("ALLOW VIBRATION: the door while the wire offers it (WebHID, a Switch 2 playing, none allowed), over CONNECTED", sr({ sw2: { shown: true, state: "idle", vib: true } }).door === SW2.vib && sr({ sw2: { shown: true, state: "woken", vib: true } }).door === SW2.vib && SW2.vib === "ALLOW VIBRATION");
   check("its status line: the help sentence; a result in its place once there is one, even with no controller", statusOf(swV({ pad: { state: "none" } }), sr({ pad: { state: "none" } })) === SW2.help && statusOf(swV({ status: SW2.cancel, pad: { state: "none" } }), sr()) === SW2.cancel);
   const fk = footText(footItems(swV({ row: 7, device: "key" }), sr(), {})), fp = footText(footItems(swV({ row: 7, device: "pad" }), sr(), {})), fn = footText(footItems(swV({ row: 7, device: "key", pad: { state: "none" } }), sr({ pad: { state: "none" } }), {}));
   check("its foot: CONNECT ENTER on keys, on a controller (SOUTH would not open the chooser) and with no controller", /CONNECT ENTER/.test(fk) && /CONNECT ENTER/.test(fp) && !/CONNECT SOUTH/.test(fp) && /CONNECT ENTER/.test(fn), J([fk, fp, fn]));
+  { const AV = { shown: true, state: "idle", seen: true, vib: true }, ak = footText(footItems(swV({ row: 7, device: "key", sw2: AV }), sr({ sw2: AV }), {})), ap = footText(footItems(swV({ row: 7, device: "pad", sw2: AV }), sr({ sw2: AV }), {}));
+    check("on ALLOW VIBRATION the foot reads ALLOW ENTER (keys and a controller), never CONNECT", /(^| )ALLOW ENTER/.test(ak) && /(^| )ALLOW ENTER/.test(ap) && !/CONNECT/.test(ak + ap), J([ak, ap])); }
   for (const ts of [1, 1.25]) {
     setTextScale(ts);
-    for (const [nm, F] of BOXES) for (const v0 of [swV({ row: 7 }), swV({ row: 7, pad: { state: "none" } })]) {
-      const tg = `${nm} @${ts}${v0.pad.state === "none" ? " (no controller)" : ""}`, r = rec(); P.drawControlsPage(r.ctx, F, v0, { level: 1, tap: false });
+    for (const [nm, F] of BOXES) for (const v0 of [swV({ row: 7 }), swV({ row: 7, pad: { state: "none" } }), swV({ row: 7, sw2: { ...SW, hid: true } })]) {
+      const HELP = v0.sw2.hid ? SW2.helpVib : SW2.help;
+      const tg = `${nm} @${ts}${v0.pad.state === "none" ? " (no controller)" : ""}${v0.sw2.hid ? " (WebHID)" : ""}`, r = rec(); P.drawControlsPage(r.ctx, F, v0, { level: 1, tap: false });
       const o = P._dbg.last.Pl.rows.SW2, door = o.val.P.find((q) => q.s === SW2.door), chev = o.val.P.find((q) => q.k === "glyph" && q.n === "chev"), at = door ? (door.r ? door.r.x : door.x) : chev ? chev.r.x : -1;
       check(`the CONNECT row (${tg}): its label drawn, then the door right of it with room between (the CONNECT key, its word, or where neither fits the door's chevron)`, r.texts.some((t) => t.s === SW2.row) && (door ? r.texts.some((t) => t.s === SW2.door) : !!chev) && at >= o.label.x + o.label.w + 8 && o.val.x + o.val.w <= o.r.x + o.r.w + 0.01, J([o.label.x + o.label.w, at, door ? "word" : chev ? "chev" : "none"]));
-      const st = P._dbg.last.live.status.map((q) => q.s).join(" "), rl = (P._dbg.last.G.d.rule ? P._dbg.last.Pl.rule2 : []).map((q) => q.s).join(" "), first = SW2.help.split(". ")[0] + ".";
-      check(`the CONNECT row (${tg}): the help sentence whole, or where it will not fit its first sentence whole (the pane's rule on the desk, the status line off it); never cut mid-sentence, never twice`, P._dbg.last.G.d.rule ? (rl === SW2.help || rl === first) && st === "" : st === SW2.help || st === first, J([rl, st]));
+      const st = P._dbg.last.live.status.map((q) => q.s).join(" "), rl = (P._dbg.last.G.d.rule ? P._dbg.last.Pl.rule2 : []).map((q) => q.s).join(" "), first = HELP.split(". ")[0] + ".";
+      check(`the CONNECT row (${tg}): the help sentence whole, or where it will not fit its first sentence whole (the pane's rule on the desk, the status line off it); never cut mid-sentence, never twice`, P._dbg.last.G.d.rule ? (rl === HELP || rl === first) && st === "" : st === HELP || st === first, J([rl, st]));
     }
-    for (const [W, H] of DESKS.filter(([W]) => W > 1024 && (ts === 1 || W === 1366))) { const r = rec(); P.drawControlsPage(r.ctx, { W, H }, swV({ row: 7 }), { level: 1, tap: false }); const rl = P._dbg.last.Pl.rule2.map((q) => q.s); check(`desk ${W}x${H} @${ts} (1366 and 1280 wide at 1, 1366 at 1.25; a narrower pane keeps the first sentence): the help sentence whole in the pane's rule on the CONNECT row (drawn), the menus rule on every other row`, rl.join(" ") === SW2.help && rl.every((q) => r.texts.some((t) => t.s === q)) && (() => { const k = rec(); P.drawControlsPage(k.ctx, { W, H }, swV({ row: 6 }), { level: 1, tap: false }); return !k.texts.some((t) => t.s === rl[0]); })(), J(rl)); }
+    for (const [W, H] of DESKS.filter(([W]) => W > 1024 && (ts === 1 || W === 1366))) for (const hid of [false, true]) { const HELP = hid ? SW2.helpVib : SW2.help, r = rec(); P.drawControlsPage(r.ctx, { W, H }, swV({ row: 7, sw2: { ...SW, hid } }), { level: 1, tap: false }); const rl = P._dbg.last.Pl.rule2.map((q) => q.s); check(`desk ${W}x${H} @${ts}${hid ? " WebHID" : ""} (1366 and 1280 wide at 1, 1366 at 1.25; a narrower pane keeps the first sentence): the help sentence whole in the pane's rule on the CONNECT row (drawn), the menus rule on every other row`, rl.join(" ") === HELP && rl.every((q) => r.texts.some((t) => t.s === q)) && (() => { const k = rec(); P.drawControlsPage(k.ctx, { W, H }, swV({ row: 6 }), { level: 1, tap: false }); return !k.texts.some((t) => t.s === rl[0]); })(), J(rl)); }
   }
   setTextScale(1);
   /* DESK_SHORT only for a desk that would scale (0.8 <= u < 1): a touch shell box on the phone form (816 x 648, 1.25: 864 x 664) stays the phone

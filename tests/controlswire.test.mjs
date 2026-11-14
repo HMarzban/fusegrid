@@ -1207,7 +1207,7 @@ for (const via of ["LATER", "the backdrop"]) {
   /* usbReach true, no controller: walkable in the NO CONTROLLER body; Enter, a click and a touch tap (on its pointerup) call request() once each */
   await withNav(fakeUsb(), "macOS", async () => {
     const u = navigator.usb, g = mk({ noPad: true }); toCtl(g);
-    check("usbReach true: ctl.sw2() shown, idle; the page view carries it", J(g.ctl.sw2()) === J({ shown: true, state: "idle" }) && g.app.controls.view(g.app.ctlT).sw2.shown === true, J(g.ctl.sw2()));
+    check("usbReach true: ctl.sw2() shown, idle; the page view carries it", J(g.ctl.sw2()) === J({ shown: true, state: "idle", vib: false, seen: false, hid: false }) && g.app.controls.view(g.app.ctlT).sw2.shown === true, J(g.ctl.sw2()));
     const v = on7(g);
     check("no controller: the row is walkable (the eighth of nine), its status the help line", v.pad.state === "none" && v.row === 7, J([v.pad.state, v.row]));
     keyDown("Enter");
@@ -1361,6 +1361,58 @@ for (const via of ["LATER", "the backdrop"]) {
   key("KeyF", "u");
   check("Dvorak: the key printed U (code KeyF) reloads", posts === 1, posts);
   delete globalThis.document;
+}
+// ---- Task 7: ALLOW VIBRATION on the CONNECT row, a Switch 2 Pro's vibration over WebHID ----
+{
+  const { SW2_WORDS } = await import("../src/app/controlspage.js");
+  const J = (v) => JSON.stringify(v);
+  const flush = () => new Promise((r) => setImmediate(r));
+  const usb = () => ({ req: 0, requestDevice() { this.req++; return new Promise(() => {}); }, getDevices: () => Promise.resolve([]), addEventListener: noop, removeEventListener: noop });
+  const hidDev = () => { const d = { vendorId: 0x057e, productId: 0x2069, opened: false, sent: [], open() { d.opened = true; return Promise.resolve(); }, sendReport(id, p) { d.sent.push([id, Array.from(p)]); return Promise.resolve(); } }; return d; };
+  const fakeHid = (pick) => ({ asked: 0, requestDevice() { this.asked++; return Promise.resolve(pick ? [pick] : []); }, getDevices: () => Promise.resolve([]), addEventListener: noop, removeEventListener: noop });
+  const sw2Pad = () => ({ id: "Switch 2 Pro Controller (Vendor: 057e Product: 2069)", connected: true, mapping: "", timestamp: 0, axes: [0, 0, 0, 0, 0, 0], buttons: Array.from({ length: 21 }, () => ({ pressed: false, value: 0 })), vibrationActuator: null, hapticActuators: [] });
+  const withNav = async (u, h, fn) => { const keep = ["usb", "hid", "userAgentData"].map((k) => [k, Object.getOwnPropertyDescriptor(navigator, k)]);
+    navigator.usb = u; navigator.userAgentData = { platform: "macOS" }; if (h) navigator.hid = h; else delete navigator.hid;
+    try { return await fn(); } finally { for (const [k, d] of keep) { if (d) Object.defineProperty(navigator, k, d); else delete navigator[k]; } } };
+  const keyDown = (code) => (L.keydown || []).forEach((f) => f({ code, key: code, repeat: false, preventDefault: noop }));
+  const open = (g) => { g.gpr.list = [sw2Pad()]; g.tick(2); g.app.screen = SCREEN.SETTINGS; g.app.cabinetSeen = true; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.lastDev = "key"; g.app.confirm(); g.app.controls.tab("pad"); g.tick(1); g.app.controls.pick(7); return g.app.controls.view(g.app.ctlT); };
+
+  await withNav(usb(), null, async () => {
+    const g = mk(), v = open(g);
+    check("no WebHID: the CONNECT row never offers ALLOW VIBRATION", v.sw2.shown === true && v.sw2.vib === false && g.ctl.sw2().vib === false, J(v.sw2));
+    check("no WebHID, a Switch 2 playing: the door reads CONNECTED, the help keeps no vibration clause", v.sw2.seen === true && v.sw2.hid === false && (await import("../src/render/controlsgeo.js")).statusOf({ ...v, status: "" }, { id: "SW2" }) === SW2_WORDS.help, J(v.sw2));
+    setHints(null);
+  });
+
+  const pick = hidDev();
+  await withNav(usb(), fakeHid(pick), async () => {
+    const u = navigator.usb, h = navigator.hid, g = mk(), v = open(g);
+    check("WebHID, a Switch 2 Pro playing, none allowed: the CONNECT row offers ALLOW VIBRATION", v.sw2.vib === true && v.row === 7 && g.ctl.rumbleInfo().route === null, J([v.sw2, v.row, g.ctl.rumbleInfo().route]));
+    g.app.lastDev = "pad"; g.app.confirm();
+    check("a controller press on ALLOW VIBRATION opens no chooser: PRESS ENTER OR CLICK", h.asked === 0 && u.req === 0 && g.app.controls.view(g.app.ctlT).status === SW2_WORDS.pad, J([h.asked, g.app.controls.view(g.app.ctlT).status]));
+    keyDown("Enter");
+    check("Enter on ALLOW VIBRATION asks for the HID device inside the keydown, never the USB chooser", h.asked === 1 && u.req === 0, J([h.asked, u.req]));
+    for (let i = 0; i < 10 && !pick.opened; i++) await flush();
+    await flush(); g.tick(1);
+    const w = g.app.controls.view(g.app.ctlT);
+    check("allowed: the device is open, the row says CONNECTED, the offer is gone", pick.opened && w.status === SW2_WORDS.ok && w.sw2.vib === false, J([pick.opened, w.status, w.sw2]));
+    const door = (await import("../src/render/controlsgeo.js")).rowsOf(w).find((q) => q.id === "SW2").door;
+    check("a pad already playing (never woken here, state idle), then ALLOW VIBRATION allowed: the door and the note both read CONNECTED", w.sw2.state === "idle" && w.sw2.seen === true && door === SW2_WORDS.ok && w.status === SW2_WORDS.ok, J([w.sw2, door, w.status]));
+    check("WebHID: the view says so, so the help names the vibration prompt", w.sw2.hid === true && (await import("../src/render/controlsgeo.js")).statusOf({ ...w, status: "" }, { id: "SW2" }) === SW2_WORDS.helpVib);
+    check("the pad now offers dual-rumble (the stand-in) and VIBRATION reads available", g.ctl.rumbleInfo().route === "dual-rumble" && w.pad.rumble === true, J([g.ctl.rumbleInfo(), w.pad.rumble]));
+    check("allowing played one test buzz over HID report 0x02", pick.sent.length >= 1 && pick.sent.every(([id]) => id === 0x02), pick.sent.length);
+    g.ctl.dispose();
+    setHints(null);
+  });
+
+  await withNav(usb(), fakeHid(null), async () => {
+    const h = navigator.hid, g = mk(); open(g);
+    keyDown("Enter");
+    await flush(); await flush(); g.tick(1);
+    const w = g.app.controls.view(g.app.ctlT);
+    check("the vibration chooser closed: no NOT CONNECTED note, the row still offers ALLOW VIBRATION", h.asked === 1 && w.status !== SW2_WORDS.cancel && w.sw2.vib === true, J([h.asked, w.status, w.sw2]));
+    setHints(null);
+  });
 }
 
 delete globalThis.window; delete globalThis.location;

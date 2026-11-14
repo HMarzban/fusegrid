@@ -55,8 +55,16 @@ export function asStandard(g) {
   const off = { pressed: false, touched: false, value: 0 };
   return { id: g.id, index: g.index, connected: g.connected, timestamp: g.timestamp, mapping: "standard", buttons: m.b.map((i) => bs[i] || off), axes: m.a.map(([i, s]) => clamp1(num(ax[i]) * s * m.k)), vibrationActuator: g.vibrationActuator || null, hapticActuators: g.hapticActuators || [] };
 }
+/* A known pad the browser gives no actuator may get a stand-in from actuatorFor(raw pad) (switch2.js over WebHID); a real actuator always wins. */
+const withActuator = (actuatorFor) => (g) => {
+  const s = asStandard(g);
+  if (!actuatorFor || !s || s === g || s.vibrationActuator) return s;
+  const a = actuatorFor(g);
+  if (a) s.vibrationActuator = a;
+  return s;
+};
 /** getGamepads with every known pad put in the standard order. */
-export const standardPads = (get) => (get ? () => Array.from(get() || [], asStandard) : get);
+export const standardPads = (get, actuatorFor) => (get ? ((f) => () => Array.from(get() || [], f))(withActuator(actuatorFor)) : get);
 
 const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 const fresh = () => ({ down: new Set(), order: [], st: null, mst: null });

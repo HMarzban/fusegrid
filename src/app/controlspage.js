@@ -8,7 +8,7 @@ const ROWS = {
   pad: ["MOVE", "BOMB", "THROW", "REMOTE", "PAUSE", "SENSITIVITY", "VIBRATION", "RESET"],
 };
 /* The CONNECT row's words (src/render/words.js SW2_WORDS, pinned equal in tests/words.test.mjs: src/app never imports src/render). */
-export const SW2_WORDS = Object.freeze({ row: "SWITCH 2 CONTROLLER", door: "CONNECT", ok: "CONNECTED", cancel: "NOT CONNECTED · TRY AGAIN", busy: "IN USE BY ANOTHER APP", failed: "COULD NOT START IT HERE", blocked: "NOT ALLOWED ON THIS PAGE", pad: "PRESS ENTER OR CLICK", vib: "ALLOW VIBRATION", help: "It needs a USB cable. Your browser asks once which controller." });
+export const SW2_WORDS = Object.freeze({ row: "SWITCH 2 CONTROLLER", door: "CONNECT", ok: "CONNECTED", cancel: "NOT CONNECTED · TRY AGAIN", busy: "IN USE BY ANOTHER APP", failed: "COULD NOT START IT HERE", blocked: "NOT ALLOWED ON THIS PAGE", pad: "PRESS ENTER OR CLICK", vib: "ALLOW VIBRATION", allow: "ALLOW", help: "It needs a USB cable. Your browser asks once which controller.", helpVib: "It needs a USB cable. Your browser asks once which controller, and once more for vibration." });
 const SW2_SAY = { pad: "pad", woken: "ok", cancelled: "cancel", busy: "busy", failed: "failed", blocked: "blocked" };
 const PAD_SW2 = [...ROWS.pad.slice(0, -1), "SW2", "RESET"];
 const NO_VIB = "NO VIBRATION ON THIS CONTROLLER OR BROWSER", NO_VIB_SAY = "Vibration, none. No vibration on this controller or browser.";
@@ -37,11 +37,11 @@ export function createControlsPage({ get, set, padView, say, device, sw2, names:
   let st = null, restAt = 0, peaks = [], fed = "";
   const learned = {};
   const nm = () => (seed ? { ...learned, ...seed() } : learned);
-  const sw2View = () => { const v = sw2 ? sw2() : null; return { shown: !!(v && v.shown), state: (v && v.state) || "idle" }; };
+  const sw2View = () => { const v = sw2 ? sw2() : null; return { shown: !!(v && v.shown), state: (v && v.state) || "idle", vib: !!(v && v.vib), seen: !!(v && v.seen), hid: !!(v && v.hid) }; };
   const rowsFor = (id) => (id === "pad" && sw2View().shown ? PAD_SW2 : ROWS[id]); // SW2 only where the wire's waker exists (switch2.js usbReach)
   const rows = () => rowsFor(tabId);
   let seen = null; // [the rows, the focused id] at the last tick: a row that appears never moves the focus
-  const sw2Door = () => (sw2View().state === "woken" && !absent(padView().state) ? SW2_WORDS.ok : SW2_WORDS.door);
+  const sw2Door = () => { const v = sw2View(); return v.vib ? SW2_WORDS.vib : v.seen ? SW2_WORDS.ok : SW2_WORDS.door; }; // the wire's: vib = ALLOW VIBRATION offered (WebHID, a Switch 2 playing, none allowed); seen = a Switch 2 in getGamepads, whoever woke it (controlsgeo rowsOf reads the same two)
   const capturing = () => cap.view() !== null;
   const noPad = () => tabId === "pad" && absent(padView().state);
   const noVib = () => padView().rumble !== true;

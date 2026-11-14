@@ -21,7 +21,7 @@
    every row at rest, the pane's slab, name and rule), keyed by what they show, so a cursor move never misses; live: the focused row, the drawing
    (its own layers, padart) with its ring and callouts, the status line, the foot and the capture plate. Under the probe the page records its rects,
    texts and squint pairs outside any layer paint. */
-import {CONTROLS_WORDS as CW, LABEL, SW2_WORDS} from "../words.js";
+import {CONTROLS_WORDS as CW, LABEL} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, plate, band, focusBomb, plaque, rfill as rr, wallCell} from "../kit/paint.js";
 import {T, DEV, SANS, measure as W, textScale, dsp, measurer as mOf, text, CAP_K} from "../kit/type.js";
@@ -35,7 +35,7 @@ import {hints, tapAt} from "../hintcopy.js";
 import {FOOT_TAP, BACK_TAP} from "../kit/copy.js";
 import {meterCell, slab, mark, course, SLAB} from "../kit/parts.js";
 import {drawPad, drawCallouts, drawKeys, glyph as padGlyph, padBox, kbPrints, kbLegend, KB_AT, PART_AT, ringR, keyRect} from "../padart.js";
-import {rowsOf, statusOf, footItems, padStates, padRing, padCallouts, padFit, keyStates, keyRing, keyCallouts, kbFit, keyName, CAPTION, PAD_TALL, capCallouts, inUseLine} from "../controlsgeo.js";
+import {rowsOf, statusOf, sw2Help, footItems, padStates, padRing, padCallouts, padFit, keyStates, keyRing, keyCallouts, kbFit, keyName, CAPTION, PAD_TALL, capCallouts, inUseLine} from "../controlsgeo.js";
 
 export const DESK = deep({
   d: {pad: [18, 22, 18, 22], list: 440, gap: 24, row: 40, grp: 12, tabs: 10, below: 12, pw: 1300, paneMin: 420, art: [200, 460], foot: 50},
@@ -350,7 +350,7 @@ function plan(c0, G, s, ui) {
   if (name && note && d.pane && name.w + 24 + W(c, sf, note) <= d.name.w) name.note = {s: note, f: sf, px: DEV.d.sec, x: d.name.x + d.name.w, y: name.y, w: W(c, sf, note)};
   let rule = null, rule2 = null;
   const ruleOf = (say) => { const bf = T.body(DEV.d.bod), ls = lines(c, bf, say, d.rule.w, 2), lh = DEV.d.bod * d.ts * 1.4; return ls.map((q, i) => ({s: q, f: bf, px: DEV.d.bod, x: d.rule.x, y: d.rule.y + d.rule.h - (ls.length - i - 0.5) * lh, w: W(c, bf, q)})); };
-  if (d.rule) { rule = ruleOf(s.tab === "key" ? CW.RULE_KEY : CW.RULE_PAD); if (rows.SW2) rule2 = ruleOf(SW2_WORDS.help); } // the CONNECT row's help takes the rule's place (the sentence wants the pane's width)
+  if (d.rule) { rule = ruleOf(s.tab === "key" ? CW.RULE_KEY : CW.RULE_PAD); if (rows.SW2) rule2 = ruleOf(sw2Help(s)); } // the CONNECT row's help takes the rule's place (the sentence wants the pane's width)
   return {rows, list, tabs, name, rule, rule2, head: headPlan(c, G, ui), c};
 }
 
@@ -591,7 +591,7 @@ const stMemo = new Map();
 function statusLines(c, G, s, row) {
   const d = G.d, dv = DEV[d.dev], f = LF(dv.sec), B = d.status, lh = dv.sec * d.ts * 1.3;
   let say = (row.changed && !s.status && !s.armed && !s.swap ? CW.CHANGED + " · " : "") + statusOf(s, row); // a changed row: the dot by its label and the word here
-  if (row.id === "SW2" && say === SW2_WORDS.help && d.rule) return []; // the pane's rule says it, at the pane's width
+  if (row.id === "SW2" && say === sw2Help(s) && d.rule) return []; // the pane's rule says it, at the pane's width
   if (!d.pane && row.id === "SENSITIVITY" && !padOff(s) && !s.status) say += " · " + CW.DRIFT + (s.drift || 0).toFixed(2) + " · " + CW.READS + (s.reads || CW.NOTHING);
   const k = [say, B.w, d.ts].join("|");
   if (!stMemo.has(k)) { if (stMemo.size > 32) stMemo.clear(); stMemo.set(k, lines(mOf(c), f, say, B.w, Math.max(1, Math.floor((B.h + 1) / lh)))); }

@@ -15,6 +15,8 @@ const NOT_OFF = "canvas,#touchpad,#upd,#updbg,#ana,#load";
 const offCanvas = (e) => !!(e.target && e.target.closest) && !(e.button > 0) && !e.target.closest(NOT_OFF);
 const padsOf = () => (typeof navigator !== "undefined" && navigator && typeof navigator.getGamepads === "function" ? () => navigator.getGamepads() : null);
 const noop = () => {};
+/* The vibration chooser's results in the CONNECT row's words: a cancel says nothing (the door still reads ALLOW VIBRATION). */
+const HID_SAY = { allowed: "woken", blocked: "blocked", failed: "failed" };
 
 /* Not in the boot graph (v202 delivery): the page reducer and its capture load
    when CONTROLS opens or in idle after the title, with the render side's paint
@@ -40,10 +42,11 @@ const navOf = () => (typeof navigator !== "undefined" && navigator ? navigator :
 const platformOf = (n) => (!n ? "" : n.userAgentData && n.userAgentData.platform ? n.userAgentData.platform : /^Mac/.test(n.platform || "") ? "macOS" : n.platform || "");
 
 /** Mounts the pad, the page, the hints and rumble on the live shell. poll(t) belongs above the frame gate. */
-export function mountControls({ win, doc, input, app, SCREEN, world, onPause, getGamepads, store, audio, unlock, setHints, art, idle, defer, importRumble, usb, policy, platform, importSwitch2, keyboard }) {
+export function mountControls({ win, doc, input, app, SCREEN, world, onPause, getGamepads, store, audio, unlock, setHints, art, idle, defer, importRumble, usb, policy, platform, importSwitch2, keyboard, hid }) {
   const W = win !== undefined ? win : typeof window !== "undefined" ? window : null;
   const D = doc !== undefined ? doc : typeof document !== "undefined" ? document : null;
-  const gp = standardPads(getGamepads || padsOf());
+  let waker = null; // the Switch 2 waker, below; its WebHID stand-in actuator rides the pad list (Task 7)
+  const gp = standardPads(getGamepads || padsOf(), (g) => (waker ? waker.actuator(g) : null));
   let c = loadControls(store), everSeen = false, lastT = 0, wasDir = false, wasPause = false;
   let pending = "", shownT = null, wasLost = false, wordDev = null, wordC = null, wordN = -1, writing = false, keysAs = null;
   let held = false, tickT = -Infinity, didReset = false;
@@ -80,18 +83,19 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
      needs user activation: a key or a mouse press (app.lastDev "key", set before routing) or a touch tap's pointerup (tapUp); a controller press is none. */
   const usbNow = () => (usb !== undefined ? usb : (navOf() && navOf().usb) || null);
   const reach = () => sw2Mod.usbReach({ usb: usbNow(), policy: policy !== undefined ? policy : D ? D.permissionsPolicy || D.featurePolicy || null : null, platform: platform !== undefined ? platform : platformOf(navOf()) });
-  let waker = null, autoDone = false, reqP = null, upRow = null, upAct = false;
+  const hidNow = () => (hid !== undefined ? hid : (navOf() && navOf().hid) || null);
+  let autoDone = false, reqP = null, upRow = null, upAct = false;
   const sw2Build = () => {
-    if (!waker && sw2Mod && usbNow() && reach()) { waker = sw2Mod.createWaker({ usb: usbNow(), pads: getGamepads || padsOf() }); if (app.wake) app.wake(); } // the raw list: the waker reads each pad's own id
+    if (!waker && sw2Mod && usbNow() && reach()) { waker = sw2Mod.createWaker({ usb: usbNow(), pads: getGamepads || padsOf(), hid: hidNow(), win: W, doc: D }); if (app.wake) app.wake(); } // the raw list: the waker reads each pad's own id
     return waker;
   };
   const sw2Want = () => (waker || !usbNow() ? Promise.resolve(waker) : loadSw2(importSwitch2).then(sw2Build, () => null));
-  const sw2View = () => ({ shown: !!waker, state: waker ? waker.state() : "idle" });
+  const sw2View = () => ({ shown: !!waker, state: waker ? waker.state() : "idle", vib: !!waker && waker.vibOffer(), seen: !!waker && waker.seen(), hid: !!hidNow() }); // vib: the door reads ALLOW VIBRATION; seen: CONNECTED; hid: the help names the vibration prompt
   const connect = () => {
     if (!waker || !page) return false;
     if (!upAct && app.lastDev !== "key") { page.sw2Said("pad"); app._feel("deny"); return false; } // no user activation: the page says what does open it
-    const p = waker.request();
-    if (p !== reqP) { reqP = p; p.then((r) => { if (reqP === p) reqP = null; if (page) page.sw2Said(r); if (app.wake) app.wake(); }, noop); } // one note per chooser, whatever presses came while it was open
+    const vib = waker.vibOffer(), p = vib ? waker.allow() : waker.request(); // a second chooser needs a press of its own: one chooser per activation
+    if (p !== reqP) { reqP = p; p.then((r) => { if (reqP === p) reqP = null; if (page) page.sw2Said(vib ? HID_SAY[r] : r); if (vib && r === "allowed" && c.vib > 0 && rum()) rumble.test(lastT); if (app.wake) app.wake(); }, noop); } // one note per chooser; vibration allowed buzzes once
     return true;
   };
   const rum = () => rumble || (rumbleMod && (rumble = rumbleMod.createRumble({
