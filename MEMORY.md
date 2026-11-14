@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — switch2 fix A (Task 7 review minors)
+- `switch2.js`: halt writes a zero only after a buzz (quiet at OFF), stop() closes the HID device and wins over auto()/adopt, playEffect with no device resolves complete, dead `cur.me`/`token` removed; four tests.
+
 ## 2026-11-14 — v219 prepared: every controller and keyboard (plan Task 8)
 - Merged main (v218) into `feature/every-controller` (3 conflicts: hud.js tip fit, screens.mjs padtoast, MEMORY), bumped `CACHE_NAME` / `REV` to v219; CHANGELOG (not released yet), privacy.md Controller access (per-site USB / HID grant, revoke paths), AGENTS CONTROLS (waker, CONNECT / ALLOW VIBRATION, stand-in actuator, letter rule, SDL credit), architecture input seam, README controls; `analytics.test` pins no controller field in events or user properties. 770 tests. Captures `--strict`: desk clean; phone `controlscapture` fails text 4.48 (the cancel line's `·` on the capture plate) + 5 skips when a controller is the last device (a real state: phone, rebind THROW with a pad), same on the pre-merge branch. Open: that gap, owner acceptance (Step 4, batched), the merge to main and push.
 

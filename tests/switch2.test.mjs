@@ -298,3 +298,47 @@ test("auto() restores the HID device the player allowed before it looks at the p
   assert.ok(w.state() === "idle" && w.seen() === true, "never woken here, yet seen: the door reads CONNECTED");
   w.stop();
 });
+
+// ---- fix A: quiet at OFF, a stopped waker lets go ----
+test("V1: halt with nothing playing and nothing sent writes no zero; after a buzz it writes exactly one", async () => {
+  const { d, doc, win, a } = await live();
+  doc.hidden = true; doc.fire("visibilitychange"); win.fire("pagehide"); await a.reset();
+  assert.equal(d.sent.length, 0, "OFF: a tab switch writes nothing");
+  a.playEffect("dual-rumble", { duration: 400, strongMagnitude: 1, weakMagnitude: 1 });
+  win.fire("pagehide"); win.fire("pagehide");
+  assert.equal(zeros(d), 1, "one zero after the buzz, none for the second halt");
+});
+
+test("V2: stop() closes the HID device and drops the stand-in", async () => {
+  const { w, d } = await live();
+  d.closed = 0; d.close = async () => { d.closed++; };
+  w.stop();
+  assert.equal(d.closed, 1);
+  assert.equal(w.actuator(), null);
+  const { w: w2, d: d2 } = await live();
+  d2.close = () => { throw new Error("x"); };
+  assert.doesNotThrow(() => w2.stop());
+  assert.equal(w2.actuator(), null);
+});
+
+test("V3: a stop() during auto()'s restore leaves no USB connect listener behind", async () => {
+  const usb = usbOf(), d = hidDev();
+  let release; const gate = new Promise((r) => (release = r));
+  const hid = hidOf({ granted: [d] }); hid.getDevices = async () => { await gate; return [d]; };
+  const w = createWaker({ usb, pads: () => [], hid, clock: fakeClock() });
+  const p = w.auto();
+  w.stop();
+  release();
+  await p;
+  assert.equal(usb.count("connect"), 0);
+  assert.equal(w.actuator(), null, "a stopped waker adopts nothing");
+});
+
+test("V4: playEffect with no device resolves complete at once and starts no timer", async () => {
+  const { hid, d, clock, a } = await live();
+  hid.fire("disconnect", { device: d });
+  const n = d.sent.length;
+  assert.equal(await Promise.race([a.playEffect("dual-rumble", { duration: 100, strongMagnitude: 1, weakMagnitude: 1 }), tick().then(() => "hung")]), "complete");
+  assert.equal(clock.fs.size, 0);
+  assert.equal(d.sent.length, n);
+});
