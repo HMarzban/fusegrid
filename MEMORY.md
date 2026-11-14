@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — v220 is live
+- Pushed on the owner's "Push it" (`fe6908b..8adec73`), Pages CI green (test, deploy), live `sw.js` v220; CHANGELOG and AGENTS marked live. Owner hardware checks still open.
+
 ## 2026-11-14 — controller discovery merged locally (shell v220)
 - `feature/controller-discovery` merged into local `main` (607abab) on the owner's word after the final review's fixes; 784 tests green on the merge; worktree and branch removed; not pushed. Open: owner hardware checks (card CONNECT with a real Switch 2, Xbox-type name and unplug pause, keyboard-only browser).
 

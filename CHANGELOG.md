@@ -15,7 +15,7 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
-## shell v220 · 2026-11-14 (prepared, not live)
+## shell v220 · 2026-11-14
 
 The game tells you how to bring a controller in, and says which one it found.
 
