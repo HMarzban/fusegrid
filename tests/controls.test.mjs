@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import {
   ACTIONS, MOVE_ORDER, DEF_KEY, DEF_PAD, DEF_CONTROLS, PAD_IDX, BTN, CONTROLS_KEY,
   clampControls, loadControls, saveControls, refuseKey, refuseBtn, bindKey, bindMoveSet, bindBtn,
-  resetDevice, keyName, moveLabel, softAliases, boundKeys, VIB_LEVELS, SENS_LEVELS, stepVib, stepSens,
+  resetDevice, keyName, moveLabel, softAliases, boundKeys, VIB_LEVELS, SENS_LEVELS, stepVib, stepSens, letterOf, layoutName,
 } from "../src/app/controls.js";
 
 let pass = 0, fail = 0;
@@ -24,6 +24,19 @@ const refused = ["Escape", "Enter", "NumpadEnter", "Backspace", "ArrowUp", "Arro
 check("refuses each listed key with a non-empty line, allows KeyE/KeyK/Period",
   refused.every((k) => refuseKey(k) !== "") && ["KeyE", "KeyK", "Period", "KeyP", "Digit6", "Digit0", "Space", "Slash"].every((k) => refuseKey(k) === ""),
   refused.filter((k) => !refuseKey(k)).join());
+
+// ---- Task 6: a letter shortcut is the printed letter, the binds stay physical ----
+check("letterOf: the printed Latin letter wherever it sits (QWERTZ KeyY prints z, KeyZ prints y; AZERTY M on Semicolon)",
+  letterOf("KeyY", "z") === "KeyZ" && letterOf("KeyZ", "y") === "KeyY" && letterOf("Semicolon", "m") === "KeyM" && letterOf("KeyR", "R") === "KeyR");
+check("letterOf: no key, a named key or another script keeps the code; a letter key printing punctuation is no letter",
+  letterOf("KeyC") === "KeyC" && letterOf("KeyU", "KeyU") === "KeyU" && letterOf("Enter", "Enter") === "Enter" && letterOf("KeyN", "т") === "KeyN" && letterOf("KeyM", ",") === "" &&
+  letterOf("Digit1", "&") === "Digit1" && letterOf("BracketLeft", "ü") === "BracketLeft" && letterOf("Space", " ") === "Space" && letterOf("ArrowUp", "ArrowUp") === "ArrowUp");
+check("layoutName: a Latin letter or digit, upper-cased; anything else is no name",
+  layoutName("z") === "Z" && layoutName("7") === "7" && layoutName("ص") === "" && layoutName("ц") === "" && layoutName(",") === "" && layoutName("Dead") === "" && layoutName(undefined) === "");
+check("refuseKey: a key printing a shortcut's letter is refused (QWERTZ KeyZ prints Y), a code that is one stays refused",
+  refuseKey("KeyZ", "y") === refuseKey("KeyY") && refuseKey("Semicolon", "m") === refuseKey("KeyM") && refuseKey("KeyY", "z") === refuseKey("KeyY") && refuseKey("KeyZ", "z") === "" && refuseKey("KeyZ") === "");
+check("bindKey reads the printed letter through names", bindKey(D, "BOMB", "KeyZ", { KeyZ: "Y" }).kind === "refused" && bindKey(D, "BOMB", "KeyZ", { KeyZ: "Z" }).kind === "set" &&
+  bindMoveSet(D, ["KeyI", "KeyL", "KeyK", "KeyJ"], { KeyL: "R" }).line === refuseKey("KeyR"));
 
 let r = bindKey(D, "REMOTE", "KeyE");
 check("swap within one device, line = \"E WAS THROW · THROW NOW Q\"", r.kind === "swap" && r.other === "THROW" && r.c.key.REMOTE === "KeyE" && r.c.key.THROW === "KeyQ" && r.line === "E WAS THROW · THROW NOW Q", r.line);

@@ -60,7 +60,7 @@ const vibOf = (s) => (s.vib == null ? DEF_VIB : s.vib);
 export function rowsOf(s) {
   const p = s.pad || { state: "none" }, k = s.key || DEF_KEY, b = s.binds || DEF_PAD, dead = s.dead == null ? DEF_DEAD : s.dead;
   if (s.tab === "key") {
-    const al = softAliasesOf(k).map((q) => q.slice(3)), nm = (q) => nameOf(q, s.names);
+    const nm = (q) => nameOf(q, s.names), al = softAliasesOf(k).map(nm);
     return [
       { id: "MOVE", val: [{ cap: moveLabel(k.MOVE, s.names) }, { cap: "ARROWS" }], changed: k.MOVE.join() !== DEF_KEY.MOVE.join() },
       { id: "BOMB", val: [{ cap: nm(k.BOMB) }], note: al.length === 2 ? al.join(" · ") + " ALSO WORK" : al.length ? al[0] + " ALSO WORKS" : "", changed: k.BOMB !== DEF_KEY.BOMB },

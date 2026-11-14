@@ -1829,6 +1829,44 @@ for (const code of ["Space", "Enter"]) {
   check("a page-key tap sounds one uiMove on SETTINGS, GUIDE, ENEMIES and LEVEL SELECT, and a key with no page (or a RECORDS tab with one page) is silent", got.every((q) => q[1] && q[2]), JSON.stringify(got));
 }
 
+// ---- Task 6: a letter shortcut is the letter printed on the key, wherever it sits; movement and the binds stay physical (code) ----
+{
+  const downK = (code, key, o) => (L.keydown || []).forEach((f) => f({ code, key, repeat: false, preventDefault: noop, ...(o || {}) }));
+  const upK = (code, key) => (L.keyup || []).forEach((f) => f({ code, key, preventDefault: noop }));
+  const pressK = (g, code, key, hold = 3) => { downK(code, key); g.tick(hold); upK(code, key); g.tick(2); };
+  const g = menu(); toRow(g, ITEMS.indexOf("RECORDS")); press(g, "Enter"); press(g, "ArrowRight");
+  pressK(g, "KeyR", "p");
+  check("STATS: Dvorak's KeyR prints P, so it arms nothing", g.app.screen === SCREEN.STATS && g.app.resetArm === false);
+  pressK(g, "KeyO", "r");
+  check("STATS: the key printed R (Dvorak KeyO) arms the reset", g.app.resetArm === true);
+  const rl = reloads;
+  downK("KeyO", "r", { shiftKey: true }); g.tick(2); upK("KeyO", "r"); g.tick(2);
+  check("STATS: a chorded printed R disarms and never erases", g.app.resetArm === false && reloads === rl, reloads - rl);
+  const c0 = clip.length;
+  pressK(g, "KeyC", "j"); await flush();
+  check("STATS: a KeyC printing J copies nothing", clip.length === c0, clip.length - c0);
+  pressK(g, "KeyI", "c"); await flush();
+  check("STATS: the key printed C (Dvorak KeyI) copies the stats", clip.length === c0 + 1);
+  g.input.onUiKey("KeyC"); await flush();
+  check("STATS: a synthetic C with no key (a tap, a controller's WEST) still copies", clip.length === c0 + 2);
+  pressK(g, "KeyK", "t");
+  check("STATS: the key printed T (Dvorak KeyK) opens MEDALS", g.app.screen === SCREEN.TROPHIES);
+  pressK(g, "KeyO", "q");
+  check("RECORDS: the key printed Q steps the tab back", g.app.screen === SCREEN.STATS, g.app.screen);
+  const r = run(); press(r, "KeyP");
+  pressK(r, "KeyM", ",");
+  check("PAUSE: AZERTY's KeyM prints a comma, so it quits nothing", r.app.screen === SCREEN.GAME && r.world.state === "PAUSE");
+  pressK(r, "Semicolon", "m");
+  check("PAUSE: the key printed M (AZERTY Semicolon) quits to MENU", r.app.screen === SCREEN.MENU, r.app.screen);
+  const mv = menu(); toRow(mv, 2);
+  pressK(mv, "KeyW", "z");
+  check("MENU: AZERTY's KeyW (printed Z) still walks up: MOVE stays physical", mv.app.cursor === 1, mv.app.cursor);
+  const p = run();
+  downK("KeyW", "z"); p.tick(1); const upHeld = p.input.input.up; upK("KeyW", "z"); p.tick(1);
+  downK("KeyZ", "w"); p.tick(1); const zHeld = p.input.input.up; upK("KeyZ", "w"); p.tick(1);
+  check("a run: AZERTY's KeyW (printed Z) is MOVE UP; the key printed W (KeyZ) is not: the binds stay physical", upHeld === true && zHeld === false, upHeld + "/" + zHeld);
+}
+
 delete globalThis.window; delete globalThis.location; delete navigator.clipboard;
 console.log(fail ? "KEYS FAIL " + fail + "/" + (pass + fail) : "KEYS OK " + pass);
 process.exit(fail ? 1 : 0);

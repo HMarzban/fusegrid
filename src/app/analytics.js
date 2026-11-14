@@ -11,6 +11,7 @@
    OFF sets ga-disable, denies consent and drops the _ga cookies. src/app
    never calls Date, so main injects `now` for gtag's js stamp. */
 import { defaultStore } from "./store.js";
+import { letterOf } from "./controls.js";
 
 export const ANALYTICS_KEY = "nb.analytics.v1";
 export const GA_PLACEHOLDER = "G-XXXXXXXXXX";
@@ -159,11 +160,11 @@ export function mountAnalytics(env) {
     doc.body.appendChild(card);
     /* Y / N answer while it shows; every other key goes on to the game */
     win.addEventListener("keydown", (ev) => {
-      const g = e.get && e.get();
-      if (!shown() || ev.repeat || (ev.code !== "KeyY" && ev.code !== "KeyN") || (g && g.app && g.app.capturing)) return;
+      const g = e.get && e.get(), L = letterOf(ev.code, ev.key); // the letter printed on the key, wherever it sits (QWERTZ's Y is the code KeyZ)
+      if (!shown() || ev.repeat || (L !== "KeyY" && L !== "KeyN") || (g && g.app && g.app.capturing)) return;
       ev.stopImmediatePropagation();
       if (g && g.app) g.app.resetArm = false;
-      set(ev.code === "KeyY" ? 1 : 0);
+      set(L === "KeyY" ? 1 : 0);
     }, true);
   };
   const tick = () => {

@@ -34,8 +34,8 @@ export function createCapture() {
       if (anyDown) { down = true; relT = null; }
       else if (down) { down = false; relT = t; }
     },
-    /** Takes one press; every press but a cancel needs a release before the next one counts. */
-    feed(kind, id, t) {
+    /** Takes one press; every press but a cancel needs a release before the next one counts. key = what a key prints, when known. */
+    feed(kind, id, t, key) {
       if (!st) return { kind: "ignored" };
       if (kind === "key" ? id === "Escape" : id === "START") { close(); return { kind: "cancel", line: CANCELLED }; }
       if (kind === "btn" && (id === "LS" || id === "RS")) return st.dev === "key" ? { kind: "ignored" } : refuse(refuseBtn(id));
@@ -44,7 +44,7 @@ export function createCapture() {
       relT = null;
       if (!live || !mine) return { kind: "ignored" };
       if (st.moveCap) st.opened = true;
-      const why = kind === "key" ? refuseKey(id) : refuseBtn(id);
+      const why = kind === "key" ? refuseKey(id, key) : refuseBtn(id);
       if (why) { st.opened = true; return refuse(why); }
       if (st.moveCap) {
         if (st.set.includes(id)) return refuse("ALREADY IN THIS MOVE SET");

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — keyboard in the player's own layout (plan Task 6)
+- Printed keys follow the layout (controlswire `keyNames()`: layout map + plain keydowns, session only, A-Z/0-9) through `wordsOf(dev, c, names)`, the CONTROLS page and the keyboard drawing; letter shortcuts (R C T Q E M B Y N U) fire on the printed letter (`controls.js` `letterOf`), binds and movement stay on `code`; a key printing a shortcut letter is refused as a bind too. Cache bump and the AZERTY owner check are left to the batch.
+
 ## 2026-11-14 — pad probe and the controller matrix (plan Task 4)
 - `tools/pads/probe.html` (dev-only, not in SRC) walks a pad and prints its `KNOWN` row; `docs/controllers.md` is the matrix, seeded from three real measurements, all else not measured. Step 3 (owner runs the probe on every pad) is open.
 

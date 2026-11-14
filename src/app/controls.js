@@ -32,8 +32,24 @@ export const BTN = freeze({
 const CAPTURABLE = ["S", "E", "W", "N", "SHL", "SHR", "TRL", "TRR", "SELECT"];
 
 const MODS = /^(Shift|Control|Alt|Meta|OS)(Left|Right)?$|^(AltGraph|CapsLock|Fn|FnLock|NumLock|ScrollLock|Symbol|SymbolLock|Hyper|Super|ContextMenu)$/;
-/** "" when the code can be bound, else the exact refusal line. */
-export function refuseKey(code) {
+/** The press a letter shortcut reads: the printed Latin letter wherever it sits ("Key" + it), else the code (a synthetic press, a key of another
+    script, a dead key); a letter position that prints punctuation (AZERTY's M key prints ,) is no letter: "". Binds and movement keep the code. */
+export function letterOf(code, key) {
+  if (typeof key !== "string" || key.length !== 1) return code;
+  if (/^[a-z]$/i.test(key)) return "Key" + key.toUpperCase();
+  return /^Key[A-Z]$/.test(code) && !/\p{L}/u.test(key) ? "" : code;
+}
+/** A printed name worth showing: a Latin letter or a digit, upper-cased; "" for anything else (another script, punctuation). */
+export const layoutName = (v) => (typeof v === "string" && /^[a-z0-9]$/i.test(v) ? v.toUpperCase() : "");
+const letterWhy = (code) => {
+  if (code === "KeyR") return "R IS THE CAMERA · PICK ANOTHER";
+  if (code === "KeyY" || code === "KeyN") return "Y AND N ANSWER THE PRIVACY CARD · PICK ANOTHER";
+  if (code === "KeyC" || code === "KeyB") return "C AND B COPY ON THE RUN END · PICK ANOTHER";
+  if (/^Key[MTU]$/.test(code)) return code[3] + " IS TAKEN BY THE MENUS · PICK ANOTHER";
+  return "";
+};
+/** "" when the code can be bound, else the exact refusal line. key = what it prints, when known: a key printing a shortcut's letter is refused too. */
+export function refuseKey(code, key) {
   if (typeof code !== "string" || !code) return "THAT KEY CANNOT BE BOUND";
   if (code === "Escape") return "ESC ALWAYS BACKS OUT · PICK ANOTHER";
   if (code === "Enter" || code === "NumpadEnter") return "ENTER IS CONFIRM · PICK ANOTHER";
@@ -41,12 +57,10 @@ export function refuseKey(code) {
   if (code.startsWith("Arrow")) return "ARROWS ALWAYS MOVE · PICK ANOTHER";
   if (code === "Tab" || /^F\d+$/.test(code)) return "THAT KEY BELONGS TO THE BROWSER";
   if (MODS.test(code)) return "THAT KEY CANNOT BE BOUND";
-  if (code === "KeyR") return "R IS THE CAMERA · PICK ANOTHER";
-  if (code === "KeyY" || code === "KeyN") return "Y AND N ANSWER THE PRIVACY CARD · PICK ANOTHER";
-  if (code === "KeyC" || code === "KeyB") return "C AND B COPY ON THE RUN END · PICK ANOTHER";
-  if (/^Key[MTU]$/.test(code)) return code[3] + " IS TAKEN BY THE MENUS · PICK ANOTHER";
+  const why = letterWhy(code);
+  if (why) return why;
   if (/^(Digit|Numpad)[1-5]$/.test(code) || code === "BracketLeft" || code === "BracketRight") return "THAT KEY IS TAKEN ON LEVEL SELECT";
-  return "";
+  return letterWhy(letterOf(code, key));
 }
 /** "" when the pad id can be bound, else the exact refusal line. */
 export function refuseBtn(id) {
@@ -130,7 +144,7 @@ export function moveLabel(move, names) {
 const SAME = (c) => ({ c, kind: "same", other: null, line: "NO CHANGE" });
 /** Rebinds one action to a key; a held key swaps with its owner. The line reads through names when given. */
 export function bindKey(c, action, code, names) {
-  const why = refuseKey(code);
+  const why = refuseKey(code, names && names[code]);
   if (why) return { c, kind: "refused", other: null, line: why };
   const old = c.key[action];
   if (code === old) return SAME(c);
@@ -150,7 +164,7 @@ export function bindKey(c, action, code, names) {
 }
 /** Commits a four-key MOVE set; an action key inside it takes a freed old MOVE key. */
 export function bindMoveSet(c, codes, names) {
-  const bad = Array.isArray(codes) && codes.length === 4 ? codes.map(refuseKey).find(Boolean) : "THAT KEY CANNOT BE BOUND";
+  const bad = Array.isArray(codes) && codes.length === 4 ? codes.map((q) => refuseKey(q, names && names[q])).find(Boolean) : "THAT KEY CANNOT BE BOUND";
   if (bad) return { c, moved: [], line: bad };
   if (new Set(codes).size !== 4) return { c, moved: [], line: "ALREADY IN THIS MOVE SET" };
   const n = thaw(c), free = c.key.MOVE.filter((q) => !codes.includes(q)), moved = [];

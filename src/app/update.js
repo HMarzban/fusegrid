@@ -9,6 +9,7 @@
    answers through padCard: SOUTH RELOAD, EAST LATER (padroute.js owns the guard). */
 import { registerSW, applyUpdate, deferRegister } from "../pwa/register.js";
 import { CACHE_NAME } from "../pwa/shell.js";
+import { letterOf } from "./controls.js";
 
 /* The running build, as MENU and OPTIONS print it. The waiting worker's
    number is never known here, so the card names only this one. */
@@ -58,7 +59,7 @@ export function mountUpdate(get, env) {
     tap(".go", go);
     tap(".later", () => { disarm(); later(); });
     doc.body.appendChild(card);
-    doc.addEventListener("keydown", (e) => { const g = get(); if (e.code === "KeyU" && !e.repeat && card && !card.hidden && !(g && g.app && g.app.capturing)) go(); });
+    doc.addEventListener("keydown", (e) => { const g = get(); if (letterOf(e.code, e.key) === "KeyU" && !e.repeat && card && !card.hidden && !(g && g.app && g.app.capturing)) go(); });
   };
   const tick = () => {
     const g = get();

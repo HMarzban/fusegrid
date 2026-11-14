@@ -51,8 +51,8 @@ const mkDom = (cookie, lay) => {
     set cookie(v) { writes.push(v); },
   };
   const win = { addEventListener: (t, f, cap) => WL.push({ t, f, cap }) };
-  const key = (code, repeat) => {
-    const ev = { code, repeat: !!repeat, stopped: false, stopImmediatePropagation() { this.stopped = true; } };
+  const key = (code, repeat, k) => {
+    const ev = { code, key: k, repeat: !!repeat, stopped: false, stopImmediatePropagation() { this.stopped = true; } };
     WL.filter((l) => l.t === "keydown" && l.cap === true).forEach((l) => l.f(ev));
     return ev;
   };
@@ -167,6 +167,27 @@ check("cookiePath keeps the cookies on the game's own directory",
   ga.event("run_start", {});
   check("N = NO THANKS: saved 0, no script, no dataLayer, events dropped",
     st.m.get(ANALYTICS_KEY) === "0" && D.head.length === 0 && D.win.dataLayer === undefined && D.card().hidden);
+}
+// ---- Task 6: Y and N are the letters printed on the keys, wherever they sit (QWERTZ swaps Y and Z) ----
+{
+  const D = mkDom(), st = mkStore();
+  const ga = mountAnalytics({ id: ID, store: st, win: D.win, doc: D.doc, loc: LOC, ...atMenu(SCREEN.MENU) });
+  ga.tick();
+  const z = D.key("KeyY", false, "z");
+  check("QWERTZ: the key printed Z (code KeyY) answers nothing and passes on", !z.stopped && ga.consent === -1 && !st.m.has(ANALYTICS_KEY) && !D.card().hidden, ga.consent);
+  const y = D.key("KeyZ", false, "y");
+  check("QWERTZ: the key printed Y (code KeyZ) answers ALLOW", y.stopped && ga.consent === 1 && st.m.get(ANALYTICS_KEY) === "1", ga.consent);
+}
+{
+  const D = mkDom(), st = mkStore();
+  const ga = mountAnalytics({ id: ID, store: st, win: D.win, doc: D.doc, loc: LOC, ...atMenu(SCREEN.MENU) });
+  ga.tick();
+  const n = D.key("KeyB", false, "n");
+  check("the key printed N answers NO THANKS wherever it sits (Dvorak's N is the code KeyB)", n.stopped && ga.consent === 0 && st.m.get(ANALYTICS_KEY) === "0", ga.consent);
+  const D2 = mkDom(), st2 = mkStore(), g2 = mountAnalytics({ id: ID, store: st2, win: D2.win, doc: D2.doc, loc: LOC, ...atMenu(SCREEN.MENU) });
+  g2.tick();
+  const cy = D2.key("KeyN", false, "т");
+  check("another script: the code's own letter still answers (KeyN printing т is N)", cy.stopped && g2.consent === 0, g2.consent);
 }
 // ---- touch: the card waits out a run (the bomb button owns that corner) ----
 {

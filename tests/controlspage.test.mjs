@@ -392,9 +392,9 @@ for (const state of ["none", "lost"]) {
   const m = open("key");
   row(m, 0); m.p.confirm(0);
   let tm = arm(m, 10);
-  for (const [c, k] of [["KeyI", "z"], ["KeyL", "y"], ["KeyK", "x"]]) { m.p.feedKey(c, k, tm); tm = arm(m, tm + 1) + 1; m.p.tick(tm, false); }
+  for (const [c, k] of [["KeyI", "z"], ["KeyL", "q"], ["KeyK", "x"]]) { m.p.feedKey(c, k, tm); tm = arm(m, tm + 1) + 1; m.p.tick(tm, false); } // q, not y: a key printing Y answers the privacy card (Task 6)
   m.p.feedKey("KeyJ", "v", tm);
-  check("B4: a MOVE set reads through names", m.p.view(tm).status === "MOVE NOW ZVXY", m.p.view(tm).status);
+  check("B4: a MOVE set reads through names", m.p.view(tm).status === "MOVE NOW ZVXQ", m.p.view(tm).status);
   const g = open("key");
   g.p.confirm(0); arm(g, 10);
   g.p.feedKey("KeyR", "k", 300);

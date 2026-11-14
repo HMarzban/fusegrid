@@ -36,9 +36,9 @@ export function createHintDev({ lay, dwell = 0.75 } = {}) {
   };
 }
 
-/** The words a device reads under these binds; CONFIRM and BACK are fixed on both devices. */
-export function wordsOf(dev, c) {
-  const b = c || DEF_CONTROLS;
+/** The words a device reads under these binds; CONFIRM and BACK are fixed on both devices. names = code to printed letter (controlswire keyNames), when known. */
+export function wordsOf(dev, c, names) {
+  const b = c || DEF_CONTROLS, nm = (q) => keyName(q, names && names[q]);
   if (dev === "pad") return { dev, ok: "SOUTH", back: "EAST", tab: "SHOULDERS", pause: "START", bomb: BTN[b.pad.BOMB].w, throw: BTN[b.pad.THROW].w, remote: BTN[b.pad.REMOTE].w, move: "D-PAD", moveAlt: b.stick === "R" ? "R-STICK" : "L-STICK", moveCaps: null, tapPage: false };
-  return { dev, ok: "ENTER", back: "ESC", tab: "[ ]", pause: keyName(b.key.PAUSE), bomb: keyName(b.key.BOMB), throw: keyName(b.key.THROW), remote: keyName(b.key.REMOTE), move: moveLabel(b.key.MOVE), moveAlt: "ARROWS", moveCaps: [0, 3, 2, 1].map((i) => keyName(b.key.MOVE[i])), tapPage: dev === "touch" };
+  return { dev, ok: "ENTER", back: "ESC", tab: "[ ]", pause: nm(b.key.PAUSE), bomb: nm(b.key.BOMB), throw: nm(b.key.THROW), remote: nm(b.key.REMOTE), move: moveLabel(b.key.MOVE, names), moveAlt: "ARROWS", moveCaps: [0, 3, 2, 1].map((i) => nm(b.key.MOVE[i])), tapPage: dev === "touch" };
 }

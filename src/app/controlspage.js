@@ -28,13 +28,15 @@ const sensSay = (dead) => {
 };
 const btnNo = (id) => "BUTTON " + Object.keys(PAD_IDX).find((i) => PAD_IDX[i] === id);
 
-/** The page's walk, tabs, capture and writes; it reads and saves only through get / set. */
-export function createControlsPage({ get, set, padView, say, device, sw2 }) {
+/** The page's walk, tabs, capture and writes; it reads and saves only through get / set. names = the wire's printed key names (controlswire keyNames),
+    read live; a name the capture saw only fills a code they lack. */
+export function createControlsPage({ get, set, padView, say, device, sw2, names: seed }) {
   const cap = createCapture();
   let tabId = "key", dev = "key", row = 1, armed = false, swap = null, status = "", noteT = null;
   let echo = null, echoEnd = 0, held = null, padWas = padView().state, adjusting = false;
   let st = null, restAt = 0, peaks = [], fed = "";
-  const names = {};
+  const learned = {};
+  const nm = () => (seed ? { ...learned, ...seed() } : learned);
   const sw2View = () => { const v = sw2 ? sw2() : null; return { shown: !!(v && v.shown), state: (v && v.state) || "idle" }; };
   const rowsFor = (id) => (id === "pad" && sw2View().shown ? PAD_SW2 : ROWS[id]); // SW2 only where the wire's waker exists (switch2.js usbReach)
   const rows = () => rowsFor(tabId);
@@ -54,7 +56,7 @@ export function createControlsPage({ get, set, padView, say, device, sw2 }) {
     const c = get(), isKey = tabId === "key";
     if (id === "RESET") return "";
     if (id === "SW2") return sw2Door();
-    if (isKey) return FIXED_KEY[id] || (id === "MOVE" ? moveLabel(c.key.MOVE, names) : keyName(c.key[id], names[c.key[id]]));
+    if (isKey) return FIXED_KEY[id] || (id === "MOVE" ? moveLabel(c.key.MOVE, nm()) : keyName(c.key[id], nm()[c.key[id]]));
     if (id === "MOVE") return "D-PAD and " + c.stick + "-STICK";
     return id === "PAUSE" ? "START and " + btnWord(c.pad.PAUSE) : btnWord(c.pad[id]);
   };
@@ -83,13 +85,13 @@ export function createControlsPage({ get, set, padView, say, device, sw2 }) {
   const startCapture = (id, t) => {
     const c = get(), isKey = tabId === "key";
     if (isKey && id === "MOVE") cap.open({ action: "MOVE", dev: "key" }, t);
-    else if (isKey) cap.open({ action: id, dev: "key", cur: c.key[id], curName: keyName(c.key[id], names[c.key[id]]) }, t);
+    else if (isKey) cap.open({ action: id, dev: "key", cur: c.key[id], curName: keyName(c.key[id], nm()[c.key[id]]) }, t);
     else cap.open({ action: id, dev: "pad", cur: c.pad[id], curName: btnWord(c.pad[id]) }, t);
     say(cap.view().prompt + " for " + id + ".");
     return true;
   };
   const commitKey = (spec, value) => {
-    const c = get();
+    const c = get(), names = nm();
     if (spec.moveCap) {
       if (J(value) === J(c.key.MOVE)) return note("NO CHANGE");
       const r = bindMoveSet(c, value, names);
@@ -134,9 +136,9 @@ export function createControlsPage({ get, set, padView, say, device, sw2 }) {
     note(tabId === "key" ? "KEYBOARD BACK TO DEFAULTS" : "CONTROLLER BACK TO DEFAULTS");
   };
   const feed = (kind, id, t, key) => {
-    const spec = cap.view(), r = cap.feed(kind, id, t);
+    const spec = cap.view(), r = cap.feed(kind, id, t, key);
     fed = r.kind;
-    if (typeof key === "string" && key.length === 1 && key !== " " && (r.kind === "step" || r.kind === "commit")) names[id] = key;
+    if (typeof key === "string" && key.length === 1 && key !== " " && (r.kind === "step" || r.kind === "commit")) learned[id] = key;
     if (r.kind === "cancel") note(r.line);
     else if (r.kind === "refused") say(r.line);
     else if (r.kind === "step") say(cap.view().prompt + ".");
@@ -148,7 +150,7 @@ export function createControlsPage({ get, set, padView, say, device, sw2 }) {
     view(t) {
       const c = get(), p = padView();
       return { tab: tabId, device: devNow(t), row, pad: { state: p.state, name: p.name, rumble: p.rumble === true, effects: p.effects }, key: c.key, binds: c.pad, stick: c.stick, dead: c.dead, vib: c.vib,
-        stickVal: p.stickVal || [0, 0], reads: readsOf(), drift: peaks.length ? peaks[0][1] : 0, armed, swap, status, capture: cap.view(CANCEL_WORD[devNow(t)]), echo, names, sw2: sw2View() };
+        stickVal: p.stickVal || [0, 0], reads: readsOf(), drift: peaks.length ? peaks[0][1] : 0, armed, swap, status, capture: cap.view(CANCEL_WORD[devNow(t)]), echo, names: nm(), sw2: sw2View() };
     },
     /** Enters the page on the last-used device's tab; touch opens CONTROLLER. */
     open(d) {

@@ -249,12 +249,17 @@ const rrect = (c, x, y, w, h, r) => { // corners as arcs (the drawing's own art,
 };
 /** The legend size at pitch k and text scale ts (desktop 15.8, never under the 10 px floor: 0 = no print). */
 export const kbLegend = (k, ts = 1) => { const px = Math.min(15.8 * ts, 0.5 * k); return px >= 10 && k - Math.max(2, 0.1 * k) - 0.22 * k >= px * 0.75 + 2 ? px : 0; };
+/** A key's legend in the player's own layout: names (code to printed letter, the wire's keyNames) replace a one-character legend; ESC, TAB, the
+    F-row, ⌫ and the arrows keep theirs. */
+export const legOf = (q, names) => (names && names[q.id] && q.leg.length === 1 && q.id !== "Backspace" ? String(names[q.id]).toUpperCase() : q.leg);
+/* the legends names change, as a layer key part: "" with none, so a default board keeps its key */
+const legSig = (names) => (names ? KB_KEYS.filter((q) => legOf(q, names) !== q.leg).map((q) => q.id + "=" + legOf(q, names)).join() : "");
 /** Which legends print at pitch k: a legend wider than its top face is left off (a lit key gets the face's whole width), the F-row prints all or
-    none, and with no legend size at all only the arrow glyphs print (the rows name every key). mw(s, px) measures. */
-export function kbPrints(k, lit, mw, ts = 1) {
+    none, and with no legend size at all only the arrow glyphs print (the rows name every key). mw(s, px) measures; names as legOf. */
+export function kbPrints(k, lit, mw, ts = 1, names) {
   const px = kbLegend(k, ts), out = {};
   if (!px) return out;
-  const fits = (q) => { const f = faceOf(keyRect(q, k), k); return q.id === "Backspace" ? f.w >= 24 : mw(q.leg, px) <= f.w - (lit[q.id] ? 0 : 4); };
+  const fits = (q) => { const f = faceOf(keyRect(q, k), k); return q.id === "Backspace" ? f.w >= 24 : mw(legOf(q, names), px) <= f.w - (lit[q.id] ? 0 : 4); };
   const F = KB_KEYS.filter((q) => q.f), fAll = F.every(fits);
   for (const q of KB_KEYS) if (q.leg && (q.f ? fAll : fits(q))) out[q.id] = true;
   return out;
@@ -265,7 +270,7 @@ function arrowGlyph(c, id, cx, cy, s, col) {
   const d = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[id], [dx, dy] = d;
   c.fillStyle = col; c.beginPath(); c.moveTo(cx + dx * s, cy + dy * s); c.lineTo(cx - dx * s * 0.7 + dy * s, cy - dy * s * 0.7 + dx * s); c.lineTo(cx - dx * s * 0.7 - dy * s, cy - dy * s * 0.7 - dx * s); c.closePath(); c.fill();
 }
-function paintKeys(c, k, t, lit, prints, px) {
+function paintKeys(c, k, t, lit, prints, px, names) {
   const dk = 0.38 * k, W = KB_W * k + 2 * dk, H = KB_H * k + 2 * dk;
   rrect(c, -dk, -dk + 0.3 * k, W, H, 0.32 * k); alpha(c, 0.55, () => { c.fillStyle = BK; c.fill(); }); // the deck's drop: a hard offset fill, never a soft shadow
   rrect(c, -dk, -dk, W, H, 0.32 * k); c.fillStyle = lin(c, -dk, H - dk, [[0, mix(t.band, WH, 0.2)], [0.3, t.band], [1, mix(t.band, BK, 0.3)]], t.band); c.fill();
@@ -281,18 +286,19 @@ function paintKeys(c, k, t, lit, prints, px) {
     const ink = on ? CONST.dk : CONST.off, cx = f.x + f.w / 2, cy = f.y + f.h / 2;
     if (!q.leg) arrowGlyph(c, q.id, cx, cy, Math.min(f.w, f.h) * 0.28, ink);
     else if (prints[q.id] && q.id === "Backspace") { c.strokeStyle = ink; c.lineWidth = 2.2; c.lineCap = "round"; c.lineJoin = "round"; c.beginPath(); c.moveTo(cx + 10, cy); c.lineTo(cx - 7, cy); c.moveTo(cx - 3, cy - 4.5); c.lineTo(cx - 8, cy); c.lineTo(cx - 3, cy + 4.5); c.stroke(); c.lineCap = "butt"; }
-    else if (prints[q.id]) { c.fillStyle = ink; c.font = sans(px, "700"); c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(q.leg, cx, cy + 0.5); }
+    else if (prints[q.id]) { c.fillStyle = ink; c.font = sans(px, "700"); c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(legOf(q, names), cx, cy + 0.5); }
   }
 }
-/** The keyboard at pitch k, its 18.5 x 6.5 k box's top-left at x y. o: {tok, lit:{code:true}, ring:code, prints:{code:true}, px}: the static board
-    is one kit/cache.js layer keyed by world, k, dpr, the lit set and the printed set; the focus ring draws live, 3 px cream at offset 3. */
+/** The keyboard at pitch k, its 18.5 x 6.5 k box's top-left at x y. o: {tok, lit:{code:true}, ring:code, prints:{code:true}, px, names}: the static
+    board is one kit/cache.js layer keyed by world, k, dpr, the lit set, the printed set and the legends names change; the focus ring draws live,
+    3 px cream at offset 3. */
 export function drawKeys(c, x, y, k, o) {
-  const q = o || {}, t = q.tok, lit = q.lit || {}, prints = q.prints || {}, px = q.px || 0, B = kbBox(k);
+  const q = o || {}, t = q.tok, lit = q.lit || {}, prints = q.prints || {}, px = q.px || 0, names = q.names, B = kbBox(k), ns = legSig(names);
   if (canMake() && typeof c.drawImage === "function") {
-    const dpr = devScale(c), sig = Object.keys(lit).filter((i) => lit[i]).sort().join(",") + "|" + Object.keys(prints).length + "|" + px, w = Math.ceil((B.x1 - B.x0) * dpr), h = Math.ceil((B.y1 - B.y0) * dpr);
-    const cv = layer({ layer: "keys", biome: t.name, level: sig, W: Math.round(k * 100) / 100, H: 0, dpr, look: "2d", textScale: 1 }, w, h, (g) => { g.scale(dpr, dpr); g.translate(-B.x0, -B.y0); paintKeys(g, k, t, lit, prints, px); });
+    const dpr = devScale(c), sig = Object.keys(lit).filter((i) => lit[i]).sort().join(",") + "|" + Object.keys(prints).length + "|" + px + (ns ? "|" + ns : ""), w = Math.ceil((B.x1 - B.x0) * dpr), h = Math.ceil((B.y1 - B.y0) * dpr);
+    const cv = layer({ layer: "keys", biome: t.name, level: sig, W: Math.round(k * 100) / 100, H: 0, dpr, look: "2d", textScale: 1 }, w, h, (g) => { g.scale(dpr, dpr); g.translate(-B.x0, -B.y0); paintKeys(g, k, t, lit, prints, px, names); });
     c.drawImage(cv, x + B.x0, y + B.y0, w / dpr, h / dpr);
-  } else { c.save(); c.translate(x, y); paintKeys(c, k, t, lit, prints, px); c.restore(); }
+  } else { c.save(); c.translate(x, y); paintKeys(c, k, t, lit, prints, px, names); c.restore(); }
   const r = q.ring && KB_AT[q.ring] && keyRect(KB_AT[q.ring], k);
   if (r) {
     alpha(c, 0.7, () => { rrect(c, x + r.x - 4.5, y + r.y - 4.5, r.w + 9, r.h + 9, 0.16 * k + 4.5); c.strokeStyle = OL; c.lineWidth = 5; c.stroke(); });

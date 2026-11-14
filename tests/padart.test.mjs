@@ -350,5 +350,20 @@ for (const [nm, Lx, touch, narrow, scale] of [["desk 1366x768", DESK, false, fal
   check("a press: the well covers the face at rest, then the face drops 2 px (no crescent of the old face)", rest > 0 && drop > rest && p.log[rest + 1] === "f#050304", [rest, drop, p.log[rest + 1]].join());
 }
 
+// ---- Task 6: the keyboard drawing prints the player's own layout (controlswire keyNames, through the page view's names) ----
+{
+  const t = worldTokens(1), lit = keyStates(keyV()), mw = (s, px) => s.length * px * 0.6, AZ = { KeyW: "Z", KeyA: "Q" };
+  const legAt = (d, id) => { const r = keyRect(KB_AT[id], 30), f = { x: r.x + 0.08 * 30, w: r.w - 0.16 * 30 }; return d.texts.filter((x) => x.x >= f.x && x.x <= f.x + f.w && x.y >= r.y && x.y <= r.y + r.h).map((x) => x.s).join(); };
+  const az = rec(); drawKeys(az.c, 0, 0, 30, { tok: t, lit, prints: kbPrints(30, lit, mw, 1, AZ), px: kbLegend(30), names: AZ });
+  const df = rec(); drawKeys(df.c, 0, 0, 30, { tok: t, lit, prints: kbPrints(30, lit, mw), px: kbLegend(30) });
+  check("names: the W key prints Z and the A key Q; S, D and SPACE as ever", legAt(az, "KeyW") === "Z" && legAt(az, "KeyA") === "Q" && legAt(az, "KeyS") === "S" && legAt(az, "Space") === "SPACE", legAt(az, "KeyW") + "/" + legAt(az, "KeyA"));
+  check("no names: the W key prints W, the A key A", legAt(df, "KeyW") === "W" && legAt(df, "KeyA") === "A", legAt(df, "KeyW"));
+  const sem = rec(); drawKeys(sem.c, 0, 0, 30, { tok: t, lit, prints: kbPrints(30, lit, mw, 1, { Semicolon: "M", Escape: "Q", Backspace: "Z", Tab: "Q" }), px: kbLegend(30), names: { Semicolon: "M", Escape: "Q", Backspace: "Z", Tab: "Q" } });
+  check("a one-character legend takes the name (AZERTY's ; is M); ESC, TAB and ⌫ keep theirs", legAt(sem, "Semicolon") === "M" && legAt(sem, "Escape") === "ESC" && legAt(sem, "Tab") === "TAB" && legAt(sem, "Backspace") === "", legAt(sem, "Semicolon") + "/" + legAt(sem, "Escape"));
+  check("kbPrints measures the name: a name wider than its face is left off", kbPrints(30, {}, mw, 1, { KeyW: "WWWWWW" }).KeyW === undefined && kbPrints(30, {}, mw).KeyW === true);
+  const page = rec(); drawControls(page.c, DESK, keyV({ names: AZ }), { level: 1 });
+  check("the CONTROLS page: its keyboard and callouts read Z Q S D", page.texts.some((x) => x.s === "Z") && page.texts.some((x) => x.s === "Z Q S D"), page.texts.map((x) => x.s).filter((q) => /^[A-Z ]{1,8}$/.test(q)).join("|"));
+}
+
 console.log(fail ? `PADART FAIL (${pass} pass, ${fail} fail)` : `PADART OK (${pass} pass)`);
 process.exit(fail ? 1 : 0);

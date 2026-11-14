@@ -15,6 +15,7 @@ import { clampPact, PACT, togglePact } from "../core/pact.js";
 import { clampPace } from "../core/pace.js";
 import { FOES } from "../core/entities.js";
 import { clampSettings, DEFAULTS } from "./settings.js";
+import { letterOf } from "./controls.js";
 import { RENDER_KINDS, renderBits, renderVal } from "./renderkind.js";
 import { LOOK_LABEL } from "./jobs.js";
 import { SHOW_DUR, SKIP_GUARD, TITLE_IN } from "./intro.js";
@@ -307,8 +308,8 @@ export function createMenuApp(opts = {}) {
         this._lockHeld = false; // released: the next press may flash LEVEL SELECT's lock again
       }
     },
-    /* Discrete key tap (Enter/Esc/Backspace/M + arrows-as-tap fallback). */
-    key(code) {
+    /* Discrete key tap (Enter/Esc/Backspace/M + arrows-as-tap fallback). key = what it prints: the letter shortcuts read it (letterOf), the binds the code. */
+    key(code, key) {
       if (this.capturing) return false; // the capture owns the key (controlspage.js)
       if (this.screen === SCREEN.ATTRACT) {
         if (code === "Escape" || code === "Backspace") return this.exitAttract();
@@ -319,7 +320,8 @@ export function createMenuApp(opts = {}) {
       this.parked = false;
       const mi = this.moveKeys.indexOf(code); // UP RIGHT DOWN LEFT, live binds; ARROWS always work
       if (mi >= 0) return this._tapMove(mi === 1 || mi === 2 ? 1 : -1, mi === 1 || mi === 3);
-      switch (code) {
+      const L = letterOf(code, key);
+      switch (L) {
         case "Enter":
         case "NumpadEnter":
           return this.confirm();
@@ -359,7 +361,7 @@ export function createMenuApp(opts = {}) {
         case "KeyQ": // RECORDS' tab keys from anywhere on its pages (keyboard only; off them recTab is false)
         case "KeyE":
           if (isRecords(this.screen)) this.prevConfirm = true; // one press, one action: a Q / E that is also the rebound confirm (BOMB) only steps the tab here
-          return this.recTab(code === "KeyQ" ? -1 : 1);
+          return this.recTab(L === "KeyQ" ? -1 : 1);
         case "KeyT": // STATS' T: the MEDALS tab (the controller foot's MEDALS NORTH)
           return this.screen === SCREEN.STATS ? this.recTab(1) : false;
         case "KeyR":

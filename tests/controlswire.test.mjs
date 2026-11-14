@@ -1290,6 +1290,76 @@ for (const via of ["LATER", "the backdrop"]) {
   }
 }
 
+// ---- Task 6: keyNames, the keys in the player's own layout (session only: the layout map, re-read on focus, and each plain keydown) ----
+{
+  const flush = () => new Promise((r) => setImmediate(r)), J = (v) => JSON.stringify(v);
+  const rig = (keyboard) => {
+    const w = createWorld(1, 1), inp = new Input(null), WL = {}, r = { words: null, wakes: 0 };
+    const app = { screen: SCREEN.MENU, pauseView: 0, ctlT: 0, lastDev: "key", wake: () => { r.wakes++; }, onControls: () => false, get capturing() { return false; }, ctlBtn: () => false, ctlKey: () => false };
+    const win = { addEventListener: (t, f) => { (WL[t] = WL[t] || []).push(f); }, removeEventListener: noop };
+    r.c = mountControls({ win, doc: null, input: inp, app, SCREEN, world: w, onPause: noop, getGamepads: () => null, store: null, keyboard, setHints: (x) => { r.words = x; } });
+    r.app = app; r.focus = () => (WL.focus || []).forEach((f) => f({}));
+    r.down = (code, key, mods) => { inp._onKey({ code, key, repeat: false, preventDefault: noop, ...(mods || {}) }); inp._onKeyUp({ code, key, preventDefault: noop }); };
+    return r;
+  };
+  const map = (o) => ({ getLayoutMap: () => Promise.resolve(new Map(Object.entries(o))) });
+  const a = rig(map({ KeyW: "z", KeyA: "q", KeyS: "s", KeyD: "d", Digit1: "&", KeyM: ",", Semicolon: "m" }));
+  await flush();
+  check("AZERTY layout map: MOVE reads ZQSD, its caps Z Q S D", a.words.move === "ZQSD" && J(a.words.moveCaps) === J(["Z", "Q", "S", "D"]), J(a.words));
+  check("SPACE, ARROWS, ENTER and ESC keep their fixed words", a.words.bomb === "SPACE" && a.words.moveAlt === "ARROWS" && a.words.ok === "ENTER" && a.words.back === "ESC" && a.words.pause === "P");
+  check("keyNames holds Latin letters and digits only, upper-cased; & and , leave the code's own", J(a.c.keyNames()) === J({ KeyW: "Z", KeyA: "Q", KeyS: "S", KeyD: "D", Semicolon: "M" }), J(a.c.keyNames()));
+  check("a layout that changes a name wakes the shell", a.wakes > 0);
+  check("the CONTROLS page is seeded with the names", a.app.controls.view(0).names.KeyW === "Z" && a.app.controls.view(0).names.KeyA === "Q", J(a.app.controls.view(0).names));
+  const n = rig(null);
+  await flush();
+  check("no layout map: WASD as today, no names", n.words.move === "WASD" && J(n.c.keyNames()) === "{}" && n.words.remote === "Q");
+  const fa = rig(map({ KeyW: "ص", KeyA: "ش" })), ru = rig(map({ KeyW: "ц" }));
+  await flush();
+  check("a Persian or Cyrillic layout map is ignored: W stays", fa.words.move === "WASD" && ru.words.move === "WASD" && J(fa.c.keyNames()) === "{}" && J(ru.c.keyNames()) === "{}", fa.words.move + " " + ru.words.move);
+  const rj = rig({ getLayoutMap: () => Promise.reject(new Error("no")) }), th = rig({ getLayoutMap: () => { throw new Error("no"); } });
+  await flush();
+  check("a rejected or throwing layout map is caught: WASD", rj.words.move === "WASD" && th.words.move === "WASD");
+  const k = rig(null);
+  k.down("KeyQ", "a");
+  check("a keydown KeyQ printing a makes REMOTE print A", k.words.remote === "A" && k.c.keyNames().KeyQ === "A", k.words.remote);
+  k.down("Digit1", "1", { shiftKey: true });
+  k.down("KeyW", "Z", { shiftKey: true });
+  k.down("KeyE", "€", { altKey: true });
+  k.down("KeyD", "d", { getModifierState: (m) => m === "AltGraph" });
+  check("Shift + Digit1 learns nothing, nor any key under Shift, Alt or AltGraph", J(k.c.keyNames()) === J({ KeyQ: "A" }), J(k.c.keyNames()));
+  k.down("Space", " "); k.down("Escape", "Escape"); k.down("ArrowUp", "ArrowUp");
+  check("Space, Escape and the arrows learn nothing", J(k.c.keyNames()) === J({ KeyQ: "A" }) && k.words.bomb === "SPACE", J(k.c.keyNames()));
+  let m = { KeyW: "z" };
+  const f = rig({ getLayoutMap: () => Promise.resolve(new Map(Object.entries(m))) });
+  await flush();
+  m = { KeyW: "ц" }; f.focus(); await flush();
+  check("focus reads the layout again: a switch to Cyrillic gives W back", f.words.move === "WASD" && J(f.c.keyNames()) === "{}", f.words.move);
+  m = { KeyW: "w", KeyY: "z", KeyZ: "y" }; f.focus(); await flush();
+  check("a later QWERTZ read names Y and Z by their printed letters", J(f.c.keyNames()) === J({ KeyW: "W", KeyY: "Z", KeyZ: "Y" }), J(f.c.keyNames()));
+  check("keyNames is a copy: writing it changes nothing", (() => { const x = f.c.keyNames(); x.KeyQ = "!"; return f.c.keyNames().KeyQ === undefined; })());
+  check("never stored: the names write no key", !Object.keys(mem).some((q) => /name|layout/i.test(q)), Object.keys(mem).join());
+}
+// ---- Task 6: U is the letter printed on the key (Dvorak's U is the code KeyF, its KeyU prints G) ----
+{
+  const el = () => { const e = { L: {}, hidden: true, dataset: {}, style: {}, setAttribute: noop, appendChild: noop, addEventListener(t, f) { (e.L[t] = e.L[t] || []).push(f); }, querySelector: () => el() }; return e; };
+  const docL = {};
+  globalThis.document = { body: el(), createElement: el, addEventListener: (t, f) => { (docL[t] = docL[t] || []).push(f); } };
+  let posts = 0;
+  const reg = { waiting: { postMessage: () => { posts++; } } };
+  const app = { screen: SCREEN.MENU, capturing: false };
+  const u = mountUpdate(() => ({ app, world: { state: "PLAY" }, isRunEnd: () => false, SCREEN }), {
+    idle: (f) => f(), top: null, self: null, href: "http://127.0.0.1/index.html", location: { reload: noop },
+    navigator: { serviceWorker: { controller: {}, addEventListener: noop, register: () => Promise.resolve(reg) } } });
+  await new Promise((r) => setImmediate(r));
+  u.tick();
+  const key = (code, k) => (docL.keydown || []).forEach((f) => f({ code, key: k, repeat: false }));
+  key("KeyU", "g");
+  check("Dvorak: the key printed G (code KeyU) reloads nothing", u.shown === true && posts === 0, posts);
+  key("KeyF", "u");
+  check("Dvorak: the key printed U (code KeyF) reloads", posts === 1, posts);
+  delete globalThis.document;
+}
+
 delete globalThis.window; delete globalThis.location;
 console.log("\n  CONTROLSWIRE RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

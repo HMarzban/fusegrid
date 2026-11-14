@@ -1,5 +1,5 @@
 // The seam that wires CONTROLS into main, frameloop and unlock. Plan: docs/superpowers/plans/2026-11-02-controls-feature.md T11.
-import { VIB_LEVELS, clampControls, loadControls, saveControls } from "./controls.js";
+import { VIB_LEVELS, clampControls, layoutName, letterOf, loadControls, saveControls } from "./controls.js";
 import { createPad, padInfo, routesOf, standardPads } from "./gamepad.js";
 import { createPadRouter } from "./padroute.js";
 import { createHintDev, keyPress, pointerPress, wordsOf } from "./hints.js";
@@ -40,15 +40,33 @@ const navOf = () => (typeof navigator !== "undefined" && navigator ? navigator :
 const platformOf = (n) => (!n ? "" : n.userAgentData && n.userAgentData.platform ? n.userAgentData.platform : /^Mac/.test(n.platform || "") ? "macOS" : n.platform || "");
 
 /** Mounts the pad, the page, the hints and rumble on the live shell. poll(t) belongs above the frame gate. */
-export function mountControls({ win, doc, input, app, SCREEN, world, onPause, getGamepads, store, audio, unlock, setHints, art, idle, defer, importRumble, usb, policy, platform, importSwitch2 }) {
+export function mountControls({ win, doc, input, app, SCREEN, world, onPause, getGamepads, store, audio, unlock, setHints, art, idle, defer, importRumble, usb, policy, platform, importSwitch2, keyboard }) {
   const W = win !== undefined ? win : typeof window !== "undefined" ? window : null;
   const D = doc !== undefined ? doc : typeof document !== "undefined" ? document : null;
   const gp = standardPads(getGamepads || padsOf());
   let c = loadControls(store), everSeen = false, lastT = 0, wasDir = false, wasPause = false;
-  let pending = "", shownT = null, wasLost = false, wordDev = null, wordC = null, writing = false, keysAs = null;
+  let pending = "", shownT = null, wasLost = false, wordDev = null, wordC = null, wordN = -1, writing = false, keysAs = null;
   let held = false, tickT = -Infinity, didReset = false;
   let helloT = -Infinity, helloP = -Infinity, titleT = -Infinity, endT = -Infinity, showWas = false, endSt = world.state;
   const keys = new Set();
+  /* The printed key names (keyNames), this session only, never stored: the browser's layout map (read at mount and on every window focus) and
+     each plain keydown; a value that is no Latin letter or digit leaves the code's own letter. namesV moves on every change. */
+  const names = {};
+  let namesV = 0;
+  const nameSet = (code, v) => {
+    const n = layoutName(v);
+    if (n ? names[code] === n : !(code in names)) return false;
+    if (n) names[code] = n; else delete names[code];
+    namesV++;
+    return true;
+  };
+  const kbd = keyboard !== undefined ? keyboard : (navOf() && navOf().keyboard) || null;
+  const readLayout = () => {
+    let p = null;
+    try { p = kbd && typeof kbd.getLayoutMap === "function" ? kbd.getLayoutMap() : null; } catch (_) { return; }
+    if (p) Promise.resolve(p).then((m) => { let ch = false; if (m && typeof m.forEach === "function") m.forEach((v, k) => { if (nameSet(k, v)) ch = true; }); if (ch) { syncWords(); if (app.wake) app.wake(); } }, noop);
+  };
+  const plain = (e) => !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey && !(typeof e.getModifierState === "function" && e.getModifierState("AltGraph"));
   const pad = createPad({ getGamepads: gp, dead: c.dead / 100, stick: c.stick });
   const hintDev = createHintDev({ lay: () => (D && D.body && D.body.dataset && D.body.dataset.lay) || "d" });
   const list = () => { try { return (gp && gp()) || []; } catch (_) { return []; } };
@@ -118,7 +136,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
      load never traps the player. */
   let page = null, openDev = null, failed = false;
   const build = () => {
-    page = pageMod.createControlsPage({ get: () => c, set, padView, say, device: () => hintDev.device(app.ctlT), sw2: sw2View });
+    page = pageMod.createControlsPage({ get: () => c, set, padView, say, device: () => hintDev.device(app.ctlT), sw2: sw2View, names: () => names });
     if (openDev !== null && app.onControls()) page.open(openDev);
     openDev = null;
   };
@@ -130,7 +148,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
   const pre = (t) => {
     const p = padView();
     return { loading: true, failed, tab: openDev === null || openDev === "key" ? "key" : "pad", device: hintDev.device(t), row: 1, pad: { state: p.state, name: p.name, rumble: p.rumble === true, effects: p.effects }, key: c.key, binds: c.pad, stick: c.stick, dead: c.dead, vib: c.vib,
-      stickVal: p.stickVal || [0, 0], reads: "", drift: 0, armed: false, swap: null, status: "", capture: null, echo: null, names: {}, sw2: sw2View() };
+      stickVal: p.stickVal || [0, 0], reads: "", drift: 0, armed: false, swap: null, status: "", capture: null, echo: null, names, sw2: sw2View() };
   };
   /* Cues live here, not in main's wrapper: a write is uiTog (a capture commit has no confirm behind it), anything else on a row is uiSel, a tab is uiMove as ←→ is, and a refusal is silent. */
   const face = {
@@ -183,8 +201,9 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     const code = e.code;
     if (!e.metaKey) keys.add(code);
     if (keyPress(e)) { app.lastDev = "key"; hintDev.key(e, app.ctlT); }
+    if (!e.repeat && typeof e.key === "string" && e.key.length === 1 && e.key !== " " && plain(e) && nameSet(code, e.key)) syncWords();
     const cap = app.capturing;
-    if (code === "KeyR" && app.screen === SCREEN.STATS && (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey)) { app.resetArm = false; return true; } // only a plain R arms or erases
+    if (letterOf(code, e.key) === "KeyR" && app.screen === SCREEN.STATS && (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey)) { app.resetArm = false; return true; } // only a plain R arms or erases
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return cap;
     if (cap && !browserKey(code)) e.preventDefault();
     return app.ctlKey(code, e.key);
@@ -224,6 +243,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
       if (onPage() && offCanvas(e) && !(face.loading && !face.failed)) tap({ off: 1 }); // the words say TAP OUTSIDE, and the viewport is bigger than the canvas; a load in flight is inert (R1 cohesion 1)
     }, true),
     on(W, "blur", blurAll),
+    on(W, "focus", readLayout),
     on(D, "visibilitychange", () => { blurAll(); if (D.hidden) stopRumble(); }),
   ];
   /* A tap resolved by controlsHit: a row is Enter on it; a page key (the kit pager, a paged touch column) focuses the first row of the page it
@@ -255,9 +275,9 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
   }
   const syncWords = () => {
     const d = hintDev.device(app.ctlT);
-    if (d === wordDev && c === wordC) return;
-    wordDev = d; wordC = c;
-    if (setHints) setHints(wordsOf(d, c));
+    if (d === wordDev && c === wordC && namesV === wordN) return;
+    wordDev = d; wordC = c; wordN = namesV;
+    if (setHints) setHints(wordsOf(d, c, names));
   };
   /* One chip at the next non-PLAY moment; LOST holds while it is true, the others age out. */
   const noteTick = (t) => {
@@ -284,6 +304,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     if (!q || q.k !== toast.k || q.a !== a || q.move !== w.move || q.bomb !== w.bomb) app.padToast = { k: toast.k, move: w.move, bomb: w.bomb, a };
   };
   syncWords();
+  readLayout();
   return {
     /** One pad poll; true on a real press, which wakes the shell and pokes the frame gate. */
     poll(t) {
@@ -356,6 +377,8 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     tapUp,
     /** The CONNECT row: shown only where switch2.js reaches (WebUSB, the page allowed, a measured platform); state is the waker's. */
     sw2: sw2View,
+    /** The printed key names this session knows, code to letter (a copy). */
+    keyNames() { return { ...names }; },
     /** The device the hints name now. */
     device() { return hintDev.device(app.ctlT); },
     blurAll,

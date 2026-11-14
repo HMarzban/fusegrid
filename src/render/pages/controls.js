@@ -453,9 +453,9 @@ function padArt(c, s, row, A, tok, ui) {
 }
 function keyArt(c, s, row, A, tok, ui) {
   const lit = s.capture ? {} : keyStates(s), it = s.capture ? (ui.call ? capCallouts(s, row.id) : []) : keyCallouts(s), ts = textScale();
-  const K = fitOnce(["key", A.w, A.h, ts, JSON.stringify(it), Object.keys(lit).sort().join()].join("|"), () => { const m = metrics(c, ui.dv), F = kbFit(A.w, A.h, it, m); return {F, prints: kbPrints(F.k, lit, m.wOf, ts)}; });
+  const ns = s.names && Object.keys(s.names).length ? JSON.stringify(s.names) : "", K = fitOnce(["key", A.w, A.h, ts, JSON.stringify(it), Object.keys(lit).sort().join(), ...(ns ? [ns] : [])].join("|"), () => { const m = metrics(c, ui.dv), F = kbFit(A.w, A.h, it, m); return {F, prints: kbPrints(F.k, lit, m.wOf, ts, s.names)}; });
   const {F, prints} = K, ox = A.x + F.ox, oy = A.y + F.oy, rk = ui.focus ? keyRing(s, row.id) : null;
-  drawKeys(c, ox, oy, F.k, {tok, lit, ring: rk, prints, px: kbLegend(F.k, ts)});
+  drawKeys(c, ox, oy, F.k, {tok, lit, ring: rk, prints, px: kbLegend(F.k, ts), names: s.names});
   if (F.plan) drawCallouts(c, ox, oy, F.plan, tok);
   const q = rk && KB_AT[rk] && keyRect(KB_AT[rk], F.k);
   return {plan: F.plan, ox, oy, ring: q ? {x: ox + q.x + q.w / 2, y: oy + q.y + q.h / 2, r: Math.max(q.w, q.h) / 2 + 4.5, w: q.w + 9, h: q.h + 9} : null};

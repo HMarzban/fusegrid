@@ -101,7 +101,7 @@ export class Input {
        ATTRACT. */
     const pz=c===k.PAUSE||c==="Escape";
     if(pz&&this.onPause)this.onPause();
-    if(this.onUiKey)this.onUiKey(c);
+    if(this.onUiKey)this.onUiKey(c,e.key);
     if(pz)return;
     const ax=this._axis.get(c);
     if(ax)this.input[ax]=true;
