@@ -15,7 +15,7 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
-## shell v219 · 2026-11-14 · not released yet
+## shell v219 · 2026-11-14
 
 Every controller and every keyboard, read the way you hold them.
 

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — v219 is live
+- Pushed on the owner's "Push it" (`afbde56..c3a8dff`), Pages CI green (test, deploy), live `sw.js` v219; CHANGELOG and AGENTS release state marked live.
+
 ## 2026-11-14 — every controller and the keyboard merged (shell v219)
 - `feature/every-controller` merged into local `main` (4aee0be) after the owner passed all 19 hardware checks; 779 tests green on the merge; not pushed. Parked: Task 5 hat D-pad (needs a captured hat pad); Bluetooth Switch 2, Safari / Firefox, Windows / Linux / Android unmeasured.
 
