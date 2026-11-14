@@ -1165,7 +1165,11 @@ not shell screens. Do not add them as `SCREEN` values.
   the consent card (a stray button must not consent; an unanswered SETTINGS ANALYTICS row is inert on a pad and says
   `ANSWER THE CARD WITH Y OR N`), the STATS wipe or the camera reset, on purpose. Disconnect pauses only with the pad last
   used in GAME PLAY (`CONTROLLER LOST`), never resumes. Pad name `CONTROLLER 1 · STANDARD` (`BUTTONS 0-N` non-standard); the device
-  id is never printed or stored. Keyboard diagonals stay about 1.41x while a pad is 4-way, disclosed. **The owner has
+  id is never printed or stored. A pad the browser hands over in its own HID order (mapping "") that `gamepad.js` `KNOWN` lists is
+  put back in the standard order before anything reads it (`asStandard` / `standardPads`, applied once in `controlswire`; the id is matched,
+  never printed or stored): today the Switch 2 Pro Controller (057e:2069; D-PAD from its buttons 8-11, Y axes flipped, its 12-bit sticks
+  scaled 1.37). Browsers see that pad only after a USB start-up sequence (report format 09), which nothing in the game sends yet; it gives
+  Chrome no vibration actuator (2026-11-14, owner's own pad). Keyboard diagonals stay about 1.41x while a pad is 4-way, disclosed. **The owner has
   played on a real controller (2026-11-02) and reported it works; details not yet reported, so M1-M7 stay open. On 2026-11-03 the owner felt the VIBRATION row's test buzz on a real controller on macOS; the in-run patterns are not yet reported.** No URL flag; `__GAME__.ctl` is the test hook. `keys.test` carries the pad matrix.
 - Pickup feedback (owner: "agree with research team, let's work on all of
   them", 2026-10-10). All names/copy come from `POWER[].name` / `.help` —
@@ -1315,8 +1319,15 @@ not shell screens. Do not add them as `SCREEN` values.
   ATTRACT, live PLAY, PAUSE or a mid-run WIN. RELOAD (tap, `pointerup`) or `U`
   posts `SKIP_WAITING`; the one `controllerchange` listener reloads once.
   LATER snoozes until the next run returns to the menus or the next boot; no
-  store. Updates are re-checked at boot and on `visibilitychange` (<= every
-  10 min). Bridge: replacing a pre-v179 shell (`PROMPT_FROM 179`) still skips
+  store. Updates are re-checked at boot, every 5 min while the page is
+  visible and on `visibilitychange` once 1 min has passed (v215, owner 2026-11-14:
+  "can you do this update check much faster?", the card kept). HEAL (v215): a boot
+  failure while a worker controls the page unregisters it, deletes the
+  `fusegrid-shell-v*` caches and reloads, by itself once a session (`fg-heal` in
+  sessionStorage, cleared when the boot ends) and on every boot RETRY; never offline
+  (`navigator.onLine` false). The loader's window error listener also takes a
+  filename-less SyntaxError / import error: WebKit reports a module link error with
+  no filename, so a mismatched cache once sat on SLOW CONNECTION forever. Bridge: replacing a pre-v179 shell (`PROMPT_FROM 179`) still skips
   waiting, because those pages cannot prompt; that is their one last silent
   reload. Activate deletes only `fusegrid-shell-v*` keys.
 
@@ -1780,6 +1791,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; the tile boards were `?gen=3` only from v188 to v197).
+- Release state (2026-11-14): shell **v215** (the update path, after the owner's Safari showed COULD NOT LOAD THE GAME on live v214 and RETRY only reloaded into the same state; it cleared on its own a little later, so the trigger, most likely a stale offline copy left from v201 or saved during the deploy, was never captured. Fresh WebKit, iOS 27 Safari in the Simulator and the v201 -> v214 upgrade path all boot clean. v215: the boot HEAL and the WebKit link-error catch above, update checks every 5 min while visible; verified by poisoning `src/main.js` in the offline copy in Playwright WebKit and Chromium: one automatic reload, the title on a fresh cache) is committed on local main, not pushed yet.
 - Release state (2026-11-12): shell **v214** (v213 with the share card swapped for the owner's round 3 pick P2, D4 in PIXEL in a pixel cabinet; og.png and its alt text; index.html is precached, so the bump) is LIVE since 2026-11-14: pushed on the owner's word as a fast-forward of `origin/main` (`e3bf4a3..0e47f7b`: v202 delivery, then the UI upgrade v203-v214), Pages CI green, live `sw.js` v214; GitHub release **v2.5.0**, shell v201 → v214. The owner re-uploaded og.png to the repo's Social preview the same day. Players jump from v201 straight to v214: the v202–v213 lines below were never live on their own. Open: device checks (U1–U15, M1–M7) and the three vetoes.
 - Release state (2026-11-12): shell **v213** (v212 with the share card swapped for the owner's round 2 pick D4, eight worlds; og.png and its alt text; index.html is precached, so the bump) is PREPARED on `feature/ui-upgrade`. Never live on its own: shipped inside v214 (LIVE 2026-11-14).
 - Release state (2026-11-12): shell **v212** (v211 plus the share card, owner pick C: og.png and its alt text in index.html and README; index.html is precached, so the bump) is PREPARED on `feature/ui-upgrade`. Never live on its own: shipped inside v214 (LIVE 2026-11-14).

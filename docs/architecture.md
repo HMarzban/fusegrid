@@ -249,7 +249,9 @@ its own held axes and latches, OR-merged with keys. A held key beats the pad on 
   20 FPS idle floor can't lose a tap. A press holds for at least one tick. The stick has a radial deadzone and walks 4-way.
   SENSITIVITY has five levels (MIN 60, LOW 40, MEDIUM 25, HIGH 15, MAX 8 percent), each with its own release and turn
   (1.40x to 1.10x). No response curve: `step()` gets -1, 0 or 1, so stick distance never reaches the sim. On a menu the
-  first engage takes vertical unless x leads y by 1.25x.
+  first engage takes vertical unless x leads y by 1.25x. A pad the browser passes in its own HID order (no `standard`
+  mapping) that `gamepad.js` knows, today the Switch 2 Pro Controller, is put back in the standard order before anything
+  reads it, so its D-PAD, triggers and sticks land where every other pad's do.
 - [`padroute.js`](../src/app/padroute.js) decides what a press means on the current screen. A press in one
   layer is spent there, so SOUTH that starts a run plants nothing.
 - [`controls.js`](../src/app/controls.js) holds the binds and their rules (`nb.controls.v1`, kept by a cabinet
@@ -486,7 +488,13 @@ installs in the background and waits; a **NEW VERSION READY** card
 menus or after a finished run, never in the middle of one. Pressing it hands
 control to the new worker and the page reloads once. Copies from before the
 card existed (shell v178 and older) update once on their own, because their
-page can't show it. Cleanup touches only this game's own caches.
+page can't show it. Cleanup touches only this game's own caches. Since v215 an
+open page looks for a new build every 5 minutes while it is visible and whenever
+you come back to the tab after a minute away ([`register.js`](../src/pwa/register.js)),
+and a first load that fails while a worker controls the page clears the game's own
+offline copy and reloads, once a session by itself and on every RETRY (the inline
+loader in `index.html`; offline it never clears). A link-time import error counts
+as that failure even when Safari reports it with no file name.
 Since shell v202 the first visit is lighter: `index.html` preloads the boot
 import graph in one go, and the floor-tile board builder, the ATTRACT bot,
 the iso renderer, `?net=local` and the CONTROLS page's paint load after the

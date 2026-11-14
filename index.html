@@ -298,6 +298,19 @@
   var later=function(f,ms){if(w.setTimeout)w.setTimeout(f,ms)};
   var css=function(k,v){var s=E.style;if(!s||!s.setProperty)return;if(v==null)s.removeProperty(k);else s.setProperty(k,Math.round(v)+"px")};
   var now=function(){return w.performance?performance.now():0};
+  /* heal (2026-11-14): a first load that fails under a service worker clears the game's own offline copy (its fusegrid-shell-v* caches and the
+     registration) and reloads, by itself once a session (fg-heal), on RETRY every time; offline it never clears, the copy may be all there is */
+  var healing=false,HK="fg-heal";
+  var ss=function(op,v){try{var s=w.sessionStorage;return op==="get"?s.getItem(HK):op==="set"?s.setItem(HK,v):s.removeItem(HK)}catch(e){return null}};
+  var swOf=function(){var n=w.navigator;return n&&n.onLine!==false&&n.serviceWorker&&n.serviceWorker.getRegistrations?n.serviceWorker:null};
+  function heal(go){
+    var sw=swOf(),c=w.caches,done=0,fin=function(){if(!done++)go()};
+    if(!sw){go();return}
+    later(fin,3000);
+    try{Promise.all([sw.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))}),
+      c&&c.keys?c.keys().then(function(ks){return Promise.all(ks.filter(function(k){return k.indexOf("fusegrid-shell-v")===0}).map(function(k){return c.delete(k)}))}):0]).then(fin,fin)}catch(e){fin()}
+  }
+  var reload=function(){w.location.reload()};
   /* a repeat gets a trailing no-break space, or a reader stays silent */
   var say=function(s){if(say0)say0.textContent=say0.textContent===s?s+"\u00a0":s};
   var bootFiles=+$("loadjs").getAttribute("data-files");
@@ -359,6 +372,7 @@
     if(j!==shown){fill.style.transition="none";fill.style.transform="scaleX("+j.f+")";fill.getBoundingClientRect();fill.style.transition="";shown=j}
     E.hidden=false;
     if(j.dock)E.setAttribute("data-dock","");else E.removeAttribute("data-dock");
+    if(failed&&healing){msg.removeAttribute("role");msg.textContent="UPDATING THE GAME";bar.hidden=false;bar.setAttribute("data-ind","");act.hidden=true;E.removeAttribute("data-act");return}
     if(failed){
       msg.setAttribute("role","alert");
       if(j.k==="boot"){sub.textContent="CHECK YOUR CONNECTION, THEN RETRY.";E.setAttribute("data-fail","")}
@@ -422,6 +436,7 @@
     /* ready only after phase(): the files are in (a failed fetch never reaches it), and only for the look on screen.
        force: the job's owner dropped it, so its failure card goes too (a held run start cancelled with P / Escape) */
     end:function(k,force){
+      if(k==="boot")ss("del");
       if(failed===k&&!force)return;if(failed===k){failed=null;drop=null;again=null;act.hidden=true;E.removeAttribute("data-act")}var j=jobs[k],chip=!!j&&j.dock&&j.ph&&shown===j&&!E.hidden;delete jobs[k];
       if(chip&&cur===k){cn={t:j.label+" · READY",bad:false,until:now()+800};later(paint,820)}
       paint();if(j&&k!=="boot"&&j.ph&&cur===k)say(j.label+" ready.")
@@ -447,7 +462,10 @@
     /* dropLabel: the second button's words (a held run start's FLOOR TILES card says BACK TO MENU) */
     fail:function(k,onDrop,onAgain,dropLabel){
       if(!jobs[k])return;
-      failed=k;drop=onDrop||null;again=onAgain||null;dl=dropLabel||"USE CLASSIC 2D";keepW.textContent=dl+(words?" EAST":"");paint();
+      failed=k;drop=onDrop||null;again=onAgain||null;dl=dropLabel||"USE CLASSIC 2D";keepW.textContent=dl+(words?" EAST":"");
+      var sw=k==="boot"&&!ss("get")&&swOf();
+      if(sw&&sw.controller){ss("set","1");healing=true;paint();heal(reload);return}
+      paint();
       if(k==="boot")retry.focus();
     },
     /* a pad's route to a look's failure card (src/app/loadbar.js loadCard); pad = last used, so the buttons name its words */
@@ -456,7 +474,7 @@
   };
   /* the flag form of spot().row, for a reader or a writer that only knows the row */
   if(Object.defineProperty)Object.defineProperty(L,"rowShown",{get:function(){return sp.row},set:function(v){L.spot({row:v,off:sp.off,x:sp.x,y:sp.y,w:sp.w})}});
-  retry.onclick=function(){var f=again;if(f)f();else location.reload()};
+  retry.onclick=function(){var f=again;if(f)f();else heal(reload)};
   keep.onclick=function(){var f=drop,k=failed;failed=null;drop=null;again=null;delete jobs[k];act.hidden=true;E.removeAttribute("data-act");paint();if(f)f()};
   /* the buttons are the card's own: nothing here reaches the game's keys; the title's press skips the card in main.js's armUnlock */
   E.addEventListener("keydown",function(e){e.stopPropagation()});
@@ -469,7 +487,8 @@
     e.preventDefault();e.stopImmediatePropagation();
   },true);
   /* a throw while the boot job lives is a game that will never paint */
-  w.addEventListener("error",function(e){if(jobs.boot&&e.filename&&e.filename.indexOf(location.origin)===0)L.fail("boot")});
+  /* our own file, or an import that does not link: Safari reports that SyntaxError with no filename (2026-11-14), so it once sat on SLOW CONNECTION */
+  w.addEventListener("error",function(e){if(jobs.boot&&(e.filename?e.filename.indexOf(location.origin)===0:/SyntaxError|import|module/i.test(e.message||"")))L.fail("boot")});
   watch();paint();say("Loading.");
 })(window,document);
 </script>

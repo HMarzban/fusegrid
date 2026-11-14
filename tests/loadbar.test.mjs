@@ -176,6 +176,13 @@ function boot1(opts = {}) {
     addEventListener(k, f, c) { winOn[k] = f; winCap[k] = c; },
     PerformanceObserver: opts.noObs ? undefined : class { constructor(f) { obs = f; } observe(o) { ctx.obsOpts = o; } },
   };
+  if (opts.sw) {
+    const sw = (ctx.swLog = { unreg: 0, deleted: [] });
+    ctx.navigator = { onLine: opts.online !== false, serviceWorker: { controller: opts.sw === "ctl" ? {} : null, getRegistrations: () => Promise.resolve([{ unregister() { sw.unreg++; return Promise.resolve(true); } }]) } };
+    ctx.caches = { keys: () => Promise.resolve(["fusegrid-shell-v201", "fusegrid-shell-v214", "someone-else"]), delete(k) { sw.deleted.push(k); return Promise.resolve(true); } };
+    const ss = (ctx.ssData = opts.ss || {});
+    ctx.sessionStorage = { getItem: (k) => (k in ss ? ss[k] : null), setItem: (k, v) => { ss[k] = String(v); }, removeItem: (k) => { delete ss[k]; } };
+  }
   ctx.window = ctx;
   const src = /<script id="loadjs"[^>]*>([\s\S]*?)<\/script>/.exec(html)[1];
   vm.runInNewContext(src, ctx);
@@ -231,6 +238,12 @@ const U = (n) => "http://x/g/src/m" + n + ".js";
   check("a stranger's script error is ignored", !b.el("loadbar").hidden);
   b.winOn.error({ filename: "http://x/g/src/main.js" });
   check("a throw in our code before the title paints shows the failure", b.el("loadbar").hidden && /COULD NOT/.test(b.el("loadmsg").textContent));
+  const w = boot1();
+  w.winOn.error({ filename: "", message: "SyntaxError: Importing binding name 'createGame' is not found." });
+  check("an import that does not link (Safari reports it with no filename) shows the failure, not an endless SLOW CONNECTION", w.el("loadbar").hidden && /COULD NOT/.test(w.el("loadmsg").textContent));
+  const x = boot1();
+  x.winOn.error({ filename: "", message: "Script error." });
+  check("a muted cross-origin 'Script error.' with no filename is still ignored", !x.el("loadbar").hidden);
   const c = boot1();
   c.L.end("boot");
   c.winOn.error({ filename: "http://x/g/src/main.js" });
@@ -502,6 +515,44 @@ const U = (n) => "http://x/g/src/m" + n + ".js";
   const t = arm(); t.cap("pointerdown", { id: "c" }); t.b.key("ArrowUp");
   check("a tap or key that is not the card's leaves the reset armed (the game's own paths decide)", t.app.resetArm === true);
   check("no #load (Node, a page without the loader): guardLoadCard does nothing", guardLoadCard({ getElementById: () => null, addEventListener() {} }, () => {}) === false && guardLoadCard(null, () => {}) === false);
+}
+
+/* 2026-11-14 (a returning Safari showed COULD NOT LOAD THE GAME and RETRY only reloaded into the same state): a boot failure while a service
+   worker controls the page clears the game's own offline copy (its fusegrid-shell-v* caches and the registration) and reloads, once a session
+   on its own; RETRY does the same every time. Offline it never clears: the offline copy may be all there is. */
+{
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  const b = boot1({ sw: "ctl" });
+  b.L.fail("boot");
+  await tick(); await tick();
+  check("a boot failure under a service worker clears the game's caches and reloads by itself", b.ctx.reloaded === 1 && b.ctx.swLog.unreg === 1 && b.ctx.swLog.deleted.join() === "fusegrid-shell-v201,fusegrid-shell-v214", JSON.stringify(b.ctx.swLog) + " r" + b.ctx.reloaded);
+  check("it says what it does while it clears, not COULD NOT LOAD", !/COULD NOT/.test(b.el("loadmsg").textContent) && /UPDATING/.test(b.el("loadmsg").textContent), b.el("loadmsg").textContent);
+  check("only once a session: the attempt is remembered", b.ctx.ssData["fg-heal"] === "1");
+  const c = boot1({ sw: "ctl", ss: { "fg-heal": "1" } });
+  c.L.fail("boot");
+  await tick();
+  check("a second failure in the session shows the card and does not loop", c.ctx.reloaded === undefined && /COULD NOT LOAD THE GAME/.test(c.el("loadmsg").textContent));
+  c.el("loadretry").onclick();
+  await tick(); await tick();
+  check("RETRY on the card clears the offline copy too, then reloads", c.ctx.reloaded === 1 && c.ctx.swLog.unreg === 1 && c.ctx.swLog.deleted.length === 2);
+  const d = boot1({ sw: "ctl", online: false });
+  d.L.fail("boot");
+  await tick();
+  check("offline: no clearing, the card shows", d.ctx.reloaded === undefined && d.ctx.swLog.unreg === 0 && /COULD NOT LOAD THE GAME/.test(d.el("loadmsg").textContent));
+  d.el("loadretry").onclick();
+  await tick();
+  check("offline RETRY reloads without touching the offline copy", d.ctx.reloaded === 1 && d.ctx.swLog.deleted.length === 0);
+  const e = boot1({ sw: "none" });
+  e.L.fail("boot");
+  await tick();
+  check("no service worker in control: the card shows as before", e.ctx.reloaded === undefined && /COULD NOT LOAD THE GAME/.test(e.el("loadmsg").textContent));
+  const f = boot1({ sw: "ctl", ss: { "fg-heal": "1" } });
+  f.L.end("boot");
+  check("a boot that reaches the title forgets the attempt", !("fg-heal" in f.ctx.ssData));
+  const g = boot1({ sw: "ctl" });
+  g.L.begin("tiles", lookPlan("px")); g.L.fail("tiles", () => {}, () => {});
+  await tick();
+  check("a look's or the tiles' failure never clears the offline copy", g.ctx.swLog.unreg === 0 && g.ctx.reloaded === undefined);
 }
 
 console.log("LOADBAR", pass + " PASS / " + fail + " FAIL");

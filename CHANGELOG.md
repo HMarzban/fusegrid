@@ -15,6 +15,23 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v215 · 2026-11-14
+
+A game that fails to start now repairs itself, and new versions are found sooner.
+
+### Fixed
+
+- **A broken offline copy can no longer lock you out.** If the game fails to start while its offline copy is in use, it
+  clears that copy and reloads once by itself, and RETRY does the same. Before, RETRY reloaded into the same broken
+  copy (seen in Safari on the day v214 went live). With no connection it never clears, so offline play is safe.
+- **Safari no longer waits forever on SLOW CONNECTION** when the game's files do not fit together: that error now shows
+  the failure (and the repair above) instead.
+
+### Changed
+
+- **New versions are found sooner.** An open game checks for a new build every 5 minutes, and when you come back to its
+  tab after a minute away; it was only at start and after 10 minutes away. NEW VERSION READY still asks before it reloads.
+
 ## shell v214 · 2026-11-14
 
 The menus centre, CONTROLS joins the world, the first load builds the title, and every overlay is sharp.

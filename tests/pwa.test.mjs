@@ -371,6 +371,27 @@ check(
   check("later update on a first-visit tab reloads once", reloads === 1, reloads);
 }
 
+/* 2026-11-14 faster update checks (owner: "can you do this update check much faster?", the card kept): every 5 minutes while the page is
+   visible, and on a return to the tab once a minute has passed since the last check (was: boot, then a return after 10 minutes) */
+{
+  let t = 1e6, iv = null, updates = 0;
+  const docL = {};
+  const doc = { visibilityState: "visible", addEventListener(k, f) { docL[k] = f; } };
+  const nav = { serviceWorker: { controller: {}, addEventListener() {}, register: () => Promise.resolve({ update() { updates++; return Promise.resolve(); } }) } };
+  registerSW({ navigator: nav, href: "http://127.0.0.1:8080/", document: doc, now: () => t, setInterval: (f, ms) => { iv = { f, ms }; return 1; } });
+  await Promise.resolve(); await Promise.resolve();
+  check("boot checks once", updates === 1, updates);
+  check("a 5-minute timer is armed", iv && iv.ms === 300000, iv && iv.ms);
+  t += 300000; iv && iv.f();
+  check("the timer checks while visible", updates === 2, updates);
+  doc.visibilityState = "hidden"; t += 300000; iv && iv.f();
+  check("the timer skips a hidden page", updates === 2, updates);
+  doc.visibilityState = "visible"; t += 30000; docL.visibilitychange && docL.visibilitychange();
+  check("a return to the tab checks once a minute has passed", updates === 3, updates);
+  t += 30000; docL.visibilitychange();
+  check("but not twice inside a minute", updates === 3, updates);
+}
+
 const spec = readFileSync(
   join(ROOT, "docs/superpowers/specs/2026-09-03-pwa-offline-design.md"),
   "utf8",

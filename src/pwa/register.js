@@ -93,20 +93,24 @@ export function registerSW(env) {
             if (w && typeof w.addEventListener === "function")
               w.addEventListener("statechange", () => { if (w.state === "installed") waiting(reg); });
           });
-        /* a home-screen app that is never reloaded still finds new builds:
-           re-check when the page comes back into view, at most every 10 min */
+        /* new builds are found fast (owner 2026-11-14): every 5 min while the page is visible, and on a return to the tab once a
+           minute has passed since the last check; a hidden page never checks */
         const doc = env && env.document !== undefined ? env.document : typeof document !== "undefined" ? document : null;
+        const now = env && typeof env.now === "function" ? env.now : () => Date.now();
+        const every = env && typeof env.setInterval === "function" ? env.setInterval : typeof setInterval === "function" ? setInterval : null;
         let last = 0;
-        const check = () => {
-          const t = Date.now();
-          if (t - last < 600000 || typeof reg.update !== "function") return;
+        const check = (gap) => {
+          const t = now();
+          if (t - last < gap || typeof reg.update !== "function") return;
+          if (doc && doc.visibilityState === "hidden") return;
           last = t;
           fill();
           Promise.resolve(reg.update()).catch(() => {});
         };
         if (doc && typeof doc.addEventListener === "function")
-          doc.addEventListener("visibilitychange", () => { if (doc.visibilityState === "visible") check(); });
-        if (typeof reg.update === "function") { last = Date.now(); return reg.update(); }
+          doc.addEventListener("visibilitychange", () => { if (doc.visibilityState === "visible") check(60000); });
+        if (every) { const h = every(() => check(290000), 300000); if (h && typeof h.unref === "function") h.unref(); }
+        if (typeof reg.update === "function") { last = now(); return reg.update(); }
       })
       .catch(() => {});
     return true;
