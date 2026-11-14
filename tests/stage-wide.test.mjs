@@ -64,6 +64,29 @@ test("mountFit: d writes #gl's wider box and data-gk; a touch layout keeps #c's 
   } finally { globalThis.window = g0.window; globalThis.document = g0.document; globalThis.getComputedStyle = g0.gcs; }
 });
 
+test("fit.wash: the strips #gl overhangs carry the source's edge column (the washes reach the near corners); hidden off the wider stage", () => {
+  const strip = () => { const e = { hidden: true, width: 0, height: 0, style: {}, calls: [] }; e.getContext = () => ({ clearRect: (...a) => e.calls.push(["clear", ...a]), drawImage: (s, ...a) => e.calls.push(["draw", s, ...a]) }); return e; };
+  const gl = { style: {}, dataset: {}, hidden: false }, wl = strip(), wr = strip(), hs = {};
+  const win = { innerWidth: 1366, innerHeight: 768, addEventListener(t, f) { (hs[t] = hs[t] || []).push(f); } };
+  const g0 = { window: globalThis.window, document: globalThis.document, gcs: globalThis.getComputedStyle };
+  globalThis.window = win;
+  globalThis.document = { getElementById: (id) => ({ gl, wl, wr })[id] || null, body: { setAttribute() {} } };
+  globalThis.getComputedStyle = () => ({ borderLeftWidth: "1px", borderTopWidth: "1px" });
+  try {
+    const cv = { width: 600, height: 520, style: {} }, fit = mountFit(cv), s = fitBox(1366, 768, false, 600, 520).s, G = glBox(600 * s, 1, "d", 1366);
+    fit.wash(cv, 7);
+    assert.ok(!wl.hidden && !wr.hidden);
+    assert.equal(wl.style.left, 1 - G.gx + "px"); assert.equal(wl.style.width, G.gx + "px");
+    assert.equal(wr.style.left, 600 * s - 1 + "px"); assert.equal(wl.style.top, "1px"); assert.equal(wl.style.height, 520 * s - 2 + "px");
+    assert.deepEqual(wl.calls.at(-1), ["draw", cv, 7, 0, 1, 520, 0, 0, 1, 520]);
+    assert.deepEqual(wr.calls.at(-1), ["draw", cv, 592, 0, 1, 520, 0, 0, 1, 520]);
+    fit.wash(null); assert.ok(wl.hidden && wr.hidden, "null hides");
+    gl.hidden = true; fit.wash(cv, 7); assert.ok(wl.hidden, "#gl hidden (CLASSIC / PIXEL): no strips");
+    gl.hidden = false; win.ontouchstart = null; win.innerWidth = 844; win.innerHeight = 390; fit(); fit.wash(cv, 7);
+    assert.ok(wl.hidden && wr.hidden, "l: no wider stage, no strips");
+  } finally { globalThis.window = g0.window; globalThis.document = g0.document; globalThis.getComputedStyle = g0.gcs; }
+});
+
 /* a stub canvas (no getContext: stub mode, no GL) that carries fit's data-gk */
 const mk = (gk) => { const cv = { style: {}, dataset: gk ? { gk: String(gk) } : {} }; return { cv, r: createRenderer3D(cv, null, { audio: null }) }; };
 const play = () => { const w = createWorld(9, 1); loadLevel(w, 1, false); w.state = "PLAY"; return w; };

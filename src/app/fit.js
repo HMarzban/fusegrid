@@ -247,7 +247,7 @@ function snapPxOrigin(el) {
 }
 
 export function mountFit(canvas) {
-  let was, cap = Infinity, shG = null, shO = null, shM = 0, shLay = "d", stG = null, hG = null, hQ = 1, hGen = 0, hudOn = false, hBW = 1, hBH = 1;
+  let wG = null, was, cap = Infinity, shG = null, shO = null, shM = 0, shLay = "d", stG = null, hG = null, hQ = 1, hGen = 0, hudOn = false, hBW = 1, hBH = 1;
   const shEl = () => (typeof document !== "undefined" && document.getElementById && document.getElementById("sh")) || null;
   const hudEl = () => (typeof document !== "undefined" && document.getElementById && document.getElementById("hud")) || null;
   const fit = () => {
@@ -266,7 +266,8 @@ export function mountFit(canvas) {
       else { gl.style.width = canvas.style.width; if (gl.style.left) gl.style.left = ""; }
       if (gl.dataset) { if (G.gk > 1) gl.dataset.gk = String(G.gk); else delete gl.dataset.gk; }
       gl.style.height = canvas.style.height;
-    }
+      wG = G.gk > 1 ? { gx: G.gx, sw: canvas.width * s, sh: canvas.height * s, bx, by } : null;
+    } else wG = null;
     const body = document.body, tp = document.getElementById && document.getElementById("touchpad");
     const game = !!tp && !tp.hidden, flip = was !== undefined && game !== was;
     was = game;
@@ -378,6 +379,27 @@ export function mountFit(canvas) {
   };
   fit.hudGeo = () => hG;
   fit.hudGen = () => hGen; // bumped whenever #hud's backing is reassigned (which clears it): the HUD repaints then, change or not
+  /* REAL 3D's wider stage (glBox): the board's washes (the title's veil, a blast's flash, PAUSE's and the run ends' veils) are whole-box
+     fills on #c or on the stage (#sh, on 2), so they would stop at the board box and leave the rim's near corners bare beside them. #wl /
+     #wr, the two strips #gl overhangs (its content box beyond #c's), carry the source's own column x (its backing px; the right one mirrored)
+     across, once a frame after the source paints, so a wash reads as the whole stage's. src null (or no wider stage on screen) hides them. */
+  const wEl = (id) => (typeof document !== "undefined" && document.getElementById && document.getElementById(id)) || null;
+  fit.wash = (src, x = 0) => {
+    const gl = wEl("gl"), on = !!(src && wG && gl && !gl.hidden && src.width > 2 * x + 1 && src.height > 0);
+    ["wl", "wr"].forEach((id, i) => {
+      const el = wEl(id);
+      if (!el) return;
+      if (!on) { if (!el.hidden) el.hidden = true; return; }
+      const h = src.height | 0, st = { left: i ? wG.sw - wG.bx : wG.bx - wG.gx, top: wG.by, width: wG.gx, height: wG.sh - 2 * wG.by };
+      if (el.width !== 1) el.width = 1;
+      if (el.height !== h) el.height = h;
+      for (const k in st) if (el.style[k] !== st[k] + "px") el.style[k] = st[k] + "px";
+      if (el.hidden) el.hidden = false;
+      const c = el.getContext("2d");
+      c.clearRect(0, 0, 1, h);
+      c.drawImage(src, i ? src.width - 1 - x : x, 0, 1, h, 0, 0, 1, h);
+    });
+  };
   fit.setPxCap = (c) => { const v = c > 0 ? c : Infinity; if (v !== cap) { cap = v; fit(); } };
   fit();
   if (typeof window !== "undefined") {

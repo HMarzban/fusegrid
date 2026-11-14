@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — REAL 3D's wider desktop stage (veto 2, option D)
+- On `d`, `#gl` is 1.12 x the board box (fit.js `glBox`), frame and buffer widened in the wrapper, rig/lens/rim/presets untouched: the near corners land on screen (bezel 1.0746 -> 0.9594), board pixels unchanged (`tests/stage-wide.test.mjs`, three.test §4b-wide). `#gl` wears the frame; `fit.wash` carries veils and the flash over the strips; the HUD tile tip clears them. Not bumped (lead bumps CACHE_NAME). Open: a wheel over a strip does not dolly; the 0.18 s close-call border stays the board box's.
+
 ## 2026-11-14 — v215 live; v216 scopes the self-repair
 - v215 pushed on the owner's "Yes, push v215" (Pages CI green). An automated security review then found the heal unregistered EVERY service worker on the shared `hmarzban.github.io` origin (the owner's other Pages projects too) and the error match used a bare origin prefix (a look-alike host passed) plus a loose message regex. v216: unregister only `scope === base`, filename must sit under the game's folder, a filename-less error must be a `SyntaxError`; tests first, re-verified by poisoning main.js in WebKit and Chromium (scope equals the folder in both), 725 tests. Build tag examples in AGENTS / README / architecture moved to v216. Pushed on the owner's "Yes, push v216"; Pages CI green, live `sw.js` v216.
 
