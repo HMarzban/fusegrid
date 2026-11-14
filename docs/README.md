@@ -24,6 +24,7 @@ something another doc owns, that's a bug. Replace the copy with a link.
 | How we treat each other | [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) | Everyone |
 | How to report a vulnerability | [SECURITY.md](../SECURITY.md) | Everyone |
 | What the opt-in play stats send, and how to switch them off | [privacy.md](privacy.md) | Players |
+| Which pads and browsers were measured, and what each does | [controllers.md](controllers.md) | Contributors |
 | Why a past decision was made | [Design history](#-design-history) below | Anyone digging |
 | Pickup and foe names and help text | The game's own `POWER` and foe tables, shown in **GUIDE** in-game | Players |
 

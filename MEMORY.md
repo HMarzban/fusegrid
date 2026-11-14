@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — pad probe and the controller matrix (plan Task 4)
+- `tools/pads/probe.html` (dev-only, not in SRC) walks a pad and prints its `KNOWN` row; `docs/controllers.md` is the matrix, seeded from three real measurements, all else not measured. Step 3 (owner runs the probe on every pad) is open.
+
 ## 2026-11-14 — CONNECT row rulings applied (plan Task 3)
 - SW2_WORDS.help is "It needs a USB cable. Your browser asks once which controller." (Task 7 extends it); DESK_SHORT now only for a desk already at 0.8 <= u < 1, so no window changes form (a 648-664 tall touch shell box had flipped phone -> desk).
 

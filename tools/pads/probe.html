@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pad probe</title>
+<style>
+:root{--bg:#f4efe6;--fg:#1d1a17;--mut:#6b6358;--card:#fffaf0;--ln:#cfc6b6;--ac:#b8470f}
+@media (prefers-color-scheme:dark){:root{--bg:#14110f;--fg:#efe7d8;--mut:#a39a8a;--card:#1e1a17;--ln:#3a342d;--ac:#ffb15a}}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif;max-width:720px;margin-inline:auto}
+h1{font-size:20px;margin:0 0 4px}
+p{margin:6px 0;color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:8px;padding:12px;margin:12px 0}
+button{font:inherit;min-height:44px;padding:0 16px;border-radius:6px;border:1px solid var(--ln);background:var(--card);color:var(--fg);margin:4px 8px 4px 0}
+button.go{background:var(--ac);color:var(--bg);border-color:var(--ac);font-weight:700}
+#step{font-size:22px;font-weight:700;color:var(--ac)}
+pre{margin:0;white-space:pre-wrap;word-break:break-all;font:13px/1.4 ui-monospace,monospace}
+</style>
+</head>
+<body>
+<h1>Pad probe</h1>
+<p>Dev tool. Nothing is stored or sent. Connect one pad, press a button on it, then start.</p>
+<div class="card"><pre id="env">no pad yet</pre></div>
+<div class="card">
+<div id="step">Press a button on the pad first</div>
+<p id="hint"></p>
+<button class="go" id="start">Start</button><button id="skip" disabled>Skip step</button><button id="restart" disabled>Restart</button>
+</div>
+<div class="card"><pre id="live"></pre></div>
+<div class="card"><pre id="out">The KNOWN row and the matrix facts print here.</pre></div>
+<script>
+const STEPS=[
+["SOUTH","b",0],["EAST","b",1],["WEST","b",2],["NORTH","b",3],["L SHOULDER","b",4],["R SHOULDER","b",5],["L TRIGGER","b",6],["R TRIGGER","b",7],["SELECT","b",8],["START","b",9],["L-STICK press","b",10],["R-STICK press","b",11],["D-PAD up","b",12],["D-PAD down","b",13],["D-PAD left","b",14],["D-PAD right","b",15],["HOME","b",16],
+["L-STICK up (hold fully)","s",0,"y"],["L-STICK right (hold fully)","s",0,"x"],["R-STICK up (hold fully)","s",1,"y"],["R-STICK right (hold fully)","s",1,"x"]];
+const $=(i)=>document.getElementById(i);
+const pad=()=>{const l=navigator.getGamepads?Array.from(navigator.getGamepads()):[];return l.find((g)=>g&&g.connected)||null};
+const brands=()=>{const u=navigator.userAgentData;return u&&u.brands?u.brands.map((b)=>b.brand+" "+b.version).join(", ")+(u.platform?" | "+u.platform:""):navigator.userAgent};
+let run=null,rest=null,res=null,seen=false;
+const sg=(v)=>v<0?-1:1;
+function begin(){const g=pad();if(!g)return;rest=Array.from(g.axes);res={b:new Array(17).fill(null),hat:{},ax:{},peak:{},rest:rest.map((v)=>+v.toFixed(3))};run={i:0,base:snap(g),best:null};show()}
+const snap=(g)=>({b:Array.from(g.buttons,(x)=>x.pressed||x.value>0.5),a:Array.from(g.axes)});
+function show(){const s=STEPS[run.i];$("step").textContent=(run.i+1)+"/"+STEPS.length+"  "+s[0];$("hint").textContent=s[1]==="b"?"Press and release it. Release everything before the next step.":"Push it and hold it at its limit until the step moves on.";$("skip").disabled=false;$("restart").disabled=false;run.base=snap(pad()||{buttons:[],axes:[]});run.best=null;run.wait=true}
+function next(){run.i++;if(run.i>=STEPS.length){finish();return}show()}
+function tick(){
+const g=pad();
+if(g){if(!seen){seen=true;$("env").textContent="engine: "+brands()+"\nid: "+g.id+"\nmapping: "+(g.mapping||"(empty)")+"\nbuttons: "+g.buttons.length+"  axes: "+g.axes.length+"\nvibration actuator: "+(g.vibrationActuator?g.vibrationActuator.type||"yes":"none")+"\nhapticActuators: "+((g.hapticActuators||[]).length)}
+$("live").textContent="buttons down: "+Array.from(g.buttons,(x,i)=>x.pressed||x.value>0.5?i:-1).filter((i)=>i>=0).join(",")+"\naxes: "+Array.from(g.axes,(v)=>v.toFixed(2)).join("  ");
+$("start").disabled=false;
+if(run&&run.i<STEPS.length)probeStep(g)}
+requestAnimationFrame(tick)}
+function probeStep(g){
+const s=STEPS[run.i],now=snap(g);
+if(s[1]==="b"){
+const hits=[];now.b.forEach((d,i)=>{if(d&&!run.base.b[i])hits.push(i)});
+if(hits.length&&run.wait===true){res.b[s[2]]=hits[0];run.wait="rel";run.got=hits}
+let ad=-1,ds=0;now.a.forEach((v,i)=>{const d=v-rest[i];if(Math.abs(d)>0.5&&Math.abs(d)>Math.abs(ds)){ad=i;ds=d}});
+if(ad>=0&&run.wait===true&&s[0].startsWith("D-PAD")){res.hat[s[0]]={axis:ad,value:+now.a[ad].toFixed(3)};run.wait="rel";res.b[s[2]]=null}
+if(run.wait==="rel"&&!now.b.some(Boolean)&&!now.a.some((v,i)=>Math.abs(v-rest[i])>0.4))next()
+}else{
+let ad=-1,ds=0;now.a.forEach((v,i)=>{const d=v-rest[i];if(Math.abs(d)>Math.abs(ds)){ad=i;ds=d}});
+if(Math.abs(ds)>0.5){if(!run.best||Math.abs(ds)>=Math.abs(run.best.ds))run.best={ad,ds,v:now.a[ad]}}
+else if(run.best&&Math.abs(ds)<0.25){const k=s[3]+s[2];res.ax[k]={axis:run.best.ad,dir:sg(run.best.ds)};res.peak[k]=+Math.abs(run.best.ds).toFixed(3);next()}}
+}
+function finish(){
+$("step").textContent="Done";$("hint").textContent="Copy everything below into the controller matrix.";$("skip").disabled=true;
+const g=pad()||{id:"?",buttons:[],axes:[]};
+const id=String(g.id),m=id.match(/(?:vendor:\s*|^)([0-9a-f]{4})[\s-]+(?:product:\s*)?([0-9a-f]{4})/i)||id.match(/([0-9a-f]{4})\W+(?:product:\s*)?([0-9a-f]{4})/i);
+const re=m?"/"+m[1].toLowerCase()+"\\W+(product:\\s*)?"+m[2].toLowerCase()+"/i":"/"+id.replace(/[.*+?^${}()|[\]\\\/]/g,"\\$&")+"/i";
+const lx=res.ax.x0,ly=res.ax.y0,rx=res.ax.x1,ry=res.ax.y1;
+const A=[[lx?lx.axis:-1,lx?lx.dir:1],[ly?ly.axis:-1,ly?-ly.dir:1],[rx?rx.axis:-1,rx?rx.dir:1],[ry?ry.axis:-1,ry?-ry.dir:1]];
+const pk=Object.values(res.peak).filter((v)=>v>0),min=pk.length?Math.min(...pk):1;
+const k=Math.max(1,Math.round(100/min)/100);
+const row="{ re: "+re+", nb: "+g.buttons.length+", na: "+g.axes.length+", b: "+JSON.stringify(res.b.map((v)=>v===null?-1:v)).replace(/,/g,", ")+", a: "+JSON.stringify(A).replace(/,/g,", ")+", k: "+k+" },";
+const missing=res.b.map((v,i)=>v===null?i:-1).filter((i)=>i>=0);
+$("out").textContent="KNOWN row:\n"+row+"\n\nraw facts:\nengine: "+brands()+"\nid: "+id+"\nmapping: "+(g.mapping||"(empty)")+"\nbuttons: "+g.buttons.length+" axes: "+g.axes.length+"\nvibration: "+(g.vibrationActuator?"present":"none")+"\naxes at rest: "+res.rest.join(", ")+"\nstick peaks (|delta|): "+JSON.stringify(res.peak)+"\nsticks: "+JSON.stringify(res.ax)+"\nhat-style d-pad (axis, not button): "+JSON.stringify(res.hat)+"\nstandard order, -1 = no button seen (skipped or hat): "+JSON.stringify(missing)+"\nsuggested matrix cell: "+(g.mapping==="standard"?"standard":(missing.length||Object.keys(res.hat).length?"hat / rebind / known (check the row)":"known"))}
+$("start").onclick=begin;
+$("restart").onclick=begin;
+$("skip").onclick=()=>{if(run&&run.i<STEPS.length)next()};
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
