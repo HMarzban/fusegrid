@@ -490,6 +490,9 @@ for (const state of ["none", "lost"]) {
   check("RESET armed", w.p.view(1).armed === true && w.p.view(1).row === 7);
   w.sw = { shown: true, state: "idle" }; w.p.tick(2, false);
   check("the row appears while the page is open: the focus stays on RESET by id (never slides onto SW2), the arm drops", w.p.view(2).row === 8 && w.p.view(2).armed === false, J([w.p.view(2).row, w.p.view(2).armed]));
+  const z = open("pad", { sw: { shown: false, state: "idle" } }); z.p.pick(7); z.p.tick(1, false);
+  z.sw = { shown: true, state: "idle" }; z.p.open("pad"); z.p.tick(2, false);
+  check("the row appears while the page is shut: re-opened, the focus is BOMB (row 1), not the old visit's row", z.p.view(2).row === 1, z.p.view(2).row);
 }
 
 console.log("\n  CONTROLS PAGE RESULT: " + pass + " PASS / " + fail + " FAIL");

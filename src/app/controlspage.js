@@ -153,7 +153,7 @@ export function createControlsPage({ get, set, padView, say, device, sw2 }) {
     /** Enters the page on the last-used device's tab; touch opens CONTROLLER. */
     open(d) {
       cap.cancel();
-      dev = d; tabId = d === "key" ? "key" : "pad"; row = 1; armed = false; echo = null; held = null; padWas = padView().state; st = null; restAt = 0; peaks = [];
+      dev = d; tabId = d === "key" ? "key" : "pad"; row = 1; armed = false; echo = null; held = null; padWas = padView().state; st = null; restAt = 0; peaks = []; seen = null; // a row that appeared while the page was shut moves no focus
       clearNote();
       say(TAB_SAY[tabId]);
     },
