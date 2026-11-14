@@ -66,9 +66,9 @@ function fixedWhy(code) {
 export function refuseKey(code, key) {
   return fixedWhy(code) || letterWhy(letterOf(code, key));
 }
-/** "" when the pad id can be bound, else the exact refusal line. */
-export function refuseBtn(id) {
-  if (id === "START") return "START IS PAUSE · PICK ANOTHER";
+/** "" when the pad id can be bound, else the exact refusal line; start = START's printed word on the controller in hand (padfamily refuseBtnFor). */
+export function refuseBtn(id, start = "START") {
+  if (id === "START") return start + " IS PAUSE · PICK ANOTHER";
   if (id === "LS" || id === "RS") return "STICKS ALWAYS MOVE · PICK ANOTHER";
   if (id === "dU" || id === "dD" || id === "dL" || id === "dR") return "D-PAD ALWAYS MOVES · PICK ANOTHER";
   return CAPTURABLE.includes(id) ? "" : "THAT BUTTON CANNOT BE BOUND · PICK ANOTHER";

@@ -526,6 +526,18 @@ check("source grep (tripwire): no string literal in src/ carries an old word out
   check("HOW TO's touch note names the touch D-PAD (never PAD alone: a controller is CONTROLLER)", W.GUIDE_WORDS.NOTE_TAP === "TOUCH · D-PAD MOVES · RIGHT BUTTON BOMBS" && !/(^|[^-])\bPAD\b/.test(W.GUIDE_WORDS.NOTE_TAP));
 }
 
+/* ---- R-LABELS fix round B (2026-11-14): the family tables in src/app pinned to their render twins; the family-aware lines ---- */
+{
+  const PF = await import("../src/app/padfamily.js"), MA = await import("../src/app/menuapp.js");
+  check("padfamily FAMILY_LABEL is words.js PAD_FAMILY_WORDS word for word", J(PF.FAMILY_LABEL) === J(W.PAD_FAMILY_WORDS), J(PF.FAMILY_LABEL));
+  check("padfamily GLYPH_CHAR is words.js PAD_GLYPH_CHAR, and its words are the kit's painted glyph words", J(PF.GLYPH_CHAR) === J(W.PAD_GLYPH_CHAR) && J(Object.keys(W.PAD_GLYPH_CHAR)) === J(Object.keys((await import("../src/render/kit/paint.js")).PAD_GLYPH)), J(PF.GLYPH_CHAR));
+  const ph = (f) => W.padHelp(f);
+  check("LEVEL SELECT's pad help names the triggers the controller in hand prints; a generic pad reads TRIGGERS as before",
+    ph("xbox") === "LT RT pick a modifier, Y toggles it." && ph("playstation") === "L2 R2 pick a modifier, TRIANGLE toggles it." && ph("nintendo") === "ZL ZR pick a modifier, X toggles it." && ph("generic") === W.LEVEL_WORDS.PAD_HELP && ph() === "TRIGGERS pick a modifier, NORTH toggles it.", J(["xbox", "playstation", "nintendo"].map(ph)));
+  check("the capture refusal for START: generic as before, every family its own START word", PF.refuseBtnFor("START", "generic") === "START IS PAUSE · PICK ANOTHER" && ["xbox", "playstation", "nintendo"].every((f) => PF.refuseBtnFor("START", f) === W.padWord("START", f) + " IS PAUSE · PICK ANOTHER"));
+  check("SETTINGS' ANALYTICS pad note names the keyboard (an Xbox pad has its own Y), menuapp's literal is words.js ANA_NOTE", MA.ANA_NOTE === W.SETTINGS_WORDS.ana && /\bKEY\b/.test(W.SETTINGS_WORDS.ana) && /\bY\b/.test(W.SETTINGS_WORDS.ana) && /\bN\b/.test(W.SETTINGS_WORDS.ana), MA.ANA_NOTE);
+}
+
 /* ---- analytics: event names and params byte-identical to v202 before the renames (captured at 4677b8e) ---- */
 {
   const m = new Map([["nb.analytics.v1", "1"]]);

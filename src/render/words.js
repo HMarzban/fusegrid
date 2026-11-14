@@ -132,6 +132,7 @@ export const SETTINGS_WORDS = Object.freeze({
   on3d: "CAMERA and BRIGHTNESS are on the list while REAL 3D is your art style.",
   of: OF, row: ROW, change: CHANGE, back: BACK, tapRow: TAP_ROW, build: "BUILD", perf: "PERFORMANCE · BATTERY", on: ON, off: OFF,
   cam: Object.freeze(["STANDARD", "WIDE", "FAR"]), vib: "VIBRATION",
+  ana: "ANSWER THE CARD · Y OR N KEY", // ANALYTICS' pad note (menuapp ANA_NOTE, pinned): the keyboard's keys, never an Xbox pad's own Y
 });
 /* GUIDE (v202 Task 3.5, pages/guide.js): the page titles, the doors' teasers, HOW TO's rules, controls and note, the foot's verbs, ENEMIES'
    points words, hint and tooltip, FLOOR's head and its placeholder lines. */
@@ -224,5 +225,7 @@ export const padWord = (id, family) => { const t = PAD_FAMILY_WORDS[family] || P
 export const padWordIn = (id, words) => padWord(id, words && words.family);
 /** CONTROLS' pad rule in the words of the controller in hand: its own SOUTH, START and EAST (a generic pad: the rule as written). */
 export const rulePad = (family) => (family && family !== "generic" && PAD_FAMILY_WORDS[family] ? CONTROLS_WORDS.RULE_PAD.replace("SOUTH", padWord("S", family)).replace("START", padWord("START", family)).replace("EAST", padWord("E", family)) : CONTROLS_WORDS.RULE_PAD);
-/** LEVEL SELECT's controller shortcut line in the words of the controller in hand (its NORTH). */
-export const padHelp = (family) => (family && family !== "generic" && PAD_FAMILY_WORDS[family] ? LEVEL_WORDS.PAD_HELP.replace("NORTH", padWord("N", family)) : LEVEL_WORDS.PAD_HELP);
+/** LEVEL SELECT's controller shortcut line in the words of the controller in hand (its triggers and its NORTH). */
+export const padHelp = (family) => (family && family !== "generic" && PAD_FAMILY_WORDS[family] ? LEVEL_WORDS.PAD_HELP.replace("TRIGGERS", padWord("TRL", family) + " " + padWord("TRR", family)).replace("NORTH", padWord("N", family)) : LEVEL_WORDS.PAD_HELP);
+/** PlayStation's four face words as the characters a DOM keycap shows (src/app/padfamily.js GLYPH_CHAR, pinned equal; the kit paints them, kit/paint.js PAD_GLYPH). */
+export const PAD_GLYPH_CHAR = Object.freeze({ CROSS: "✕", CIRCLE: "○", SQUARE: "□", TRIANGLE: "△" });

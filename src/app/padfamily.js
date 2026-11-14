@@ -1,19 +1,23 @@
 // Which controller is in the player's hands, and the words its buttons wear (owner ruling R-LABELS, 2026-11-14). Pure. The id is matched here and
 // nowhere else: never printed, never stored, never sent. Positions stay the ids, the binds and the store; only what a player reads follows the family.
-import { BTN } from "./controls.js";
+import { BTN, refuseBtn } from "./controls.js";
 
 export const FAMILIES = Object.freeze(["xbox", "playstation", "nintendo", "generic"]);
 const VENDOR = Object.freeze({ "045e": "xbox", "054c": "playstation", "057e": "nintendo" });
 const NAMED = [[/xbox/i, "xbox"], [/dualsense|dualshock|playstation/i, "playstation"], [/pro controller|joy-con|switch/i, "nintendo"]];
 
-/** "xbox" | "playstation" | "nintendo" | "generic" from a Gamepad id: the vendor id first (Chrome's "Vendor: 045e", Firefox's leading "045e-028e-"), then the name. */
+const memo = new Map();
+/** "xbox" | "playstation" | "nintendo" | "generic" from a Gamepad id: the vendor id first (Chrome's "Vendor: 045e", Firefox's leading "045e-028e-",
+    unpadded on macOS: "54c-9cc-"), then the name. Memoized per id string: the poller asks every frame. */
 export function familyOf(id) {
   if (typeof id !== "string" || !id) return "generic";
-  const m = /vendor:\s*([0-9a-f]{4})\b/i.exec(id) || /^([0-9a-f]{4})-[0-9a-f]{4}-/i.exec(id);
-  const v = m && VENDOR[m[1].toLowerCase()];
-  if (v) return v;
-  for (const [re, f] of NAMED) if (re.test(id)) return f;
-  return "generic";
+  let f = memo.get(id);
+  if (f) return f;
+  const m = /vendor:\s*([0-9a-f]{4})\b/i.exec(id) || /^([0-9a-f]{1,4})-[0-9a-f]{1,4}-/i.exec(id);
+  f = (m && VENDOR[m[1].toLowerCase().padStart(4, "0")]) || (NAMED.find(([re]) => re.test(id)) || [, "generic"])[1];
+  if (memo.size >= 8) memo.clear();
+  memo.set(id, f);
+  return f;
 }
 
 const IDS = ["S", "E", "W", "N", "SHL", "SHR", "TRL", "TRR", "SELECT", "START"];
@@ -37,6 +41,9 @@ export const btnWord = (id, f) => (FAMILY_LABEL[famOf(f)][id] || BTN[id] || { w:
 export const btnSay = (id, f) => { const q = FAMILY_LABEL[famOf(f)][id]; return q ? q.a : (BTN[id] || { w: id }).w; };
 /** The shoulders as the tab keys read: SHOULDERS on a generic pad, else the pair (LB RB, L1 R1, L R). */
 export const tabWord = (f) => (famOf(f) === "generic" ? "SHOULDERS" : btnWord("SHL", f) + " " + btnWord("SHR", f));
-const GLYPH_CHAR = Object.freeze({ CROSS: "✕", CIRCLE: "○", SQUARE: "□", TRIANGLE: "△" });
+/** The capture's refusal for a pad id, START named the way the controller in hand prints it (MENU, OPTIONS, +); a generic pad: refuseBtn's line. */
+export const refuseBtnFor = (id, f) => refuseBtn(id, btnWord("START", f));
+/** PlayStation's four face words as the characters a DOM keycap shows (words.js PAD_GLYPH_CHAR, pinned in tests/words.test.mjs). */
+export const GLYPH_CHAR = Object.freeze({ CROSS: "✕", CIRCLE: "○", SQUARE: "□", TRIANGLE: "△" });
 /** A DOM keycap's legend (the cards are HTML, not the kit painter): PlayStation's faces as the ✕ ○ □ △ characters, every other button its printed word. */
 export const btnCap = (id, f) => { const w = btnWord(id, f); return GLYPH_CHAR[w] || w; };

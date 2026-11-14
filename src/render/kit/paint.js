@@ -65,28 +65,31 @@ const legend = (c, s, cx, cy, font, col) => {
   c.font = font; c.fillStyle = col; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(s, cx, cy);
 };
 
-/* a painted text run (a foot line, a toast line) that names a PlayStation face button draws its glyph inline, at the run's cap height; the word stays
-   in the text the probe and the live region read. A run with no such word is the plain kit text, call for call. */
+/* a painted text run (a foot line, a toast line) that names a PlayStation face button draws its glyph inline, at the run's cap height, ONLY when the caller
+   says the run carries a PlayStation pad's words (ps): copy that merely holds an uppercase CROSS stays text on every other pad. The word stays in the
+   text the probe and the live region read. A run without ps, or with no such word, is the plain kit text, call for call. */
 const GLYPH_RE = /\b(CROSS|CIRCLE|SQUARE|TRIANGLE)\b/;
-/** True when s holds a PlayStation face word a painted run draws as its glyph. */
+/** True when s holds a PlayStation face word a painted run would draw as its glyph (the caller still decides, runW / runText's ps). */
 export const hasPadGlyph = (s) => GLYPH_RE.test(String(s));
 const runZ = (font) => Math.round(pxOf(font) * 1.1);
 const parts = (s) => String(s).split(GLYPH_RE).reduce((a, p) => (p === "" ? a : [...a, p]), []);
-/** The drawn width of a text run in font: measure() itself when it holds no glyph word, else its words plus each glyph's own width. */
-export function runW(c, font, s) {
-  if (!hasPadGlyph(s)) return measure(c, font, s);
+/** The drawn width of a text run in font: measure() itself unless ps (a PlayStation pad's words) and it holds a glyph word, else its words plus each glyph's width. */
+export function runW(c, font, s, ps) {
+  if (!ps || !hasPadGlyph(s)) return measure(c, font, s);
   return parts(s).reduce((w, p) => w + (PAD_GLYPH[p] ? runZ(font) : measure(c, font, p)), 0);
 }
-/** Paints a text run at x y (middle baseline, align left / center / right) with each PlayStation face word as its glyph; no such word: kit text(). */
-export function runText(c, s, x, y, font, col, align) {
-  if (!hasPadGlyph(s)) return kitText(c, s, x, y, font, col, align);
-  const w = runW(c, font, s), z = runZ(font);
+/** Paints a text run at x y (middle baseline, align left / center / right); with ps each PlayStation face word is its glyph, and the context's
+    textAlign / textBaseline are left as found. No ps, or no such word: kit text(). */
+export function runText(c, s, x, y, font, col, align, ps) {
+  if (!ps || !hasPadGlyph(s)) return kitText(c, s, x, y, font, col, align);
+  const w = runW(c, font, s, ps), z = runZ(font), ta = c.textAlign, tb = c.textBaseline;
   let at = align === "center" ? x - w / 2 : align === "right" ? x - w : x;
   for (const p of parts(s)) {
     if (PAD_GLYPH[p]) { if (!noText()) glyph(c, PAD_GLYPH[p], at, y - z / 2, z, col); at += z; continue; }
     kitText(c, p, at, y, font, col, "left");
     at += measure(c, font, p);
   }
+  c.textAlign = ta; c.textBaseline = tb;
 }
 
 export function key(c, x, y, w, h, kind, o = {}) {

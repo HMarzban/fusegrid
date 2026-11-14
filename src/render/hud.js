@@ -25,7 +25,7 @@ import {FOES, POWER} from "../core/entities.js";
 import {CFG, key as cell} from "../core/config.js";
 import {TILE_NAME, featKindOf, featProfile, tileTip} from "../core/feat.js";
 import {CONST, worldTokens} from "./kit/tokens.js";
-import {plate, key as kkey, runW, runText, hasPadGlyph} from "./kit/paint.js";
+import {plate, key as kkey, runW, runText, hasPadGlyph, PAD_GLYPH} from "./kit/paint.js";
 import {T, DEV, measure, textScale} from "./kit/type.js";
 import {layer, canMake, keyOf, touch as touchLayer} from "./kit/cache.js";
 import * as P from "./kit/probe.js";
@@ -75,7 +75,7 @@ export function toastState(world, o) {
   const q = o && o.padToast;
   if (!q || world.state !== "PLAY") return null;
   const head = q.k === "lost" ? PAD_TOAST.LOST : q.k === "back" ? PAD_TOAST.BACK : PAD_TOAST.READY, body = q.k === "lost" ? PAD_TOAST.LOST_BODY : PAD_TOAST.body(q.move, q.bomb);
-  return {s: head + " · " + body, alt: PAD_TOAST.SHORT + " · " + head.slice(PAD_TOAST.SHORT.length + 1) + " · " + body, short: "", a: q.a, t: null, pad: true};
+  return {s: head + " · " + body, alt: PAD_TOAST.SHORT + " · " + head.slice(PAD_TOAST.SHORT.length + 1) + " · " + body, short: "", a: q.a, t: null, pad: true, ps: !!PAD_GLYPH[q.bomb]}; // ps: BOMB names a PlayStation face (only that family prints one), so its glyph paints
 }
 /* a floor-tile coach tip and its nearest tile of that kind (grid coords) to the player; null for any other tip */
 const TILEK = (k) => (k === "BRAKE" ? "GLIDE" : k && TILE_NAME[k] ? k : null);
@@ -169,13 +169,13 @@ function stripOf(geo) {
 }
 const TIPT = 8;
 /* words into lines of at most w; a break at a " · " drops the separator, so no line starts or ends with one */
-function wrap(c, s, font, w) {
+function wrap(c, s, font, w, ps) {
   const out = [], end = (l) => l.replace(/ ·$/, "");
   let line = "";
   for (const wd of String(s).split(" ")) {
     if (wd === "·" && !line) continue;
     const t = line ? line + " " + wd : wd;
-    if (line && runW(c, font, t) > w) { out.push(end(line)); line = wd === "·" ? "" : wd; } else line = t;
+    if (line && runW(c, font, t, ps) > w) { out.push(end(line)); line = wd === "·" ? "" : wd; } else line = t;
   }
   if (line) out.push(end(line));
   return out;
@@ -198,14 +198,14 @@ function tipGeomOf(c, G, geo, st, box, s, nameOnly, np) {
   const lay = geo.lay, D = DEV[lay === "d" ? "d" : "p"], K = textScale(), [name, rest] = tipOf(s), [, low] = tipOf(st.tip.short || ""), pad = 12, ST = geo.stage;
   const fl = Math.min(D.bod, TIP_FLOOR[lay === "d" ? "d" : "p"] / K);
   const words = [[rest, D.bod], [rest, fl], [low, D.bod], [low, fl]].filter(([b, px], i, a) => b && !a.slice(0, i).some(([b2, p2]) => b2 === b && p2 === px));
-  const size = (w, body, px) => { const lines = body ? wrap(c, body, T.body(px), w - 2 * pad) : []; return {lines, px, body, h: 10 + np * K + (lines.length ? 6 + lines.length * px * K * 1.25 : 0) + 12}; };
+  const size = (w, body, px) => { const lines = body ? wrap(c, body, T.body(px), w - 2 * pad, st.tip.ps) : []; return {lines, px, body, h: 10 + np * K + (lines.length ? 6 + lines.length * px * K * 1.25 : 0) + 12}; };
   /* the first step of `steps` that fits a w x maxH inner box, or null; the toast, and any tip beside REAL 3D's wider stage (its column ~42 px
      narrower, box.gx), may wrap to a third line so the tip keeps its whole words (2026-11-14) */
   const pick = (w, maxH, steps) => {
     if (!(w >= 2 * pad) || !(maxH > 0) || measure(c, T.label(np), name) + 2 * pad > w) return null;
     for (const [body, px] of steps) {
       const z = size(w, body, px);
-      if (z.lines.length <= (st.tip.pad || box.gx > 0 ? 3 : 2) && z.h <= maxH + 1e-6 && z.lines.every((l) => runW(c, T.body(px), l) + 2 * pad <= w + 1e-6)) return z;
+      if (z.lines.length <= (st.tip.pad || box.gx > 0 ? 3 : 2) && z.h <= maxH + 1e-6 && z.lines.every((l) => runW(c, T.body(px), l, st.tip.ps) + 2 * pad <= w + 1e-6)) return z;
     }
     return null;
   };
@@ -242,7 +242,7 @@ function tipGeomOf(c, G, geo, st, box, s, nameOnly, np) {
     const z = pick(sl.w, sl.maxH, steps);
     if (!z) continue;
     const [inner, lead] = sl.place(z);
-    return {name, np, lines: z.lines, px: z.px, body: z.body === rest ? "whole" : z.body ? "short" : "name", in: inner, box: ring(inner), lead, a: st.tip.a, D};
+    return {name, np, lines: z.lines, px: z.px, body: z.body === rest ? "whole" : z.body ? "short" : "name", in: inner, box: ring(inner), lead, a: st.tip.a, D, ps: !!st.tip.ps};
   }
   return null;
 }
@@ -524,9 +524,9 @@ function tip(c, G, tok, rec, q, look) {
   c.font = T.body(bp); c.fillStyle = CONST.t2;
   t.lines.forEach((l, i) => {
     const y = ly + np * K / 2 + 6 + (i + 0.5) * bp * K * 1.25;
-    if (hasPadGlyph(l)) { runText(c, l, r.x + 12, y, T.body(bp), CONST.t2, "left"); c.font = T.body(bp); c.fillStyle = CONST.t2; c.textAlign = "left"; } // the toast's BOMB ✕ on a PlayStation pad
+    if (t.ps && hasPadGlyph(l)) { runText(c, l, r.x + 12, y, T.body(bp), CONST.t2, "left", true); c.font = T.body(bp); c.fillStyle = CONST.t2; } // the toast's BOMB ✕ on a PlayStation pad
     else c.fillText(l, r.x + 12, y);
-    if (rec) P.text(l, r.x + 12, y - bp * K * 0.36, runW(c, T.body(bp), l), bp * K * 0.72, {role: "body", px: bp * K, col: CONST.t2});
+    if (rec) P.text(l, r.x + 12, y - bp * K * 0.36, runW(c, T.body(bp), l, t.ps), bp * K * 0.72, {role: "body", px: bp * K, col: CONST.t2});
   });
   if (rec) P.rect("tip", r.x, r.y, r.w, r.h, {plate: TIPT, fill: tok.bedA});
   c.globalAlpha = a0;

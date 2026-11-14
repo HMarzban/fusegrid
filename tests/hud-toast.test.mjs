@@ -86,5 +86,5 @@ test("a PlayStation pad's toast paints BOMB with the cross glyph inline, never t
     assert.ok(ts.some((s) => /BOMB $/.test(s)), "BOMB, then the glyph: " + JSON.stringify(ts));
   }
   const c = rec().ctx, f = T.body(18);
-  assert.ok(runW(c, f, "BOMB CROSS") < runW(c, f, "BOMB SOUTH"), "the fit counts the glyph's width, not the word's");
+  assert.ok(runW(c, f, "BOMB CROSS", true) < runW(c, f, "BOMB SOUTH", true), "the fit counts the glyph's width, not the word's");
 });

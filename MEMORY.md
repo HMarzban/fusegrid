@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — R-LABELS review fixes (round B)
+- `familyOf` reads Firefox macOS's unpadded ids (`54c-9cc-`) and memoizes per id; LEVEL SELECT's pad help names LT RT / L2 R2 / ZL ZR; `refuseBtnFor` names START per family (capture never reaches it: START cancels); hints' unread `say` gone; `GLYPH_CHAR` / `FAMILY_LABEL` pinned in words.test; ANALYTICS pad note now `ANSWER THE CARD · Y OR N KEY` (fits one line at 600x520 as before); kit `runW` / `runText` draw glyphs only with the caller's `ps` flag (PAUSE foot, HUD toast) and restore textAlign / textBaseline.
+
 ## 2026-11-14 — switch2 fix A (Task 7 review minors)
 - `switch2.js`: halt writes a zero only after a buzz (quiet at OFF), stop() closes the HID device and wins over auto()/adopt, playEffect with no device resolves complete, dead `cur.me`/`token` removed; four tests.
 
