@@ -1,7 +1,7 @@
 /* The controller toast (owner 2026-11-12: "I connected the controller and it does not a toast or something that show user they can use
    controller"). controlswire writes app.padToast while a run PLAYs; main hands it to the HUD as o.padToast; the HUD shows it in the tile tip's
-   plate and slots (beside the board on a desktop, under it on a portrait phone, the left gutter on a landscape one), never over the board or a
-   live control, its words from words.js. It takes the slot over a tile tip for its 3 s, then the tile tip comes back. */
+   plate, over the chip plate on a desktop and a portrait phone (owner veto 3, pick B, 2026-11-14; it was beside the board / above the strip),
+   the left gutter on a landscape one, never over the board or a live control, its words from words.js. It takes the slot over a tile tip for its 3 s, then the tile tip comes back. */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { rec } from "./lib/textrec.mjs";
@@ -42,6 +42,17 @@ for (const ts of [1, 1.25]) for (const [lay, W, H] of BOXES) test(`${lay} ${W}x$
   assert.ok(off(G.tip.box, geo.stage), "never over the board");
   for (const r of Object.values(geo.strip || {})) assert.ok(off(G.tip.box, r), "never over a touch control");
   if (lay === "d") assert.ok(G.tip.box.y <= geo.stage.y + 24, "a desktop toast stands at the board's top, not its middle");
+  /* owner veto 3, pick B (2026-11-14): on a desktop and a portrait phone the toast sits over the chip plate, the same place on both; it covers each
+     chip whole or not at all, never the PAUSE key; a landscape phone has no plate and keeps the left gutter */
+  if (lay !== "l") {
+    const inside = (a, b) => a.x >= b.x - 0.5 && a.y >= b.y - 0.5 && a.x + a.w <= b.x + b.w + 0.5 && a.y + a.h <= b.y + b.h + 0.5;
+    const ov = (a, b) => !off(a, b);
+    assert.ok(G.plate && ov(G.tip.in, G.plate) && G.tip.box.y + G.tip.box.h <= geo.stage.y + 0.5, "over the chip plate, above the board: " + JSON.stringify([G.tip.box, G.plate]));
+    const chips = Object.values(G.chips).map((q) => q.box || q), under = chips.filter((q) => inside(q, G.tip.box));
+    assert.ok(chips.every((q) => inside(q, G.tip.box) || off(q, G.tip.box)), "no chip is half-covered");
+    assert.ok(under.length >= (lay === "d" ? 7 : 6), "it covers the chip rows: " + under.length);
+    if (G.pause) assert.ok(off(G.tip.box, G.pause), "never over the PAUSE key");
+  }
 });
 
 test("the toast takes the slot over a tile tip; off PLAY there is none", () => {
