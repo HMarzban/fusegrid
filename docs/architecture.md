@@ -264,6 +264,13 @@ its own held axes and latches, OR-merged with keys. A held key beats the pad on 
   `dual-rumble` actuator that streams rumble reports; `rumble.js` cannot tell it from a real one. Trade-off: one HID device
   per page, so two Switch 2 Pros share one buzz; Bluetooth is not seen at all. What Chrome remembers is in
   [privacy.md](privacy.md#controller-access).
+- [`padhelp.js`](../src/app/padhelp.js) (shell v220) is the menu's controller help card, `#padhelp`. A browser shows a page
+  no controller before its first button press and no USB device the page was not granted, and fires no event for one, so
+  the game cannot notice a controller being plugged in. The card is therefore shown up front, on MENU on a keyboard layout,
+  and retires once a controller is seen, after GOT IT or after three runs with none (`nb.padhelp.v1`, kept by a STATS
+  reset). Where the Switch 2 waker reaches, its CONNECT SWITCH 2 click is the user activation Chrome's chooser needs
+  (controlswire `sw2Connect`, no CONTROLS page involved). The menu note and the HUD toast name the controller family
+  (`XBOX CONTROLLER READY`), and a pad in an unknown order reads `CONTROLLER READY · NON-STANDARD BUTTONS`.
 - [`padfamily.js`](../src/app/padfamily.js) reads the controller's vendor id (else its name) and names its
   buttons the way the player's controller prints them: Xbox A / B / X / Y, PlayStation ✕ ○ □ △ (painted as glyphs, the
   word kept for screen readers), Nintendo B / A / Y / X, and the old position names (SOUTH, EAST...) for anything else.

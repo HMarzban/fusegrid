@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — controller discovery (shell v220, prepared)
+- Owner: players plug and unplug different controllers; the game must discover them. Built on `feature/controller-discovery`: the menu's `#padhelp` card (press any button; CONNECT SWITCH 2 on Chrome/macOS), family-named notes and toast, the NON-STANDARD BUTTONS note. Browser limits make the first Switch 2 grant a click; not merged, not pushed; owner hardware checks open.
+
 ## 2026-11-14 — GitHub release v2.6.0
 - Cut on the owner's word: annotated tag `v2.6.0` on `ed63fe7` (live v219), marked Latest; notes from the v219 CHANGELOG plus the owner's hardware checks, SDL credited.
 
