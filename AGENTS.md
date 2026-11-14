@@ -1090,8 +1090,9 @@ not shell screens. Do not add them as `SCREEN` values.
   `familyOf(id)` reads the vendor id (Chrome `Vendor: 045e`, Firefox `045e-028e-`; `045e` xbox, `054c` playstation, `057e` nintendo, the Switch 2
   bridge included), else the name, else `generic`; the id is matched there only, never printed, stored or sent, and the family goes nowhere near
   analytics. `FAMILY_LABEL` (pinned equal to words.js `PAD_FAMILY_WORDS`): Xbox `A B X Y`, `LB RB LT RT`, `VIEW MENU`; PlayStation `CROSS CIRCLE
-  SQUARE TRIANGLE` (a painted keycap draws them as kit `glyph` cross / circle / square / triangle, kit/paint.js `PAD_GLYPH`; text lines and the live
-  region keep the word; a DOM keycap the characters, `btnCap`), `L1 R1 L2 R2`, `CREATE OPTIONS`; Nintendo by position `B A Y X`, `L R ZL ZR`, `− +`
+  SQUARE TRIANGLE` (a painted keycap draws them as kit `glyph` cross / circle / square / triangle, kit/paint.js `PAD_GLYPH`; a painted text run, PAUSE's foot and
+  the HUD toast's `BOMB ✕`, draws the glyph inline at its cap height through kit `runText` / `runW`, the fit counting the glyph's width; the live region,
+  the probe's text and screen-reader text keep the word; a DOM keycap the characters, `btnCap`; a run with no such word is kit `text`, call for call), `L1 R1 L2 R2`, `CREATE OPTIONS`; Nintendo by position `B A Y X`, `L R ZL ZR`, `− +`
   (said MINUS / PLUS); generic the positions SOUTH EAST WEST NORTH, L/R SHOULDER, L/R TRIGGER, SELECT, START, exactly as before (every pin unchanged).
   The pad snap carries `family`; controlswire hands it only on the standard mapping (a non-standard pad keeps `BUTTON n`), keeps the last pad's until
   another arrives, and re-lays the hints once per switch (`wordsOf(dev, c, names, family)`; a family's pad words also carry `family` and `say`). The

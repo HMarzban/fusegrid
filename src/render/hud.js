@@ -25,7 +25,7 @@ import {FOES, POWER} from "../core/entities.js";
 import {CFG, key as cell} from "../core/config.js";
 import {TILE_NAME, featKindOf, featProfile, tileTip} from "../core/feat.js";
 import {CONST, worldTokens} from "./kit/tokens.js";
-import {plate, key as kkey} from "./kit/paint.js";
+import {plate, key as kkey, runW, runText, hasPadGlyph} from "./kit/paint.js";
 import {T, DEV, measure, textScale} from "./kit/type.js";
 import {layer, canMake, keyOf, touch as touchLayer} from "./kit/cache.js";
 import * as P from "./kit/probe.js";
@@ -175,7 +175,7 @@ function wrap(c, s, font, w) {
   for (const wd of String(s).split(" ")) {
     if (wd === "·" && !line) continue;
     const t = line ? line + " " + wd : wd;
-    if (line && measure(c, font, t) > w) { out.push(end(line)); line = wd === "·" ? "" : wd; } else line = t;
+    if (line && runW(c, font, t) > w) { out.push(end(line)); line = wd === "·" ? "" : wd; } else line = t;
   }
   if (line) out.push(end(line));
   return out;
@@ -204,7 +204,7 @@ function tipGeomOf(c, G, geo, st, box, s, nameOnly, np) {
     if (!(w >= 2 * pad) || !(maxH > 0) || measure(c, T.label(np), name) + 2 * pad > w) return null;
     for (const [body, px] of steps) {
       const z = size(w, body, px);
-      if (z.lines.length <= (st.tip.pad ? 3 : 2) && z.h <= maxH + 1e-6 && z.lines.every((l) => measure(c, T.body(px), l) + 2 * pad <= w + 1e-6)) return z;
+      if (z.lines.length <= (st.tip.pad ? 3 : 2) && z.h <= maxH + 1e-6 && z.lines.every((l) => runW(c, T.body(px), l) + 2 * pad <= w + 1e-6)) return z;
     }
     return null;
   };
@@ -520,8 +520,9 @@ function tip(c, G, tok, rec, q, look) {
   c.font = T.body(bp); c.fillStyle = CONST.t2;
   t.lines.forEach((l, i) => {
     const y = ly + np * K / 2 + 6 + (i + 0.5) * bp * K * 1.25;
-    c.fillText(l, r.x + 12, y);
-    if (rec) P.text(l, r.x + 12, y - bp * K * 0.36, measure(c, T.body(bp), l), bp * K * 0.72, {role: "body", px: bp * K, col: CONST.t2});
+    if (hasPadGlyph(l)) { runText(c, l, r.x + 12, y, T.body(bp), CONST.t2, "left"); c.font = T.body(bp); c.fillStyle = CONST.t2; c.textAlign = "left"; } // the toast's BOMB ✕ on a PlayStation pad
+    else c.fillText(l, r.x + 12, y);
+    if (rec) P.text(l, r.x + 12, y - bp * K * 0.36, runW(c, T.body(bp), l), bp * K * 0.72, {role: "body", px: bp * K, col: CONST.t2});
   });
   if (rec) P.rect("tip", r.x, r.y, r.w, r.h, {plate: TIPT, fill: tok.bedA});
   c.globalAlpha = a0;

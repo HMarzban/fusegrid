@@ -22,7 +22,7 @@ import {wallShapes, paintShapes} from "../wallart.js";
 import {railOf, bossOf} from "../frameart.js";
 import {paintFloor} from "../floorart.js";
 import {CONST, rgba} from "./tokens.js";
-import {T, DEV, measure, textScale} from "./type.js";
+import {T, DEV, measure, textScale, text as kitText} from "./type.js";
 import {noText} from "./probe.js";
 
 const OL = CONST.ol;
@@ -64,6 +64,30 @@ const legend = (c, s, cx, cy, font, col) => {
   if (g) { const z = Math.round(pxOf(font) * 1.05); if (!noText()) glyph(c, g, cx - z / 2, cy - z / 2, z, col); return; } // a PlayStation face button: its glyph, at the legend's cap size (hidden with the text in a capture's text-hidden twin)
   c.font = font; c.fillStyle = col; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(s, cx, cy);
 };
+
+/* a painted text run (a foot line, a toast line) that names a PlayStation face button draws its glyph inline, at the run's cap height; the word stays
+   in the text the probe and the live region read. A run with no such word is the plain kit text, call for call. */
+const GLYPH_RE = /\b(CROSS|CIRCLE|SQUARE|TRIANGLE)\b/;
+/** True when s holds a PlayStation face word a painted run draws as its glyph. */
+export const hasPadGlyph = (s) => GLYPH_RE.test(String(s));
+const runZ = (font) => Math.round(pxOf(font) * 1.1);
+const parts = (s) => String(s).split(GLYPH_RE).reduce((a, p) => (p === "" ? a : [...a, p]), []);
+/** The drawn width of a text run in font: measure() itself when it holds no glyph word, else its words plus each glyph's own width. */
+export function runW(c, font, s) {
+  if (!hasPadGlyph(s)) return measure(c, font, s);
+  return parts(s).reduce((w, p) => w + (PAD_GLYPH[p] ? runZ(font) : measure(c, font, p)), 0);
+}
+/** Paints a text run at x y (middle baseline, align left / center / right) with each PlayStation face word as its glyph; no such word: kit text(). */
+export function runText(c, s, x, y, font, col, align) {
+  if (!hasPadGlyph(s)) return kitText(c, s, x, y, font, col, align);
+  const w = runW(c, font, s), z = runZ(font);
+  let at = align === "center" ? x - w / 2 : align === "right" ? x - w : x;
+  for (const p of parts(s)) {
+    if (PAD_GLYPH[p]) { if (!noText()) glyph(c, PAD_GLYPH[p], at, y - z / 2, z, col); at += z; continue; }
+    kitText(c, p, at, y, font, col, "left");
+    at += measure(c, font, p);
+  }
+}
 
 export function key(c, x, y, w, h, kind, o = {}) {
   const K = KINDS[kind], t = o.tok, y0 = y, d = dev(o);

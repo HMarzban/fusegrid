@@ -196,3 +196,20 @@ test("the update card's keycaps follow the controller in hand (a DOM keycap: Pla
   assert.deepEqual(["S", "E"].map((id) => btnCap(id, "generic")), ["SOUTH", "EAST"]);
   assert.deepEqual(["S", "E"].map((id) => btnCap(id, "nintendo")), ["B", "A"]);
 });
+
+import { runText, runW, hasPadGlyph } from "../src/render/kit/paint.js";
+import { text as kitText, measure } from "../src/render/kit/type.js";
+test("a painted text run draws a PlayStation face word as its glyph inline; a run without one is kit text call for call", () => {
+  const f = "700 16px sans-serif", a = rec(), b = rec();
+  runText(a.ctx, "MOVE D-PAD · CONFIRM SOUTH", 100, 50, f, "#fff", "center");
+  kitText(b.ctx, "MOVE D-PAD · CONFIRM SOUTH", 100, 50, f, "#fff", "center");
+  assert.equal(JSON.stringify([a.texts, a.paints]), JSON.stringify([b.texts, b.paints]));
+  assert.equal(runW(a.ctx, f, "A B"), measure(a.ctx, f, "A B"));
+  const g = rec();
+  runText(g.ctx, "CONFIRM CROSS · BACK CIRCLE", 100, 50, f, "#fff", "center");
+  assert.deepEqual(g.texts.map((t) => t.s), ["CONFIRM ", " · BACK "]);
+  assert.equal(g.paints.filter((p) => p.op === "stroke").length, 2);
+  const w = runW(g.ctx, f, "CONFIRM CROSS · BACK CIRCLE");
+  assert.ok(Math.abs(g.texts[0].x - (100 - w / 2)) < 1e-9, "centred on the run's drawn width");
+  assert.ok(hasPadGlyph("BOMB CROSS") && !hasPadGlyph("CROSSING") && !hasPadGlyph("SOUTH"));
+});

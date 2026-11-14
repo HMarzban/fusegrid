@@ -3,7 +3,7 @@
    Every page task proves its layout on these: tools/ui/gates.mjs measures them, tools/ui/compare.mjs puts each beside its approved mock frame.
 
    node tools/ui/shots.mjs [flags]
-     --screens a,b    screens to capture (default all): title, menu, level, levelloading (LEVEL SELECT's LOADING plate, its import held), options (alias settings), graphics, controls, padtoast, controlsnone, controlspad, controlscapture, controlsconnect, menupadxbox / menupadps, controlspadxbox / controlspadps, pausepadxbox / pausepadps (R-LABELS: a fake Xbox or PlayStation controller in hand, one NORTH press so the hints name it), guide, howto, items,
+     --screens a,b    screens to capture (default all): title, menu, level, levelloading (LEVEL SELECT's LOADING plate, its import held), options (alias settings), graphics, controls, padtoast, controlsnone, controlspad, controlscapture, controlsconnect, menupadxbox / menupadps, controlspadxbox / controlspadps, pausepadxbox / pausepadps, padtoastps (R-LABELS: a fake Xbox or PlayStation controller in hand, one NORTH press so the hints name it), guide, howto, items,
                       enemies, floor, scores, stats, statsreset (STATS armed), medals, scoresfull / statsfull (a seeded cabinet,
                       __GAME__.seedRecords()), statspage2 (STATS' second page on a paged phone), scoresidle (RECORDS through the real lazy.idle() load: no want()), pause, pausetags (PAUSE with the run's rules seeded: the tag row), win, win2 (a paged run end's second
                       page), lose, loseshort (a saved best: the shortfall), losedaily (today's DAILY), lose2,
@@ -217,7 +217,7 @@ async function group(c, port, a, look, world, rep) {
           if (R.padPress != null) { await ev(PRESS(R.padPress, true)); await P.adv(100); await ev(PRESS(R.padPress, false)); await P.adv(900); }
         }
         if (s === "hud" && (await ev(HUD_RUN)) == null) warn("the room has no floor tile: no tile tip");
-        if (s === "padtoast") { await P.adv(300); await ev(PAD(true)); await P.adv(200); } // a controller plugged in mid-run: the HUD's toast
+        if (s === "padtoast" || R.toast) { await P.adv(300); await ev(PAD(true, PAD_ID[R.pad])); await P.adv(200); } // a controller plugged in mid-run: the HUD's toast
         if (R.run === "lose" || R.run === "win") {
           await P.adv(300);
           await ev(R.run === "lose" ? LOSE : "window.__GAME__.clearAllEnemies()");
