@@ -15,6 +15,17 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v216 · 2026-11-14
+
+The self-repair from v215 stays inside the game.
+
+### Fixed
+
+- **The repair only touches FUSE/GRID's own offline copy.** The game shares its web address with other projects; when a
+  start failed, v215 could also remove their offline helpers. It now removes only its own.
+- **Only the game's own files can trigger the repair.** An error from a look-alike address, another project on the same
+  address, or a stray message no longer counts as the game failing to start.
+
 ## shell v215 · 2026-11-14
 
 A game that fails to start now repairs itself, and new versions are found sooner.

@@ -178,7 +178,7 @@ function boot1(opts = {}) {
   };
   if (opts.sw) {
     const sw = (ctx.swLog = { unreg: 0, deleted: [] });
-    ctx.navigator = { onLine: opts.online !== false, serviceWorker: { controller: opts.sw === "ctl" ? {} : null, getRegistrations: () => Promise.resolve([{ unregister() { sw.unreg++; return Promise.resolve(true); } }]) } };
+    ctx.navigator = { onLine: opts.online !== false, serviceWorker: { controller: opts.sw === "ctl" ? {} : null, getRegistrations: () => Promise.resolve([{ scope: "http://x/g/", unregister() { sw.unreg++; return Promise.resolve(true); } }, { scope: "http://x/other/", unregister() { sw.foreign = (sw.foreign || 0) + 1; return Promise.resolve(true); } }]) } };
     ctx.caches = { keys: () => Promise.resolve(["fusegrid-shell-v201", "fusegrid-shell-v214", "someone-else"]), delete(k) { sw.deleted.push(k); return Promise.resolve(true); } };
     const ss = (ctx.ssData = opts.ss || {});
     ctx.sessionStorage = { getItem: (k) => (k in ss ? ss[k] : null), setItem: (k, v) => { ss[k] = String(v); }, removeItem: (k) => { delete ss[k]; } };
@@ -241,6 +241,11 @@ const U = (n) => "http://x/g/src/m" + n + ".js";
   const w = boot1();
   w.winOn.error({ filename: "", message: "SyntaxError: Importing binding name 'createGame' is not found." });
   check("an import that does not link (Safari reports it with no filename) shows the failure, not an endless SLOW CONNECTION", w.el("loadbar").hidden && /COULD NOT/.test(w.el("loadmsg").textContent));
+  const y = boot1();
+  y.winOn.error({ filename: "http://x.evil/g/src/main.js" });
+  y.winOn.error({ filename: "http://x/other/app.js" });
+  y.winOn.error({ filename: "", message: "TypeError: module is not defined" });
+  check("a look-alike origin, another project on the shared origin, or a stray non-SyntaxError message is ignored", !y.el("loadbar").hidden);
   const x = boot1();
   x.winOn.error({ filename: "", message: "Script error." });
   check("a muted cross-origin 'Script error.' with no filename is still ignored", !x.el("loadbar").hidden);
@@ -528,6 +533,7 @@ const U = (n) => "http://x/g/src/m" + n + ".js";
   check("a boot failure under a service worker clears the game's caches and reloads by itself", b.ctx.reloaded === 1 && b.ctx.swLog.unreg === 1 && b.ctx.swLog.deleted.join() === "fusegrid-shell-v201,fusegrid-shell-v214", JSON.stringify(b.ctx.swLog) + " r" + b.ctx.reloaded);
   check("it says what it does while it clears, not COULD NOT LOAD", !/COULD NOT/.test(b.el("loadmsg").textContent) && /UPDATING/.test(b.el("loadmsg").textContent), b.el("loadmsg").textContent);
   check("only once a session: the attempt is remembered", b.ctx.ssData["fg-heal"] === "1");
+  check("it never unregisters another project's worker on the shared origin (only this game's scope)", !b.ctx.swLog.foreign, b.ctx.swLog.foreign);
   const c = boot1({ sw: "ctl", ss: { "fg-heal": "1" } });
   c.L.fail("boot");
   await tick();

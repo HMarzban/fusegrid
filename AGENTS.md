@@ -221,12 +221,12 @@ the cntroller side ha?" reversed the 2026-11-02 ruling that kept it a CONSOLE PA
 CONSOLE PANEL kit in `menudraw.js` (`plate`, `head`, `foot`, `paintRow`, `listGeom` / `listHit`, `pageBox`, `segs`, the ellipsis `clip` / `wrap`)
 is gone with its last page; menudraw keeps only the fonts and colours the controller drawings' glyphs read (`TEXT`, `MUTED`, `sans`). MENU is on
 the world kit since UI upgrade Task 3.1 (MENU page, below). Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v214` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v216` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v214", the running build,
+as `rev`) and `update.js` (the card's "You are on v216", the running build,
 never a guessed next one) — never a second literal. The desk MENU's foot ends
-`| v214`; the phone column carries it as SOURCE's teaser (the round 7 frame);
-SETTINGS keeps its `BUILD v214` kicker. Never on the HUD.
+`| v216`; the phone column carries it as SOURCE's teaser (the round 7 frame);
+SETTINGS keeps its `BUILD v216` kicker. Never on the HUD.
 PAUSE is on the world kit since UI upgrade Task 5.1 (`src/render/pages/pause.js`, boot; `scenes.js` re-exports `PAUSE_ROWS`, `PAUSE_SHAPE`,
 `PAUSE_ROW_H` / `_D`, `pauseGeom`, `pauseHit`, `pauseKick`, `pauseKickers` / `pauseKicker`; the round 7 S7-pages 10-pause frame). It sits over
 `#c`'s frozen board in all three looks, drawn on the stage (`#sh` over `#c` at device px, Task 9.12; on a portrait phone on `#sh`'s over box under the HUD plate, Task 9.8: see SHELL BOX), through the one painter `drawPause` that `drawOverlay`'s PAUSE branch calls (view 0 only; views 1-3
@@ -1321,12 +1321,15 @@ not shell screens. Do not add them as `SCREEN` values.
   LATER snoozes until the next run returns to the menus or the next boot; no
   store. Updates are re-checked at boot, every 5 min while the page is
   visible and on `visibilitychange` once 1 min has passed (v215, owner 2026-11-14:
-  "can you do this update check much faster?", the card kept). HEAL (v215): a boot
-  failure while a worker controls the page unregisters it, deletes the
+  "can you do this update check much faster?", the card kept). HEAL (v215, scoped in v216): a boot
+  failure while a worker controls the page unregisters ONLY this game's
+  registration (`scope` equal to the page's folder: `hmarzban.github.io` is
+  shared with the owner's other Pages projects), deletes the
   `fusegrid-shell-v*` caches and reloads, by itself once a session (`fg-heal` in
   sessionStorage, cleared when the boot ends) and on every boot RETRY; never offline
-  (`navigator.onLine` false). The loader's window error listener also takes a
-  filename-less SyntaxError / import error: WebKit reports a module link error with
+  (`navigator.onLine` false). The loader's window error listener counts a file
+  only under the game's own folder (not a bare origin prefix) and also takes a
+  filename-less `SyntaxError`: WebKit reports a module link error with
   no filename, so a mismatched cache once sat on SLOW CONNECTION forever. Bridge: replacing a pre-v179 shell (`PROMPT_FROM 179`) still skips
   waiting, because those pages cannot prompt; that is their one last silent
   reload. Activate deletes only `fusegrid-shell-v*` keys.
@@ -1791,7 +1794,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; the tile boards were `?gen=3` only from v188 to v197).
-- Release state (2026-11-14): shell **v215** (the update path, after the owner's Safari showed COULD NOT LOAD THE GAME on live v214 and RETRY only reloaded into the same state; it cleared on its own a little later, so the trigger, most likely a stale offline copy left from v201 or saved during the deploy, was never captured. Fresh WebKit, iOS 27 Safari in the Simulator and the v201 -> v214 upgrade path all boot clean. v215: the boot HEAL and the WebKit link-error catch above, update checks every 5 min while visible; verified by poisoning `src/main.js` in the offline copy in Playwright WebKit and Chromium: one automatic reload, the title on a fresh cache) is committed on local main, not pushed yet.
+- Release state (2026-11-14): shell **v215** (the update path, after the owner's Safari showed COULD NOT LOAD THE GAME on live v214 and RETRY only reloaded into the same state; it cleared on its own a little later, so the trigger, most likely a stale offline copy left from v201 or saved during the deploy, was never captured. Fresh WebKit, iOS 27 Safari in the Simulator and the v201 -> v214 upgrade path all boot clean. v215: the boot HEAL and the WebKit link-error catch above, update checks every 5 min while visible; verified by poisoning `src/main.js` in the offline copy in Playwright WebKit and Chromium: one automatic reload, the title on a fresh cache) went LIVE 2026-11-14 on the owner's "Yes, push v215" (Pages CI green). Shell **v216** (same day) scopes it after an automated security review: the heal unregisters only the registration whose scope is the game's folder (v215 unregistered every worker on the shared `hmarzban.github.io` origin, other Pages projects included), the error listener matches the game's folder instead of a bare origin prefix (a look-alike host passed), and a filename-less error must be a `SyntaxError`; re-verified in WebKit and Chromium, 725 tests.
 - Release state (2026-11-12): shell **v214** (v213 with the share card swapped for the owner's round 3 pick P2, D4 in PIXEL in a pixel cabinet; og.png and its alt text; index.html is precached, so the bump) is LIVE since 2026-11-14: pushed on the owner's word as a fast-forward of `origin/main` (`e3bf4a3..0e47f7b`: v202 delivery, then the UI upgrade v203-v214), Pages CI green, live `sw.js` v214; GitHub release **v2.5.0**, shell v201 → v214. The owner re-uploaded og.png to the repo's Social preview the same day. Players jump from v201 straight to v214: the v202–v213 lines below were never live on their own. Open: device checks (U1–U15, M1–M7) and the three vetoes.
 - Release state (2026-11-12): shell **v213** (v212 with the share card swapped for the owner's round 2 pick D4, eight worlds; og.png and its alt text; index.html is precached, so the bump) is PREPARED on `feature/ui-upgrade`. Never live on its own: shipped inside v214 (LIVE 2026-11-14).
 - Release state (2026-11-12): shell **v212** (v211 plus the share card, owner pick C: og.png and its alt text in index.html and README; index.html is precached, so the bump) is PREPARED on `feature/ui-upgrade`. Never live on its own: shipped inside v214 (LIVE 2026-11-14).

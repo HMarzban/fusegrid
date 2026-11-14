@@ -307,7 +307,7 @@
     var sw=swOf(),c=w.caches,done=0,fin=function(){if(!done++)go()};
     if(!sw){go();return}
     later(fin,3000);
-    try{Promise.all([sw.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))}),
+    try{Promise.all([sw.getRegistrations().then(function(rs){return Promise.all(rs.filter(function(r){return r.scope===base}).map(function(r){return r.unregister()}))}),
       c&&c.keys?c.keys().then(function(ks){return Promise.all(ks.filter(function(k){return k.indexOf("fusegrid-shell-v")===0}).map(function(k){return c.delete(k)}))}):0]).then(fin,fin)}catch(e){fin()}
   }
   var reload=function(){w.location.reload()};
@@ -487,8 +487,9 @@
     e.preventDefault();e.stopImmediatePropagation();
   },true);
   /* a throw while the boot job lives is a game that will never paint */
-  /* our own file, or an import that does not link: Safari reports that SyntaxError with no filename (2026-11-14), so it once sat on SLOW CONNECTION */
-  w.addEventListener("error",function(e){if(jobs.boot&&(e.filename?e.filename.indexOf(location.origin)===0:/SyntaxError|import|module/i.test(e.message||"")))L.fail("boot")});
+  /* a file of this game (its folder, never the shared origin's other projects), or an import that does not link: Safari reports that
+     SyntaxError with no filename (2026-11-14), so it once sat on SLOW CONNECTION */
+  w.addEventListener("error",function(e){if(jobs.boot&&(e.filename?e.filename.indexOf(base)===0:/\bSyntaxError\b/.test(e.message||"")))L.fail("boot")});
   watch();paint();say("Loading.");
 })(window,document);
 </script>

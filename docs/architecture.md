@@ -50,7 +50,7 @@ START) beside the same card. On a phone both become one column, and on a
 landscape phone a grid of tiles. Any teaser built from your record (a top
 score, a best time) reads only runs you played, never placeholders.
 
-The build you're running is named on the main menu (`v214` today): at the end
+The build you're running is named on the main menu (`v216` today): at the end
 of the desktop foot, or on the SOURCE row's teaser on a phone. SETTINGS shows
 it as its `BUILD` kicker and the NEW VERSION READY card says which build you're on.
 There is one source for it: `shellview.js` and `update.js` both derive it
@@ -492,9 +492,10 @@ page can't show it. Cleanup touches only this game's own caches. Since v215 an
 open page looks for a new build every 5 minutes while it is visible and whenever
 you come back to the tab after a minute away ([`register.js`](../src/pwa/register.js)),
 and a first load that fails while a worker controls the page clears the game's own
-offline copy and reloads, once a session by itself and on every RETRY (the inline
-loader in `index.html`; offline it never clears). A link-time import error counts
-as that failure even when Safari reports it with no file name.
+offline copy (its caches and its own worker only: the `hmarzban.github.io` origin is
+shared with other projects) and reloads, once a session by itself and on every RETRY (the inline
+loader in `index.html`; offline it never clears). A link-time import error (a
+`SyntaxError`) counts as that failure even when Safari reports it with no file name.
 Since shell v202 the first visit is lighter: `index.html` preloads the boot
 import graph in one go, and the floor-tile board builder, the ATTRACT bot,
 the iso renderer, `?net=local` and the CONTROLS page's paint load after the
