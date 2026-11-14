@@ -353,7 +353,7 @@ for (const [nm, Lx, touch, narrow, scale] of [["desk 1366x768", DESK, false, fal
 // ---- Task 6: the keyboard drawing prints the player's own layout (controlswire keyNames, through the page view's names) ----
 {
   const t = worldTokens(1), lit = keyStates(keyV()), mw = (s, px) => s.length * px * 0.6, AZ = { KeyW: "Z", KeyA: "Q" };
-  const legAt = (d, id) => { const r = keyRect(KB_AT[id], 30), f = { x: r.x + 0.08 * 30, w: r.w - 0.16 * 30 }; return d.texts.filter((x) => x.x >= f.x && x.x <= f.x + f.w && x.y >= r.y && x.y <= r.y + r.h).map((x) => x.s).join(); };
+  const legAt = (d, id, k = 30) => { const r = keyRect(KB_AT[id], k), f = { x: r.x + 0.08 * k, w: r.w - 0.16 * k }; return d.texts.filter((x) => x.x >= f.x && x.x <= f.x + f.w && x.y >= r.y && x.y <= r.y + r.h).map((x) => x.s).join(); };
   const az = rec(); drawKeys(az.c, 0, 0, 30, { tok: t, lit, prints: kbPrints(30, lit, mw, 1, AZ), px: kbLegend(30), names: AZ });
   const df = rec(); drawKeys(df.c, 0, 0, 30, { tok: t, lit, prints: kbPrints(30, lit, mw), px: kbLegend(30) });
   check("names: the W key prints Z and the A key Q; S, D and SPACE as ever", legAt(az, "KeyW") === "Z" && legAt(az, "KeyA") === "Q" && legAt(az, "KeyS") === "S" && legAt(az, "Space") === "SPACE", legAt(az, "KeyW") + "/" + legAt(az, "KeyA"));
@@ -361,6 +361,26 @@ for (const [nm, Lx, touch, narrow, scale] of [["desk 1366x768", DESK, false, fal
   const sem = rec(); drawKeys(sem.c, 0, 0, 30, { tok: t, lit, prints: kbPrints(30, lit, mw, 1, { Semicolon: "M", Escape: "Q", Backspace: "Z", Tab: "Q" }), px: kbLegend(30), names: { Semicolon: "M", Escape: "Q", Backspace: "Z", Tab: "Q" } });
   check("a one-character legend takes the name (AZERTY's ; is M); ESC, TAB and ⌫ keep theirs", legAt(sem, "Semicolon") === "M" && legAt(sem, "Escape") === "ESC" && legAt(sem, "Tab") === "TAB" && legAt(sem, "Backspace") === "", legAt(sem, "Semicolon") + "/" + legAt(sem, "Escape"));
   check("kbPrints measures the name: a name wider than its face is left off", kbPrints(30, {}, mw, 1, { KeyW: "WWWWWW" }).KeyW === undefined && kbPrints(30, {}, mw).KeyW === true);
+  /* ruling 2: the names take every printable ASCII character, so no two keys print the same letter on a real AZERTY or QWERTZ map */
+  const MAPS = {
+    AZERTY: { Backquote: "²", Digit1: "&", Digit2: "é", Digit3: "\"", Digit4: "'", Digit5: "(", Digit6: "-", Digit7: "è", Digit8: "_", Digit9: "ç", Digit0: "à", Minus: ")", Equal: "=",
+      KeyQ: "a", KeyW: "z", KeyE: "e", KeyR: "r", KeyT: "t", KeyY: "y", KeyU: "u", KeyI: "i", KeyO: "o", KeyP: "p", BracketLeft: "^", BracketRight: "$", Backslash: "*",
+      KeyA: "q", KeyS: "s", KeyD: "d", KeyF: "f", KeyG: "g", KeyH: "h", KeyJ: "j", KeyK: "k", KeyL: "l", Semicolon: "m", Quote: "ù",
+      KeyZ: "w", KeyX: "x", KeyC: "c", KeyV: "v", KeyB: "b", KeyN: "n", KeyM: ",", Comma: ";", Period: ":", Slash: "!" },
+    QWERTZ: { Backquote: "^", Digit1: "1", Digit2: "2", Digit3: "3", Digit4: "4", Digit5: "5", Digit6: "6", Digit7: "7", Digit8: "8", Digit9: "9", Digit0: "0", Minus: "ß", Equal: "´",
+      KeyQ: "q", KeyW: "w", KeyE: "e", KeyR: "r", KeyT: "t", KeyY: "z", KeyU: "u", KeyI: "i", KeyO: "o", KeyP: "p", BracketLeft: "ü", BracketRight: "+", Backslash: "#",
+      KeyA: "a", KeyS: "s", KeyD: "d", KeyF: "f", KeyG: "g", KeyH: "h", KeyJ: "j", KeyK: "k", KeyL: "l", Semicolon: "ö", Quote: "ä",
+      KeyZ: "y", KeyX: "x", KeyC: "c", KeyV: "v", KeyB: "b", KeyN: "n", KeyM: "m", Comma: ",", Period: ".", Slash: "-" },
+  };
+  for (const [nm, raw] of Object.entries(MAPS)) {
+    const names = Object.fromEntries(Object.entries(raw).map(([q, v]) => [q, model.layoutName(v)]).filter((e) => e[1])), d = rec();
+    drawKeys(d.c, 0, 0, 40, { tok: t, lit: {}, prints: kbPrints(40, {}, mw, 1, names), px: kbLegend(40), names });
+    const letters = d.texts.map((x) => x.s).filter((q) => /^[A-Z]$/.test(q)), dup = letters.filter((q, i) => letters.indexOf(q) !== i);
+    check(nm + ": every printed letter on the drawing is unique (26 letters, each once)", letters.length === 26 && !dup.length, dup.join() + " / " + letters.length);
+    if (nm === "AZERTY") check("AZERTY: KeyM prints , and Semicolon prints M; the 1 key prints &, the é key keeps 2", legAt(d, "KeyM", 40) === "," && legAt(d, "Semicolon", 40) === "M" && legAt(d, "Digit1", 40) === "&" && legAt(d, "Digit2", 40) === "2", legAt(d, "KeyM", 40) + "/" + legAt(d, "Semicolon", 40));
+    if (nm === "QWERTZ") check("QWERTZ: KeyY prints Z and KeyZ prints Y; ß, ü and ö keep the code's own legend", legAt(d, "KeyY", 40) === "Z" && legAt(d, "KeyZ", 40) === "Y" && legAt(d, "Minus", 40) === "-" && legAt(d, "BracketLeft", 40) === "[" && legAt(d, "Semicolon", 40) === ";", legAt(d, "KeyY", 40) + "/" + legAt(d, "KeyZ", 40));
+  }
+  check("the fixed words stay: SPACE, ESC, ENTER, TAB on a full AZERTY map", (() => { const n = Object.fromEntries(Object.entries(MAPS.AZERTY).map(([q, v]) => [q, model.layoutName(v)]).filter((e) => e[1])), d = rec(); drawKeys(d.c, 0, 0, 40, { tok: t, lit: {}, prints: kbPrints(40, {}, mw, 1, n), px: kbLegend(40), names: n }); return ["Space", "Escape", "Enter", "Tab"].every((q) => legAt(d, q, 40) === KB_AT[q].leg); })());
   const page = rec(); drawControls(page.c, DESK, keyV({ names: AZ }), { level: 1 });
   check("the CONTROLS page: its keyboard and callouts read Z Q S D", page.texts.some((x) => x.s === "Z") && page.texts.some((x) => x.s === "Z Q S D"), page.texts.map((x) => x.s).filter((q) => /^[A-Z ]{1,8}$/.test(q)).join("|"));
 }

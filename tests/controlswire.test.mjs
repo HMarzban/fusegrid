@@ -1307,7 +1307,7 @@ for (const via of ["LATER", "the backdrop"]) {
   await flush();
   check("AZERTY layout map: MOVE reads ZQSD, its caps Z Q S D", a.words.move === "ZQSD" && J(a.words.moveCaps) === J(["Z", "Q", "S", "D"]), J(a.words));
   check("SPACE, ARROWS, ENTER and ESC keep their fixed words", a.words.bomb === "SPACE" && a.words.moveAlt === "ARROWS" && a.words.ok === "ENTER" && a.words.back === "ESC" && a.words.pause === "P");
-  check("keyNames holds Latin letters and digits only, upper-cased; & and , leave the code's own", J(a.c.keyNames()) === J({ KeyW: "Z", KeyA: "Q", KeyS: "S", KeyD: "D", Semicolon: "M" }), J(a.c.keyNames()));
+  check("keyNames holds printable ASCII only, letters upper-cased: AZERTY's KeyM prints , and its 1 key &", J(a.c.keyNames()) === J({ KeyW: "Z", KeyA: "Q", KeyS: "S", KeyD: "D", Digit1: "&", KeyM: ",", Semicolon: "M" }), J(a.c.keyNames()));
   check("a layout that changes a name wakes the shell", a.wakes > 0);
   check("the CONTROLS page is seeded with the names", a.app.controls.view(0).names.KeyW === "Z" && a.app.controls.view(0).names.KeyA === "Q", J(a.app.controls.view(0).names));
   const n = rig(null);

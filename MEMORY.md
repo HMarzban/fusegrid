@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — Task 6 rulings: refusal by printed letter, ASCII names
+- `refuseKey` judges R Y N C B M T U by the printed letter when known (QWERTZ KeyY binds, KeyZ refused), the code otherwise; stored binds are checked by place only, never dropped. `layoutName` takes any printable ASCII (AZERTY KeyM prints ","), so no letter prints twice.
+
 ## 2026-11-14 — keyboard in the player's own layout (plan Task 6)
 - Printed keys follow the layout (controlswire `keyNames()`: layout map + plain keydowns, session only, A-Z/0-9) through `wordsOf(dev, c, names)`, the CONTROLS page and the keyboard drawing; letter shortcuts (R C T Q E M B Y N U) fire on the printed letter (`controls.js` `letterOf`), binds and movement stay on `code`; a key printing a shortcut letter is refused as a bind too. Cache bump and the AZERTY owner check are left to the batch.
 

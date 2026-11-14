@@ -397,8 +397,16 @@ for (const state of ["none", "lost"]) {
   check("B4: a MOVE set reads through names", m.p.view(tm).status === "MOVE NOW ZVXQ", m.p.view(tm).status);
   const g = open("key");
   g.p.confirm(0); arm(g, 10);
-  g.p.feedKey("KeyR", "k", 300);
-  check("a refused key leaves no name behind", g.p.view(300).names.KeyR === undefined);
+  g.p.feedKey("KeyO", "r", 300); // Task 6 ruling 1: the printed R is refused, wherever it sits
+  check("a refused key leaves no name behind", g.p.view(300).names.KeyO === undefined && g.c.key.BOMB === "Space");
+  const q = open("key");
+  q.p.confirm(0); arm(q, 10);
+  q.p.feedKey("KeyY", "z", 300);
+  check("QWERTZ: the key printed Z (code KeyY) binds", q.c.key.BOMB === "KeyY" && q.p.view(300).status === "BOMB NOW Z", q.p.view(300).status);
+  const y = open("key");
+  y.p.confirm(0); arm(y, 10);
+  y.p.feedKey("KeyZ", "y", 300);
+  check("QWERTZ: the key printed Y (code KeyZ) is refused", y.c.key.BOMB === "Space" && y.p.view(300).capture && /PRIVACY CARD/.test(y.p.view(300).capture.sub), J(y.p.view(300).capture));
   check("outside capture an unrelated key is not taken", r.p.feedKey("KeyG", "g", 360) === false);
 }
 {

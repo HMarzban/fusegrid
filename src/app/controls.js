@@ -39,8 +39,9 @@ export function letterOf(code, key) {
   if (/^[a-z]$/i.test(key)) return "Key" + key.toUpperCase();
   return /^Key[A-Z]$/.test(code) && !/\p{L}/u.test(key) ? "" : code;
 }
-/** A printed name worth showing: a Latin letter or a digit, upper-cased; "" for anything else (another script, punctuation). */
-export const layoutName = (v) => (typeof v === "string" && /^[a-z0-9]$/i.test(v) ? v.toUpperCase() : "");
+/** A printed name worth showing: one printable ASCII character (a letter upper-cased, a digit, punctuation such as AZERTY's , on KeyM); "" for
+    anything else (another script, an accented letter, a dead key, space). */
+export const layoutName = (v) => (typeof v === "string" && /^[!-~]$/.test(v) ? v.toUpperCase() : "");
 const letterWhy = (code) => {
   if (code === "KeyR") return "R IS THE CAMERA · PICK ANOTHER";
   if (code === "KeyY" || code === "KeyN") return "Y AND N ANSWER THE PRIVACY CARD · PICK ANOTHER";
@@ -48,8 +49,8 @@ const letterWhy = (code) => {
   if (/^Key[MTU]$/.test(code)) return code[3] + " IS TAKEN BY THE MENUS · PICK ANOTHER";
   return "";
 };
-/** "" when the code can be bound, else the exact refusal line. key = what it prints, when known: a key printing a shortcut's letter is refused too. */
-export function refuseKey(code, key) {
+/* "" when the code may hold a bind on some layout: every refusal but the shortcut letters, which follow what the key prints (refuseKey) */
+function fixedWhy(code) {
   if (typeof code !== "string" || !code) return "THAT KEY CANNOT BE BOUND";
   if (code === "Escape") return "ESC ALWAYS BACKS OUT · PICK ANOTHER";
   if (code === "Enter" || code === "NumpadEnter") return "ENTER IS CONFIRM · PICK ANOTHER";
@@ -57,10 +58,13 @@ export function refuseKey(code, key) {
   if (code.startsWith("Arrow")) return "ARROWS ALWAYS MOVE · PICK ANOTHER";
   if (code === "Tab" || /^F\d+$/.test(code)) return "THAT KEY BELONGS TO THE BROWSER";
   if (MODS.test(code)) return "THAT KEY CANNOT BE BOUND";
-  const why = letterWhy(code);
-  if (why) return why;
   if (/^(Digit|Numpad)[1-5]$/.test(code) || code === "BracketLeft" || code === "BracketRight") return "THAT KEY IS TAKEN ON LEVEL SELECT";
-  return letterWhy(letterOf(code, key));
+  return "";
+}
+/** "" when the code can be bound, else the exact refusal line. key = what it prints, when known: the shortcut letters (R Y N C B M T U) are judged
+    by it (QWERTZ's KeyY prints Z and binds; its KeyZ prints Y and is refused); with no key, or one of another script, by the code. */
+export function refuseKey(code, key) {
+  return fixedWhy(code) || letterWhy(letterOf(code, key));
 }
 /** "" when the pad id can be bound, else the exact refusal line. */
 export function refuseBtn(id) {
@@ -70,7 +74,7 @@ export function refuseBtn(id) {
   return CAPTURABLE.includes(id) ? "" : "THAT BUTTON CANNOT BE BOUND · PICK ANOTHER";
 }
 
-const keyOk = (code) => typeof code === "string" && refuseKey(code) === "";
+const keyOk = (code) => typeof code === "string" && fixedWhy(code) === ""; // a stored bind is judged by its place only: the layout it was made on is not known here
 const keyBlockOk = (k) => {
   if (!k || typeof k !== "object" || !Array.isArray(k.MOVE) || k.MOVE.length !== 4) return false;
   const all = [...k.MOVE, ...ACTIONS.map((a) => k[a])];
