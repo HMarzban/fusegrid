@@ -1030,7 +1030,7 @@ not shell screens. Do not add them as `SCREEN` values.
   stays on STATS; no point of the idle RESET or COPY targets is AGAIN ERASES.
   CLEAR = highscores, bests, stats, daily, times, medals, plaques, ghost,
   pact, coach v1/v2, cabinet (12); KEEP = `nb.settings.v1`, `nb.pace.v1`,
-  `nb.analytics.v1` (the GA consent), `nb.controls.v1` (the binds).
+  `nb.analytics.v1` (the GA consent), `nb.controls.v1` (the binds), `nb.padhelp.v1` (the controller help card retired, v220; grouped with the controls in the reset sentence).
   `nb.cabinet.v1` is still written on the first INTRO exit and no longer
   branches anything (ruling 2026-10-09).
   Lists import each store's own `*_KEY`; `tests/reset.test.mjs` fails on any

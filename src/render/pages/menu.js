@@ -196,7 +196,8 @@ function noteCands(ui) {
   const s = padSign(ui.pad);
   if (!s) return [];
   if (ui.pad === ODD_NOTE) return [s, PAD_ODD];
-  return VIB.test(ui.pad) ? [signOf(ui.pad), s, readyOf(ui.pad)] : [s, readyOf(ui.pad)];
+  const r = readyOf(ui.pad), g = r === M.PAD_READY ? [] : [M.PAD_READY]; // a family's name drops last (final review: PLAYSTATION CONTROLLER READY is long)
+  return (VIB.test(ui.pad) ? [signOf(ui.pad), s, r] : [s, r]).concat(g);
 }
 export const _noteCands = noteCands; // test seam
 export function playTags(ui) {

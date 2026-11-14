@@ -18,7 +18,7 @@
    With no canvas source (Node) it paints straight onto the target; a context with no clip or rect gets the plan only. Under the probe it records
    its rects, texts and squint pairs outside any layer paint. */
 import {biomeOf} from "../../core/config.js";
-import {LABEL, MENU_WORDS as M, PAUSE_WORDS as PW, runParts} from "../words.js";
+import {LABEL, MENU_WORDS as M, PAUSE_WORDS as PW, runParts, padNoteSteps} from "../words.js";
 import {worldTokens, CONST, rgba} from "../kit/tokens.js";
 import {key, plate, band, focusBomb, glyph, PAD_GLYPH, runW, runText} from "../kit/paint.js";
 import {T, DEV, measure, textScale} from "../kit/type.js";
@@ -203,7 +203,7 @@ function tagPlan(c, d, dv, world, time) {
 }
 export function plan(G, world, ui, run, tm) {
   const c = mc(), d = G.d, dv = DEV[d.dev], P = PZ[d.dev], words = hints(), time = !!(tm && tm.on), showCaps = !G.touch, kf = T.label(dv.pri);
-  const base = ui.note ? [ui.note] : kickers(world, run, d.fold, time), kick = ui.next ? pauseKick(c, ui.note || base[0], ui.next, d.cw, kf) : fitWords(c, kf, base, d.cw);
+  const base = ui.note ? padNoteSteps(ui.note) : kickers(world, run, d.fold, time), kick = ui.next ? pauseKick(c, ui.note || base[0], ui.next, d.cw, kf) : fitWords(c, kf, base, d.cw);
   const tags = d.tagRow ? tagPlan(c, d, dv, world, time) : null, lf = kf, bs = dv.bombs, gs = P.gs, rows = [];
   PAUSE_SHAPE.forEach((s, i) => {
     const r = d.rows[i], grid = d.mode === "grid", e = grid ? 6 : 8, o = {label: s.label, r, hero: s.hero, danger: s.danger, door: s.door, rest: r.x + (grid ? 12 : 16), bx: r.x + e, foc: r.x + e + bs + e};

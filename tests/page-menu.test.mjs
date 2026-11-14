@@ -534,9 +534,14 @@ const { readFileSync } = await import("node:fs");
   const nc = P._noteCands({ pad: "CONTROLLER READY · NON-STANDARD BUTTONS" });
   check("the non-standard note steps down to its signpost, then the words alone", nc[0] === W.PAD_ODD + " · " + W.TO_CONTROLS && nc[nc.length - 1] === W.PAD_ODD, J(nc));
   const xb = P._noteCands({ pad: "XBOX CONTROLLER READY · VIBRATION HIGH" });
-  check("a family READY note keeps today's step-down with the family's name", xb[0] === "XBOX CONTROLLER READY · VIBRATION HIGH · " + W.TO_CONTROLS && xb[xb.length - 1] === "XBOX CONTROLLER READY", J(xb));
+  check("a family READY note keeps today's step-down with the family's name", xb[0] === "XBOX CONTROLLER READY · VIBRATION HIGH · " + W.TO_CONTROLS && xb[xb.length - 2] === "XBOX CONTROLLER READY" && xb[xb.length - 1] === W.MENU_WORDS.PAD_READY, J(xb));
   const g = P._noteCands({ pad: "CONTROLLER READY" });
   check("a generic READY note steps down as before", J(g) === J([W.MENU_WORDS.PAD_READY + " · " + W.TO_CONTROLS, W.MENU_WORDS.PAD_READY]), J(g));
+}
+
+{
+  const pc = P._noteCands({ pad: "PLAYSTATION CONTROLLER READY" });
+  check("final review: a family note steps down to plain CONTROLLER READY last", pc[pc.length - 1] === W.MENU_WORDS.PAD_READY && pc.includes("PLAYSTATION CONTROLLER READY"), J(pc));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

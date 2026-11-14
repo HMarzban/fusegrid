@@ -24,9 +24,11 @@ export function loadHelp(store) {
 }
 export function saveHelp(v, store) { try { const st = storeOf(store); if (st) st.setItem(PADHELP_KEY, JSON.stringify({ s: v.s ? 1 : 0, x: v.x ? 1 : 0, r: v.r | 0 })); } catch (_) {} }
 export const helpDone = (st) => !!(st.s || st.x || st.r >= RUNS);
-/** Pure: MENU on a keyboard layout, no other card up, no controller in, not retired, no CONTROLS capture. */
-export function helpVisible({ screen, S, lay, busy, padIn, done, capturing }) {
-  return screen === S.MENU && lay === "d" && !busy && !padIn && !done && !capturing;
+/* Under ROOM the card's corner meets MENU's rows (600 x 520 covers SETTINGS, GUIDE and SOURCE): no card there (final review, 2026-11-14) */
+export const ROOM = Object.freeze({ w: 1024, h: 700 });
+/** Pure: MENU on a keyboard layout with room, no other card up, no controller in, not retired, no CONTROLS capture. */
+export function helpVisible({ screen, S, lay, busy, padIn, done, capturing, roomy = true }) {
+  return screen === S.MENU && lay === "d" && roomy && !busy && !padIn && !done && !capturing;
 }
 
 /** Mounts the card; tick() every `every` ms (250, as the consent card), 0 = the caller ticks. */
@@ -35,7 +37,7 @@ export function mountPadHelp(env) {
     win = e.win !== undefined ? e.win : typeof window !== "undefined" ? window : null,
     doc = e.doc !== undefined ? e.doc : typeof document !== "undefined" ? document : null,
     ctl = e.ctl, every = e.every !== undefined ? e.every : 250;
-  let st = loadHelp(e.store), card = null, asking = false, was;
+  let st = loadHelp(e.store), card = null, asking = false, was, seen = false; // seen: the card showed since the last run counted
   const save = () => saveHelp(st, e.store);
   const hide = () => { if (card) card.hidden = true; };
   const build = () => {
@@ -68,14 +70,16 @@ export function mountPadHelp(env) {
     const g = e.get && e.get();
     if (!g || !g.app) return;
     const scr = g.app.screen, S = g.SCREEN;
-    if (was !== undefined && was !== S.GAME && scr === S.GAME && !helpDone(st)) { st.r++; save(); } // a run started, from any screen
+    if (was !== undefined && was !== S.GAME && scr === S.GAME && seen && !helpDone(st)) { st.r++; seen = false; save(); } // a run started, from any screen, after the card showed: a card hidden behind another uses up nothing
     was = scr;
     const padIn = !!(ctl && ctl.padIn());
     if (padIn && !st.s) { st.s = 1; save(); } // a controller is in: the card's job is done, for good
     const reach = !!(ctl && ctl.sw2 && ctl.sw2().shown), go = card.querySelector(".go"), line = card.querySelector(".sw2");
     if (go.hidden === reach) { go.hidden = !reach; line.hidden = !reach; }
     const lay = doc.body && doc.body.dataset ? doc.body.dataset.lay : "d",
-      show = helpVisible({ screen: scr, S, lay, busy: !!(g.busy && g.busy()), padIn, done: helpDone(st), capturing: !!g.app.capturing });
+      roomy = !win || !win.innerWidth || (win.innerWidth >= ROOM.w && win.innerHeight >= ROOM.h),
+      show = helpVisible({ screen: scr, S, lay, busy: !!(g.busy && g.busy()), padIn, done: helpDone(st), capturing: !!g.app.capturing, roomy });
+    if (show) seen = true;
     if (card.hidden === show) card.hidden = !show;
   };
   if (doc && typeof doc.createElement === "function" && doc.body && typeof doc.body.appendChild === "function" && !helpDone(st)) { // a harness document without elements: no card

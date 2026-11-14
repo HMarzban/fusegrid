@@ -31,7 +31,7 @@ const ptr = () => { const e = { n: 0, stopPropagation() { e.n++; } }; return e; 
 const mkCtl = (o = {}) => ({ calls: 0, padNow: false, reach: !!o.reach, res: o.res || (() => Promise.resolve("cancelled")),
   padIn() { return this.padNow; }, sw2() { return { shown: this.reach }; }, sw2Connect() { this.calls++; return this.res(); } });
 const mount = (o = {}) => {
-  const dom = mkDom(o.lay), app = { screen: SCREEN.MENU }, ctl = o.ctl || mkCtl(), store = o.store || mkStore(), busy = { v: false };
+  const dom = mkDom(o.lay), app = { screen: SCREEN.MENU }, ctl = o.ctl || mkCtl(), store = o.store || mkStore(), busy = { v: !!o.busyFirst };
   const h = mountPadHelp({ get: () => ({ app, SCREEN, busy: () => busy.v }), ctl, store, doc: dom.doc, win: dom.win, every: 0 });
   h.tick();
   return { h, dom, app, ctl, store, busy, card: () => dom.body.find((e) => e.id === "padhelp") };
@@ -159,6 +159,24 @@ for (const [r, w] of [["busy", SW2_WORDS.busy], ["failed", SW2_WORDS.failed], ["
   let threw = false, h;
   try { h = mountPadHelp({ get: () => ({ app: { screen: SCREEN.MENU }, SCREEN }), ctl: mkCtl(), store: mkStore(), doc: { body: {} }, win: {}, every: 0 }); h.tick(); } catch (_) { threw = true; }
   check("a document that cannot make elements: no card, nothing throws", !threw && h && h.shown === false);
+}
+
+/* final review fixes (2026-11-14) */
+{
+  const t = mount({ busyFirst: true });
+  for (let i = 0; i < 3; i++) { t.app.screen = SCREEN.GAME; t.h.tick(); t.app.screen = SCREEN.MENU; t.h.tick(); }
+  check("runs count only while the card could be seen: three runs behind the consent card use none", loadHelp(t.store).r === 0, J(loadHelp(t.store)));
+  t.busy.v = false; t.h.tick();
+  check("runs count only while the card could be seen: it shows once the other card is answered", t.card().hidden === false);
+  t.app.screen = SCREEN.GAME; t.h.tick(); t.app.screen = SCREEN.MENU; t.h.tick();
+  check("runs count only while the card could be seen: a run after it showed counts", loadHelp(t.store).r === 1, J(loadHelp(t.store)));
+}
+{
+  check("helpVisible: a small window has no room", V({ roomy: false }) === false && V({ roomy: true }) === true);
+  const small = (w, h) => { const dom = mkDom(), app = { screen: SCREEN.MENU }; dom.win.innerWidth = w; dom.win.innerHeight = h;
+    const hh = mountPadHelp({ get: () => ({ app, SCREEN, busy: () => false }), ctl: mkCtl(), store: mkStore(), doc: dom.doc, win: dom.win, every: 0 }); hh.tick(); return hh.shown; };
+  check("a small desktop window keeps the card off the menu rows: 900 x 768 and 1280 x 650 hide it", small(900, 768) === false && small(1280, 650) === false);
+  check("1024 x 700 and 1366 x 768 show it", small(1024, 700) === true && small(1366, 768) === true);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -215,6 +215,13 @@ export const PAD_TOAST = Object.freeze({ READY: MENU_WORDS.PAD_READY, BACK: MENU
    non-standard note's words are the CONTROLS page's own; the help card #padhelp (src/app/padhelp.js HELP_WORDS, pinned equal) */
 export const PAD_NAME = Object.freeze({ xbox: "XBOX CONTROLLER", playstation: "PLAYSTATION CONTROLLER", nintendo: "NINTENDO CONTROLLER", generic: "CONTROLLER" });
 export const PAD_ODD = "NON-STANDARD BUTTONS";
+/** A controller note's step-downs for a slot that will not hold it: the whole note, its head, then its head with the family's name dropped (final review). */
+export const padNoteSteps = (n) => {
+  const head = String(n).split(" · ")[0], fam = Object.values(PAD_NAME).find((x) => x !== PAD_NAME.generic && head.startsWith(x + " ")), out = [n];
+  if (head !== n) out.push(head);
+  if (fam) out.push(PAD_NAME.generic + head.slice(fam.length));
+  return out;
+};
 export const PAD_HELP_WORDS = Object.freeze({ title: "PLAYING WITH A CONTROLLER?", body: "Plug it in and press any button on it. A browser shows a controller to a game only after its first press.",
   sw2: "A Switch 2 Pro Controller on a cable needs one click here first.", go: "CONNECT SWITCH 2", no: "GOT IT", press: "PRESS ANY BUTTON ON IT" });
 /* R-LABELS (owner 2026-11-14): the words a controller's buttons wear, by the family in the player's hands (src/app/padfamily.js FAMILY_LABEL, pinned
