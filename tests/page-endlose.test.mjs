@@ -135,7 +135,7 @@ for (const [lay, css, w] of [["d", 1.38, lose({ level: 1 })], ["d", 1.38, lose({
   probe.setOn(true);
   draw(w, { ...RUN, r: w.level - 1, lay, css });
   const s = probe.snapshot(); probe.setOn(false);
-  const lk = s.pairs.find((q) => q.kind === "locked"), f = lk && lk.floor, cells = s.rects.filter((r) => /^cell \d$/.test(r.name)), nums = s.texts.filter((t) => /^\d$/.test(t.s));
+  const lk = s.pairs.find((q) => q.kind === "locked"), f = lk && lk.floor, cells = s.rects.filter((r) => /^cell \d( ahead)?$/.test(r.name)), nums = s.texts.filter((t) => /^\d$/.test(t.s));
   const host = f && cells.find((r) => f.x >= r.x && f.y >= r.y && f.x + f.w <= r.x + r.w && f.y + f.h <= r.y + r.h);
   const hit = f && nums.some((t) => t.x < f.x + f.w && t.x + t.w > f.x && t.y < f.y + f.h && t.y + t.capH > f.y);
   check("the locked floor sample sits inside one cell, clear of the numbers, >= 4x4 CSS px (" + lay + " L" + w.level + ")", !!host && !hit && f.w * css >= 4 && f.h * css >= 4, J([f, host, hit]));

@@ -172,9 +172,14 @@ export function cell(p, x, y, s, cl, o = {}) {
     else if (cl.fin && cl.st === "ahead") glyph(c, "flag", x + s * 0.6, y + s * 0.32, s * 0.32, CONST.ink); // cream: >= 4.5:1 on every world's well (t2 read 4.26 on ARENA)
   }
   if (cl.fin && cl.st === "ahead") rpair(p, "info", [x + s * 0.6, y + s * 0.32, s * 0.32, s * 0.32], [x + 3, y + 3, s - 6, s - 6], {col: CONST.ink, name: "finale flag"});
+  /* the marks a player reads on a course, each over its own ground (2026-11-14: a world-8 finale or a death on level 8 drew no other non-text mark,
+     so the info gate had nothing to measure): a won cell's check on its notch, the crack on the level fallen against the cell's face */
+  { const q = s * 0.44, ty = kind === "lit" ? y - 2 : y;
+    if (cl.st === "won") rpair(p, "info", [x + s - q * 0.62, ty + q * 0.02, q * 0.6, q * 0.6], [x + s - q * 0.5, ty, q * 0.5, q * 0.5], {col: CONST.ink, name: "check notch"});
+    if (cl.st === "crack" && (cl.grow == null || cl.grow >= 1)) rpair(p, "info", [x + 2 + (s - 4) * 7 / 36, ty + 2, (s - 4) * 10 / 36, s - 4], [x + 2 + (s - 4) * 0.62, ty + s * 0.3, (s - 4) * 0.3, s * 0.4], {col: OL, name: "crack"}); }
   const ty = kind === "lit" ? y - 2 : y, nx = cl.st === "crack" ? x + s / 2 + 7 * (s / 40) : cl.fin && cl.st !== "locked" ? x + s * 0.32 : x + s / 2;
   if (cl.st !== "locked") text(p, "num", n, nx, ty + s / 2, px, {align: "center", col: kind === "lit" ? CONST.dk : CONST.t2, role: "secondary"});
-  rrect(p, "cell " + n + (cl.st === "locked" ? " locked" : ""), x, y, s, s); // a locked level is named so (tools/ui screens.mjs exemptIfNo)
+  rrect(p, "cell " + n + (cl.st === "locked" ? " locked" : cl.st === "ahead" ? " ahead" : ""), x, y, s, s); // a locked or not-reached level is named so (tools/ui screens.mjs exemptIfNo)
 }
 export function course(p, x, y, s, gap, cells, o = {}) {
   cells.forEach((cl, i) => cell(p, x + i * (s + gap), y, s, cl, o));
