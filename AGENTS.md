@@ -1214,7 +1214,7 @@ not shell screens. Do not add them as `SCREEN` values.
   set, BOMB THROW REMOTE PAUSE: `playKeys`, menuapp `boundKey`) is never one of the refused letters R Y N C B M T U, whatever a layout prints on it
   (`controls.js` `shortcutOf`, read by main, menuapp, analytics, update and the wire's chord guard: Colemak's MOVE DOWN KeyS and Workman's THROW KeyE
   print r and stay a move / a throw; a bound key printing Y never consents); the letter is "", never the raw code (Dvorak may bind KeyR, which prints
-  p); Q and E stay RECORDS' tab keys on QWERTY's own REMOTE / THROW, and the silent J / X aliases are not counted (Colemak and Workman print N only on
+  p); only a real keystroke is judged: a tap or a controller press (`onUiKey(code)`, no key) keeps its shortcut on a bound code; Q and E stay RECORDS' tab keys on QWERTY's own REMOTE / THROW, and the silent J / X aliases are not counted (Colemak and Workman print N only on
   KeyJ: NO THANKS keeps a key, as ALLOW does); a chorded press (Ctrl, Cmd, Alt, AltGraph) answers neither the consent nor the update card. Keyboard diagonals stay about 1.41x while a pad is 4-way, disclosed. **The owner has
   played on a real controller (2026-11-02) and reported it works; details not yet reported, so M1-M7 stay open. On 2026-11-03 the owner felt the VIBRATION row's test buzz on a real controller on macOS; the in-run patterns are not yet reported.** No URL flag; `__GAME__.ctl` is the test hook. `keys.test` carries the pad matrix.
 - Pickup feedback (owner: "agree with research team, let's work on all of

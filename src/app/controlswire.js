@@ -196,6 +196,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     get onValue() { return !!page && page.onValue; },
     get capturing() { return !!page && page.capturing; },
     get fed() { return page ? page.fed : ""; },
+    get key() { return c.key; }, // the live key binds, for menuapp boundKey (no view built per keydown)
   };
   if (sw2Mod) sw2Build();
   if (pageMod && (!art || artDone)) build();

@@ -46,7 +46,7 @@ const SHORTCUT = new Set(["KeyR", "KeyY", "KeyN", "KeyC", "KeyB", "KeyM", "KeyT"
     KeyR, which prints p). Q and E, RECORDS' tab keys, sit on QWERTY's own REMOTE and THROW by design and stay. */
 export function shortcutOf(code, key, bound) {
   const L = letterOf(code, key);
-  return SHORTCUT.has(L) && typeof bound === "function" && bound(code) ? "" : L;
+  return typeof key === "string" && SHORTCUT.has(L) && typeof bound === "function" && bound(code) ? "" : L; // a tap or a controller press (no key) keeps its shortcut
 }
 /** A printed name worth showing: one printable ASCII character (a letter upper-cased, a digit, punctuation such as AZERTY's , on KeyM); "" for
     anything else (another script, an accented letter, a dead key, space). */

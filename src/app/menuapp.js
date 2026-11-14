@@ -978,7 +978,8 @@ export function createMenuApp(opts = {}) {
     },
     /* true when the code is one the player plays with now (the MOVE set, BOMB THROW REMOTE PAUSE): such a key answers no shortcut letter (controls.js shortcutOf) */
     boundKey(code) {
-      return playKeys(this.controls ? this.controls.view(this.ctlT).key : DEF_KEY).has(code);
+      const c = this.controls;
+      return playKeys(!c ? DEF_KEY : c.key || c.view(this.ctlT).key).has(code); // the wire's live binds; a stand-in with none builds its view
     },
     ctlKey(code, key) {
       return this.onControls() ? this.controls.feedKey(code, key, this.ctlT) : false;

@@ -1519,6 +1519,14 @@ for (const code of ["Space", "Enter"]) {
     g.app.pact = 0; }
   { const g = page("LEVEL SELECT")(); g.app.pactUnlocked = false; tap(g, "TRR"); tap(g, "N");
     check("T14: MODES stay shut before the first CLEAR", g.app.modeCur === -1 && g.app.pact === 0); }
+  /* final re-review: a tap or a controller press carries no printed key, so its shortcut stands on a code bound to play (Dvorak may bind KeyR, KeyC) */
+  { mem["nb.controls.v1"] = JSON.stringify({ v: 1, key: { BOMB: "KeyR", THROW: "KeyC", REMOTE: "KeyQ", PAUSE: "KeyP", MOVE: ["KeyW", "KeyD", "KeyS", "KeyA"] }, pad: { BOMB: "S", THROW: "W", REMOTE: "E", PAUSE: "SELECT" }, stick: "L", dead: 25, vib: 2 });
+    const g = page("RECORDS", (g) => tap(g, "dR"))(), c0 = clip.length; delete mem["nb.controls.v1"];
+    tap(g, "W"); await flush(); g.tick();
+    check("STATS, THROW bound to KeyC: WEST (a synthetic KeyC, no key) still copies the stats", g.app.screen === SCREEN.STATS && clip.length === c0 + 1, clip.length - c0);
+    g.input.onUiKey("KeyR"); g.tick();
+    check("STATS, BOMB bound to KeyR: the RESET tap (a synthetic KeyR, no key) still arms the reset", g.app.screen === SCREEN.STATS && g.app.resetArm === true, g.app.resetArm);
+    g.app.resetArm = false; }
   { const g = page("RECORDS", (g) => tap(g, "dR"))(), c0 = clip.length; tap(g, "W"); await flush(); g.tick();
     check("T14: STATS WEST copies the stats, with the same note", g.app.screen === SCREEN.STATS && clip.length === c0 + 1 && g.app.toast.s === "COPIED" && g.app.toast.t > 0, g.app.toast.s);
     clipMode = "no"; tap(g, "W"); await flush(); g.tick(); clipMode = "ok";
