@@ -328,6 +328,8 @@
   var GL=[16.02,166.53,567.96,185.94,12.35,70.06,198.95,459.89,61.75,355.47],GS=[55.35,64.02,489.31,390.97,13.64,85.36,99.49,429.28,76.4,457.98],UL=[0,0,65,0,144,0,219,0,369,0,451,0,528,0,567,0],US=[50,0,115,0,194,0,269,0,0,130,82,130,159,130,198,130];
   try{S=JSON.parse(localStorage.getItem("nb.settings.v1"))||{}}catch(e){}
   if(q?/3d|iso/.test(q[1]):S.r3d)st.setAttribute("data-3d","");
+  /* REAL 3D's desktop stage is fit.js glBox wide (GL_WIDE 1.12 x #c's content box, centred, never past the viewport; firstload.test pins it to glBox) */
+  var GW=(q?q[1]==="3d":!!S.r3d)&&!tch?1.12:1;
   if(S.flx||w.matchMedia&&w.matchMedia("(prefers-reduced-motion:reduce)").matches)st.setAttribute("data-still","");
   if(tch)E.setAttribute("data-t","");
   var pt=function(v){return Math.round(v*100)/100+"px"},ps=function(el,k,v){el.style.setProperty(k,pt(v))};
@@ -336,7 +338,8 @@
     var W=w.innerWidth,H=w.innerHeight;if(!W)return;
     var p=tch&&!(W>H),R=p?[16,250]:tch?[332,16]:[40,48],s=Math.max(.3,Math.min((W-R[0])/600,(H-R[1])/520,1.8)),G=p?GS:GL,U=p?US:UL,pl=$("lpl"),sg=$("lsg"),u,i,f;
     X=(W-600*s)/2;Y=p?Math.floor(Math.max(60,Math.min((H-520*s)/2,H-190-520*s))):(H-520*s)/2;kx=(600*s-2)/600;ky=(520*s-2)/520;
-    sg.style.left=pt(X);sg.style.top=pt(Y);sg.style.width=pt(600*s);sg.style.height=pt(520*s);ps(sg,"--c",40*kx);
+    var c0=600*s-2,gk=Math.max(1,Math.min(GW,(W-2)/c0)),sw=gk*c0+2;
+    sg.style.left=pt(X+(600*s-sw)/2);sg.style.top=pt(Y);sg.style.width=pt(sw);sg.style.height=pt(520*s);ps(sg,"--c",40*kx);
     at(pl,G[0],G[1],G[2],G[3]);pl.style.borderWidth=pt(G[4]*kx);ps(pl,"--t",G[8]*kx);at(lg,G[5],G[6],G[7]);
     if(p!==P){P=p;u=d.querySelectorAll?d.querySelectorAll("#xF use,#xG use"):[];for(i=0;i<u.length;i++){u[i].setAttribute("x",U[2*i]);u[i].setAttribute("y",U[2*i+1])}
       lg.setAttribute("viewBox",p?"-20 -40 414 306":"-20 -40 677 176");$("lbm").setAttribute("transform",p?"translate(-11 130)":"");$("lbo").setAttribute("transform",p?"translate(-11 130)":"");
