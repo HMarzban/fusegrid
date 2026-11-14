@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — button labels for the controller in your hands (R-LABELS, plan Task 9)
+- `src/app/padfamily.js` `familyOf` + `FAMILY_LABEL` (words.js `PAD_FAMILY_WORDS` twin); hints, CONTROLS, PAUSE, MENU foot, run ends, RECORDS, LEVEL SELECT help and the update card read A / ✕ / B; a generic pad unchanged. Kit `glyph` cross/circle/square/triangle; HUD toast and plain text lines keep the word (CROSS). Cache bump and owner check open (batched).
+
 ## 2026-11-14 — pad probe and the controller matrix (plan Task 4)
 - `tools/pads/probe.html` (dev-only, not in SRC) walks a pad and prints its `KNOWN` row; `docs/controllers.md` is the matrix, seeded from three real measurements, all else not measured. Step 3 (owner runs the probe on every pad) is open.
 

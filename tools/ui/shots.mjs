@@ -3,7 +3,7 @@
    Every page task proves its layout on these: tools/ui/gates.mjs measures them, tools/ui/compare.mjs puts each beside its approved mock frame.
 
    node tools/ui/shots.mjs [flags]
-     --screens a,b    screens to capture (default all): title, menu, level, levelloading (LEVEL SELECT's LOADING plate, its import held), options (alias settings), graphics, controls, padtoast, controlsnone, controlspad, controlscapture, controlsconnect, guide, howto, items,
+     --screens a,b    screens to capture (default all): title, menu, level, levelloading (LEVEL SELECT's LOADING plate, its import held), options (alias settings), graphics, controls, padtoast, controlsnone, controlspad, controlscapture, controlsconnect, menupadxbox / menupadps, controlspadxbox / controlspadps, pausepadxbox / pausepadps (R-LABELS: a fake Xbox or PlayStation controller in hand, one NORTH press so the hints name it), guide, howto, items,
                       enemies, floor, scores, stats, statsreset (STATS armed), medals, scoresfull / statsfull (a seeded cabinet,
                       __GAME__.seedRecords()), statspage2 (STATS' second page on a paged phone), scoresidle (RECORDS through the real lazy.idle() load: no want()), pause, pausetags (PAUSE with the run's rules seeded: the tag row), win, win2 (a paged run end's second
                       page), lose, loseshort (a saved best: the shortfall), losedaily (today's DAILY), lose2,
@@ -102,8 +102,11 @@ const HUD_RUN = `(()=>{const G=window.__GAME__.G,p=G.players[0];Object.assign(p,
 const LOSE = `(()=>{const G=window.__GAME__.G,p=G.players[0];G.lives=1;p.iFrames=0;p.shield=false;G.bombs.push({x:p.x,y:p.y,tx:Math.floor(p.x/40),ty:Math.floor(p.y/40),timer:0.05,radius:1,variant:'normal',dead:false});return true;})()`;
 const TWIN_MS = 1000 / 30;
 /* a standard-mapping controller in slot 0 (headless Chrome has none), no button down, for the CONTROLS frames that need one; false takes it away */
-const PAD = (on) => `(()=>{const b=()=>({pressed:false,touched:false,value:0}),p={id:'shots controller',index:0,connected:true,mapping:'standard',timestamp:0,axes:[0,0,0,0],buttons:Array.from({length:17},b),vibrationActuator:null};
+const PAD = (on, id) => `(()=>{const b=()=>({pressed:false,touched:false,value:0}),p=window.__shotsPad={id:${JSON.stringify(id || "shots controller")},index:0,connected:true,mapping:'standard',timestamp:0,axes:[0,0,0,0],buttons:Array.from({length:17},b),vibrationActuator:null};
  Object.defineProperty(navigator,'getGamepads',{value:${on} ? (()=>[p,null,null,null]) : (()=>[null,null,null,null]),configurable:true,writable:true});return true;})()`;
+/* R-LABELS: the ids a recipe's pad: "xbox" / "ps" plugs in (Chrome's form, as measured), and one press of button i so the hints name that pad */
+const PAD_ID = { xbox: "Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 0b13)", ps: "DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)" };
+const PRESS = (i, on) => `(window.__shotsPad&&(window.__shotsPad.buttons[${i}]={pressed:${on},touched:${on},value:${on ? 1 : 0}}),true)`;
 /* a WebUSB on macOS (the CONNECT row's reach, every-controller Task 3): the chooser always answers NotFoundError (cancelled), no pad is ever allowed */
 const USB = `(()=>{const u={requestDevice:()=>Promise.reject(Object.assign(new Error('none'),{name:'NotFoundError'})),getDevices:()=>Promise.resolve([]),addEventListener(){},removeEventListener(){}};
  Object.defineProperty(navigator,'usb',{value:u,configurable:true});Object.defineProperty(navigator,'userAgentData',{value:{platform:'macOS',mobile:false,brands:[]},configurable:true});return true;})()`;
@@ -210,6 +213,8 @@ async function group(c, port, a, look, world, rep) {
           await P.adv(600);
           if (R.tags) await ev("(Object.assign(window.__GAME__.G,{heat:2,pace:1,pact:15}),window.__GAME__.app.timeAttack=true,true)"); // the tag row: every rule on, for the capture only
           await ev("window.__pause&&window.__pause()");
+          if (R.pad) { await ev(PAD(true, PAD_ID[R.pad])); await P.adv(100); }
+          if (R.padPress != null) { await ev(PRESS(R.padPress, true)); await P.adv(100); await ev(PRESS(R.padPress, false)); await P.adv(900); }
         }
         if (s === "hud" && (await ev(HUD_RUN)) == null) warn("the room has no floor tile: no tile tip");
         if (s === "padtoast") { await P.adv(300); await ev(PAD(true)); await P.adv(200); } // a controller plugged in mid-run: the HUD's toast
@@ -221,7 +226,7 @@ async function group(c, port, a, look, world, rep) {
           for (const k of [].concat(R.key || [])) { await P.adv(100); await ev(`(window.__GAME__.input.onUiKey(${JSON.stringify(k)}),true)`); } // a run end's keys (a paged end's ▼)
         }
         await shoot(s, R.settle);
-        if (s === "padtoast") await ev(PAD(false));
+        if (s === "padtoast" || R.pad) { await ev(PAD(false)); await P.adv(100); } // the pad's loss lands in this capture's run: a phone's next run (no key press) would pause on it
         continue;
       }
       await ev("(window.__GAME__.reset(),true)");
@@ -240,7 +245,8 @@ async function group(c, port, a, look, world, rep) {
       if ((R.wait === "records" || R.wait === "level") && !(await poll(`import('/src/render/pages/lazy.js').then((m)=>(m.want('${R.wait}').catch(()=>{}),!!m.get('${R.wait}')))`, 10000))) warn("the " + R.wait.toUpperCase() + " page never loaded");
       if (R.wait === "records-idle" && !(await poll("import('/src/render/pages/lazy.js').then((m)=>!!m.get('records'))", 10000))) { L.fail(base, "the RECORDS page never loaded through lazy.idle()"); L.close(base); continue; } // never want(): the page's own idle load
       if (R.usb && !(await poll("!!window.__GAME__.ctl&&window.__GAME__.ctl.sw2().shown", 10000))) warn("the CONNECT row never showed (switch2.js usbReach)");
-      if (R.pad) { await ev(PAD(true)); await P.adv(100); }
+      if (R.pad) { await ev(PAD(true, PAD_ID[R.pad])); await P.adv(100); }
+      if (R.padPress != null) { await ev(PRESS(R.padPress, true)); await P.adv(100); await ev(PRESS(R.padPress, false)); await P.adv(900); }
       for (const st of [].concat(R.ctl || [])) { await ev(`(window.__GAME__.app.controls.${st},true)`); await P.adv(50); } // the page's own reducer calls, by name
       await shoot(s, R.settle || 600);
       if (R.block) await ev(BLOCK(R.block, false));

@@ -303,6 +303,12 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   }
   paint(menu(0, false, "v99"));
   check("pad: MENU foot = MOVE D-PAD · START SOUTH | v99 (label first, keycap last)", footOf() === "MOVE [D-PAD] · START [SOUTH] | v99", footOf());
+  /* R-LABELS (owner 2026-11-14): the controller in hand names START's key; a PlayStation cap paints its glyph, so the plan still carries the word */
+  for (const [fam, ok] of [["xbox", "A"], ["playstation", "CROSS"], ["nintendo", "B"]]) {
+    setHints(wordsOf("pad", DEF_CONTROLS, undefined, fam)); paint(menu(0, false, "v99"));
+    check("pad (" + fam + "): MENU foot = MOVE D-PAD · START " + ok + " | v99", footOf() === "MOVE [D-PAD] · START [" + ok + "] | v99", footOf());
+  }
+  setHints(PAD);
   paint(menu(6, false, "v99"));
   check("pad: MENU foot on SOURCE says it needs a click or Enter, with no SOUTH keycap (never a claim the press keeps)", footOf() === "MOVE [D-PAD] · NEEDS A CLICK OR ENTER | v99", footOf());
   const lv = paint(PAGES.LEVEL(false));

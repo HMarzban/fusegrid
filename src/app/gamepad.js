@@ -1,5 +1,6 @@
 // The pad poller and the stick, pure over an injected getGamepads. Plan: docs/superpowers/plans/2026-11-02-controls-feature.md T3.
 import { PAD_IDX as IDX, SENS_LEVELS } from "./controls.js";
+import { familyOf } from "./padfamily.js";
 const IDS = Object.keys(IDX).map(Number);
 const DPAD = { dU: "up", dD: "down", dL: "left", dR: "right" };
 const T_ON = 0.5,
@@ -62,7 +63,7 @@ const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 const fresh = () => ({ down: new Set(), order: [], st: null, mst: null });
 
 function emptySnap() {
-  return { connected: false, found: false, lost: false, count: 0, index: null, mapping: "standard", name: "", nb: 0, down: new Set(), press: [], release: [], dir: NODIR(), menuDir: NODIR(), mag: 0, anyDown: false };
+  return { connected: false, found: false, lost: false, count: 0, index: null, mapping: "standard", family: "generic", name: "", nb: 0, down: new Set(), press: [], release: [], dir: NODIR(), menuDir: NODIR(), mag: 0, anyDown: false };
 }
 
 /** The poller: one poll per rAF; PadSnap in, no side effects beyond its own latches. */
@@ -153,6 +154,7 @@ export function createPad(o = {}) {
       s.mapping = std ? "standard" : "other";
       s.nb = nb;
       s.name = padName({ connected: true, mapping: s.mapping, nb });
+      s.family = familyOf(g.id); // the words its buttons wear (R-LABELS); the id itself goes no further
       s.down = ps.down;
       s.press = e.press;
       s.release = dropped.length ? e.release.concat(dropped) : e.release;

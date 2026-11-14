@@ -1084,9 +1084,19 @@ not shell screens. Do not add them as `SCREEN` values.
   `docs/superpowers/specs/2026-11-06-controls-built.md`). Gamepad play, rebinding on both devices, one
   page, hints that follow the last-used device. **The sim never sees a pad:** the pad is another writer
   into `Input` with its own held axes and latches, OR-merged with keys; no wire field, no `src/core` read
-  of a pad, SENSITIVITY or vibration. The reserved `kick` slot stays false. Button names are by position only (SOUTH EAST WEST NORTH,
-  L/R SHOULDER, L/R TRIGGER, SELECT, START, D-PAD, L-STICK, R-STICK; ids `S E W N SHL SHR TRL TRR SELECT
-  START dU dD dL dR`); no maker's name anywhere. Seams: `src/app/controlswire.js` (the wire), `gamepad.js`
+  of a pad, SENSITIVITY or vibration. The reserved `kick` slot stays false. Button ids, binds and the store are positions
+  (ids `S E W N SHL SHR TRL TRR SELECT START dU dD dL dR`); what a player reads names the controller in hand (owner ruling R-LABELS, 2026-11-14:
+  "our system must be smart and detact true and show the users the right lable", reversing "by position only, no maker's name"): `src/app/padfamily.js`
+  `familyOf(id)` reads the vendor id (Chrome `Vendor: 045e`, Firefox `045e-028e-`; `045e` xbox, `054c` playstation, `057e` nintendo, the Switch 2
+  bridge included), else the name, else `generic`; the id is matched there only, never printed, stored or sent, and the family goes nowhere near
+  analytics. `FAMILY_LABEL` (pinned equal to words.js `PAD_FAMILY_WORDS`): Xbox `A B X Y`, `LB RB LT RT`, `VIEW MENU`; PlayStation `CROSS CIRCLE
+  SQUARE TRIANGLE` (a painted keycap draws them as kit `glyph` cross / circle / square / triangle, kit/paint.js `PAD_GLYPH`; text lines and the live
+  region keep the word; a DOM keycap the characters, `btnCap`), `L1 R1 L2 R2`, `CREATE OPTIONS`; Nintendo by position `B A Y X`, `L R ZL ZR`, `− +`
+  (said MINUS / PLUS); generic the positions SOUTH EAST WEST NORTH, L/R SHOULDER, L/R TRIGGER, SELECT, START, exactly as before (every pin unchanged).
+  The pad snap carries `family`; controlswire hands it only on the standard mapping (a non-standard pad keeps `BUTTON n`), keeps the last pad's until
+  another arrives, and re-lays the hints once per switch (`wordsOf(dev, c, names, family)`; a family's pad words also carry `family` and `say`). The
+  CONTROLS rows, foot, rule, status, callouts and the drawing's face legends (padart `drawPad` `fam`, the body stays generic), the run ends' and
+  RECORDS' WEST / NORTH caps, LEVEL SELECT's NORTH line and the update card follow it. Seams: `src/app/controlswire.js` (the wire), `gamepad.js`
   (poller, above the frame gate; radial deadzone, 4-way; SENSITIVITY `SENS_LEVELS` MIN 60 / LOW 40 / MEDIUM 25 / HIGH 15 / MAX 8, turn 1.40x to 1.10x, release `dead - 0.05`, `- 0.10` at 40 and above, floor 0.03; no response curve; a menu's first engage is vertical unless x > 1.25y), `padroute.js` (pad -> `Input` / shell, the
   swallow rule), `capture.js` (all input up, then 200 ms; later MOVE steps and a retry need only the release;
   no timeout), `controlspage.js` (reducer), `controls.js` (model, rules, store), `hints.js` (device tracker,

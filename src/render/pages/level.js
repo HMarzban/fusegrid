@@ -28,7 +28,7 @@
    0.6 em estimate; with no canvas source (Node) everything paints straight onto the target over one flat fill; a context with no clip or rect gets the
    plan only. Under the probe it records its rects, texts and pairs outside any layer paint. */
 import {isFinale, roomCap} from "../../core/config.js";
-import {LABEL, DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, DEFAULT_RULES, modWords, tagFor, runParts, LEVEL_WORDS as LW, MENU} from "../words.js";
+import {LABEL, DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, DEFAULT_RULES, modWords, tagFor, runParts, LEVEL_WORDS as LW, MENU, padHelp} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, cap, capW, plate, band, focusBomb, glyph, plaque, rpath as rp} from "../kit/paint.js";
 import {T, DEV, measure as W, textScale, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
@@ -261,7 +261,7 @@ export function startTags(ui) {
   return [...new Set([t, runParts(run, {count: true}).join(" · "), runParts(run, {count: true, terse: true}).join(" · ")])];
 }
 /** The desk's help line: the focused list entry (or a controller's TRIGGER cursor); a controller with modifiers offered, how TRIGGER and NORTH work; else the level's sentence. */
-export const helpOf = (ui) => (ui.open && ui.cur >= 0 ? LW.MOD_HELP[ui.cur] : ui.trig >= 0 ? LW.MOD_HELP[ui.trig] : ui.pad && ui.unlocked && !ui.open ? LW.PAD_HELP : LW.help(ui.level | 0 || 1, !!ui.unlocked));
+export const helpOf = (ui) => (ui.open && ui.cur >= 0 ? LW.MOD_HELP[ui.cur] : ui.trig >= 0 ? LW.MOD_HELP[ui.trig] : ui.pad && ui.unlocked && !ui.open ? padHelp(hints().family) : LW.help(ui.level | 0 || 1, !!ui.unlocked));
 /** LEVEL SELECT's foot follows the focus, label first and keycap last: ↑↓ ROW, ←→ CHANGE on LEVEL / DIFFICULTY / GAME SPEED, confirm STARTs (OPENs on
     MODIFIERS), back BACK; in the open list ↑↓ PICK, confirm TOGGLEs, back CLOSEs. Keys and controller words. */
 export function footItems(row, open, words) {

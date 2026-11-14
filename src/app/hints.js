@@ -1,5 +1,6 @@
 // The last-used device tracker behind the hints, and the words each device reads. Every t is frame time in ms; dwell is in seconds.
-import { BTN, DEF_CONTROLS, keyName, moveLabel } from "./controls.js";
+import { DEF_CONTROLS, keyName, moveLabel } from "./controls.js";
+import { btnSay, btnWord, tabWord } from "./padfamily.js";
 export { helpOf } from "../core/entities.js"; // lives beside POWER: menudraw may not import src/app, and src/app may not import src/render
 
 const SRC = new Set(["key", "pad", "touch"]);
@@ -36,9 +37,17 @@ export function createHintDev({ lay, dwell = 0.75 } = {}) {
   };
 }
 
-/** The words a device reads under these binds; CONFIRM and BACK are fixed on both devices. */
-export function wordsOf(dev, c) {
+/** The words a device reads under these binds; CONFIRM and BACK are fixed on both devices. family (padfamily.js) names a pad's buttons the way the
+    controller in the player's hands prints them (R-LABELS); a generic pad, or none, reads the positions exactly as before. names: the keyboard's
+    printed characters, passed through (unused here). A family pad's words also carry family, and say: each button word as the live region says it. */
+export function wordsOf(dev, c, names, family) {
   const b = c || DEF_CONTROLS;
-  if (dev === "pad") return { dev, ok: "SOUTH", back: "EAST", tab: "SHOULDERS", pause: "START", bomb: BTN[b.pad.BOMB].w, throw: BTN[b.pad.THROW].w, remote: BTN[b.pad.REMOTE].w, move: "D-PAD", moveAlt: b.stick === "R" ? "R-STICK" : "L-STICK", moveCaps: null, tapPage: false };
+  if (dev === "pad") {
+    const f = family || "generic", w = (id) => btnWord(id, f);
+    const o = { dev, ok: w("S"), back: w("E"), tab: tabWord(f), pause: w("START"), bomb: w(b.pad.BOMB), throw: w(b.pad.THROW), remote: w(b.pad.REMOTE), move: "D-PAD", moveAlt: b.stick === "R" ? "R-STICK" : "L-STICK", moveCaps: null, tapPage: false };
+    if (f === "generic") return o;
+    const a = (id) => btnSay(id, f);
+    return { ...o, family: f, say: { ok: a("S"), back: a("E"), pause: a("START"), bomb: a(b.pad.BOMB), throw: a(b.pad.THROW), remote: a(b.pad.REMOTE) } };
+  }
   return { dev, ok: "ENTER", back: "ESC", tab: "[ ]", pause: keyName(b.key.PAUSE), bomb: keyName(b.key.BOMB), throw: keyName(b.key.THROW), remote: keyName(b.key.REMOTE), move: moveLabel(b.key.MOVE), moveAlt: "ARROWS", moveCaps: [0, 3, 2, 1].map((i) => keyName(b.key.MOVE[i])), tapPage: dev === "touch" };
 }
