@@ -54,7 +54,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
   const names = {};
   let namesV = 0;
   const nameSet = (code, v) => {
-    const n = layoutName(v);
+    const n = /^Numpad/.test(code) ? "" : layoutName(v); // a numpad key keeps NUM n, never a bare digit like the top row's
     if (n ? names[code] === n : !(code in names)) return false;
     if (n) names[code] = n; else delete names[code];
     namesV++;

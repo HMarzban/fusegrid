@@ -1327,8 +1327,8 @@ for (const via of ["LATER", "the backdrop"]) {
   k.down("KeyE", "€", { altKey: true });
   k.down("KeyD", "d", { getModifierState: (m) => m === "AltGraph" });
   check("Shift + Digit1 learns nothing, nor any key under Shift, Alt or AltGraph", J(k.c.keyNames()) === J({ KeyQ: "A" }), J(k.c.keyNames()));
-  k.down("Space", " "); k.down("Escape", "Escape"); k.down("ArrowUp", "ArrowUp");
-  check("Space, Escape and the arrows learn nothing", J(k.c.keyNames()) === J({ KeyQ: "A" }) && k.words.bomb === "SPACE", J(k.c.keyNames()));
+  k.down("Space", " "); k.down("Escape", "Escape"); k.down("ArrowUp", "ArrowUp"); k.down("Numpad7", "7");
+  check("Space, Escape, the arrows and a numpad key (NUM 7 stays) learn nothing", J(k.c.keyNames()) === J({ KeyQ: "A" }) && k.words.bomb === "SPACE", J(k.c.keyNames()));
   let m = { KeyW: "z" };
   const f = rig({ getLayoutMap: () => Promise.resolve(new Map(Object.entries(m))) });
   await flush();
