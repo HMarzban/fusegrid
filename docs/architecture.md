@@ -61,7 +61,7 @@ Since shell v203 (the UI upgrade's first release) the menus are drawn by a
 world kit in [`src/render/kit/`](../src/render/kit/): `worldTokens(level)` gives
 each world its colours, `paint.js` the keys, cells, plate, the bare focus
 bomb and its ring, `type.js` the system-font type scale, `room.js` the look of
-the picked level behind the page, and `cache.js` an offscreen layer cache, so a
+the picked level behind the page (its floor only, at the size you play on, since the owner's 2026-11-14 pick), and `cache.js` an offscreen layer cache, so a
 steady menu frame is a few blits plus the live focus. Each page is one module
 in [`src/render/pages/`](../src/render/pages/) (MENU, LEVEL SELECT, the cards,
 SETTINGS / GRAPHICS, GUIDE, RECORDS, PAUSE and the run ends) with ONE geometry
