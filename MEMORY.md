@@ -17,7 +17,7 @@ append an entry when it makes a non-trivial change.
 ## Log
 
 ## 2026-11-14 — v202 + v214 are LIVE
-- Owner: "push the all changes in the local to the prod". 723 tests green; `origin/main` fast-forwarded `e3bf4a3..0e47f7b` (v202 delivery squash, then the UI upgrade through v214; history checked free of promotion text). Pages CI green (test + deploy), live `sw.js` / `CACHE_NAME` read v214, og.png served. Open: Social preview re-upload, GitHub release v2.5.0, device checks, three vetoes, the stale-branch delete.
+- Owner: "push the all changes in the local to the prod". 723 tests green; `origin/main` fast-forwarded `e3bf4a3..0e47f7b` (v202 delivery squash, then the UI upgrade through v214; history checked free of promotion text). Pages CI green (test + deploy), live `sw.js` / `CACHE_NAME` read v214, og.png served. GitHub release v2.5.0 (shell v201 → v214) cut the same day. Open: Social preview re-upload, device checks, three vetoes, the stale-branch delete.
 
 ## 2026-11-12 — Sign-off: docs aligned to the v214 release
 - CHANGELOG's v214 section notes v207-v213 were local builds (never released); architecture.md dates its post-v206 facts to v214. State at sign-off: feature/ui-upgrade = v214, 723 tests green, nothing pushed. Owner to-dos: device checks, three vetoes, the 56-branch delete, push main (v202) then the branch, Social preview upload, the v2.5.0 release note (draft in the ledger folder), the marketing kit's stale copy blocks.
