@@ -17,7 +17,7 @@ append an entry when it makes a non-trivial change.
 ## Log
 
 ## 2026-11-14 — v218: v217's loose ends
-- World-8 run-end gates measured (check notch / crack info pairs, `cell n ahead`, WIN chosen exemption "no level left to win", stale lose exemption removed); REAL 3D tile tips may take a third line; orbit controls on #stage (wheel / right-drag over the strips, survives a released #gl); first-load stage glBox wide with REAL 3D saved. Stayed out of the controller files: another session is working on them. 736 tests, strict captures clean; push awaits the owner.
+- World-8 run-end gates measured (check notch / crack info pairs, `cell n ahead`, WIN chosen exemption "no level left to win", stale lose exemption removed); REAL 3D tile tips may take a third line; orbit controls on #stage (wheel / right-drag over the strips, survives a released #gl); first-load stage glBox wide with REAL 3D saved. Stayed out of the controller files: another session is working on them. 736 tests, strict captures clean; Pushed on the owner's "Yes, push v218"; Pages CI green, live `sw.js` v218.
 
 ## 2026-11-14 — v217: the three veto picks
 - Owner picked from the contact sheets: veto 1 D (floor-only room behind menus), veto 2 D (REAL 3D wider desktop stage, built by a worktree agent, merged d8d3e0b), veto 3 B (toast over the chip plate). Also closed issues #2, #3, #4 and commented #5 on the owner's word. A combined capture found the toast hid the HUD's one info pair (the hearts); padtoast now exempts info only where the LIVES chip is covered. 735 tests; Pushed on the owner's "Yes, push v217"; Pages CI green, live `sw.js` v217.
