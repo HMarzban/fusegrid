@@ -30,6 +30,19 @@ WebKit column.
 | | Safari | not measured | n/a | n/a | n/a | not measured |
 | | Firefox | not measured | not measured | not measured | not measured | n/a |
 
+## What happens by itself, and what needs a click
+
+A browser keeps three rules the game cannot get round:
+
+1. It shows a controller to a page only after that controller's first button press.
+2. It shows a page no USB device the player has not allowed, and fires no event when one is plugged in.
+3. It opens its "pick a device" chooser only inside a click, key or tap.
+
+So a standard controller (Xbox, PlayStation and most others) needs no setup: plug it in and press a button, and the menu
+says which one it found. A Switch 2 Pro Controller needs one click per browser, on CONNECT SWITCH 2 on the menu's help card
+or CONNECT on SETTINGS › CONTROLS; after that the game wakes it on every visit and every plug-in. The help card (shell v220)
+is shown up front because rule 2 means the game can never see an un-allowed controller arrive.
+
 ## How to add a cell
 
 Open `tools/pads/probe.html` from a local `PORT=0 node serve.js` (or the file

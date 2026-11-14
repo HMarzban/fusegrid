@@ -15,6 +15,26 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v220 · 2026-11-14 (prepared, not live)
+
+The game tells you how to bring a controller in, and says which one it found.
+
+### Added
+
+- **A "PLAYING WITH A CONTROLLER?" card** on the menu (keyboard layouts), bottom right. It tells you to press any button
+  on the controller, because a browser shows a controller to a game only after its first press. In Chrome on a Mac it also
+  carries **CONNECT SWITCH 2**: one click opens Chrome's controller chooser for a Switch 2 Pro Controller on a cable, with
+  no trip to SETTINGS › CONTROLS, and the card says how it went. It waits behind the privacy and update cards, and goes
+  away for good once a controller has been seen, when you press GOT IT, or after three runs with no controller.
+
+### Changed
+
+- **The controller notes name your controller.** The menu note and the in-run message read XBOX CONTROLLER READY,
+  PLAYSTATION CONTROLLER BACK or NINTENDO CONTROLLER READY; any other controller still reads CONTROLLER. CONTROLLER LOST
+  stays as it was.
+- **A controller whose buttons arrive in an unknown order says so:** CONTROLLER READY · NON-STANDARD BUTTONS, pointing at
+  SETTINGS › CONTROLS, where you can test each button and rebind it.
+
 ## shell v219 · 2026-11-14
 
 Every controller and every keyboard, read the way you hold them.

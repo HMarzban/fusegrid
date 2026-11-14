@@ -191,11 +191,28 @@
     border-radius:4px;background:var(--k-band);color:var(--k-ink);font-size:12px;letter-spacing:.1em;cursor:pointer;white-space:nowrap}
   #ana .yes:hover,#ana .no:hover{background:var(--k-hover)}
   #ana a{color:var(--k-ink)}
+  /* controller help card (src/app/padhelp.js, controller discovery 2026-11-14): the consent card's plate in the same corner, one card at a time;
+     CONNECT SWITCH 2 the one lit key (its click is Chrome's USB chooser activation), GOT IT quiet; the status line under them */
+  #padhelp{position:fixed;z-index:20;right:16px;bottom:16px;width:min(330px,calc(100vw - 32px));
+    box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:10px 8px;padding:12px 12px 12px 16px;
+    background:var(--k-pane);border:1px solid var(--k-frame);border-radius:6px;
+    box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 var(--k-lit);color:var(--k-ink);
+    font:700 13px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.12em;
+    animation:updIn .16s steps(4) both;user-select:none;-webkit-user-select:none}
+  #padhelp b{flex-basis:100%}
+  #padhelp i{flex-basis:100%;margin-top:-4px;font:400 11px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-style:normal;color:var(--k-off);letter-spacing:0}
+  #padhelp .st{color:var(--k-ink);font-weight:700;letter-spacing:.08em}
+  #padhelp .go,#padhelp .no{display:flex;align-items:center;justify-content:center;height:34px;padding:0 10px;border:1px solid var(--k-frame);
+    border-radius:4px;background:var(--k-band);color:var(--k-ink);font-size:12px;letter-spacing:.1em;cursor:pointer;white-space:nowrap}
+  #padhelp .go{flex:2;background:var(--k-lit);color:var(--k-dk)}
+  #padhelp .no{flex:1}
+  #padhelp .no:hover{background:var(--k-hover)}
+  #padhelp [hidden]{display:none}
   /* an author display:flex beats the UA [hidden] rule, so each card needs its own:
      without it the NEW VERSION card and the consent card never hide */
-  #upd[hidden],#ana[hidden]{display:none}
+  #upd[hidden],#ana[hidden],#padhelp[hidden]{display:none}
   @keyframes updIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-  @media (prefers-reduced-motion:reduce){#upd,#ana{animation:updFade .12s linear both}}
+  @media (prefers-reduced-motion:reduce){#upd,#ana,#padhelp{animation:updFade .12s linear both}}
   @keyframes updFade{from{opacity:0}to{opacity:1}}
   body[data-lay=p] #upd kbd,body[data-lay=l] #upd kbd,body[data-lay=p] #ana kbd,body[data-lay=l] #ana kbd{display:none}
   body[data-lay=p] #upd[data-pad="1"] kbd,body[data-lay=l] #upd[data-pad="1"] kbd{display:inline}
@@ -296,7 +313,7 @@
      #loadsay (outside #load, which hides) speaks stages only, never counts; a failure
      card speaks through #loadmsg's alert. Enter answers a failure card with RETRY,
      Escape with the other button, the keyboard twin of a pad's SOUTH and EAST. -->
-<script id="loadjs" data-files="121">
+<script id="loadjs" data-files="122">
 (function(w,d){
   var $=function(i){return d.getElementById(i)},E=$("load"),bar=$("loadbar"),fill=$("loadfill"),msg=$("loadmsg"),act=$("loadact"),retry=$("loadretry"),keep=$("loadkeep"),retryW=$("loadretryw"),keepW=$("loadkeepw"),retryK=$("loadretryk"),keepK=$("loadkeepk");
   var SLOW=10000,STALL=30000,say0=$("loadsay"),jobs={},cur=null,failed=null,drop=null,again=null,dl="USE CLASSIC 2D",shown=null,words=false,iv=0,base=new URL("./",d.baseURI).href;
@@ -537,6 +554,7 @@
 <link rel="modulepreload" href="./src/app/pacestore.js">
 <link rel="modulepreload" href="./src/app/pactstore.js">
 <link rel="modulepreload" href="./src/app/padfamily.js">
+<link rel="modulepreload" href="./src/app/padhelp.js">
 <link rel="modulepreload" href="./src/app/padroute.js">
 <link rel="modulepreload" href="./src/app/perf.js">
 <link rel="modulepreload" href="./src/app/plaques.js">

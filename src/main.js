@@ -59,6 +59,7 @@ import {
 import { clampPace } from "./core/pace.js";
 import { mountUpdate } from "./app/update.js";
 import { mountAnalytics } from "./app/analytics.js";
+import { mountPadHelp } from "./app/padhelp.js";
 import { mountControls } from "./app/controlswire.js";
 import { shortcutOf } from "./app/controls.js";
 import { mountPointer } from "./app/pointer.js";
@@ -468,6 +469,7 @@ export function createGame(canvas, opts = {}) {
   let padUnlock = null;
   if (typeof window !== "undefined") padUnlock = armUnlock(window, audio, () => { if (app.screen === SCREEN.INTRO) { fireJingle(); app.beginShow(); } }, (ev) => !!(ev && ev.target && ev.target.closest && ev.target.closest("#load"))).pad, mountAudioPower(window, typeof document !== "undefined" ? document : null, audio, () => settings.snd !== 0);
   const ctl = mountControls({ input, app, SCREEN, world, onPause, getGamepads: opts.getGamepads, store: opts.store, audio, unlock: padUnlock, setHints, art: loadControlsArt, idle: idleNow }); // pad + rebinds + hints + rumble; the page and rumble load lazily (src/app/controlswire.js)
+  mountPadHelp({ get: () => ({ app, SCREEN, busy: () => upd.shown || ga.shown }), ctl }); // the controller help card on MENU (src/app/padhelp.js)
   if (typeof window !== "undefined") window.addEventListener("pointerdown", () => { if (app.screen === SCREEN.INTRO) app.skipShow(); }); // bubble: an off-canvas tap skips too; the canvas handler runs first
 
   /* ATTRACT demo world handle (src/app/attract.js): the shell machine only

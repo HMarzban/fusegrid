@@ -3,7 +3,7 @@
    that follow it, a generic pad reading its positions exactly as before, and a family switch that re-lays the hints once. */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { familyOf, FAMILY_LABEL, FAMILIES, btnWord, btnSay, btnCap, tabWord } from "../src/app/padfamily.js";
+import { familyOf, FAMILY_LABEL, FAMILIES, btnWord, btnSay, btnCap, tabWord, nameOf } from "../src/app/padfamily.js";
 import { BTN, DEF_CONTROLS, bindBtn } from "../src/app/controls.js";
 import { createPad } from "../src/app/gamepad.js";
 import { wordsOf } from "../src/app/hints.js";
@@ -247,4 +247,14 @@ test("a glyph run leaves the caller's textAlign and textBaseline as it found the
   g.ctx.textAlign = "right"; g.ctx.textBaseline = "alphabetic";
   runText(g.ctx, "CONFIRM CROSS", 100, 50, "700 16px sans-serif", "#fff", "center", true);
   assert.deepEqual([g.ctx.textAlign, g.ctx.textBaseline], ["right", "alphabetic"]);
+});
+
+/* Controller discovery (2026-11-14): the notes and the toast name the family in the player's hands */
+test("nameOf names each family and falls back to CONTROLLER", () => {
+  assert.equal(nameOf("xbox"), "XBOX CONTROLLER");
+  assert.equal(nameOf("playstation"), "PLAYSTATION CONTROLLER");
+  assert.equal(nameOf("nintendo"), "NINTENDO CONTROLLER");
+  assert.equal(nameOf("generic"), "CONTROLLER");
+  assert.equal(nameOf("zzz"), "CONTROLLER");
+  assert.equal(nameOf(undefined), "CONTROLLER");
 });

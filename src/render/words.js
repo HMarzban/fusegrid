@@ -165,6 +165,7 @@ export const RESET_GROUP = Object.freeze({
   "nb.highscores.v1": "score", "nb.bests.v1": "best", "nb.times.v1": "time", "nb.daily.v1": "daily try", "nb.ghost.v1": "ghost", "nb.medals.v1": "medal",
   "nb.plaques.v1": "badge", "nb.stats.v1": "stat", "nb.coach.v1": "tips", "nb.coach.v2": "tips", "nb.cabinet.v1": "tips", "nb.pact.v1": "locks",
   "nb.settings.v1": "settings", "nb.pace.v1": "game speed", "nb.analytics.v1": "analytics choice", "nb.controls.v1": "controls",
+  "nb.padhelp.v1": "controls", // the controller help card retired (controller discovery, 2026-11-14): kept with the controls
 });
 const ERASE_NOUNS = ["score", "best", "time", "daily try", "ghost", "medal", "badge", "stat"], KEEP_NOUNS = ["settings", "game speed", "analytics choice", "controls"];
 /* the two groups that are not nouns: how each reads when kept (fix round 1: every group prints in either list, or the sentence throws) */
@@ -208,7 +209,21 @@ export const HUD_WORDS = Object.freeze({ PAUSE: "PAUSE", RESUME: "RESUME", BOMB:
 /* the HUD's controller toast while a run PLAYs (owner 2026-11-12): the note's own words, then the controller's MOVE and BOMB (hints wordsOf "pad") */
 export const PAD_TOAST = Object.freeze({ READY: MENU_WORDS.PAD_READY, BACK: MENU_WORDS.PAD_BACK, LOST: CONTROLS_WORDS.LOST, LOST_BODY: "THE KEYS STILL WORK",
   body: (move, bomb) => MENU_WORDS.MOVE + "\u00a0" + move + " · " + HUD_WORDS.BOMB + "\u00a0" + bomb, // a no-break space: a wrapped toast never parts an action from its button
-  SHORT: CONTROLS_WORDS.CONTROLLER }); // a slot too narrow for the whole title (the landscape gutters): CONTROLLER, its state leading the line under it
+  SHORT: CONTROLS_WORDS.CONTROLLER, // a slot too narrow for the whole title (the landscape gutters): CONTROLLER, its state leading the line under it
+  ODD_BODY: "NON-STANDARD BUTTONS · " + TO_CONTROLS }); // a controller in an unknown button order (controller discovery, 2026-11-14): CONTROLS sets it up
+/* Controller discovery (2026-11-14): the notes and the toast name the family in hand (src/app/padfamily.js FAMILY_NAME, pinned equal); the
+   non-standard note's words are the CONTROLS page's own; the help card #padhelp (src/app/padhelp.js HELP_WORDS, pinned equal) */
+export const PAD_NAME = Object.freeze({ xbox: "XBOX CONTROLLER", playstation: "PLAYSTATION CONTROLLER", nintendo: "NINTENDO CONTROLLER", generic: "CONTROLLER" });
+export const PAD_ODD = "NON-STANDARD BUTTONS";
+/** A controller note's step-downs for a slot that will not hold it: the whole note, its head, then its head with the family's name dropped (final review). */
+export const padNoteSteps = (n) => {
+  const head = String(n).split(" · ")[0], fam = Object.values(PAD_NAME).find((x) => x !== PAD_NAME.generic && head.startsWith(x + " ")), out = [n];
+  if (head !== n) out.push(head);
+  if (fam) out.push(PAD_NAME.generic + head.slice(fam.length));
+  return out;
+};
+export const PAD_HELP_WORDS = Object.freeze({ title: "PLAYING WITH A CONTROLLER?", body: "Plug it in and press any button on it. A browser shows a controller to a game only after its first press.",
+  sw2: "A Switch 2 Pro Controller on a cable needs one click here first.", go: "CONNECT SWITCH 2", no: "GOT IT", press: "PRESS ANY BUTTON ON IT" });
 /* R-LABELS (owner 2026-11-14): the words a controller's buttons wear, by the family in the player's hands (src/app/padfamily.js FAMILY_LABEL, pinned
    equal in tests/words.test.mjs: src/app never imports this file). w printed, s short, a the live region's word. PlayStation's four faces print as
    the words where only text fits; a painted keycap draws them as the ✕ ○ □ △ glyphs (kit/paint.js). A generic pad reads its positions as before. */

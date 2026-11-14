@@ -24,7 +24,7 @@
    gets no keycap; with no canvas source (Node) the plate and foot paint straight onto the target over one flat fill; a context with no clip or rect (the
    headless renderer's) gets the plan only. Under the probe it records its rects, texts and squint pairs outside any layer paint. */
 import {biomeOf} from "../../core/config.js";
-import {LABEL, MENU_ROWS, MENU_WORDS as M, SETTINGS_WORDS, TO_CONTROLS, ART_STYLES, DIFF, tagFor, runParts} from "../words.js";
+import {LABEL, MENU_ROWS, MENU_WORDS as M, SETTINGS_WORDS, TO_CONTROLS, ART_STYLES, DIFF, tagFor, runParts, PAD_NAME, PAD_ODD} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, cap, capW, plate, band, focusBomb, glyph, plaque} from "../kit/paint.js";
 import {T, DEV, measure as W, textScale, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
@@ -183,13 +183,23 @@ function teasers(l, ui, phoneMode, words) {
   }
   return [];
 }
-const PAD_SIGN = M.PAD_READY + " · " + TO_CONTROLS, VIB = new RegExp("^" + M.PAD_READY + " · " + SETTINGS_WORDS.vib + " \\w+$");
-export const padSign = (n) => (n === M.PAD_READY || n === M.PAD_BACK || VIB.test(n || "") ? PAD_SIGN : "");
+/* the controller notes (controlswire): <NAME> READY / BACK, <NAME> READY · VIBRATION <LEVEL>, NAME the family's (words.js PAD_NAME, controller discovery
+   2026-11-14) or CONTROLLER, and CONTROLLER READY · NON-STANDARD BUTTONS. Each wears its signpost to CONTROLS (READY even on a BACK note); LOST none. */
+const READY = M.PAD_READY.slice(PAD_NAME.generic.length + 1), NAMES = "(" + Object.values(PAD_NAME).join("|") + ")";
+const ODD_NOTE = M.PAD_READY + " · " + PAD_ODD;
+const NOTE = new RegExp("^" + NAMES + " (" + READY + "|" + M.PAD_BACK.slice(PAD_NAME.generic.length + 1) + ")$"), VIB = new RegExp("^" + NAMES + " " + READY + " · " + SETTINGS_WORDS.vib + " \\w+$");
+const readyOf = (n) => { const h = n.split(" · ")[0]; return h.slice(0, h.lastIndexOf(" ")) + " " + READY; }; // XBOX CONTROLLER BACK -> XBOX CONTROLLER READY
+export const padSign = (n) => (n === ODD_NOTE ? PAD_ODD + " · " + TO_CONTROLS : NOTE.test(n || "") || VIB.test(n || "") ? readyOf(n) + " · " + TO_CONTROLS : "");
+const signOf = (n) => (VIB.test(n || "") ? n + " · " + TO_CONTROLS : padSign(n)); // the longest sign a note wears
 function noteCands(ui) {
   if (ui.note) return [ui.note, ui.note.split(" · ")[0]];
   const s = padSign(ui.pad);
-  return !s ? [] : VIB.test(ui.pad) ? [ui.pad + " · " + TO_CONTROLS, s, M.PAD_READY] : [s, M.PAD_READY];
+  if (!s) return [];
+  if (ui.pad === ODD_NOTE) return [s, PAD_ODD];
+  const r = readyOf(ui.pad), g = r === M.PAD_READY ? [] : [M.PAD_READY]; // a family's name drops last (final review: PLAYSTATION CONTROLLER READY is long)
+  return (VIB.test(ui.pad) ? [signOf(ui.pad), s, r] : [s, r]).concat(g);
 }
+export const _noteCands = noteCands; // test seam
 export function playTags(ui) {
   const run = ui.run || {}, t = tagFor(run), lv = LABEL.LEVEL + " " + (ui.level | 0 || 1) + " · " + biomeOf(ui.level | 0 || 1).name;
   if (!t) return [lv];
@@ -263,7 +273,7 @@ function footPlan(c, G, ui, words, verb, sign) {
   let w = 0;
   parts.forEach((p, i) => { if (p.sep) p.w = W(c, f, p.sep); w += (i ? (p.cap ? p.gap : 12) : 0) + p.w; });
   const fw = w + 32 + 4, x = d.plate.x + d.plate.w / 2 - fw / 2, y = d.foot.y;
-  if (x < GUT && sign && sign !== PAD_SIGN) return footPlan(c, G, ui, words, verb, PAD_SIGN);
+  if (x < GUT && sign && sign !== padSign(ui.pad)) return footPlan(c, G, ui, words, verb, padSign(ui.pad)); // a long sign steps down to the short one
   let cx = x + 18;
   parts.forEach((p, i) => { cx += i ? (p.cap ? p.gap : 12) : 0; p.x = cx; cx += p.w; });
   return {x, y, w: fw, h: FOOT_H, f, px: dv.sec, parts, mid: y + FOOT_H / 2};
@@ -271,7 +281,7 @@ function footPlan(c, G, ui, words, verb, sign) {
 export function plan(c0, G, ui) {
   const c = mOf(c0), words = hints(), showCap = G.mode === "desk" && !G.tap && !G.touch, rows = {};
   for (const l of G.order) rows[l] = rowPlan(c, G, ui, l, words, showCap);
-  const sign = !ui.note && padSign(ui.pad) ? (VIB.test(ui.pad) ? ui.pad + " · " + TO_CONTROLS : PAD_SIGN) : "";
+  const sign = !ui.note && padSign(ui.pad) ? signOf(ui.pad) : "";
   const verbs = G.mode === "desk" ? (G.tap || sign ? [""] : words.dev === "pad" ? [M.START, M.OPEN, M.SOURCE_PAD] : [M.START, M.OPEN]) : [];
   const foot = {};
   for (const v of verbs) foot[v] = footPlan(c, G, ui, words, v, sign);

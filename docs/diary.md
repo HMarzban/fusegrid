@@ -966,6 +966,15 @@ wide as REAL 3D's, so nothing jumps at the hand-off. The fourth was older: the c
 measure on world 8, where every level is won and none is left ahead. Rather than excuse it, the page now declares the marks a
 player actually reads there, the check on a won level and the crack on the one you fell on, and both clear the bar easily.
 
+## 2026-11-14: a card for the controller you just plugged in (shell v220)
+
+The owner plugged the Switch 2 Pro Controller into the live site and nothing happened. Nothing was broken: their earlier
+"allow" had been given to the local copy, and Chrome keeps it per site. Players had been saying the same thing about other
+controllers, so the question became how a game notices a controller arriving. The honest answer is that it can't: a
+browser hides a pad until its first press, and hides a USB device it was never given. So the menu now says it up front,
+in a small card: press any button, and on a Mac in Chrome, one click to connect a Switch 2. The notes name what they
+found, XBOX CONTROLLER READY and the rest, and a controller with its buttons in a strange order is told where to set it up.
+
 ---
 
 **CONTINUE?** See what each release changed in the
