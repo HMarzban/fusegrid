@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — controller discovery merged locally (shell v220)
+- `feature/controller-discovery` merged into local `main` (607abab) on the owner's word after the final review's fixes; 784 tests green on the merge; worktree and branch removed; not pushed. Open: owner hardware checks (card CONNECT with a real Switch 2, Xbox-type name and unplug pause, keyboard-only browser).
+
 ## 2026-11-14 — controller discovery (shell v220, prepared)
 - Owner: players plug and unplug different controllers; the game must discover them. Built on `feature/controller-discovery`: the menu's `#padhelp` card (press any button; CONNECT SWITCH 2 on Chrome/macOS), family-named notes and toast, the NON-STANDARD BUTTONS note. Browser limits make the first Switch 2 grant a click; not merged, not pushed; owner hardware checks open.
 
