@@ -469,6 +469,9 @@ const SRC_ALLOW = [
   ["src/core/pact.js", /^export const PACT_NAME=/, /^(BARE|THIN)$/], ["src/render/scenes.js", /chip\(314, 64, "LV"/, /^LV$/],
   ["src/render/fx.js", /cap=\(v,m\)=>|CFG\.MAX_SPEED\?/, /^MAX$/], ["src/app/gfx.js", /^\s*fps: Object\.freeze\(\["30", "60", "MAX"\]\)/, /^MAX$/],
   ["src/app/controls.js", /^export const SENS_LEVELS = /, /^MAX$/], ["src/render/controlsgeo.js", /^export const SENS_LEVELS = /, /^MAX$/],
+  /* R-LABELS (owner 2026-11-14): a controller's own button names are what the player's pad prints, not the old level / settings words: L1 R1 L2 R2
+     and OPTIONS on a PlayStation pad, PLUS (said for Nintendo's +), in the one family table and its src/app twin */
+  ["src/app/padfamily.js", /^\s*(playstation|nintendo): \{/, /^([LR][12]|OPTIONS|PLUS)$/], ["src/render/words.js", /^\s*(playstation|nintendo): famRow\(/, /^([LR][12]|OPTIONS|PLUS)$/],
 ];
 const OLD_CAPS = new RegExp(OLD.source);
 /* a level / heat / pace shorthand built at runtime: a literal that ends in a lone L, R or LV just before a "+", or a template

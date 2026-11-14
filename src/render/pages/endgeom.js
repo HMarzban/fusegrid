@@ -14,7 +14,7 @@
    endHit(x, y, G) names the key under a tap (main, menu, copy, map; up / down the pager's) or null: off the keys a tap does nothing (it skips the motion). endTap is
    main's whole tap path: while the page for this mode is not in (LOADING), null; where no page is registered yet, today's tap, the main key. */
 import {isFinale, biomeOf} from "../../core/config.js";
-import {LABEL, diffTag, multTag, runParts, END_WORDS as EW, MENU} from "../words.js";
+import {LABEL, diffTag, multTag, runParts, END_WORDS as EW, MENU, padWordIn} from "../words.js";
 import {fmtTime, fmtSpan, bestLabel, dailyLine, pauseKickers, isRunEnd} from "../scenes.js";
 import {T, DEV, measure, textScale} from "../kit/type.js";
 import {hints} from "../hintcopy.js";
@@ -185,7 +185,7 @@ function geomOf(B, F, o, brk) {
   const top = 0, availW = (B.w - 2 * MARGIN) * css - ring, availH = (B.h - top - 2 * MARGIN) * css - ring; // no look draws in #c's top band since the HUD left the board (v206), so the plate centres in the whole box, the over box (Task 9.8) too
   /* the keys' words (a touch layout in tap mode shows no keycaps): GAME OVER's foot keys share their row by what each needs (label and
      keycap), and its plate widens to hold them (never past the box) */
-  const W = hints(), tap = ph && W.dev !== "pad", caps = W.dev === "pad" ? {menu: W.back, copy: EW.CAP_COPY, map: EW.CAP_MAP} : {menu: W.back, copy: "C", map: "B"};
+  const W = hints(), tap = ph && W.dev !== "pad", caps = W.dev === "pad" ? {menu: W.back, copy: W.family ? padWordIn("W", W) : EW.CAP_COPY, map: W.family ? padWordIn("N", W) : EW.CAP_MAP} : {menu: W.back, copy: "C", map: "B"};
   const need = (l, c) => 16 + wOf(o.m, "label", l, D.pri) + (tap ? 4 : 14 + Math.max(DEV.d.capw, wOf(o.m, "label", c, D.sec) + 20)) + 14;
   const footNeed = [need(MENU, caps.menu), need(EW.COPY, caps.copy), need(EW.MAP, caps.map)];
   let plateW = Math.min(lose && !ph ? Math.max(nominal, footNeed.reduce((a, b) => a + b, 0) + 24 + 2 * side) : nominal, availW);

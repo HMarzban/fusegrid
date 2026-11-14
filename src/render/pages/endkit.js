@@ -6,7 +6,7 @@
    A page paints its static parts once into a kit cache layer (pen with rec off) and records them every frame with c null, so a steady frame paints
    the blit and the live parts only. No filters: the soft parts are gradients. A colour is a token or a CONST, never a new hex but the few the
    appendix names (the warm core #fff3b0, char and soot #15181f / #07080b / #3a302c, the medal disc #1e1216). */
-import {END_WORDS as EW} from "../words.js";
+import {END_WORDS as EW, padWordIn} from "../words.js";
 import {CONST, rgba} from "../kit/tokens.js";
 import {key, cap, capW, glyph, focusBomb} from "../kit/paint.js";
 import {T, DEV, measure, textScale} from "../kit/type.js";
@@ -277,7 +277,7 @@ export const ease = (t) => 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 3);
 export function capsOf(touch) {
   const W = hints();
   if (tapMode(touch)) return {main: null, menu: null, copy: null, map: null};
-  return W.dev === "pad" ? {main: W.ok, menu: W.back, copy: EW.CAP_COPY, map: EW.CAP_MAP} : {main: W.ok, menu: W.back, copy: "C", map: "B"};
+  return W.dev === "pad" ? {main: W.ok, menu: W.back, copy: W.family ? padWordIn("W", W) : EW.CAP_COPY, map: W.family ? padWordIn("N", W) : EW.CAP_MAP} : {main: W.ok, menu: W.back, copy: "C", map: "B"};
 }
 /* the pager (endGeom on a short box): ▲ and ▼ keys (44 design px = 44 CSS px tall) either side of "page / pages"; r its row, G.keys.up / down */
 export function pager(p, G, tok) {

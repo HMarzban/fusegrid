@@ -10,6 +10,7 @@
 import { registerSW, applyUpdate, deferRegister } from "../pwa/register.js";
 import { CACHE_NAME } from "../pwa/shell.js";
 import { letterOf } from "./controls.js";
+import { btnCap } from "./padfamily.js";
 
 /* The running build, as MENU and OPTIONS print it. The waiting worker's
    number is never known here, so the card names only this one. */
@@ -28,7 +29,7 @@ export function mountUpdate(get, env) {
     snoozed = false,
     wasGame = false,
     card = null,
-    wordPad = false,
+    wordPad = "",
     bg = null;
   const go = () => reg && applyUpdate(reg);
   const later = () => { snoozed = true; card.hidden = bg.hidden = true; };
@@ -70,11 +71,12 @@ export function mountUpdate(get, env) {
     wasGame = inGame;
     const show = !!reg && !snoozed && updVisible(app.screen, world.state, isRunEnd(world), SCREEN, app.capturing);
     card.dataset.ctx = inGame ? "end" : "menu";
-    const pad = app.lastDev === "pad";
-    if (pad !== wordPad) { // the card is a live region: a rewrite would be read out again
-      wordPad = pad;
+    const pad = app.lastDev === "pad", fam = app.padFamily || "generic", words = pad ? "pad:" + fam : ""; // R-LABELS: the controller in hand names its buttons
+    if (words !== wordPad) { // the card is a live region: a rewrite would be read out again
+      wordPad = words;
       card.dataset.pad = pad ? "1" : "";
-      card.querySelector(".go kbd").textContent = pad ? "SOUTH" : "U";
+      card.querySelector(".go kbd").textContent = pad ? btnCap("S", fam) : "U";
+      card.querySelector(".later kbd").textContent = btnCap("E", fam);
     }
     if (card.hidden === show) card.hidden = bg.hidden = !show;
   };

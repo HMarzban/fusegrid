@@ -28,7 +28,7 @@
    tab or the chosen difficulty), SCORES' chosen difficulty and its rows. A tab step paints its own layer once; a focus move or a filter step paints none.
    With no canvas source (Node) everything paints straight onto the target over one flat fill; a context with no clip or rect gets the plan only.
    Under the probe the page records its rects, texts and squint pairs outside any layer paint. */
-import {LABEL, DIFF, RECORD_TABS, REC_WORDS as RW, BADGE_NAMES, STATS_WORDS as ST, RESET_DEFAULT, RESET_SHORT, resetShort, modsCount, noRunsYet, pickToSet, diffTag, speedTag, resetSentence} from "../words.js";
+import {LABEL, DIFF, RECORD_TABS, REC_WORDS as RW, BADGE_NAMES, STATS_WORDS as ST, RESET_DEFAULT, RESET_SHORT, resetShort, modsCount, noRunsYet, pickToSet, diffTag, speedTag, resetSentence, padWordIn} from "../words.js";
 import {biomeOf} from "../../core/config.js";
 import {FOES, POWER} from "../../core/entities.js";
 import {drawEnemyBody} from "../sprites.js";
@@ -876,7 +876,8 @@ function dspCol(c, s, x, y, px, col) {
 
 /* ---------- the controller's cue line (phone and compact, no foot): label first, keycap last; a part that does not fit drops whole, STATS' COPY and
    MEDALS first ---------- */
-export const cueItems = (page, words) => [...(page === "stats" ? [{t: ST.COPY_ARMED, cap: RW.WEST}, {t: ST.MEDALS_T, cap: RW.NORTH}] : []), {t: RW.TAB, cap: words.move}, {t: RW.BACK, cap: words.back}];
+const padW = (id, words, def) => (words && words.family ? padWordIn(id, words) : def); // R-LABELS: the controller in hand names WEST / NORTH its own way
+export const cueItems = (page, words) => [...(page === "stats" ? [{t: ST.COPY_ARMED, cap: padW("W", words, RW.WEST)}, {t: ST.MEDALS_T, cap: padW("N", words, RW.NORTH)}] : []), {t: RW.TAB, cap: words.move}, {t: RW.BACK, cap: words.back}];
 function cuePlan(c, G, page, words) {
   const r = G.d.cue, dv = DEV.p, f = T.label(dv.sec), sep = W(c, f, "·"), widthOf = (l) => l.reduce((n, it, i) => n + (i ? 24 + sep : 0) + W(c, f, it.t) + 8 + capW(c, it.cap, {phone: true}), 0);
   let list = cueItems(page, words);
@@ -904,7 +905,7 @@ export function footItems(page, foc, words, tap = false) {
   if (tap) return [{t: page === "stats" && foc === "arm" ? ST.TAP_CANCEL : RW.TAP}]; // the touch-desk form in tap mode: the tap model, no keycaps
   if (page === "stats") {
     if (foc === "arm") return [{t: ST.ERASE, caps: ["R"]}, {t: ST.COPY_ARMED, caps: ["C"], key: "KeyC"}, {t: ST.CANCEL, caps: []}];
-    if (pad) return [{t: ST.COPY, caps: [RW.WEST], key: "KeyC"}, {t: ST.MEDALS_T, caps: [RW.NORTH], key: "KeyT"}, {t: RW.TAB, caps: [words.move]}, {t: RW.BACK, caps: [words.back], key: "back"}];
+    if (pad) return [{t: ST.COPY, caps: [padW("W", words, RW.WEST)], key: "KeyC"}, {t: ST.MEDALS_T, caps: [padW("N", words, RW.NORTH)], key: "KeyT"}, {t: RW.TAB, caps: [words.move]}, {t: RW.BACK, caps: [words.back], key: "back"}];
     return [{t: ST.COPY, caps: ["C"], key: "KeyC"}, {t: ST.RESET, caps: ["R"], key: "KeyR"}, {t: RW.TAB, caps: foc === "body" ? ["Q", "E"] : [A("lf"), A("rt")]}, {t: RW.BACK, caps: [words.back], key: "back"}];
   }
   if (pad) return page === "scores" && foc === "body" ? [{t: LABEL.DIFFICULTY, caps: [words.move]}, {t: RW.BACK, caps: [words.back], key: "back"}] : [{t: RW.TAB, caps: [words.move]}, {t: RW.BACK, caps: [words.back], key: "back"}];

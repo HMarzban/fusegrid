@@ -2,6 +2,7 @@
 import { BTN, PAD_IDX, SENS_LEVELS, VIB_LEVELS, bindBtn, bindKey, bindMoveSet, clampControls, keyName, layoutName, moveLabel, resetDevice, softAliases, stepSens, stepVib } from "./controls.js";
 import { createCapture } from "./capture.js";
 import { resolveStick } from "./gamepad.js";
+import { btnSay, btnWord as famWord } from "./padfamily.js";
 
 const ROWS = {
   key: ["MOVE", "BOMB", "THROW", "REMOTE", "PAUSE", "CONFIRM", "BACK", "RESET"],
@@ -50,7 +51,9 @@ export function createControlsPage({ get, set, padView, say, device, sw2, names:
   const label = (id) => (id === "RESET" ? LABEL[tabId] : id === "SW2" ? SW2_WORDS.row : id);
   const clearNote = () => { swap = null; status = ""; noteT = null; };
   const note = (s, sw) => { status = s; swap = sw || null; noteT = null; say(s); };
-  const btnWord = (id) => (nonstd() ? btnNo(id) : BTN[id].w);
+  const fam = () => padView().family || "generic"; // the controller in hand names its buttons (R-LABELS); the binds stay positions
+  const btnWord = (id) => (nonstd() ? btnNo(id) : famWord(id, fam()));
+  const btnSaid = (id) => (nonstd() ? btnNo(id) : btnSay(id, fam())); // the live region's word: MINUS for −, CROSS for the ✕ cap
   /* The row's value in the screen's own words, for the live region; "" = the row has none. */
   const boundWord = (id) => {
     const c = get(), isKey = tabId === "key";
@@ -58,7 +61,7 @@ export function createControlsPage({ get, set, padView, say, device, sw2, names:
     if (id === "SW2") return sw2Door();
     if (isKey) return FIXED_KEY[id] || (id === "MOVE" ? moveLabel(c.key.MOVE, nm()) : keyName(c.key[id], nm()[c.key[id]]));
     if (id === "MOVE") return "D-PAD and " + c.stick + "-STICK";
-    return id === "PAUSE" ? "START and " + btnWord(c.pad.PAUSE) : btnWord(c.pad[id]);
+    return id === "PAUSE" ? btnSaid("START") + " and " + btnSaid(c.pad.PAUSE) : btnSaid(c.pad[id]);
   };
   const vibLine = () => (noVib() ? NO_VIB_SAY : vibSay(get().vib));
   const sayRow = (id) => {
@@ -81,7 +84,7 @@ export function createControlsPage({ get, set, padView, say, device, sw2, names:
     say(sayRow(rows()[row]) + " " + (row + 1) + " of " + rows().length + ".");
     return true;
   };
-  const padLine = (r, id, old) => (nonstd() ? r.line.split(BTN[id].w).join(btnNo(id)).split(BTN[old].w).join(btnNo(old)) : r.line);
+  const padLine = (r, id, old) => (nonstd() || fam() !== "generic" ? r.line.split(BTN[id].w).join(btnWord(id)).split(BTN[old].w).join(btnWord(old)) : r.line);
   const startCapture = (id, t) => {
     const c = get(), isKey = tabId === "key";
     if (isKey && id === "MOVE") cap.open({ action: "MOVE", dev: "key" }, t);
@@ -149,8 +152,8 @@ export function createControlsPage({ get, set, padView, say, device, sw2, names:
     /** The state the painter draws. */
     view(t) {
       const c = get(), p = padView();
-      return { tab: tabId, device: devNow(t), row, pad: { state: p.state, name: p.name, rumble: p.rumble === true, effects: p.effects }, key: c.key, binds: c.pad, stick: c.stick, dead: c.dead, vib: c.vib,
-        stickVal: p.stickVal || [0, 0], reads: readsOf(), drift: peaks.length ? peaks[0][1] : 0, armed, swap, status, capture: cap.view(CANCEL_WORD[devNow(t)]), echo, names: nm(), sw2: sw2View() };
+      return { tab: tabId, device: devNow(t), row, pad: { state: p.state, name: p.name, family: p.family || "generic", rumble: p.rumble === true, effects: p.effects }, key: c.key, binds: c.pad, stick: c.stick, dead: c.dead, vib: c.vib,
+        stickVal: p.stickVal || [0, 0], reads: readsOf(), drift: peaks.length ? peaks[0][1] : 0, armed, swap, status, capture: cap.view(devNow(t) === "pad" ? famWord("START", fam()) : CANCEL_WORD[devNow(t)]), echo, names: nm(), sw2: sw2View() };
     },
     /** Enters the page on the last-used device's tab; touch opens CONTROLLER. */
     open(d) {

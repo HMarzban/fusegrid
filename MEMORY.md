@@ -16,11 +16,15 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — button labels for the controller in your hands (R-LABELS, plan Task 9)
+- `src/app/padfamily.js` `familyOf` + `FAMILY_LABEL` (words.js `PAD_FAMILY_WORDS` twin); hints, CONTROLS, PAUSE, MENU foot, run ends, RECORDS, LEVEL SELECT help and the update card read A / ✕ / B; a generic pad unchanged. Kit `glyph` cross/circle/square/triangle; fix round 1: PAUSE's foot and the HUD toast paint the glyph inline too (kit `runText`), the live region keeps the word. Cache bump and owner check open (batched).
+
 ## 2026-11-14 — Task 6 rulings: refusal by printed letter, ASCII names
 - `refuseKey` judges R Y N C B M T U by the printed letter when known (QWERTZ KeyY binds, KeyZ refused), the code otherwise; stored binds are checked by place only, never dropped. `layoutName` takes any printable ASCII (AZERTY KeyM prints ","), so no letter prints twice.
 
 ## 2026-11-14 — keyboard in the player's own layout (plan Task 6)
 - Printed keys follow the layout (controlswire `keyNames()`: layout map + plain keydowns, session only, A-Z/0-9) through `wordsOf(dev, c, names)`, the CONTROLS page and the keyboard drawing; letter shortcuts (R C T Q E M B Y N U) fire on the printed letter (`controls.js` `letterOf`), binds and movement stay on `code`; a key printing a shortcut letter is refused as a bind too. Cache bump and the AZERTY owner check are left to the batch.
+
 ## 2026-11-14 — Switch 2 vibration over WebHID (plan Task 7)
 - `switch2.js` `rumblePacket` (the trial page's felt HD-rumble encoder) and a `dual-rumble` stand-in actuator (12 ms stream, one zero at the end / reset / hidden / pagehide / HID disconnect); `standardPads(get, actuatorFor)` puts it on a Switch 2 Pro with none; the CONNECT row's door reads ALLOW VIBRATION where WebHID is present and none is allowed. Cache bump and the owner check (Step 5) are open, batched by the lead.
 - Fix round (lead rulings): the door reads CONNECTED whenever a Switch 2 is in getGamepads (`sw2.seen`, both door sites), the foot reads ALLOW ENTER on ALLOW VIBRATION (`SW2_WORDS.allow`), the help names the vibration prompt only with WebHID (`help` / `helpVib`, `controlsgeo` `sw2Help`); one HID device per waker noted in the `switch2.js` header.

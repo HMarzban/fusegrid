@@ -208,3 +208,21 @@ export const HUD_WORDS = Object.freeze({ PAUSE: "PAUSE", RESUME: "RESUME", BOMB:
 export const PAD_TOAST = Object.freeze({ READY: MENU_WORDS.PAD_READY, BACK: MENU_WORDS.PAD_BACK, LOST: CONTROLS_WORDS.LOST, LOST_BODY: "THE KEYS STILL WORK",
   body: (move, bomb) => MENU_WORDS.MOVE + "\u00a0" + move + " · " + HUD_WORDS.BOMB + "\u00a0" + bomb, // a no-break space: a wrapped toast never parts an action from its button
   SHORT: CONTROLS_WORDS.CONTROLLER }); // a slot too narrow for the whole title (the landscape gutters): CONTROLLER, its state leading the line under it
+/* R-LABELS (owner 2026-11-14): the words a controller's buttons wear, by the family in the player's hands (src/app/padfamily.js FAMILY_LABEL, pinned
+   equal in tests/words.test.mjs: src/app never imports this file). w printed, s short, a the live region's word. PlayStation's four faces print as
+   the words where only text fits; a painted keycap draws them as the ✕ ○ □ △ glyphs (kit/paint.js). A generic pad reads its positions as before. */
+const famRow = (o) => Object.freeze(Object.fromEntries(Object.entries(o).map(([id, [w, s, a]]) => [id, Object.freeze({ w, s: s || w, a: a || w })])));
+export const PAD_FAMILY_WORDS = Object.freeze({
+  xbox: famRow({ S: ["A"], E: ["B"], W: ["X"], N: ["Y"], SHL: ["LB"], SHR: ["RB"], TRL: ["LT"], TRR: ["RT"], SELECT: ["VIEW"], START: ["MENU"] }),
+  playstation: famRow({ S: ["CROSS"], E: ["CIRCLE"], W: ["SQUARE"], N: ["TRIANGLE"], SHL: ["L1"], SHR: ["R1"], TRL: ["L2"], TRR: ["R2"], SELECT: ["CREATE"], START: ["OPTIONS"] }),
+  nintendo: famRow({ S: ["B"], E: ["A"], W: ["Y"], N: ["X"], SHL: ["L"], SHR: ["R"], TRL: ["ZL"], TRR: ["ZR"], SELECT: ["−", "−", "MINUS"], START: ["+", "+", "PLUS"] }),
+  generic: famRow({ S: ["SOUTH"], E: ["EAST"], W: ["WEST"], N: ["NORTH"], SHL: ["L SHOULDER", "L SHLDR"], SHR: ["R SHOULDER", "R SHLDR"], TRL: ["L TRIGGER", "L TRIG"], TRR: ["R TRIGGER", "R TRIG"], SELECT: ["SELECT"], START: ["START"] }),
+});
+/** The printed word for a controller position on this family; a position the table does not hold (or an unknown family) keeps the id given. */
+export const padWord = (id, family) => { const t = PAD_FAMILY_WORDS[family] || PAD_FAMILY_WORDS.generic; return t[id] ? t[id].w : id; };
+/** A page's word for a position from the hint words in force: the family's when a controller of one drives (hints wordsOf carries family), else the position's. */
+export const padWordIn = (id, words) => padWord(id, words && words.family);
+/** CONTROLS' pad rule in the words of the controller in hand: its own SOUTH, START and EAST (a generic pad: the rule as written). */
+export const rulePad = (family) => (family && family !== "generic" && PAD_FAMILY_WORDS[family] ? CONTROLS_WORDS.RULE_PAD.replace("SOUTH", padWord("S", family)).replace("START", padWord("START", family)).replace("EAST", padWord("E", family)) : CONTROLS_WORDS.RULE_PAD);
+/** LEVEL SELECT's controller shortcut line in the words of the controller in hand (its NORTH). */
+export const padHelp = (family) => (family && family !== "generic" && PAD_FAMILY_WORDS[family] ? LEVEL_WORDS.PAD_HELP.replace("NORTH", padWord("N", family)) : LEVEL_WORDS.PAD_HELP);

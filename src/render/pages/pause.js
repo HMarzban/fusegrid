@@ -20,7 +20,7 @@
 import {biomeOf} from "../../core/config.js";
 import {LABEL, MENU_WORDS as M, PAUSE_WORDS as PW, runParts} from "../words.js";
 import {worldTokens, CONST, rgba} from "../kit/tokens.js";
-import {key, plate, band, focusBomb, glyph} from "../kit/paint.js";
+import {key, plate, band, focusBomb, glyph, PAD_GLYPH, runW, runText} from "../kit/paint.js";
 import {T, DEV, measure, textScale} from "../kit/type.js";
 import {layer, touch as touchLayer, keyOf, canMake} from "../kit/cache.js";
 import * as probe from "../kit/probe.js";
@@ -144,7 +144,7 @@ function mc() {
   return (MC = okM(g) ? g : EST);
 }
 const W = (c, f, s) => measure(c, f, s);
-const capWd = (c, s, dv) => Math.max(dv.capw, Math.ceil(W(c, T.label(dv.sec), String(s))) + 20);
+const capWd = (c, s, dv) => (PAD_GLYPH[s] ? dv.capw : Math.max(dv.capw, Math.ceil(W(c, T.label(dv.sec), String(s))) + 20)); // a PlayStation face button is its glyph: the narrowest cap
 /* the first candidate that fits room, else the last dropped from the end until it does */
 function fitWords(c, f, cands, room) {
   const L = [].concat(cands), p = String(L[L.length - 1]).split(" · ");
@@ -230,8 +230,8 @@ export function plan(G, world, ui, run, tm) {
   const foot = d.foot ? (tapAt(G.touch, ui.tap) ? M.TAP : M.MOVE + " " + (words.dev === "pad" ? words.move : "↑↓") + " · " + PW.CONFIRM + " " + words.ok) : "";
   const ff = T.label(dv.sec);
   if (tags) for (const q of tags.chips) q.tw = W(c, tags.f, q.s);
-  return {kick, kw: W(c, kf, kick), kf, kpx: dv.pri, pw: W(c, T.display(P.title), PW.PAUSED), tags, rows, foot, fw: foot ? W(c, ff, foot) : 0, ff, fpx: dv.sec, tf: P.title,
-    caps: rows.map((o) => (o.cap ? W(c, T.label(dv.sec), o.cap.s) : 0))};
+  return {kick, kw: W(c, kf, kick), kf, kpx: dv.pri, pw: W(c, T.display(P.title), PW.PAUSED), tags, rows, foot, fw: foot ? runW(c, ff, foot) : 0, ff, fpx: dv.sec, tf: P.title,
+    caps: rows.map((o) => (!o.cap ? 0 : PAD_GLYPH[o.cap.s] ? Math.round(dv.sec * textScale() * 1.05) : W(c, T.label(dv.sec), o.cap.s)))}; // a glyph cap records the glyph's own width
 }
 
 /* page-specific glyphs (16-unit grid, round caps, kit5 IC): reset (RESTART) and back (QUIT TO MENU on a touch layout or a controller) */
@@ -264,7 +264,9 @@ function keycap(c, q, tok, ph, main) {
   const f = T.label(DEV[ph ? "p" : "d"].sec), fill = (x, y, w, h, r, col) => { c.fillStyle = col; c.beginPath(); rp(c, x, y, w, h, r); c.fill(); };
   if (main) { fill(q.x, q.y + 3, q.w, q.h, 6, "#6a4a08"); fill(q.x, q.y, q.w, q.h, 6, CONST.ol); fill(q.x + 2, q.y + 2, q.w - 4, q.h - 4, 4, CONST.yelInk); }
   else key(c, q.x, q.y, q.w, q.h, "key", {tok});
-  text(c, q.s, q.x + q.w / 2, q.y + q.h / 2, f, main ? CONST.yel : CONST.t2, "center");
+  const g = PAD_GLYPH[q.s], z = Math.round(DEV[ph ? "p" : "d"].sec * textScale() * 1.05);
+  if (g) { if (!probe.noText()) glyph(c, g, q.x + (q.w - z) / 2, q.y + (q.h - z) / 2, z, main ? CONST.yel : CONST.t2); }
+  else text(c, q.s, q.x + q.w / 2, q.y + q.h / 2, f, main ? CONST.yel : CONST.t2, "center");
 }
 function paintRow(c, o, tok, ph, foc) {
   const r = o.r, dv = DEV[ph ? "p" : "d"], x = foc ? o.foc : o.rest;
@@ -293,7 +295,7 @@ function paintPlate(c, G, Pl, tok) {
   }
   for (const o of Pl.rows) paintRow(c, o, tok, ph, false);
   if (G.div != null) course(c, d.cx0, d.div, d.cw, tok);
-  if (Pl.foot) text(c, Pl.foot, d.cx, d.footY, Pl.ff, CONST.t2, "center");
+  if (Pl.foot) runText(c, Pl.foot, d.cx, d.footY, Pl.ff, CONST.t2, "center"); // a PlayStation pad's CONFIRM reads its glyph
 }
 
 const CAP_K = 0.705;

@@ -48,7 +48,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
   let waker = null; // the Switch 2 waker, below; its WebHID stand-in actuator rides the pad list (Task 7)
   const gp = standardPads(getGamepads || padsOf(), (g) => (waker ? waker.actuator(g) : null));
   let c = loadControls(store), everSeen = false, lastT = 0, wasDir = false, wasPause = false;
-  let pending = "", shownT = null, wasLost = false, wordDev = null, wordC = null, wordN = -1, writing = false, keysAs = null;
+  let pending = "", shownT = null, wasLost = false, wordDev = null, wordC = null, wordN = -1, wordF = null, writing = false, keysAs = null;
   let held = false, tickT = -Infinity, didReset = false;
   let helloT = -Infinity, helloP = -Infinity, titleT = -Infinity, endT = -Infinity, showWas = false, endSt = world.state;
   const keys = new Set();
@@ -107,9 +107,12 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
   const wantRumble = () => { if (!rumbleMod) loadRumble(importRumble).catch(noop); }; // in flight: the same promise; failed: a fresh try
   const canBuzz = () => routesOf(activePad()).length > 0; // gamepad.js, boot: the door and the READY note never wait on rumble.js
   const stopRumble = () => { if (c.vib > 0 && rum()) rumble.stop(); };
+  /* The words its buttons wear (R-LABELS): the family of the pad in hand, only on the standard mapping (another order puts a family's word on the wrong button). */
+  let famLast = "generic"; // a pad that goes keeps its words until another arrives, so one switch re-lays the hints once
+  const famNow = () => { const s = pad.snap(); if (s.connected) famLast = s.mapping === "standard" ? s.family || "generic" : "generic"; return famLast; };
   const padView = () => {
     const s = pad.snap(), g = activePad(), ax = (g && g.axes) || [], a = c.stick === "R" ? 2 : 0;
-    return { state: s.connected ? (s.mapping === "standard" ? "ready" : "nonstd") : everSeen ? "lost" : "none", name: s.name, rumble: canBuzz(), effects: padInfo(g).effects, stickVal: [+ax[a] || 0, +ax[a + 1] || 0] };
+    return { state: s.connected ? (s.mapping === "standard" ? "ready" : "nonstd") : everSeen ? "lost" : "none", name: s.name, family: famNow(), rumble: canBuzz(), effects: padInfo(g).effects, stickVal: [+ax[a] || 0, +ax[a + 1] || 0] };
   };
   /* The one live region (a11y R7.2): this page only, never in PLAY. A repeat gets a trailing no-break space, or a reader stays silent. */
   const sayEl = D && D.getElementById ? D.getElementById("ctlsay") : null;
@@ -151,7 +154,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
   };
   const pre = (t) => {
     const p = padView();
-    return { loading: true, failed, tab: openDev === null || openDev === "key" ? "key" : "pad", device: hintDev.device(t), row: 1, pad: { state: p.state, name: p.name, rumble: p.rumble === true, effects: p.effects }, key: c.key, binds: c.pad, stick: c.stick, dead: c.dead, vib: c.vib,
+    return { loading: true, failed, tab: openDev === null || openDev === "key" ? "key" : "pad", device: hintDev.device(t), row: 1, pad: { state: p.state, name: p.name, family: p.family, rumble: p.rumble === true, effects: p.effects }, key: c.key, binds: c.pad, stick: c.stick, dead: c.dead, vib: c.vib,
       stickVal: p.stickVal || [0, 0], reads: "", drift: 0, armed: false, swap: null, status: "", capture: null, echo: null, names, sw2: sw2View() };
   };
   /* Cues live here, not in main's wrapper: a write is uiTog (a capture commit has no confirm behind it), anything else on a row is uiSel, a tab is uiMove as ←→ is, and a refusal is silent. */
@@ -278,10 +281,11 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
     try { app.confirm(); } finally { upAct = false; }
   }
   const syncWords = () => {
-    const d = hintDev.device(app.ctlT);
-    if (d === wordDev && c === wordC && namesV === wordN) return;
-    wordDev = d; wordC = c; wordN = namesV;
-    if (setHints) setHints(wordsOf(d, c, names));
+    const d = hintDev.device(app.ctlT), f = famNow();
+    app.padFamily = f; // the DOM cards' keycaps (update.js) read it: src/app's own copy of the words
+    if (d === wordDev && c === wordC && namesV === wordN && (d !== "pad" || f === wordF)) return; // a new printed name, or a family switch (one pad out, another in), re-lays the hints once
+    wordDev = d; wordC = c; wordN = namesV; wordF = f;
+    if (setHints) setHints(wordsOf(d, c, names, f));
   };
   /* One chip at the next non-PLAY moment; LOST holds while it is true, the others age out. */
   const noteTick = (t) => {
@@ -304,7 +308,7 @@ export function mountControls({ win, doc, input, app, SCREEN, world, onPause, ge
   const toastTick = (t) => {
     const age = toast ? t - toast.t0 : 0;
     if (!toast || age >= TOAST_MS) { toast = null; if (app.padToast) app.padToast = null; return; }
-    const w = wordsOf("pad", c), a = Math.round(Math.min(1, (TOAST_MS - age) / TOAST_FADE) * 10) / 10, q = app.padToast;
+    const w = wordsOf("pad", c, undefined, famNow()), a = Math.round(Math.min(1, (TOAST_MS - age) / TOAST_FADE) * 10) / 10, q = app.padToast;
     if (!q || q.k !== toast.k || q.a !== a || q.move !== w.move || q.bomb !== w.bomb) app.padToast = { k: toast.k, move: w.move, bomb: w.bomb, a };
   };
   syncWords();

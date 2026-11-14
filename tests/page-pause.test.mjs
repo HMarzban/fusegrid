@@ -143,6 +143,15 @@ for (const dev of ["key", "pad"]) {
     !!res && !!cap && res.x + res.w < cap.x - cap.w / 2 && (dev === "pad" ? !m : !!m && T.find((x) => x.s === "QUIT TO MENU").x + T.find((x) => x.s === "QUIT TO MENU").w < m.x - m.w / 2) &&
     !!foot && foot.s === (dev === "pad" ? "MOVE D-PAD · CONFIRM SOUTH" : "MOVE ↑↓ · CONFIRM ENTER"), J([res, cap, m, foot && foot.s]));
 }
+/* R-LABELS (owner 2026-11-14): with the controller in hand its own words; a PlayStation cap is its glyph (no CIRCLE written), the foot's text the word */
+for (const [fam, back, ok, glyphCap] of [["xbox", "B", "A", false], ["playstation", "CIRCLE", "CROSS", true], ["nintendo", "A", "B", false]]) {
+  setHints(wordsOf("pad", DEF_CONTROLS, undefined, fam));
+  const f = frame("kb", PLAIN, { cursor: 1 }), T = f.t.texts, foot = T.find((x) => /^MOVE /.test(x.s));
+  /* fix round 1 (controller ruling): a PlayStation foot paints MOVE D-PAD · CONFIRM, then the cross glyph inline: no CROSS written */
+  const footOk = glyphCap ? !!foot && foot.s === "MOVE D-PAD · CONFIRM " && !T.some((x) => /CROSS/.test(x.s)) : !!foot && foot.s === "MOVE D-PAD · CONFIRM " + ok;
+  check(`R-LABELS (${fam}): the foot reads MOVE D-PAD · CONFIRM ${glyphCap ? "and the cross glyph" : ok}; RESUME's cap ${glyphCap ? "is painted as its glyph" : "reads " + back}`,
+    footOk && (glyphCap ? !T.some((x) => x.s === back) : T.some((x) => x.s === back)) && !T.some((x) => x.s === "EAST"), J([foot && foot.s, T.map((x) => x.s)]));
+}
 setHints(null);
 {
   const f = frame("p393", PLAIN), T = f.t.texts.map((x) => x.s);

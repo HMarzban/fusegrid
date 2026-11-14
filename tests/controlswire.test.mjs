@@ -1414,6 +1414,27 @@ for (const via of ["LATER", "the backdrop"]) {
     setHints(null);
   });
 }
+// ---- R-LABELS (owner 2026-11-14): the hints name the controller in hand's buttons; one family switch re-lays them once ----
+{
+  const g = mk();
+  g.pad.id = "Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 0b13)";
+  tap(g, "S"); g.tick(60);
+  check("an Xbox pad: the hints read A to confirm, B to go back, BOMB A", hints().dev === "pad" && hints().ok === "A" && hints().back === "B" && hints().bomb === "A" && g.app.padFamily === "xbox", JSON.stringify(hints()));
+  const seen = [];
+  const watch = (n) => { for (let i = 0; i < n; i++) { g.tick(); if (seen[seen.length - 1] !== hints()) seen.push(hints()); } };
+  seen.push(hints());
+  g.gpr.list = [null]; watch(10);
+  check("unplugged: the words stay the last pad's, nothing re-laid", seen.length === 1 && hints().ok === "A", seen.length);
+  const ps = mkPad(); ps.id = "054c-0ce6-DualSense Wireless Controller";
+  g.gpr.list = [ps]; g.pad = ps; watch(10);
+  check("a PlayStation pad plugged in: the hints re-lay once and read CROSS / CIRCLE, with the word said", seen.length === 2 && hints().ok === "CROSS" && hints().back === "CIRCLE" && hints().say.bomb === "CROSS", JSON.stringify([seen.length, hints().ok]));
+  const gen = mkPad();
+  g.gpr.list = [gen]; g.pad = gen; watch(10);
+  check("a generic pad after it: once more, and the words are the positions exactly as before", seen.length === 3 && JSON.stringify(hints()) === JSON.stringify({ dev: "pad", ok: "SOUTH", back: "EAST", tab: "SHOULDERS", pause: "START", bomb: "SOUTH", throw: "WEST", remote: "EAST", move: "D-PAD", moveAlt: "L-STICK", moveCaps: null, tapPage: false }), JSON.stringify(hints()));
+  const ns = mkPad(); ns.id = "Xbox 360 Controller (Vendor: 045e Product: 028e)"; ns.mapping = "";
+  g.gpr.list = [ns]; g.pad = ns; watch(10);
+  check("a non-standard Xbox pad: its own order, so the positions, not the family's letters", hints().ok === "SOUTH", hints().ok);
+}
 
 delete globalThis.window; delete globalThis.location;
 console.log("\n  CONTROLSWIRE RESULT: " + pass + " PASS / " + fail + " FAIL");
