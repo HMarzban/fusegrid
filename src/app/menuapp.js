@@ -103,7 +103,7 @@ const REP_FIRST = 0.35,
 export const IDLE_T = 10; // MENU idle seconds before ATTRACT takes over
 export const WARM_T = 0.4; // s on the ART STYLE row before the next look warms
 const DEF_MOVE = Object.freeze(["KeyW", "KeyD", "KeyS", "KeyA"]); // UP RIGHT DOWN LEFT; no controls.js import, it is not in this file's boot graph
-const ANA_NOTE = "ANSWER THE CARD WITH Y OR N";
+export const ANA_NOTE = "ANSWER THE CARD · Y OR N KEY"; // words.js SETTINGS_WORDS.ana, pinned: the keyboard's Y and N, never an Xbox pad's Y
 
 export function createMenuApp(opts = {}) {
   const o = opts || {};

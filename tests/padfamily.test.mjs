@@ -93,9 +93,9 @@ test("wordsOf: a generic pad reads exactly as before; Xbox, PlayStation and Nint
   assert.deepEqual([x.ok, x.back, x.bomb, x.throw, x.remote, x.pause, x.tab, x.family], ["A", "B", "A", "X", "B", "MENU", "LB RB", "xbox"]);
   const p = wordsOf("pad", DEF_CONTROLS, undefined, "playstation");
   assert.deepEqual([p.ok, p.back, p.bomb, p.pause], ["CROSS", "CIRCLE", "CROSS", "OPTIONS"]);
-  assert.equal(p.say.bomb, "CROSS");
+  assert.ok(!("say" in p), "no say block: nothing reads it (the live region speaks through padfamily btnSay)");
   const n = wordsOf("pad", DEF_CONTROLS, undefined, "nintendo");
-  assert.deepEqual([n.ok, n.back, n.bomb, n.pause, n.say.pause], ["B", "A", "B", "+", "PLUS"]);
+  assert.deepEqual([n.ok, n.back, n.bomb, n.pause], ["B", "A", "B", "+"]);
   assert.equal(wordsOf("pad", bindBtn(DEF_CONTROLS, "THROW", "SHL").c, undefined, "xbox").throw, "LB");
   assert.deepEqual(wordsOf("key", DEF_CONTROLS, undefined, "xbox"), wordsOf("key", DEF_CONTROLS), "the keyboard's words never take a family");
 });
@@ -206,10 +206,45 @@ test("a painted text run draws a PlayStation face word as its glyph inline; a ru
   assert.equal(JSON.stringify([a.texts, a.paints]), JSON.stringify([b.texts, b.paints]));
   assert.equal(runW(a.ctx, f, "A B"), measure(a.ctx, f, "A B"));
   const g = rec();
-  runText(g.ctx, "CONFIRM CROSS · BACK CIRCLE", 100, 50, f, "#fff", "center");
+  runText(g.ctx, "CONFIRM CROSS · BACK CIRCLE", 100, 50, f, "#fff", "center", true);
   assert.deepEqual(g.texts.map((t) => t.s), ["CONFIRM ", " · BACK "]);
   assert.equal(g.paints.filter((p) => p.op === "stroke").length, 2);
-  const w = runW(g.ctx, f, "CONFIRM CROSS · BACK CIRCLE");
+  const w = runW(g.ctx, f, "CONFIRM CROSS · BACK CIRCLE", true);
   assert.ok(Math.abs(g.texts[0].x - (100 - w / 2)) < 1e-9, "centred on the run's drawn width");
   assert.ok(hasPadGlyph("BOMB CROSS") && !hasPadGlyph("CROSSING") && !hasPadGlyph("SOUTH"));
+});
+
+/* fix round B (review findings, 2026-11-14) */
+test("familyOf: Firefox on macOS writes the ids unpadded (54c-9cc-), and still finds the family", () => {
+  assert.equal(familyOf("54c-9cc-Wireless Controller"), "playstation");
+  assert.equal(familyOf("45e-28e-Xbox 360 Wired Controller"), "xbox");
+  assert.equal(familyOf("57e-2069-Pro Controller"), "nintendo");
+  assert.equal(familyOf("79-6-Generic   USB  Joystick  "), "generic");
+  assert.equal(familyOf("cafe-babe-Xbox Adapter"), "xbox", "an unknown vendor falls through to the name");
+});
+test("familyOf: memoized per id, and still right after the memo clears", () => {
+  const ids = Array.from({ length: 20 }, (_, i) => (i % 2 ? ID.psChrome : ID.xboxFirefox) + " #" + i);
+  for (let r = 0; r < 3; r++) ids.forEach((id, i) => assert.equal(familyOf(id), i % 2 ? "playstation" : "xbox", id));
+  assert.equal(familyOf(ID.unknown), "generic");
+});
+test("the capture refusal names START by the controller in hand; a generic pad reads it as before", async () => {
+  const { refuseBtnFor } = await import("../src/app/padfamily.js");
+  const { refuseBtn } = await import("../src/app/controls.js");
+  assert.deepEqual(FAMILIES.map((f) => refuseBtnFor("START", f)), ["MENU IS PAUSE · PICK ANOTHER", "OPTIONS IS PAUSE · PICK ANOTHER", "+ IS PAUSE · PICK ANOTHER", "START IS PAUSE · PICK ANOTHER"]);
+  assert.equal(refuseBtnFor("START"), refuseBtn("START"));
+  for (const f of FAMILIES) for (const id of ["S", "TRR", "dU", "LS", "zz"]) assert.equal(refuseBtnFor(id, f), refuseBtn(id), f + " " + id);
+});
+test("a text run draws glyphs only when the caller says it carries PlayStation words", () => {
+  const f = "700 16px sans-serif", a = rec(), b = rec();
+  runText(a.ctx, "STAND ON THE CROSS · CIRCLE IT", 100, 50, f, "#fff", "center");
+  kitText(b.ctx, "STAND ON THE CROSS · CIRCLE IT", 100, 50, f, "#fff", "center");
+  assert.equal(JSON.stringify([a.texts, a.paints]), JSON.stringify([b.texts, b.paints]), "no flag: kit text call for call");
+  assert.equal(runW(a.ctx, f, "BOMB CROSS"), measure(a.ctx, f, "BOMB CROSS"));
+  assert.ok(runW(a.ctx, f, "BOMB CROSS", true) < measure(a.ctx, f, "BOMB CROSS"));
+});
+test("a glyph run leaves the caller's textAlign and textBaseline as it found them", () => {
+  const g = rec();
+  g.ctx.textAlign = "right"; g.ctx.textBaseline = "alphabetic";
+  runText(g.ctx, "CONFIRM CROSS", 100, 50, "700 16px sans-serif", "#fff", "center", true);
+  assert.deepEqual([g.ctx.textAlign, g.ctx.textBaseline], ["right", "alphabetic"]);
 });

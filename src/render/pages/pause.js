@@ -230,7 +230,7 @@ export function plan(G, world, ui, run, tm) {
   const foot = d.foot ? (tapAt(G.touch, ui.tap) ? M.TAP : M.MOVE + " " + (words.dev === "pad" ? words.move : "↑↓") + " · " + PW.CONFIRM + " " + words.ok) : "";
   const ff = T.label(dv.sec);
   if (tags) for (const q of tags.chips) q.tw = W(c, tags.f, q.s);
-  return {kick, kw: W(c, kf, kick), kf, kpx: dv.pri, pw: W(c, T.display(P.title), PW.PAUSED), tags, rows, foot, fw: foot ? runW(c, ff, foot) : 0, ff, fpx: dv.sec, tf: P.title,
+  return {kick, kw: W(c, kf, kick), kf, kpx: dv.pri, pw: W(c, T.display(P.title), PW.PAUSED), tags, rows, foot, fw: foot ? runW(c, ff, foot, words.family === "playstation") : 0, ff, ps: words.family === "playstation", fpx: dv.sec, tf: P.title,
     caps: rows.map((o) => (!o.cap ? 0 : PAD_GLYPH[o.cap.s] ? Math.round(dv.sec * textScale() * 1.05) : W(c, T.label(dv.sec), o.cap.s)))}; // a glyph cap records the glyph's own width
 }
 
@@ -295,7 +295,7 @@ function paintPlate(c, G, Pl, tok) {
   }
   for (const o of Pl.rows) paintRow(c, o, tok, ph, false);
   if (G.div != null) course(c, d.cx0, d.div, d.cw, tok);
-  if (Pl.foot) runText(c, Pl.foot, d.cx, d.footY, Pl.ff, CONST.t2, "center"); // a PlayStation pad's CONFIRM reads its glyph
+  if (Pl.foot) runText(c, Pl.foot, d.cx, d.footY, Pl.ff, CONST.t2, "center", Pl.ps); // a PlayStation pad's CONFIRM reads its glyph
 }
 
 const CAP_K = 0.705;

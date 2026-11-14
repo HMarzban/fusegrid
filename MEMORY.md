@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — R-LABELS review fixes (round B)
+- `familyOf` reads Firefox macOS's unpadded ids (`54c-9cc-`) and memoizes per id; LEVEL SELECT's pad help names LT RT / L2 R2 / ZL ZR; `refuseBtnFor` names START per family (capture never reaches it: START cancels); hints' unread `say` gone; `GLYPH_CHAR` / `FAMILY_LABEL` pinned in words.test; ANALYTICS pad note now `ANSWER THE CARD · Y OR N KEY` (fits one line at 600x520 as before); kit `runW` / `runText` draw glyphs only with the caller's `ps` flag (PAUSE foot, HUD toast) and restore textAlign / textBaseline.
+
 ## 2026-11-14 — button labels for the controller in your hands (R-LABELS, plan Task 9)
 - `src/app/padfamily.js` `familyOf` + `FAMILY_LABEL` (words.js `PAD_FAMILY_WORDS` twin); hints, CONTROLS, PAUSE, MENU foot, run ends, RECORDS, LEVEL SELECT help and the update card read A / ✕ / B; a generic pad unchanged. Kit `glyph` cross/circle/square/triangle; fix round 1: PAUSE's foot and the HUD toast paint the glyph inline too (kit `runText`), the live region keeps the word. Cache bump and owner check open (batched).
 
