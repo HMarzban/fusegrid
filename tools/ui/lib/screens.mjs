@@ -44,6 +44,9 @@ const CTL_ROW = {
   exemptIfNo: {
     ring: { rect: "^ring ", why: "the drawing rings the focused row's button; a capture with none (no controller, SENSITIVITY or RESET focused, tap mode, a drawing that does not fit) has no ring, and where a ring is drawn it is measured" },
     locked: { rect: "^locked ", why: "the locked parts are a FIXED input's wall plaque and the NO CONTROLLER body; a capture that shows neither (a paged phone page without PAUSE, CONFIRM or BACK) has no locked pair" },
+    info: { rect: "^tab ", why: "listening on the capture plate the controller's buttons are states (the action's lit, the rest quiet: its chosen pair) ringed by the ring pair, not marks; the plate draws no glyph (a key's dashed slot, where shown, is measured); wherever the page is drawn its glyphs are measured" },
+    touch: { rect: "^tab ", why: "listening on the capture plate (a box with no room for the drawing: a landscape phone's #c) the page has no touch target: the plate is inert and a tap off it cancels; wherever the page is drawn its tabs and rows are measured" },
+    gap: { rect: "^tab ", why: "the capture plate has no touch targets to space (see touch); wherever the page is drawn they are measured" },
   },
 };
 const ROWS = {

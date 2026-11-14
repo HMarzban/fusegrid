@@ -18,6 +18,7 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-14 — CONTROLS fix round C (review minors)
 - Chooser activation is `navigator.userActivation.isActive` where present (a pad press never), switch2.js never fetched off macOS / policy-refused WebUSB (wire pre-check = usbReach's rule), status/rule lines step down by whole words keeping the full stop, PAUSE view 3 taps through `ctlAt`, names copy-on-write so a steady CONTROLS frame allocates no names (padart `legSig` memo too), layout-map handler throws caught.
+- Follow-up (lead ruling): a line whose first sentence will not fit whole drops (never a shortened rule). Capture plate (no room for the drawing, e.g. a landscape phone #c): its `·` separators t2 (CONST.off was 4.46-4.48 on bedB), a chosen pair (lit vs quiet button), foot cap fills; screens.mjs CTL_ROW exempts info / touch / gap where no tab rect is recorded.
 
 ## 2026-11-14 — button labels for the controller in your hands (R-LABELS, plan Task 9)
 - `src/app/padfamily.js` `familyOf` + `FAMILY_LABEL` (words.js `PAD_FAMILY_WORDS` twin); hints, CONTROLS, PAUSE, MENU foot, run ends, RECORDS, LEVEL SELECT help and the update card read A / ✕ / B; a generic pad unchanged. Kit `glyph` cross/circle/square/triangle; fix round 1: PAUSE's foot and the HUD toast paint the glyph inline too (kit `runText`), the live region keeps the word. Cache bump and owner check open (batched).
