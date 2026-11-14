@@ -31,8 +31,8 @@ Every controller and every keyboard, read the way you hold them.
 
 - **Button names follow your controller.** An Xbox controller reads A, B, X, Y, LB, RB, LT, RT, VIEW and MENU; a
   PlayStation controller draws ✕, ○, □ and △ and reads L1, R1, L2, R2, CREATE and OPTIONS; a Nintendo controller reads
-  B, A, Y, X, L, R, ZL, ZR, − and +. Every hint, the CONTROLS page and its drawing, PAUSE, the run ends, RECORDS and the
-  CONTROLLER READY note use them. Any other controller keeps the position names (SOUTH, EAST, WEST, NORTH), as before.
+  B, A, Y, X, L, R, ZL, ZR, − and +. The CONTROLS page and its drawing, PAUSE, the menu foot, the run ends, RECORDS and
+  the CONTROLLER READY note use them. Any other controller keeps the position names (SOUTH, EAST, WEST, NORTH), as before.
 - **Keys follow your keyboard layout.** CONTROLS and every hint print the letter on your key (an AZERTY player sees
   their own Z and Q), and Y / N on the privacy card, U on the update card and the other letter shortcuts (R, C, B, M, T,
   Q and E) answer the key that prints that letter, wherever it sits. A shortcut letter held with Ctrl, Cmd or Alt answers
@@ -42,11 +42,16 @@ Every controller and every keyboard, read the way you hold them.
 
 - Standard controllers play exactly as before. Any other controller can still be set up on **SETTINGS › CONTROLS** by
   rebinding its buttons.
+- Chrome remembers the USB and HID permissions, not the game. [Privacy](docs/privacy.md#controller-access) says how to take
+  them back.
+
+### Known
+
 - Over Bluetooth, the Switch 2 Pro Controller is not seen by the browser; use the cable.
 - A controller seen through Steam Input or DS4Windows reads as an Xbox controller, because that is what it tells the browser.
 - Two Switch 2 Pro Controllers at once share one vibration: the second buzzes through the first.
-- Chrome remembers the USB and HID permissions, not the game. [Privacy](docs/privacy.md#controller-access) says how to take
-  them back.
+- A few lines still use position names on every controller: the bind refusal for START, LEVEL SELECT's TRIGGERS help and
+  the ANALYTICS row's ANSWER THE CARD WITH Y OR N note.
 
 ## shell v218 · 2026-11-14
 
