@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — switch2 fix A (Task 7 review minors)
+- `switch2.js`: halt writes a zero only after a buzz (quiet at OFF), stop() closes the HID device and wins over auto()/adopt, playEffect with no device resolves complete, dead `cur.me`/`token` removed; four tests.
+
 ## 2026-11-14 — button labels for the controller in your hands (R-LABELS, plan Task 9)
 - `src/app/padfamily.js` `familyOf` + `FAMILY_LABEL` (words.js `PAD_FAMILY_WORDS` twin); hints, CONTROLS, PAUSE, MENU foot, run ends, RECORDS, LEVEL SELECT help and the update card read A / ✕ / B; a generic pad unchanged. Kit `glyph` cross/circle/square/triangle; fix round 1: PAUSE's foot and the HUD toast paint the glyph inline too (kit `runText`), the live region keeps the word. Cache bump and owner check open (batched).
 

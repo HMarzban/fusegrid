@@ -84,10 +84,10 @@ export function createWaker({ usb, pads, hid, win, doc, clock }) {
   };
   /* The stand-in: one per waker, the same object every call; live only while an opened HID device backs it. */
   const ck = clock || CLOCK;
-  let dev = null, seq = 0, loop = null, cur = null, token = 0, hidBusy = null, hidOn = false, offs = [];
-  const send = (s, w) => { const d = dev; if (!d) return; try { const r = d.sendReport(0x02, rumblePacket(seq++, s, w)); if (r && r.catch) r.catch(() => {}); } catch (_) {} };
+  let dev = null, seq = 0, loop = null, cur = null, lit = false, stopped = false, hidBusy = null, hidOn = false, offs = [];
+  const send = (s, w) => { const d = dev; if (!d) return; lit = s > 0 || w > 0; try { const r = d.sendReport(0x02, rumblePacket(seq++, s, w)); if (r && r.catch) r.catch(() => {}); } catch (_) {} };
   const settle = (how) => { const c = cur; cur = null; if (c) c.done(how); };
-  const halt = (how) => { if (loop !== null) { ck.cancel(loop); loop = null; } settle(how); send(0, 0); };
+  const halt = (how) => { if (loop !== null) { ck.cancel(loop); loop = null; } settle(how); if (lit) send(0, 0); };
   const tick = () => {
     if (!cur) return;
     const t = ck.now();
@@ -100,23 +100,24 @@ export function createWaker({ usb, pads, hid, win, doc, clock }) {
     effects: Object.freeze(["dual-rumble"]),
     playEffect(type, p) {
       if (type !== "dual-rumble") return Promise.reject(new TypeError("dual-rumble only"));
-      const o = p || {}, t = ck.now(), me = ++token;
+      if (!dev) return Promise.resolve("complete");
+      const o = p || {}, t = ck.now();
       settle("preempted"); // the older effect ends here; its own end can no longer cut this one
       return new Promise((done) => {
-        cur = { me, done, s: +o.strongMagnitude || 0, w: +o.weakMagnitude || 0, from: t + Math.max(0, +o.startDelay || 0), until: t + Math.max(0, +o.startDelay || 0) + Math.max(0, +o.duration || 0) };
+        cur = { done, s: +o.strongMagnitude || 0, w: +o.weakMagnitude || 0, from: t + Math.max(0, +o.startDelay || 0), until: t + Math.max(0, +o.startDelay || 0) + Math.max(0, +o.duration || 0) };
         if (loop === null) loop = ck.every(tick, EVERY_MS);
         tick();
       });
     },
-    reset() { token++; halt("preempted"); return Promise.resolve("complete"); },
+    reset() { halt("preempted"); return Promise.resolve("complete"); },
   };
   const isHid = (d) => isPad(d) && typeof d.sendReport === "function";
   const adopt = (d) => {
-    if (!isHid(d) || dev === d) return Promise.resolve(!!dev);
-    return Promise.resolve(d.opened ? null : d.open()).then(() => { dev = d; return true; }, () => false);
+    if (stopped || !isHid(d) || dev === d) return Promise.resolve(!stopped && !!dev);
+    return Promise.resolve(d.opened ? null : d.open()).then(() => { if (stopped) { try { d.close(); } catch (_) {} return false; } dev = d; return true; }, () => false);
   };
   const hidListen = () => {
-    if (hidOn || !hid) return;
+    if (stopped || hidOn || !hid) return;
     hidOn = true;
     const add = (o, t, f) => { if (o && typeof o.addEventListener === "function") { o.addEventListener(t, f); offs.push(() => o.removeEventListener(t, f)); } };
     add(hid, "disconnect", (e) => { if (e && e.device && e.device === dev) { halt("preempted"); dev = null; } });
@@ -154,6 +155,7 @@ export function createWaker({ usb, pads, hid, win, doc, clock }) {
   };
   async function auto() {
     await restore();
+    if (stopped) return 0;
     if (!onConnect) {
       onConnect = (e) => { if (isPad(e && e.device)) run(e.device); };
       usb.addEventListener("connect", onConnect);
@@ -162,7 +164,7 @@ export function createWaker({ usb, pads, hid, win, doc, clock }) {
     let list = [];
     try { list = (await usb.getDevices()).filter(isPad); } catch (_) {}
     let n = 0;
-    for (const d of list) if ((await run(d)) === "woken") n++;
+    for (const d of list) { if (stopped) break; if ((await run(d)) === "woken") n++; }
     return n;
   }
   function request() {
@@ -192,7 +194,9 @@ export function createWaker({ usb, pads, hid, win, doc, clock }) {
     stop() {
       if (onConnect) usb.removeEventListener("connect", onConnect);
       onConnect = null;
-      if (dev) halt("preempted");
+      stopped = true;
+      halt("preempted");
+      if (dev) { const d = dev; dev = null; try { const c = d.close && d.close(); if (c && c.catch) c.catch(() => {}); } catch (_) {} }
       for (const f of offs) f();
       offs = []; hidOn = false;
     },
