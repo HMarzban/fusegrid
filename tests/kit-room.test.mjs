@@ -123,12 +123,10 @@ if (room) {
     check("roomLook draws the veil last: rgba(toL(bg1, 0.004), 0.5) over the box at alpha 1", last.op === "fillRect" && last.style === rgbaOf(toL(tok.bg1, 0.004), 0.5) && last.alpha === 1 && eqBox(last.box, box), J(last));
     const tr = r.calls.findIndex((q) => q.op === "translate" && near(q.a[0], 10) && near(q.a[1], 20));
     check("box 300 x 260: the board scales by max(w/600, h/520) = 0.5 from the box corner", tr >= 0 && r.calls[tr + 1].op === "scale" && near(r.calls[tr + 1].a[0], 0.5) && near(r.calls[tr + 1].a[1], 0.5), J(r.calls[tr + 1]));
-    const at = cellsOf(r, 1), want = new Map();
-    for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) {
-      const wall = x === 0 || y === 0 || x === C - 1 || y === R - 1 || (x % 2 === 0 && y % 2 === 0), brick = !wall && !(x + y <= 3 || x + y >= C + R - 5) && hsh(x, y, 10) < 0.42;
-      want.set(x * 40 + "," + y * 40, brick ? 2 : 1);
-    }
-    check("the representative layout: 195 cells, each painted once, a brick cell is its floor then its brick (appendix hash, seed 7)", at.size === 195 && [...want].every(([p, n]) => at.get(p) === n), at.size + " cells, bricks " + [...at.values()].filter((n) => n === 2).length + " / " + [...want.values()].filter((n) => n === 2).length);
+    const at = cellsOf(r, 1), bio = biomeOf(1), hard = new Set([bio.wall, bio.wallHi, bio.brickA, bio.brickB, bio.brickHi].map((v) => String(v).toLowerCase()));
+    /* owner veto 1, pick D (2026-11-14): the room behind the menus is the world's floor only, edge to edge: no wall or brick competes with PLAY */
+    check("floor only: the board's 195 cells each painted once, as floor", at.size === 195 && [...at.values()].every((n) => n === 1), at.size + " cells, multi-painted " + [...at.values()].filter((n) => n !== 1).length);
+    check("floor only: no wall or brick colour anywhere in the room", !r.paints.some((q) => typeof q.style === "string" && hard.has(q.style.toLowerCase())), J(r.paints.filter((q) => typeof q.style === "string" && hard.has(q.style.toLowerCase())).slice(0, 3)));
     check("roomLook leaves the transform and the clip as it found them", balanced(r));
     check("roomLook sets no filter, shadowBlur or shadowColor", !r.writes.some((w) => /^(filter|shadowBlur|shadowColor)$/.test(w.k)));
     const wide = rec();

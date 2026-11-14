@@ -2,12 +2,11 @@
    the 2D menu canvas, painted through the kit's cell painters (paint.js wallCell / floorCell / brickCell) on artOf(level): the level's REAL board art, the
    untinted biomeOf(level) (appendix 1.3: the backdrop keeps the game's real art, only the veil is tinted; the mock's lane paints the same raw biome).
    tok gives the UI colours only: the veil (tok.bg1), the lane bed (tok.bed) and the cache key (tok.name). roomLook and lane leave the context state as found.
-   roomLook   (c, box, level, tok, o) fills bg1, draws the 600 x 520 representative board centred at PLAY scale (Task 9.6: s = min(o.play, cover) x o.k,
-              o.play = box units per board unit in a run on this layout, fit.js shellGeo's play through the frame F; no o.play (#c, the board's own canvas,
-              where play = cover = 1) keeps COVER, s = max(w/600, h/520)), continues the field past the board's rampart over the whole box (_field), then lays
-              the veil rgba(toL(tok.bg1, 0.004), o.veil = 0.5) over the box last (appendix 6). The layout is fixed, never the board the run deals: border and
-              even-even pillar walls (border codes, pillar variant [0,0,1,2] by hsh seed 7), bricks where hsh(x, y, 10) < 0.42 off both diagonals; outside the
-              board the even-even pillars and the same brick hash (no spawn-corner rule there), so only the cells the box shows are painted.
+   roomLook   (c, box, level, tok, o) fills bg1, paints the world's FLOOR checker over the whole box at PLAY scale, its grid centred as the board's
+              (Task 9.6: s = min(o.play, cover) x o.k, o.play = box units per board unit in a run on this layout, fit.js shellGeo's play through the frame F;
+              no o.play (#c, the board's own canvas, where play = cover = 1) keeps COVER, s = max(w/600, h/520)), then lays the veil
+              rgba(toL(tok.bg1, 0.004), o.veil = 0.5) over the box last (appendix 6). Floor only, no wall or brick (owner veto 1, pick D, 2026-11-14:
+              "nothing outside the plate competes with PLAY"; the room's walls and bricks read as busy), so only the cells the box shows are painted.
    roomLayer  (box, level, tok, o) the same painted once per key into a cache.js layer at o.dpr (o.look, o.textScale in the key; a veil, k or play other than
               the default joins the layer name, so a WIN veil never reuses the menu one); roomKey is that key, the one every page touches.
    laneGrid   (level) pure and DOM-free: the representative board as T codes with fair.js stampStart over it (the sealed spawn pocket, doors (5,1) and
@@ -51,9 +50,6 @@ const isWall = (x, y) => edge(x, y) || (x % 2 === 0 && y % 2 === 0);
 const wallCode = (x, y) => (inBoard(x, y) && edge(x, y) ? borderCode(x, y) : [0, 0, 1, 2][Math.floor(hsh(x, y, SEED) * 4)]);
 const isBrick = (x, y) => !(x + y <= 3 || x + y >= C + R - 5) && hsh(x, y, SEED + 3) < 0.42;
 const inBoard = (x, y) => x >= 0 && y >= 0 && x < C && y < R;
-/* the field behind a page: the representative board inside, outside it the even-even pillars and the brick hash (0 floor, 1 wall, 2 brick) */
-export const _field = (x, y) => (inBoard(x, y) ? (isWall(x, y) ? 1 : isBrick(x, y) ? 2 : 0) : (x & 1) === 0 && (y & 1) === 0 ? 1 : hsh(x, y, SEED + 3) < 0.42 ? 2 : 0);
-const FIELD = [T.EMPTY, T.WALL, T.BRICK];
 const ART = new Map(), artOf = (level) => { const b = biomeOf(level); let a = ART.get(b); if (!a) ART.set(b, (a = Object.freeze({biome: b}))); return a; };
 function cell(c, px, py, s, art, v, x, y, level) {
   if (v === T.WALL) return wallCell(c, px, py, s, art, {code: wallCode(x, y)});
@@ -69,7 +65,7 @@ export function roomLook(c, box, level, tok, o = {}) {
   c.fillStyle = art.biome.bg1; c.fillRect(x, y, w, h);
   c.save(); c.translate(x + ox, y + oy); c.scale(s, s);
   const i0 = Math.floor(-ox / q + E), i1 = Math.ceil((w - ox) / q - E), j0 = Math.floor(-oy / q + E), j1 = Math.ceil((h - oy) / q - E);
-  for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) cell(c, i * TS, j * TS, TS, art, FIELD[_field(i, j)], i, j, level);
+  for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) cell(c, i * TS, j * TS, TS, art, T.EMPTY, i, j, level);
   c.restore();
   c.fillStyle = rgba(toL(tok.bg1, 0.004), o.veil ?? 0.5); c.fillRect(x, y, w, h);
   c.restore();
