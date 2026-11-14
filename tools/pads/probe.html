@@ -40,7 +40,7 @@ let run=null,rest=null,res=null,seen=false;
 const sg=(v)=>v<0?-1:1;
 function begin(){const g=pad();if(!g)return;rest=Array.from(g.axes);res={b:new Array(17).fill(null),hat:{},ax:{},peak:{},rest:rest.map((v)=>+v.toFixed(3))};run={i:0,base:snap(g),best:null};show()}
 const snap=(g)=>({b:Array.from(g.buttons,(x)=>x.pressed||x.value>0.5),a:Array.from(g.axes)});
-function show(){const s=STEPS[run.i];$("step").textContent=(run.i+1)+"/"+STEPS.length+"  "+s[0];$("hint").textContent=s[1]==="b"?"Press and release it. Release everything before the next step.":"Push it and hold it at its limit until the step moves on.";$("skip").disabled=false;$("restart").disabled=false;run.base=snap(pad()||{buttons:[],axes:[]});run.best=null;run.wait=true}
+function show(note){const s=STEPS[run.i];$("step").textContent=(run.i+1)+"/"+STEPS.length+"  "+s[0];$("hint").textContent=s[1]==="b"?"Press and release it. Release everything before the next step.":"Push it all the way, then let go.";if(note)$("hint").textContent=note+"  "+$("hint").textContent;$("skip").disabled=false;$("restart").disabled=false;run.base=snap(pad()||{buttons:[],axes:[]});run.best=null;run.wait=true}
 function next(){run.i++;if(run.i>=STEPS.length){finish();return}show()}
 function tick(){
 const g=pad();
@@ -53,10 +53,13 @@ function probeStep(g){
 const s=STEPS[run.i],now=snap(g);
 if(s[1]==="b"){
 const hits=[];now.b.forEach((d,i)=>{if(d&&!run.base.b[i])hits.push(i)});
-if(hits.length&&run.wait===true){res.b[s[2]]=hits[0];run.wait="rel";run.got=hits}
+if(hits.length>1&&run.wait===true){run.wait="redo"}
+else if(hits.length&&run.wait===true){res.b[s[2]]=hits[0];run.wait="rel";run.got=hits}
 let ad=-1,ds=0;now.a.forEach((v,i)=>{const d=v-rest[i];if(Math.abs(d)>0.5&&Math.abs(d)>Math.abs(ds)){ad=i;ds=d}});
-if(ad>=0&&run.wait===true&&s[0].startsWith("D-PAD")){res.hat[s[0]]={axis:ad,value:+now.a[ad].toFixed(3)};run.wait="rel";res.b[s[2]]=null}
-if(run.wait==="rel"&&!now.b.some(Boolean)&&!now.a.some((v,i)=>Math.abs(v-rest[i])>0.4))next()
+if(ad>=0&&run.wait===true&&!hits.length&&s[0].startsWith("D-PAD")){res.hat[s[0]]={axis:ad,value:+now.a[ad].toFixed(3)};run.wait="rel";res.b[s[2]]=null}
+const calm=!now.b.some(Boolean)&&!now.a.some((v,i)=>Math.abs(v-rest[i])>0.4);
+if(run.wait==="redo"){$("hint").textContent="PRESS ONE BUTTON ONLY. Release everything.";if(calm)show("PRESS ONE BUTTON ONLY.")}
+else if(run.wait==="rel"&&calm)next()
 }else{
 let ad=-1,ds=0;now.a.forEach((v,i)=>{const d=v-rest[i];if(Math.abs(d)>Math.abs(ds)){ad=i;ds=d}});
 if(Math.abs(ds)>0.5){if(!run.best||Math.abs(ds)>=Math.abs(run.best.ds))run.best={ad,ds,v:now.a[ad]}}
@@ -65,14 +68,16 @@ else if(run.best&&Math.abs(ds)<0.25){const k=s[3]+s[2];res.ax[k]={axis:run.best.
 function finish(){
 $("step").textContent="Done";$("hint").textContent="Copy everything below into the controller matrix.";$("skip").disabled=true;
 const g=pad()||{id:"?",buttons:[],axes:[]};
-const id=String(g.id),m=id.match(/(?:vendor:\s*|^)([0-9a-f]{4})[\s-]+(?:product:\s*)?([0-9a-f]{4})/i)||id.match(/([0-9a-f]{4})\W+(?:product:\s*)?([0-9a-f]{4})/i);
-const re=m?"/"+m[1].toLowerCase()+"\\W+(product:\\s*)?"+m[2].toLowerCase()+"/i":"/"+id.replace(/[.*+?^${}()|[\]\\\/]/g,"\\$&")+"/i";
+const id=String(g.id),m=id.match(/Vendor:\s*([0-9a-f]{4})\s+Product:\s*([0-9a-f]{4})/i)||id.match(/^([0-9a-f]{4})-([0-9a-f]{4})-/i);
+const re=m?"/"+m[1].toLowerCase()+"\\W+(product:\\s*)?"+m[2].toLowerCase()+"/i":null;
 const lx=res.ax.x0,ly=res.ax.y0,rx=res.ax.x1,ry=res.ax.y1;
 const A=[[lx?lx.axis:-1,lx?lx.dir:1],[ly?ly.axis:-1,ly?-ly.dir:1],[rx?rx.axis:-1,rx?rx.dir:1],[ry?ry.axis:-1,ry?-ry.dir:1]];
 const pk=Object.values(res.peak).filter((v)=>v>0),min=pk.length?Math.min(...pk):1;
 const k=Math.max(1,Math.round(100/min)/100);
-const row="{ re: "+re+", nb: "+g.buttons.length+", na: "+g.axes.length+", b: "+JSON.stringify(res.b.map((v)=>v===null?-1:v)).replace(/,/g,", ")+", a: "+JSON.stringify(A).replace(/,/g,", ")+", k: "+k+" },";
+const body="{ re: "+re+", nb: "+g.buttons.length+", na: "+g.axes.length+", b: "+JSON.stringify(res.b.map((v)=>v===null?-1:v)).replace(/,/g,", ")+", a: "+JSON.stringify(A).replace(/,/g,", ")+", k: "+k+" },";
 const missing=res.b.map((v,i)=>v===null?i:-1).filter((i)=>i>=0);
+const gone=missing.map((i)=>STEPS[i][0]).concat([["x0","L-STICK right"],["y0","L-STICK up"],["x1","R-STICK right"],["y1","R-STICK up"]].filter((q)=>!res.ax[q[0]]).map((q)=>q[1]));
+const row=!re?"no vendor/product in this id: a KNOWN row needs one":gone.length?"// INCOMPLETE: "+gone.join(", ")+"\n// NOT COPY-READY, redo the missing steps\n// "+body:body;
 $("out").textContent="KNOWN row:\n"+row+"\n\nraw facts:\nengine: "+brands()+"\nid: "+id+"\nmapping: "+(g.mapping||"(empty)")+"\nbuttons: "+g.buttons.length+" axes: "+g.axes.length+"\nvibration: "+(g.vibrationActuator?"present":"none")+"\naxes at rest: "+res.rest.join(", ")+"\nstick peaks (|delta|): "+JSON.stringify(res.peak)+"\nsticks: "+JSON.stringify(res.ax)+"\nhat-style d-pad (axis, not button): "+JSON.stringify(res.hat)+"\nstandard order, -1 = no button seen (skipped or hat): "+JSON.stringify(missing)+"\nsuggested matrix cell: "+(g.mapping==="standard"?"standard":(missing.length||Object.keys(res.hat).length?"hat / rebind / known (check the row)":"known"))}
 $("start").onclick=begin;
 $("restart").onclick=begin;

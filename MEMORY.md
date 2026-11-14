@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+
+## 2026-11-14 — pad probe review fixes
+- `tools/pads/probe.html`: incomplete rows print as a commented INCOMPLETE block, two buttons in one step redo it, `re` only from a real vendor/product pair, button beats hat, stick hint says release.
 ## 2026-11-14 — pad probe and the controller matrix (plan Task 4)
 - `tools/pads/probe.html` (dev-only, not in SRC) walks a pad and prints its `KNOWN` row; `docs/controllers.md` is the matrix, seeded from three real measurements, all else not measured. Step 3 (owner runs the probe on every pad) is open.
 
