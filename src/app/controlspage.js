@@ -30,14 +30,21 @@ const sensSay = (dead) => {
 const btnNo = (id) => "BUTTON " + Object.keys(PAD_IDX).find((i) => PAD_IDX[i] === id);
 
 /** The page's walk, tabs, capture and writes; it reads and saves only through get / set. names = the wire's printed key names (controlswire keyNames),
-    read live; a name the capture saw only fills a code they lack. */
-export function createControlsPage({ get, set, padView, say, device, sw2, names: seed }) {
+    read live; a name the capture saw only fills a code they lack. namesV = their version (the wire's namesV): view().names is one object until
+    either moves, so a steady frame allocates none. */
+export function createControlsPage({ get, set, padView, say, device, sw2, names: seed, namesV }) {
   const cap = createCapture();
   let tabId = "key", dev = "key", row = 1, armed = false, swap = null, status = "", noteT = null;
   let echo = null, echoEnd = 0, held = null, padWas = padView().state, adjusting = false;
   let st = null, restAt = 0, peaks = [], fed = "";
   const learned = {};
-  const nm = () => (seed ? { ...learned, ...seed() } : learned);
+  let learnedV = 0, nmObj = null, nmKey, nmL = -1;
+  const nm = () => {
+    const k = namesV ? namesV() : seed ? seed() : null; // no version handed in: the seed's own object stands for it
+    if (nmObj && k === nmKey && nmL === learnedV) return nmObj;
+    nmKey = k; nmL = learnedV;
+    return (nmObj = seed ? { ...learned, ...seed() } : { ...learned });
+  };
   const sw2View = () => { const v = sw2 ? sw2() : null; return { shown: !!(v && v.shown), state: (v && v.state) || "idle", vib: !!(v && v.vib), seen: !!(v && v.seen), hid: !!(v && v.hid) }; };
   const rowsFor = (id) => (id === "pad" && sw2View().shown ? PAD_SW2 : ROWS[id]); // SW2 only where the wire's waker exists (switch2.js usbReach)
   const rows = () => rowsFor(tabId);
@@ -141,7 +148,7 @@ export function createControlsPage({ get, set, padView, say, device, sw2, names:
   const feed = (kind, id, t, key) => {
     const spec = cap.view(), r = cap.feed(kind, id, t, key);
     fed = r.kind;
-    if (layoutName(key) && (r.kind === "step" || r.kind === "commit")) learned[id] = layoutName(key); // the wire's rule: printable ASCII only, so another script keeps the code's letter
+    if (layoutName(key) && (r.kind === "step" || r.kind === "commit") && learned[id] !== layoutName(key)) { learned[id] = layoutName(key); learnedV++; } // the wire's rule: printable ASCII only, so another script keeps the code's letter
     if (r.kind === "cancel") note(r.line);
     else if (r.kind === "refused") say(r.line);
     else if (r.kind === "step") say(cap.view().prompt + ".");

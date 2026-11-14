@@ -338,5 +338,42 @@ const CW9 = (await import("../src/render/words.js")).CONTROLS_WORDS;
     check("393x852, no controller: eight rows keep the locked body; with the CONNECT row a drawing under LOCK_MIN gives way to the plaque alone (NO CONTROLLER and its line still drawn)", a8.W >= P.LOCK_MIN && !!a8.body && a9.W < P.LOCK_MIN && !a9.body && r9.texts.some((t) => t.s === "NO CONTROLLER") && r9.texts.some((t) => t.s === "Connect one and press a button."), J([a8.W, a9.W])); }
 }
 
+/* ---- fix round C (M3, lead ruling): a line whose first sentence (or · part) will not fit whole drops; never a shortened sentence, never a cut line ---- */
+{
+  const { _lines } = await import("../src/render/pages/controls.js");
+  const c = { font: "", measureText: (t) => ({ width: t.length * 10 }) }, f = "10px m3";
+  const RULE = "In menus SOUTH or START confirms and EAST goes back. Those never change.";
+  check("M3: the first sentence too long for its lines: the line drops (never 'In menus SOUTH or START.', a different rule)", J(_lines(c, f, RULE, 300, 1)) === "[]", J(_lines(c, f, RULE, 300, 1)));
+  const b = _lines(c, f, RULE, 300, 2);
+  check("M3: two lines: the first sentence whole with its full stop (the step-down that already worked)", J(b) === J(["In menus SOUTH or START", "confirms and EAST goes back."]), J(b));
+  check("M3: the whole rule where it fits", J(_lines(c, f, RULE, 800, 1)) === J([RULE]));
+  check("M3: a single sentence that will not fit: dropped", J(_lines(c, f, "Connect one and press a button.", 150, 1)) === "[]");
+  check("M3: a · line whose first part will not fit: dropped; one that fits steps down to it", J(_lines(c, f, "TAB D-PAD · BACK EAST · COPY WEST", 60, 1)) === "[]" && J(_lines(c, f, "TAB D-PAD · BACK EAST · COPY WEST", 100, 1)) === J(["TAB D-PAD"]));
+  check("M3: a caps status with no sentence that will not fit: dropped, no full stop invented", J(_lines(c, f, "PRESS ENTER OR CLICK", 120, 1)) === "[]");
+}
+
+/* ---- fix round C: the capture plate (a box with no drawing: a landscape phone's #c) — its · separators clear 4.5 against the plate's bed in every
+   world, and it declares the chosen pair the gates require (the lit button vs a quiet one; it draws no info glyph: screens.mjs exempts info there) ---- */
+{
+  const { lum } = await import("../src/render/kit/tokens.js");
+  const cr = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const f = fitBox(852, 393, true, 600, 520), F = { W: 600, H: 520, touch: true, css: f.s };
+  const v = padV({ row: 2, device: "pad", capture: { action: "THROW", prompt: "PRESS A BUTTON", sub: "NOW WEST", foot: "START CANCELS · WEST KEEPS IT · TAP OFF THE PLATE CANCELS" } });
+  for (const w of [1, 8]) {
+    probe.setOn(true);
+    const r = rec(); P.drawControlsPage(r.ctx, F, v, { level: w, tap: false });
+    const S = probe.snapshot(); probe.setOn(false);
+    const tok = worldTokens(w), seps = r.texts.filter((t) => t.s === "·"), worst = Math.min(...seps.map((t) => Math.min(cr(t.fill, tok.bedA), cr(t.fill, tok.bedB))));
+    check(`capture plate, world ${w}: the plate is drawn (no drawing on the page) and every · separator clears 4.5 against the plate's bed`, !P._dbg.last.G.art && seps.length >= 2 && worst >= 4.5, J([seps.map((t) => t.fill), worst.toFixed(3)]));
+    const probeSep = S.texts.filter((t) => t.s === "·");
+    check(`capture plate, world ${w}: the probe records the separators in the colour drawn`, probeSep.length === seps.length && probeSep.every((t) => t.col === seps[0].fill), J(probeSep.map((t) => t.col)));
+    const kinds = new Set(S.pairs.map((q) => q.kind));
+    check(`capture plate, world ${w}: declares a chosen pair (the lit button vs a quiet one), and no info pair (no glyph on the plate)`, kinds.has("chosen") && !kinds.has("info"), J(S.pairs.map((q) => q.kind)));
+    const k = rec(); probe.setOn(true); P.drawControlsPage(k.ctx, F, keyV({ row: 2, capture: { action: "THROW", prompt: "PRESS A KEY", sub: "NOW E", foot: "ESC CANCELS · E KEEPS IT" } }), { level: w, tap: false }); const SK = probe.snapshot(); probe.setOn(false);
+    check(`capture plate, world ${w}, a key: the dashed slot is its info pair (t2 on the plate), its · separators in t2 too`, SK.pairs.some((q) => q.kind === "info" && q.col === CONST.t2) && k.texts.filter((t) => t.s === "·").length > 0 && k.texts.filter((t) => t.s === "·").every((t) => t.fill === CONST.t2), J(SK.pairs.map((q) => q.kind)));
+    check(`capture plate, world ${w}: its foot caps declare their fill (the yellow gate)`, S.rects.filter((q) => q.name === "foot cap").length >= 2 && S.rects.filter((q) => q.name === "foot cap").every((q) => q.fill === tok.key), J(S.rects.filter((q) => q.name === "foot cap")));
+  }
+}
+
 console.log("\n  PAGE-CONTROLS RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

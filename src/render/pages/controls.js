@@ -34,7 +34,7 @@ import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapAt} from "../hintcopy.js";
 import {FOOT_TAP, BACK_TAP} from "../kit/copy.js";
 import {meterCell, slab, mark, course, SLAB} from "../kit/parts.js";
-import {drawPad, drawCallouts, drawKeys, glyph as padGlyph, padBox, kbPrints, kbLegend, KB_AT, PART_AT, ringR, keyRect} from "../padart.js";
+import {drawPad, drawCallouts, drawKeys, glyph as padGlyph, padBox, kbPrints, kbLegend, KB_AT, PART_AT, PADG, ringR, keyRect} from "../padart.js";
 import {rowsOf, statusOf, sw2Help, footItems, padStates, padRing, padCallouts, padFit, keyStates, keyRing, keyCallouts, kbFit, keyName, CAPTION, PAD_TALL, capCallouts, inUseLine} from "../controlsgeo.js";
 
 export const DESK = deep({
@@ -46,7 +46,7 @@ export const PHONE = deep({p: {top: 12, bot: 12, side: 12, pad: [12, 12, 14, 12]
   p125: {top: 10, bot: 10, side: 12, pad: [10, 12, 12, 12], grp: 10, tabs: 10, back: 124, below: 10, max: 600, art: [120, 300]}});
 export const COL_ART = 180; // col's compact drawing, at the head's right over the tabs (no callouts: the rows name every input)
 export const TOUCH = Object.freeze({h: 44, g: 8}), DESK_U = 0.8, GUT = 8, FOOT1 = 50, TROUGH = 11, TAB_GAP = 8, MIN_ROWS = 2;
-/* a wall course before each of these rows: actions · fixed or feel · connect (Task 3: shown only where switch2.js reaches) · reset */
+/* a wall course before each of these rows: actions · fixed or feel · reset */
 export const GROUP = Object.freeze(["CONFIRM", "SENSITIVITY", "RESET"]);
 const BACK_CHEV = 52; // BACK as its chevron alone (>= 44 CSS px), records' compact step-down
 const LAND_TIGHT = Object.freeze({top: 12, bot: 12, pad: Object.freeze([6, 12, 8, 12]), below: 8, tabs: 6});
@@ -321,8 +321,9 @@ function lines(c, f, s, w, n) {
   if (one) return one;
   const sep = String(s).includes(" · ") ? " · " : ". ", parts = String(s).split(sep), end = sep === ". " ? "." : "";
   for (let k = parts.length - 1; k >= 1; k--) { const q = wrap(c, f, parts.slice(0, k).join(sep) + end, w, n); if (q) return q; }
-  return wrap(c, f, parts[0], w, 99) ? wrap(c, f, parts[0], w, 99).slice(0, n) : [];
+  return []; // not even the first part whole: the line drops (a shortened sentence would say a different rule; lead ruling, fix round C)
 }
+export const _lines = lines; // test seam
 function nameWords(s) {
   const st = s.pad && s.pad.state;
   if (s.tab === "key") return [CW.KEYBOARD, CW.ALSO];
@@ -455,9 +456,12 @@ function padArt(c, s, row, A, tok, ui) {
   if (!off && !cap && ui.warm && !(row.id === "VIBRATION")) { const a = c.globalAlpha; c.globalAlpha = 0; drawPad(c, ox, oy, Wd, {tok, lit, grips: true, fam: famOf(s)}); c.globalAlpha = a; } // the grips layer made with the page, so a cursor move onto VIBRATION never misses
   return {plan: F.plan, W: Wd, none, body: off && !bare ? R(ox + 0.06 * Wd, oy + 0.42 * Wd, 0.18 * Wd, 0.14 * Wd) : null, ox, oy, ring: ring && PART_AT[ring] ? {x: ox + PART_AT[ring][0] * Wd, y: oy + PART_AT[ring][1] * Wd, r: ringR(ring, Wd)} : null};
 }
+/* the printed names' key, one slot by identity: the wire hands a new object only when a name changes (copy on write), so a steady frame stringifies none */
+let nsOf = null, nsSig = "";
+const namesSig = (o) => { if (o !== nsOf) { nsOf = o; nsSig = o && Object.keys(o).length ? JSON.stringify(o) : ""; } return nsSig; };
 function keyArt(c, s, row, A, tok, ui) {
   const lit = s.capture ? {} : keyStates(s), it = s.capture ? (ui.call ? capCallouts(s, row.id) : []) : keyCallouts(s), ts = textScale();
-  const ns = s.names && Object.keys(s.names).length ? JSON.stringify(s.names) : "", K = fitOnce(["key", A.w, A.h, ts, JSON.stringify(it), Object.keys(lit).sort().join(), ...(ns ? [ns] : [])].join("|"), () => { const m = metrics(c, ui.dv), F = kbFit(A.w, A.h, it, m); return {F, prints: kbPrints(F.k, lit, m.wOf, ts, s.names)}; });
+  const ns = namesSig(s.names), K = fitOnce(["key", A.w, A.h, ts, JSON.stringify(it), Object.keys(lit).sort().join(), ...(ns ? [ns] : [])].join("|"), () => { const m = metrics(c, ui.dv), F = kbFit(A.w, A.h, it, m); return {F, prints: kbPrints(F.k, lit, m.wOf, ts, s.names)}; });
   const {F, prints} = K, ox = A.x + F.ox, oy = A.y + F.oy, rk = ui.focus ? keyRing(s, row.id) : null;
   drawKeys(c, ox, oy, F.k, {tok, lit, ring: rk, prints, px: kbLegend(F.k, ts), names: s.names});
   if (F.plan) drawCallouts(c, ox, oy, F.plan, tok);
@@ -489,13 +493,18 @@ function paintCapture(c, G, s, tok, ui, row) {
   text(c, kick, mid, B.y + 18, LF(dv.sec), CONST.t2, "center"); put(kick, B.y + 18, LF(dv.sec), dv.sec, CONST.t2, "secondary");
   dsp(c, cap.prompt, mid, B.y + 46, pp, {align: "center"}); put(cap.prompt, B.y + 46, T.display(pp), pp, CONST.ink, "primary");
   const top = B.y + 66, room = B.h - 66 - 66;
-  let ring = null;
+  let ring = null, lit = null, quiet = null, slot = null;
   if (padOn) {
     const id = padRing(s, row.id), Wp = Math.min(150, B.w - 40, room / PAD_TALL), bx = padBox(Wp), px = mid - Wp / 2, py = top + (room - (bx.y1 - bx.y0)) / 2 - bx.y0;
     drawPad(c, px, py, Wp, {tok, lit: id ? {[id]: "lit"} : {}, ring: id, fam: famOf(s)});
-    if (id && PART_AT[id]) ring = {x: px + PART_AT[id][0] * Wp, y: py + PART_AT[id][1] * Wp, r: ringR(id, Wp)};
+    if (id && PART_AT[id]) {
+      ring = {x: px + PART_AT[id][0] * Wp, y: py + PART_AT[id][1] * Wp, r: ringR(id, Wp)};
+      const q = ["N", "E", "S", "W"].find((k) => k !== id), at = (k) => ({x: px + PART_AT[k][0] * Wp, y: py + PART_AT[k][1] * Wp}), h = PADG.br * Wp * 0.6; // inside a face button's face, clear of its rim
+      lit = {...at(id), h}; quiet = {...at(q), h}; // the probe's chosen pair: the action's button lit, the rest quiet
+    }
   } else {
     const sw = 64, sh = 30, sx = mid - sw / 2, sy = top + (room - sh) / 2;
+    slot = R(sx, sy, sw, sh);
     c.strokeStyle = CONST.t2; c.lineWidth = 2;
     for (const [x0, y0, x1, y1] of [[sx, sy, sx + sw, sy], [sx + sw, sy, sx + sw, sy + sh], [sx + sw, sy + sh, sx, sy + sh], [sx, sy + sh, sx, sy]]) { const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / 7)); for (let i = 0; i < n; i++) { const a = i / n, b = (i + 0.57) / n; c.beginPath(); c.moveTo(x0 + (x1 - x0) * a, y0 + (y1 - y0) * a); c.lineTo(x0 + (x1 - x0) * b, y0 + (y1 - y0) * b); c.stroke(); } }
   }
@@ -506,9 +515,9 @@ function paintCapture(c, G, s, tok, ui, row) {
   const x0 = mid - x / 2, fy = B.y + B.h - 24;
   for (const p of parts) {
     if (p.cap) { key(c, x0 + p.x, fy - dv.caph / 2, p.w, dv.caph, "key", {tok, phone: ph, label: p.cap, px: dv.sec}); caps.push(R(x0 + p.x, fy - dv.caph / 2, p.w, dv.caph)); const w = W(mc, f, p.cap); texts.push({s: p.cap, x: x0 + p.x + (p.w - w) / 2, y: fy, w, px: dv.sec, col: CONST.ink, role: "secondary"}); }
-    else { text(c, p.sep || p.t, x0 + p.x, fy, f, p.sep ? CONST.off : CONST.t2); texts.push({s: p.sep || p.t, x: x0 + p.x, y: fy, w: W(mc, f, p.sep || p.t), px: dv.sec, col: p.sep ? CONST.off : CONST.t2, role: "secondary", ...(p.sep ? {} : {})}); }
+    else { text(c, p.sep || p.t, x0 + p.x, fy, f, CONST.t2); texts.push({s: p.sep || p.t, x: x0 + p.x, y: fy, w: W(mc, f, p.sep || p.t), px: dv.sec, col: CONST.t2, role: "secondary"}); } // the · in the words' t2: CONST.off is 4.46 against the plate's bedB (secondary text needs 4.5)
   }
-  return {ring, texts, caps};
+  return {ring, texts, caps, lit, quiet, slot};
 }
 
 /* ---- the probe record (outside any layer paint) ---- */
@@ -523,7 +532,10 @@ function record(G, Pl, s, ui, foc, live, dpr, el, touchy, pg, tok) {
     probe.rect("plate", ...b(B), {plate: 10});
     if (C && C.ring) ringPair(probe, b, C.ring, "capture", R(B.x + 8, B.y + 8, 20, 12));
     for (const t of C ? C.texts : []) txt(t.s, t.x, t.y, t.w, t.px, t.col, t.role);
-    for (const k of C ? C.caps : []) probe.rect("foot cap", ...b(k));
+    for (const k of C ? C.caps : []) probe.rect("foot cap", ...b(k), {fill: tok.key});
+    const sq = (p, h) => R(p.x - h, p.y - h, 2 * h, 2 * h);
+    if (C && C.lit) probe.pair("chosen", b(sq(C.lit, C.lit.h)), b(sq(C.quiet, C.quiet.h)), {name: "capture: the action's button lit vs a quiet one"}); // the lit button is a state, not a mark: its focus is the ring pair (screens.mjs exempts info where the plate draws no glyph)
+    if (C && C.slot) probe.pair("info", b(R(C.slot.x - 2, C.slot.y - 2, C.slot.w + 4, C.slot.h + 4)), b(R(C.slot.x - 10, C.slot.y - 10, C.slot.w + 20, C.slot.h + 20)), {col: CONST.t2, name: "capture: the dashed key slot"});
     return;
   }
   const H = Pl.head;
