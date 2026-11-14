@@ -53,7 +53,8 @@ that's all. The Switch 2 Pro Controller is the exception. On **SETTINGS ›
 CONTROLS**, **CONNECT** asks Chrome to let the page talk to it over USB, and
 **ALLOW VIBRATION** asks once more for HID, which is how the game makes it buzz.
 Chrome shows its own prompt each time, and nothing happens unless you pick the
-controller there.
+controller there. The menu's **PLAYING WITH A CONTROLLER?** card offers the same
+prompt as **CONNECT SWITCH 2**; it is the same Chrome prompt, nothing more.
 
 - **Chrome keeps the grant, not the game.** After one yes, the game finds that
   controller on its own whenever you plug it in, with no new prompt.
@@ -66,7 +67,10 @@ controller there.
   site's settings and reset the USB and HID permissions.
 
 The game stores nothing about your controller beyond the binds you set on
-CONTROLS (they stay in your browser, like your settings). Which kind of
+CONTROLS (they stay in your browser, like your settings), and three small flags
+for that menu card: whether a controller has been seen, whether you pressed GOT
+IT, and how many runs it has been on screen for, so it knows when to stop
+showing. Which kind of
 controller you hold and what your keyboard prints are read fresh each visit and
 never saved. None of it is sent anywhere: the play stats carry no field
 about a controller or a keyboard.
