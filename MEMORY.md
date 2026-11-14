@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — every controller and the keyboard merged (shell v219)
+- `feature/every-controller` merged into local `main` (4aee0be) after the owner passed all 19 hardware checks; 779 tests green on the merge; not pushed. Parked: Task 5 hat D-pad (needs a captured hat pad); Bluetooth Switch 2, Safari / Firefox, Windows / Linux / Android unmeasured.
+
 ## 2026-11-14 — final whole-branch review fixes (every-controller)
 - Re-review regression fixed: `shortcutOf` judges binds only for a real keystroke (a key string); a tap or controller press (`onUiKey(code)`, no key) keeps KeyR / KeyC / KeyT / KeyB on a bound code. menuapp `boundKey` reads the wire's live `controls.key`, no view per keydown.
 - A key bound to play (MOVE, BOMB THROW REMOTE PAUSE) is never a shortcut letter R Y N C B M T U whatever its layout prints (`controls.js` `shortcutOf`, menuapp `boundKey`; main, menuapp, analytics, update, wire chord guard): Colemak S moves, never resets the camera or STATS; silent J / X aliases left out so Colemak / Workman keep an N for NO THANKS. Switch 2 `auto()` at the first deferred slot, not the first idle (deep links wake); connect() `.catch`; CHANGELOG / AGENTS truthful; 779 tests.
