@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v214, live on 2026-11-14.
+shell v218 on 2026-11-14.
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -935,6 +935,36 @@ the v201 players had. Against v201 itself the startup files are about 64 KB (gzi
 about 309 KB; the note and the changelog now say so, and they list only the fixes a v201 player could ever have hit. The owner re-uploaded the share card to the repo's social preview and went to try the game on other controllers. The
 honest leftover is the same as before the push: the real phone and controller checks, and three looks the owner may still
 veto.
+
+## 2026-11-14: Safari says it could not load (shells v215 and v216)
+
+An hour after the push the owner opened the game in Safari and got COULD NOT LOAD THE GAME, with a RETRY that only reloaded
+into the same screen. By the time the console was open it had fixed itself, so the trigger was never caught. The same code
+started cleanly in a fresh Safari engine, in iOS 27 Safari and through the whole v201 to v214 update path, so the likeliest
+story is an offline copy that no longer matched the page. The hunt still found two real gaps. When the files do not fit,
+Safari reports the error with no file name, so the loader waited forever on SLOW CONNECTION; and nothing ever cleared a bad
+offline copy, so RETRY could not help. Shell v215 counts that error and, when a start fails, clears the game's offline copy
+and reloads once by itself (never when offline); an open game also looks for new builds every 5 minutes now. An automated
+security review read it straight after the push and caught an overreach: the game shares its address with the owner's other
+projects, and the repair removed their offline helpers too. Shell v216 keeps it to the game's own.
+
+## 2026-11-14: the owner rules on three looks (shell v217)
+
+Three looks had waited since the upgrade for the owner's word. Each came back as one sheet of real captures: what ships,
+two alternatives and one bolder option, with its cost under it. The owner took the bolder one twice. The room behind the
+menus became the world's floor alone, so the plate is the only thing to read. REAL 3D got a stage a little wider than the
+board on a computer, which puts the cabinet's near corners back on screen without shrinking the board or touching the
+camera. The controller note moved over the score row, the same place on a computer and a phone. A last capture of all
+three together caught one honest side effect: while the note covers the score row, the hearts it covers cannot be
+measured for contrast, so the check now says why instead of quietly skipping.
+
+## 2026-11-14: tying off v217 (shell v218)
+
+The wider REAL 3D stage left four small debts, and v218 pays them. Tile tips beside it may wrap to a third line, so none
+falls back to its short form; the wheel and right-drag answer over the new side strips; the first load draws its stage as
+wide as REAL 3D's, so nothing jumps at the hand-off. The fourth was older: the checks behind the run ends had nothing to
+measure on world 8, where every level is won and none is left ahead. Rather than excuse it, the page now declares the marks a
+player actually reads there, the check on a won level and the crack on the one you fell on, and both clear the bar easily.
 
 ---
 

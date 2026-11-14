@@ -693,6 +693,7 @@ export function createGame(canvas, opts = {}) {
     shBox = sh && !sh.box.over ? sh.box : null;
     drawShell(sh ? sh.ctx : c, app, world, sh ? sh.box : canvas, curKind, getScoresForHeat, getPlaquesFn, getCab, ro);
     if (ro.over && renderer.over) renderer.over(sm === 2 && sh ? sh.ctx : c, world); // a run end's particles over its plate (on p, on #c under the veil)
+    if (fit && fit.wash) fit.wash(curKind === "3d" && sm !== 1 ? (sm === 2 && sh ? sh.el : canvas) : null, sm === 2 && sh ? 0 : 7); // REAL 3D's wider stage: the washes reach the rim's near corners (#c's column 7 clears the close-call border)
     if (swapped || world.grid !== gPrev) { swapped = false; gPrev = world.grid; last = null; } // G5: a look swap, run start or room start drops this long frame from the next dt
   }
 

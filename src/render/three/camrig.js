@@ -82,8 +82,9 @@ export function applyOrbit(camera,st,shake){
    swallowed while mounted. TWO gates (camera-research spec §4): right-drag
    orbit needs getActive() (main wires GAME+3d+?orbit=1); wheel/pinch dolly
    rides getDolly() when given (GAME+3d, always-on within clamps) and falls
-   back to getActive() otherwise. */
-export function mountOrbitCtl({canvas,getActive,getDolly,input,camrig}){
+   back to getActive() otherwise. also: the element that holds #gl (default #stage: a released look replaces #gl, the stage stays), whose side strips show past #c's box
+   on REAL 3D's wider desktop stage (2026-11-14), answers the same pointerdown / wheel / contextmenu; an event #c already took is skipped. */
+export function mountOrbitCtl({canvas,getActive,getDolly,input,camrig,also}){
   const canOrbit=getActive||(()=>false);
   const canDolly=getDolly||canOrbit;
   if(!canvas)return {detach(){}};
@@ -135,16 +136,16 @@ export function mountOrbitCtl({canvas,getActive,getDolly,input,camrig}){
     dollBy(camrig,e.deltaY*WHEEL_DOLLY_K);
    };
   const onCtx=(e)=>{ e.preventDefault(); };   // right-drag owns button 2
-  canvas.addEventListener("pointerdown",onDown);
-  canvas.addEventListener("wheel",onWheel,{passive:false});
-  canvas.addEventListener("contextmenu",onCtx);
+  if(also===undefined)also=typeof document!=="undefined"&&document.getElementById?document.getElementById("stage"):null;
+  const skip=(f)=>(e)=>{if(e.target!==canvas)f(e)};
+  const H=[[canvas,onDown,onWheel,onCtx]];
+  if(also&&also!==canvas)H.push([also,skip(onDown),skip(onWheel),skip(onCtx)]);
+  H.forEach(([el,d,wh,cx])=>{el.addEventListener("pointerdown",d);el.addEventListener("wheel",wh,{passive:false});el.addEventListener("contextmenu",cx);});
   const winL=w?[["pointermove",onMove],["pointerup",endPt],
     ["pointercancel",endPt]]:[];
   winL.forEach(([t,f])=>w.addEventListener(t,f));
   return {detach(){
-    canvas.removeEventListener("pointerdown",onDown);
-    canvas.removeEventListener("wheel",onWheel);
-    canvas.removeEventListener("contextmenu",onCtx);
+    H.forEach(([el,d,wh,cx])=>{el.removeEventListener("pointerdown",d);el.removeEventListener("wheel",wh);el.removeEventListener("contextmenu",cx);});
     winL.forEach(([t,f])=>w&&w.removeEventListener(t,f));
    }};
 }

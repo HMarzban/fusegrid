@@ -51,6 +51,7 @@ import {createGame} from "../src/main.js";
 import {SCREEN, PAUSE_ITEMS} from "../src/app/menuapp.js";
 import * as THREE from "../vendor/three.module.js";
 import {readdirSync, readFileSync} from "node:fs";
+import {GL_WIDE} from "../src/app/fit.js";
 import "../src/render/r3d/scene3d.js";
 import "../src/core/board3.js";
 import "../src/app/demobot.js";
@@ -453,6 +454,54 @@ function scan(grid){
   check("§4b keystone far/near floor width >=0.78, blocks do not splay"
       +" (FOV 45/870 scored 0.722)",
     key>=0.78, key.toFixed(4));
+}
+
+// ---- §4b-wide: the frame the desktop player sees (owner pick D, 2026-11-14) ----
+/* Veto 2 "REAL 3D near corners at the default zoom", option D "BOLDER: WIDER
+   3D STAGE, rig untouched". On d, #gl is GL_WIDE (1.12) x the board box across
+   (fit.js glBox) and the wrapper widens the camera's frame with it, so the
+   block above stays the board box's own framing (and the whole frame on p / l,
+   where gk is 1): every number in it is unchanged. Here the same rig is judged
+   at aspect GL_WIDE x W/H. Changed vs the board box: the bezel at STANDARD,
+   1.0746 -> 0.9594, now ON the canvas (ceiling 1.10 -> 0.97); the dolly-in
+   limit 1473.54 that scored 1.10 scores 0.9821 (<= 1). Unchanged by
+   construction: playfield x is the board box's x / GL_WIDE (the same pixels on
+   a canvas 1.12 wider), y, span, centring, side:top and keystone identical. */
+{
+  const W4=CFG.COLS*CFG.TILE, D4=CFG.ROWS*CFG.TILE;
+  const at=(gk,dist)=>{
+    const cam=new THREE.PerspectiveCamera(CAM_FOV,W4/D4,1,3000);
+    cam.setViewOffset(W4*gk,D4,0,0,W4*gk,D4);
+    const st=createRig(); st.dist=dist;
+    applyOrbit(cam,st,{x:0,y:0}); cam.updateMatrixWorld(true);
+    const ndc=(x,y,z)=>new THREE.Vector3(x,y,z).project(cam);
+    let px=0, py=0, bez=0, lo=1, hi=-1;
+    for(const b of BIOMES)
+      for(const sx of [-1,1])for(const sz of [-1,1]){
+        for(const y of [0,b.hWall]){ const v=ndc(sx*W4/2,y,sz*D4/2);
+          px=Math.max(px,Math.abs(v.x)); py=Math.max(py,Math.abs(v.y)); lo=Math.min(lo,v.y); hi=Math.max(hi,v.y); }
+        for(const y of [0,b.hWall+RIM_LIP]){ const v=ndc(sx*(W4/2+RIM_W),y,sz*(D4/2+RIM_W));
+          bez=Math.max(bez,Math.abs(v.x),Math.abs(v.y)); }
+       }
+    return {px,py,bez,span:hi-lo};
+   };
+  const box=at(1,1503), wide=at(GL_WIDE,1503);
+  check("§4b-wide the desktop stage is GL_WIDE 1.12 x the board box",
+    GL_WIDE===1.12, String(GL_WIDE));
+  check("§4b-wide near corners ON the canvas at STANDARD with margin"
+      +" (|ndc|<=0.97; the board box scores 1.0746)",
+    wide.bez<=0.97&&box.bez>1, wide.bez.toFixed(4)+" (box "+box.bez.toFixed(4)+")");
+  check("§4b-wide the board keeps its pixels: playfield x = board-box x / 1.12,"
+      +" y and span identical",
+    Math.abs(wide.px*GL_WIDE-box.px)<1e-9&&Math.abs(wide.py-box.py)<1e-9
+    &&Math.abs(wide.span-box.span)<1e-9&&box.span>=1.32,
+    wide.px.toFixed(4)+" x 1.12 = "+(wide.px*GL_WIDE).toFixed(4));
+  for(let i=0;i<CAM_PRESET.length;i++){ const r=at(GL_WIDE,CAM_PRESET[i]);
+    check("§4b-wide "+CAM_NAME[i]+" keeps the near corners on the canvas"
+        +" (|ndc|<=0.97)", r.bez<=0.97, r.bez.toFixed(4)); }
+  check("§4b-wide the old dolly-in limit (1473.54, bezel 1.10 on the board box)"
+      +" stays on the canvas (<=1)", at(GL_WIDE,1473.54).bez<=1,
+    at(GL_WIDE,1473.54).bez.toFixed(4));
 }
 
 // ---- §6b brightness gate: no tone mapping, no fog over the board ----

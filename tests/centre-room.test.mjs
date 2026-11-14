@@ -125,19 +125,7 @@ for (const [W, H] of SIZES) {
   const brick = cells.filter((p) => p[0] < 0 || p[1] < 0).length;
   check(`roomLook ${W}x${H}: the outer field has cells on every side of the board`, cells.some((p) => p[0] < 0) && cells.some((p) => p[1] < 0) && cells.some((p) => p[0] >= 600) && cells.some((p) => p[1] >= 520) && brick > 0);
 }
-{
-  /* _field(x, y): 0 floor, 1 wall, 2 brick; inside the board it is the representative board (rampart, pillars, the spawn-corner rule) */
-  const f = room._field, hsh = (x, y, s) => { let h = (x * 374761393 + y * 668265263 + s * 1442695041) >>> 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
-  let bad = [], tl = 0, br = 0;
-  if (f) for (let y = -8; y < 22; y++) for (let x = -12; x < 28; x++) {
-    const inB = x >= 0 && y >= 0 && x < 15 && y < 13, edge = inB && (x === 0 || y === 0 || x === 14 || y === 12), pil = ((x % 2) + 2) % 2 === 0 && ((y % 2) + 2) % 2 === 0;
-    const want = edge || pil ? 1 : (!inB || !(x + y <= 3 || x + y >= 15 + 13 - 5)) && hsh(x, y, 10) < 0.42 ? 2 : 0;
-    if (f(x, y) !== want) bad.push([x, y, f(x, y), want]);
-    if (!inB && f(x, y) === 2) { if (x < 0 && y < 0) tl++; if (x >= 15 && y >= 13) br++; }
-  }
-  check("the field: the representative board inside, outside a pillar at even-even and the brick hash with no spawn-corner rule", !!f && bad.length === 0, J(bad.slice(0, 6)));
-  check("the outer top-left and bottom-right quadrants carry bricks (the spawn-corner rule binds the board only)", tl > 10 && br > 10, J([tl, br]));
-}
+check("the field helper is gone with the walls and bricks behind the menus (veto 1 D)", room._field === undefined);
 {
   const tok = worldTokens(3), m0 = cache._dbg.misses;
   const a = room.roomLayer({ w: 1366, h: 768 }, 3, tok, { dpr: 2, play: 1.1635 }), b = room.roomLayer({ w: 1366, h: 768 }, 3, tok, { dpr: 2, play: 1.1635 }), c = room.roomLayer({ w: 1366, h: 768 }, 3, tok, { dpr: 2, play: 1.8 });

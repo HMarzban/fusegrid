@@ -199,12 +199,13 @@ function tipGeomOf(c, G, geo, st, box, s, nameOnly, np) {
   const fl = Math.min(D.bod, TIP_FLOOR[lay === "d" ? "d" : "p"] / K);
   const words = [[rest, D.bod], [rest, fl], [low, D.bod], [low, fl]].filter(([b, px], i, a) => b && !a.slice(0, i).some(([b2, p2]) => b2 === b && p2 === px));
   const size = (w, body, px) => { const lines = body ? wrap(c, body, T.body(px), w - 2 * pad) : []; return {lines, px, body, h: 10 + np * K + (lines.length ? 6 + lines.length * px * K * 1.25 : 0) + 12}; };
-  /* the first step of `steps` that fits a w x maxH inner box, or null */
+  /* the first step of `steps` that fits a w x maxH inner box, or null; the toast, and any tip beside REAL 3D's wider stage (its column ~42 px
+     narrower, box.gx), may wrap to a third line so the tip keeps its whole words (2026-11-14) */
   const pick = (w, maxH, steps) => {
     if (!(w >= 2 * pad) || !(maxH > 0) || measure(c, T.label(np), name) + 2 * pad > w) return null;
     for (const [body, px] of steps) {
       const z = size(w, body, px);
-      if (z.lines.length <= (st.tip.pad ? 3 : 2) && z.h <= maxH + 1e-6 && z.lines.every((l) => runW(c, T.body(px), l) + 2 * pad <= w + 1e-6)) return z;
+      if (z.lines.length <= (st.tip.pad || box.gx > 0 ? 3 : 2) && z.h <= maxH + 1e-6 && z.lines.every((l) => runW(c, T.body(px), l) + 2 * pad <= w + 1e-6)) return z;
     }
     return null;
   };
@@ -212,24 +213,27 @@ function tipGeomOf(c, G, geo, st, box, s, nameOnly, np) {
   const ring = (r) => R4(r.x - TIPT, r.y - TIPT, r.w + 2 * TIPT, r.h + 2 * TIPT + 3);
   /* slots: w and the inner height it may take (its ring then stays inside the slot), place(z) -> [inner box, leader] */
   const slots = [];
-  const top = (x, y, w, maxH, grow) => slots.push({w, maxH, place: (z) => [R4(x, y, w, grow ? Math.min(maxH, Math.max(z.h, grow)) : z.h), null]});
+  /* the controller toast (st.tip.pad) takes the chip plate first on a desktop and a portrait phone, the same place on both, and fills the plate's
+     height so every chip under it is covered whole (owner veto 3, pick B, 2026-11-14); a tile tip keeps the plate as its last slot */
+  const toast = !!st.tip.pad, plateFirst = toast && lay !== "l";
+  const top = (x, y, w, maxH, grow) => (plateFirst ? slots.unshift : slots.push).call(slots, {w, maxH, place: (z) => [R4(x, y, w, grow ? Math.min(maxH, Math.max(z.h, grow)) : z.h), null]});
   if (lay === "d") {
-    const rx = ST.x + ST.w + 30, rw = Math.min(360, box.w - 22 - rx - TIPT), lw = Math.min(360, ST.x - 30 - 22 - TIPT), right = rw >= lw, w = right ? rw : lw;
+    const gx = box.gx || 0, rx = ST.x + ST.w + gx + 30, rw = Math.min(360, box.w - 22 - rx - TIPT), lw = Math.min(360, ST.x - gx - 30 - 22 - TIPT), right = rw >= lw, w = right ? rw : lw; // gx: REAL 3D's wider stage (fit.js glBox), kept clear
     const y0 = (G.plate ? G.plate.y + G.plate.h + 10 + TIPT : TIPT), y1 = Math.min(ST.y + ST.h, box.h - 184) - TIPT - 3;
     if (w >= 120) slots.push({w, maxH: y1 - y0, place: (z) => {
-      const h = z.h, cy = at ? at[1] : st.tip.pad ? y0 + h / 2 : ST.y + ST.h / 2, y = Math.max(y0, Math.min(y1 - h, cy - h / 2)), x = right ? rx + TIPT : ST.x - 30 - TIPT - w;
+      const h = z.h, cy = at ? at[1] : st.tip.pad ? y0 + h / 2 : ST.y + ST.h / 2, y = Math.max(y0, Math.min(y1 - h, cy - h / 2)), x = right ? rx + TIPT : ST.x - gx - 30 - TIPT - w;
       let lead = null;
       if (at) {
-        const ex = right ? x - TIPT : x + w + TIPT, ky = Math.max(y + 12, Math.min(y + h - 12, at[1])), kx = right ? ST.x + ST.w + 12 : ST.x - 12;
+        const ex = right ? x - TIPT : x + w + TIPT, ky = Math.max(y + 12, Math.min(y + h - 12, at[1])), kx = right ? ST.x + ST.w + gx + 12 : ST.x - gx - 12;
         lead = Math.abs(ky - at[1]) < 0.5 ? [at, [ex, ky]] : [at, [kx, at[1]], [kx, ky], [ex, ky]];
       }
       return [R4(x, y, w, h), lead];
     }});
-    if (G.plate) { const y = G.plate.y - HUD.d.ring + TIPT; top(G.plate.x, y, G.plate.w, ST.y - y - TIPT - 3); } // over the chips: its ring on the plate's own ring, stopping at the board's top edge
+    if (G.plate) { const y = G.plate.y - HUD.d.ring + TIPT, m = ST.y - y - TIPT - 3; top(G.plate.x, y, G.plate.w, m, toast ? m : 0); } // over the chips: its ring on the plate's own ring, stopping at the board's top edge
   } else if (lay === "p") {
     const b = geo.band, x = b.x + TIPT, w = b.w - 2 * TIPT, foot = b.y + b.h - TIPT - 3, y0 = ST.y + ST.h + 8 + TIPT;
     for (const yt of G.bar ? [Math.max(y0, G.bar.y + G.bar.h + 8 + TIPT), y0] : [y0]) slots.push({w, maxH: foot - yt, place: (z) => [R4(x, foot - z.h, w, z.h), null]});
-    if (G.plate) { const y = G.plate.y - HUD.p.ring + TIPT; top(G.plate.x, y, (G.pause ? G.pause.x - 6 - TIPT : G.plate.x + G.plate.w) - G.plate.x, ST.y - y - TIPT - 3); }
+    if (G.plate) { const y = G.plate.y - HUD.p.ring + TIPT, m = ST.y - y - TIPT - 3; top(G.plate.x, y, (G.pause ? G.pause.x - 2 - TIPT : G.plate.x + G.plate.w) - G.plate.x, m, toast ? m : 0); } // its ring ends in the 4 px chip gap left of PAUSE
   } else if (geo.left && G.cols) {
     const a = R4(geo.left.x + TIPT, geo.left.y + TIPT, geo.left.w - 2 * TIPT, geo.left.h - 2 * TIPT - 3);
     top(a.x, a.y, a.w, a.h, G.cols[0].h - 2 * TIPT - 3);
@@ -567,8 +571,8 @@ function dockPause(G, geo) {
 
 /* the right / bottom reach of the HUD as drawn (the plate's ring, the bar, both widened when they needed it, and the board): #hud's data-r,
    which the analytics card clears; fit writes the board-wide estimate, this the truth once painted */
-function reachOf(G, geo) {
-  const T0 = HUD[G.lay].ring, rs = [geo.stage, G.bar, G.plate && ringed(G.plate, T0)].filter(Boolean);
+function reachOf(G, geo, gx = 0) {
+  const T0 = HUD[G.lay].ring, S = geo.stage, rs = [{x: S.x, y: S.y, w: S.w + gx, h: S.h}, G.bar, G.plate && ringed(G.plate, T0)].filter(Boolean);
   return Math.ceil(Math.max(...rs.map((r) => r.x + r.w))) + "," + Math.ceil(Math.max(...rs.map((r) => r.y + r.h)));
 }
 
@@ -590,11 +594,11 @@ export function createHud() {
       shown = true; last = key;
       const c = h.ctx, q = h.el && h.w ? h.el.width / h.w : 1;
       c.clearRect(0, 0, h.w, h.h);
-      const G = hudGeom(c, geo, st, {w: h.w, h: h.h, at: st.tip && st.tip.at});
+      const gx = look === "3d" && geo.gx > 0 ? geo.gx : 0, G = hudGeom(c, geo, st, {w: h.w, h: h.h, at: st.tip && st.tip.at, gx});
       if (rec) P.begin("hud", {w: h.w, h: h.h, dpr: q, el: "hud"});
       drawHud(c, G, st, worldTokens(world.level), {px: look === "px", q, look, rec});
       dockPause(G, geo);
-      if (geo.lay === "d" && h.el && h.el.dataset) { const r = reachOf(G, geo); if (h.el.dataset.r !== r) h.el.dataset.r = r; }
+      if (geo.lay === "d" && h.el && h.el.dataset) { const r = reachOf(G, geo, gx); if (h.el.dataset.r !== r) h.el.dataset.r = r; }
     },
   };
 }

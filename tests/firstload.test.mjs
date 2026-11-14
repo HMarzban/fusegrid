@@ -4,7 +4,7 @@
 // backing, draw2d titleSpot over worlds.js titleFit) at five windows, its letters to glyphs.js, and walks its states.
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
-import { fitBox, portraitGeo } from "../src/app/fit.js";
+import { fitBox, portraitGeo, glBox } from "../src/app/fit.js";
 import { titleLogoBox, drawIntroChrome } from "../src/render/menudraw.js";
 import { titleSpot } from "../src/render/logo/draw2d.js";
 import { layout as glyphs } from "../src/render/logo/glyphs.js";
@@ -153,6 +153,15 @@ for (const [W, H, touch] of SIZES) {
   check("REAL 3D (saved r3d, or ?render=3d) skips the floor: its board is tilted", "data-3d" in r3.el("loadst").attrs && "data-3d" in u3.el("loadst").attrs);
   check("?render=px beats a saved r3d, and PIXEL keeps the floor", !("data-3d" in px0.el("loadst").attrs) && !("data-3d" in p.el("loadst").attrs));
   check("the floor's skip is CSS on data-3d", /#loadst\[data-3d\] #lfl\{display:none\}/.test(css));
+  /* 2026-11-14: REAL 3D's desktop stage is fit.js glBox wide (GL_WIDE, centred, never past the viewport), so the first load's stage is too: the
+     hand-off to the title does not step the frame outward. CLASSIC / PIXEL and touch layouts keep #c's box */
+  for (const [W, H] of [[1366, 768], [1280, 720], [1024, 768], [700, 600]]) {
+    const a3 = run({ W, H, settings: { r3d: 1 } }), a2 = run({ W, H }), sw = px(a2.el("lsg").style.width), g = glBox(sw, 1, "d", W);
+    check(W + "x" + H + " REAL 3D: the first-load stage is glBox wide and centred (" + g.gk.toFixed(3) + "x)", near(px(a3.el("lsg").style.width), g.w) && near(px(a3.el("lsg").style.left), px(a2.el("lsg").style.left) + g.left), J([a3.el("lsg").style.width, a3.el("lsg").style.left, g]));
+    check(W + "x" + H + " REAL 3D: the plate and logo stay where the title paints them", a3.el("lpl").style.left === a2.el("lpl").style.left && a3.el("llg").style.left === a2.el("llg").style.left);
+  }
+  const t3 = run({ W: 1024, H: 768, touch: true, settings: { r3d: 1 } }), t2 = run({ W: 1024, H: 768, touch: true });
+  check("a touch layout keeps #c's box in REAL 3D (glBox is 1 there)", t3.el("lsg").style.width === t2.el("lsg").style.width);
   const still = run({ W: 1366, H: 768, settings: { flx: 1 } }), rm = run({ W: 1366, H: 768, rm: true }), live = run({ W: 1366, H: 768 });
   check("REDUCE FLASH (saved flx) or prefers-reduced-motion: the spark holds its reduced frame", "data-still" in still.el("loadst").attrs && "data-still" in rm.el("loadst").attrs && !("data-still" in live.el("loadst").attrs));
   check("touch: the card's words are the phone size and no keycap shows", "data-t" in run({ W: 393, H: 852, touch: true }).el("load").attrs && !("data-t" in live.el("load").attrs) && /#load\[data-t\] kbd\{display:none\}/.test(css));

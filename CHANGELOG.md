@@ -15,6 +15,54 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v218 · 2026-11-14
+
+The loose ends from v217, tied off.
+
+### Fixed
+
+- **Floor-tile tips keep their whole words in REAL 3D.** Beside the wider stage they wrap to a third line instead of
+  falling back to their short form.
+- **The mouse wheel and right-drag work over REAL 3D's side strips**, not only over the board itself.
+- **No jump on the first load with REAL 3D saved.** The loading screen's stage is already as wide as REAL 3D's, so the
+  title takes over without the frame stepping outward.
+
+### Notes
+
+- The checks behind GAME OVER and the finale now measure the marks a player reads on the level course (the check on a
+  won level, the crack on the level you fell on), so world 8 is checked like every other world.
+
+## shell v217 · 2026-11-14
+
+Three looks the owner picked from side-by-side captures.
+
+### Changed
+
+- **A calmer room behind the menus.** MENU and every menu page now sit on the world's own floor, edge to edge, at the size
+  you play on. The walls and bricks that ran to the window's edges are gone, so nothing outside the plate competes with PLAY.
+- **REAL 3D shows the whole cabinet on a computer.** At the default camera the 3D stage is a little wider than the board,
+  so the rim's two near corners are on screen; the board itself stays exactly the same size. Phones are unchanged.
+- **CONTROLLER READY appears over the score row.** When you plug in a controller mid-run, the note now covers the row of
+  LIVES to SCORE for its 3 seconds, in the same place on a computer and a phone, instead of off to the side of the board.
+  On a phone the PAUSE key stays clear; a landscape phone keeps it in the left column.
+
+### Known
+
+- In REAL 3D on a computer a few floor-tile tips show their short line, because the column beside the wider stage is narrower.
+- A cold first load with REAL 3D saved may jump from the board's box to the wider stage as it starts.
+
+
+## shell v216 · 2026-11-14
+
+The self-repair from v215 stays inside the game.
+
+### Fixed
+
+- **The repair only touches FUSE/GRID's own offline copy.** The game shares its web address with other projects; when a
+  start failed, v215 could also remove their offline helpers. It now removes only its own.
+- **Only the game's own files can trigger the repair.** An error from a look-alike address, another project on the same
+  address, or a stray message no longer counts as the game failing to start.
+
 ## shell v215 · 2026-11-14
 
 A game that fails to start now repairs itself, and new versions are found sooner.

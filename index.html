@@ -57,6 +57,13 @@
   #px{position:absolute;inset:0;width:100%;height:100%;z-index:0;image-rendering:auto}
   #px[hidden]{display:none}
   #c{position:relative;z-index:1}
+  /* REAL 3D's wider desktop stage (fit.js glBox, data-gk): #gl wears the frame and the glow, so #c's own frame never crosses the rim */
+  #gl[data-gk]:not([hidden])~#c{border-color:transparent;box-shadow:none!important}
+  /* its two side strips (fit.wash): the board's washes (veils, a blast's flash) carried over the rim's near corners; click-through */
+  #wl,#wr{position:absolute;z-index:1;pointer-events:none;border:0;box-shadow:none;image-rendering:auto}
+  #wl{border-radius:9px 0 0 9px}
+  #wr{border-radius:0 9px 9px 0}
+  #wl[hidden],#wr[hidden]{display:none}
   /* shell box (fit.js shellGeo, every layout that has one): MENU and the plated
      pages draw on #sh, a fixed overlay over the whole viewport; the board stays
      on #c. Over #c, under #touchpad and the cards; a run end shows it
@@ -307,7 +314,7 @@
     var sw=swOf(),c=w.caches,done=0,fin=function(){if(!done++)go()};
     if(!sw){go();return}
     later(fin,3000);
-    try{Promise.all([sw.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))}),
+    try{Promise.all([sw.getRegistrations().then(function(rs){return Promise.all(rs.filter(function(r){return r.scope===base}).map(function(r){return r.unregister()}))}),
       c&&c.keys?c.keys().then(function(ks){return Promise.all(ks.filter(function(k){return k.indexOf("fusegrid-shell-v")===0}).map(function(k){return c.delete(k)}))}):0]).then(fin,fin)}catch(e){fin()}
   }
   var reload=function(){w.location.reload()};
@@ -321,6 +328,8 @@
   var GL=[16.02,166.53,567.96,185.94,12.35,70.06,198.95,459.89,61.75,355.47],GS=[55.35,64.02,489.31,390.97,13.64,85.36,99.49,429.28,76.4,457.98],UL=[0,0,65,0,144,0,219,0,369,0,451,0,528,0,567,0],US=[50,0,115,0,194,0,269,0,0,130,82,130,159,130,198,130];
   try{S=JSON.parse(localStorage.getItem("nb.settings.v1"))||{}}catch(e){}
   if(q?/3d|iso/.test(q[1]):S.r3d)st.setAttribute("data-3d","");
+  /* REAL 3D's desktop stage is fit.js glBox wide (GL_WIDE 1.12 x #c's content box, centred, never past the viewport; firstload.test pins it to glBox) */
+  var GW=(q?q[1]==="3d":!!S.r3d)&&!tch?1.12:1;
   if(S.flx||w.matchMedia&&w.matchMedia("(prefers-reduced-motion:reduce)").matches)st.setAttribute("data-still","");
   if(tch)E.setAttribute("data-t","");
   var pt=function(v){return Math.round(v*100)/100+"px"},ps=function(el,k,v){el.style.setProperty(k,pt(v))};
@@ -329,7 +338,8 @@
     var W=w.innerWidth,H=w.innerHeight;if(!W)return;
     var p=tch&&!(W>H),R=p?[16,250]:tch?[332,16]:[40,48],s=Math.max(.3,Math.min((W-R[0])/600,(H-R[1])/520,1.8)),G=p?GS:GL,U=p?US:UL,pl=$("lpl"),sg=$("lsg"),u,i,f;
     X=(W-600*s)/2;Y=p?Math.floor(Math.max(60,Math.min((H-520*s)/2,H-190-520*s))):(H-520*s)/2;kx=(600*s-2)/600;ky=(520*s-2)/520;
-    sg.style.left=pt(X);sg.style.top=pt(Y);sg.style.width=pt(600*s);sg.style.height=pt(520*s);ps(sg,"--c",40*kx);
+    var c0=600*s-2,gk=Math.max(1,Math.min(GW,(W-2)/c0)),sw=gk*c0+2;
+    sg.style.left=pt(X+(600*s-sw)/2);sg.style.top=pt(Y);sg.style.width=pt(sw);sg.style.height=pt(520*s);ps(sg,"--c",40*kx);
     at(pl,G[0],G[1],G[2],G[3]);pl.style.borderWidth=pt(G[4]*kx);ps(pl,"--t",G[8]*kx);at(lg,G[5],G[6],G[7]);
     if(p!==P){P=p;u=d.querySelectorAll?d.querySelectorAll("#xF use,#xG use"):[];for(i=0;i<u.length;i++){u[i].setAttribute("x",U[2*i]);u[i].setAttribute("y",U[2*i+1])}
       lg.setAttribute("viewBox",p?"-20 -40 414 306":"-20 -40 677 176");$("lbm").setAttribute("transform",p?"translate(-11 130)":"");$("lbo").setAttribute("transform",p?"translate(-11 130)":"");
@@ -487,8 +497,9 @@
     e.preventDefault();e.stopImmediatePropagation();
   },true);
   /* a throw while the boot job lives is a game that will never paint */
-  /* our own file, or an import that does not link: Safari reports that SyntaxError with no filename (2026-11-14), so it once sat on SLOW CONNECTION */
-  w.addEventListener("error",function(e){if(jobs.boot&&(e.filename?e.filename.indexOf(location.origin)===0:/SyntaxError|import|module/i.test(e.message||"")))L.fail("boot")});
+  /* a file of this game (its folder, never the shared origin's other projects), or an import that does not link: Safari reports that
+     SyntaxError with no filename (2026-11-14), so it once sat on SLOW CONNECTION */
+  w.addEventListener("error",function(e){if(jobs.boot&&(e.filename?e.filename.indexOf(base)===0:/\bSyntaxError\b/.test(e.message||"")))L.fail("boot")});
   watch();paint();say("Loading.");
 })(window,document);
 </script>
@@ -622,7 +633,7 @@
 <p class="sr-only">Single-player bomb-grid arcade. Pick the art style: REAL 3D, classic 2D or PIXEL. Difficulty NORMAL, HARD and EXPERT. Eight levels, eight chiptune themes, a DAILY board. Free — no install, no account, plays offline.</p>
 <noscript><p>Play Fusegrid in the browser — a single-player bomb-grid arcade. JavaScript is required.</p></noscript>
 <div id="wrap">
-  <div id="stage"><canvas id="gl" hidden></canvas><canvas id="px" hidden></canvas><canvas id="c" aria-label="Fusegrid game board"></canvas>
+  <div id="stage"><canvas id="gl" hidden></canvas><canvas id="px" hidden></canvas><canvas id="c" aria-label="Fusegrid game board"></canvas><canvas id="wl" hidden aria-hidden="true"></canvas><canvas id="wr" hidden aria-hidden="true"></canvas>
     <div id="touchpad" hidden>
       <div id="tpad" role="group" aria-label="Move pad"></div>
       <div id="tbomb" role="button" aria-label="Bomb"><canvas id="tbomb-icon" width="64" height="64" aria-hidden="true"></canvas></div>
