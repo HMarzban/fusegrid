@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v216 on 2026-11-14.
+shell v217 on 2026-11-14.
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -947,6 +947,16 @@ offline copy, so RETRY could not help. Shell v215 counts that error and, when a 
 and reloads once by itself (never when offline); an open game also looks for new builds every 5 minutes now. An automated
 security review read it straight after the push and caught an overreach: the game shares its address with the owner's other
 projects, and the repair removed their offline helpers too. Shell v216 keeps it to the game's own.
+
+## 2026-11-14: the owner rules on three looks (shell v217)
+
+Three looks had waited since the upgrade for the owner's word. Each came back as one sheet of real captures: what ships,
+two alternatives and one bolder option, with its cost under it. The owner took the bolder one twice. The room behind the
+menus became the world's floor alone, so the plate is the only thing to read. REAL 3D got a stage a little wider than the
+board on a computer, which puts the cabinet's near corners back on screen without shrinking the board or touching the
+camera. The controller note moved over the score row, the same place on a computer and a phone. A last capture of all
+three together caught one honest side effect: while the note covers the score row, the hearts it covers cannot be
+measured for contrast, so the check now says why instead of quietly skipping.
 
 ---
 

@@ -15,6 +15,25 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v217 · 2026-11-14
+
+Three looks the owner picked from side-by-side captures.
+
+### Changed
+
+- **A calmer room behind the menus.** MENU and every menu page now sit on the world's own floor, edge to edge, at the size
+  you play on. The walls and bricks that ran to the window's edges are gone, so nothing outside the plate competes with PLAY.
+- **REAL 3D shows the whole cabinet on a computer.** At the default camera the 3D stage is a little wider than the board,
+  so the rim's two near corners are on screen; the board itself stays exactly the same size. Phones are unchanged.
+- **CONTROLLER READY appears over the score row.** When you plug in a controller mid-run, the note now covers the row of
+  LIVES to SCORE for its 3 seconds, in the same place on a computer and a phone, instead of off to the side of the board.
+  On a phone the PAUSE key stays clear; a landscape phone keeps it in the left column.
+
+### Known
+
+- In REAL 3D on a computer a few floor-tile tips show their short line, because the column beside the wider stage is narrower.
+- A cold first load with REAL 3D saved may jump from the board's box to the wider stage as it starts.
+
 ## shell v216 · 2026-11-14
 
 The self-repair from v215 stays inside the game.
