@@ -527,5 +527,17 @@ const { readFileSync } = await import("node:fs");
   check("MENU phone / compact: SOURCE's teaser says NEEDS A CLICK OR ENTER (stepped down to CLICK OR ENTER where it does not fit) while a controller drives, the build tag on keys", bad.length === 0, bad.join(" | "));
 }
 
+/* Controller discovery (2026-11-14): a note that names the family keeps the signpost; the non-standard note points at CONTROLS; LOST has none */
+{
+  const sg = (n) => P.padSign(n);
+  check("padSign takes the family-named notes and the non-standard note", !!sg("PLAYSTATION CONTROLLER BACK") && !!sg("XBOX CONTROLLER READY") && !!sg("XBOX CONTROLLER READY · VIBRATION HIGH") && !!sg("NINTENDO CONTROLLER READY") && !!sg("CONTROLLER READY · NON-STANDARD BUTTONS") && !!sg("CONTROLLER READY") && sg("CONTROLLER LOST") === "" && sg("ACME CONTROLLER READY") === "", J(["PLAYSTATION CONTROLLER BACK", "CONTROLLER LOST"].map(sg)));
+  const nc = P._noteCands({ pad: "CONTROLLER READY · NON-STANDARD BUTTONS" });
+  check("the non-standard note steps down to its signpost, then the words alone", nc[0] === W.PAD_ODD + " · " + W.TO_CONTROLS && nc[nc.length - 1] === W.PAD_ODD, J(nc));
+  const xb = P._noteCands({ pad: "XBOX CONTROLLER READY · VIBRATION HIGH" });
+  check("a family READY note keeps today's step-down with the family's name", xb[0] === "XBOX CONTROLLER READY · VIBRATION HIGH · " + W.TO_CONTROLS && xb[xb.length - 1] === "XBOX CONTROLLER READY", J(xb));
+  const g = P._noteCands({ pad: "CONTROLLER READY" });
+  check("a generic READY note steps down as before", J(g) === J([W.MENU_WORDS.PAD_READY + " · " + W.TO_CONTROLS, W.MENU_WORDS.PAD_READY]), J(g));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

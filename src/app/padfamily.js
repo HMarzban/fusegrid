@@ -35,6 +35,9 @@ export const FAMILY_LABEL = Object.freeze(Object.fromEntries(FAMILIES.map((f) =>
   return [id, Object.freeze({ w, s: s || w, a: a || w })];
 })))])));
 const famOf = (f) => (FAMILY_LABEL[f] ? f : "generic");
+/** The family's name, as the notes and the toast print it (words.js PAD_NAME, pinned equal in tests/words.test.mjs); any other family: CONTROLLER. */
+export const FAMILY_NAME = Object.freeze({ xbox: "XBOX CONTROLLER", playstation: "PLAYSTATION CONTROLLER", nintendo: "NINTENDO CONTROLLER", generic: "CONTROLLER" });
+export const nameOf = (f) => FAMILY_NAME[famOf(f)];
 /** The printed word for a position id on this family; ids the family table does not hold (the D-PAD, the sticks) keep BTN's word. */
 export const btnWord = (id, f) => (FAMILY_LABEL[famOf(f)][id] || BTN[id] || { w: id }).w;
 /** The word the live region says for a position id on this family. */

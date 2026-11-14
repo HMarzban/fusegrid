@@ -74,8 +74,9 @@ export function hudState(world, o) {
 export function toastState(world, o) {
   const q = o && o.padToast;
   if (!q || world.state !== "PLAY") return null;
-  const head = q.k === "lost" ? PAD_TOAST.LOST : q.k === "back" ? PAD_TOAST.BACK : PAD_TOAST.READY, body = q.k === "lost" ? PAD_TOAST.LOST_BODY : PAD_TOAST.body(q.move, q.bomb);
-  return {s: head + " · " + body, alt: PAD_TOAST.SHORT + " · " + head.slice(PAD_TOAST.SHORT.length + 1) + " · " + body, short: "", a: q.a, t: null, pad: true, ps: !!PAD_GLYPH[q.bomb]}; // ps: BOMB names a PlayStation face (only that family prints one), so its glyph paints
+  const lost = q.k === "lost", state = (lost ? PAD_TOAST.LOST : q.k === "back" ? PAD_TOAST.BACK : PAD_TOAST.READY).slice(PAD_TOAST.SHORT.length + 1); // READY / BACK / LOST
+  const head = lost ? PAD_TOAST.LOST : (q.name || PAD_TOAST.SHORT) + " " + state, body = lost ? PAD_TOAST.LOST_BODY : q.odd ? PAD_TOAST.ODD_BODY : PAD_TOAST.body(q.move, q.bomb); // the family's name (controller discovery); a non-standard order points at CONTROLS
+  return {s: head + " · " + body, alt: PAD_TOAST.SHORT + " · " + state + " · " + body, short: "", a: q.a, t: null, pad: true, ps: !q.odd && !!PAD_GLYPH[q.bomb]}; // ps: BOMB names a PlayStation face (only that family prints one), so its glyph paints
 }
 /* a floor-tile coach tip and its nearest tile of that kind (grid coords) to the player; null for any other tip */
 const TILEK = (k) => (k === "BRAKE" ? "GLIDE" : k && TILE_NAME[k] ? k : null);

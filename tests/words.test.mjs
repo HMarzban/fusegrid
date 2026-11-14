@@ -530,6 +530,9 @@ check("source grep (tripwire): no string literal in src/ carries an old word out
 {
   const PF = await import("../src/app/padfamily.js"), MA = await import("../src/app/menuapp.js");
   check("padfamily FAMILY_LABEL is words.js PAD_FAMILY_WORDS word for word", J(PF.FAMILY_LABEL) === J(W.PAD_FAMILY_WORDS), J(PF.FAMILY_LABEL));
+  check("controller discovery: padfamily FAMILY_NAME is words.js PAD_NAME word for word", J(PF.FAMILY_NAME) === J(W.PAD_NAME) && W.PAD_NAME.xbox === "XBOX CONTROLLER" && W.PAD_NAME.playstation === "PLAYSTATION CONTROLLER" && W.PAD_NAME.nintendo === "NINTENDO CONTROLLER" && W.PAD_NAME.generic === "CONTROLLER" && Object.isFrozen(W.PAD_NAME), J([PF.FAMILY_NAME, W.PAD_NAME]));
+  check("controller discovery: the non-standard note and the help card's words", W.PAD_ODD === "NON-STANDARD BUTTONS" && W.PAD_TOAST.ODD_BODY === "NON-STANDARD BUTTONS · " + W.TO_CONTROLS &&
+    J(W.PAD_HELP_WORDS) === J({ title: "PLAYING WITH A CONTROLLER?", body: "Plug it in and press any button on it. A browser shows a controller to a game only after its first press.", sw2: "A Switch 2 Pro Controller on a cable needs one click here first.", go: "CONNECT SWITCH 2", no: "GOT IT", press: "PRESS ANY BUTTON ON IT" }) && Object.isFrozen(W.PAD_HELP_WORDS), J([W.PAD_ODD, W.PAD_HELP_WORDS]));
   check("padfamily GLYPH_CHAR is words.js PAD_GLYPH_CHAR, and its words are the kit's painted glyph words", J(PF.GLYPH_CHAR) === J(W.PAD_GLYPH_CHAR) && J(Object.keys(W.PAD_GLYPH_CHAR)) === J(Object.keys((await import("../src/render/kit/paint.js")).PAD_GLYPH)), J(PF.GLYPH_CHAR));
   const ph = (f) => W.padHelp(f);
   check("LEVEL SELECT's pad help names the triggers the controller in hand prints; a generic pad reads TRIGGERS as before",

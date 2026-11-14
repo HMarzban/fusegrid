@@ -88,3 +88,21 @@ test("a PlayStation pad's toast paints BOMB with the cross glyph inline, never t
   const c = rec().ctx, f = T.body(18);
   assert.ok(runW(c, f, "BOMB CROSS", true) < runW(c, f, "BOMB SOUTH", true), "the fit counts the glyph's width, not the word's");
 });
+
+/* Controller discovery (2026-11-14): the toast names the family in hand; a controller in an unknown button order points at CONTROLS */
+test("the toast names the controller's family, the narrow form keeps CONTROLLER", () => {
+  const { st } = geomOf("d", 1366, 768, W0(), { padToast: { ...READY, name: "XBOX CONTROLLER", bomb: "A" } });
+  assert.ok(st.tip.s.startsWith("XBOX CONTROLLER READY · "), st.tip.s);
+  assert.ok(st.tip.alt.startsWith("CONTROLLER · READY · "), st.tip.alt);
+  const back = geomOf("d", 1366, 768, W0(), { padToast: { ...READY, k: "back", name: "PLAYSTATION CONTROLLER" } }).st.tip;
+  assert.ok(back.s.startsWith("PLAYSTATION CONTROLLER BACK · "), back.s);
+});
+test("a non-standard controller's toast points at CONTROLS", () => {
+  const { st } = geomOf("d", 1366, 768, W0(), { padToast: { ...READY, name: "CONTROLLER", odd: true } });
+  assert.equal(st.tip.s, "CONTROLLER READY · " + PAD_TOAST.ODD_BODY);
+});
+test("a toast with no name reads exactly as before", () => {
+  const { st } = geomOf("d", 1366, 768, W0(), { padToast: READY });
+  assert.ok(st.tip.s.startsWith(PAD_TOAST.READY + " · "), st.tip.s);
+  assert.ok(st.tip.alt.startsWith(PAD_TOAST.SHORT + " · READY · "), st.tip.alt);
+});
