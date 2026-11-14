@@ -199,12 +199,13 @@ function tipGeomOf(c, G, geo, st, box, s, nameOnly, np) {
   const fl = Math.min(D.bod, TIP_FLOOR[lay === "d" ? "d" : "p"] / K);
   const words = [[rest, D.bod], [rest, fl], [low, D.bod], [low, fl]].filter(([b, px], i, a) => b && !a.slice(0, i).some(([b2, p2]) => b2 === b && p2 === px));
   const size = (w, body, px) => { const lines = body ? wrap(c, body, T.body(px), w - 2 * pad) : []; return {lines, px, body, h: 10 + np * K + (lines.length ? 6 + lines.length * px * K * 1.25 : 0) + 12}; };
-  /* the first step of `steps` that fits a w x maxH inner box, or null */
+  /* the first step of `steps` that fits a w x maxH inner box, or null; the toast, and any tip beside REAL 3D's wider stage (its column ~42 px
+     narrower, box.gx), may wrap to a third line so the tip keeps its whole words (2026-11-14) */
   const pick = (w, maxH, steps) => {
     if (!(w >= 2 * pad) || !(maxH > 0) || measure(c, T.label(np), name) + 2 * pad > w) return null;
     for (const [body, px] of steps) {
       const z = size(w, body, px);
-      if (z.lines.length <= (st.tip.pad ? 3 : 2) && z.h <= maxH + 1e-6 && z.lines.every((l) => measure(c, T.body(px), l) + 2 * pad <= w + 1e-6)) return z;
+      if (z.lines.length <= (st.tip.pad || box.gx > 0 ? 3 : 2) && z.h <= maxH + 1e-6 && z.lines.every((l) => measure(c, T.body(px), l) + 2 * pad <= w + 1e-6)) return z;
     }
     return null;
   };

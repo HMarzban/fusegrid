@@ -175,6 +175,8 @@ test("HUD: in REAL 3D every real tile tip (8 kinds, CORE and MAX) stays beside t
     const left = geo.stage.x, right = left + geo.stage.w, side = (b, gx) => Math.abs(b.x - (right + gx + 30)) < 1e-6 || Math.abs(b.x + b.w - (left - gx - 30)) < 1e-6; // beside the board, either side
     assert.ok(G3.tip && side(G3.tip.box, geo.gx), W0 + " " + k + " " + heat + " 3d tip " + JSON.stringify(G3.tip && G3.tip.box) + " stage " + left + ".." + right + " gx " + geo.gx);
     assert.ok(G2.tip && side(G2.tip.box, 0), W0 + " " + k + " 2d tip unchanged");
+    if (G2.tip.body === "whole") assert.equal(G3.tip.body, "whole", W0 + " " + k + " " + heat + ": the narrower 3D column never shortens a tip CLASSIC shows whole (a third line, 2026-11-14)");
+    assert.ok(G3.tip.lines.length <= 3 && G2.tip.lines.length <= 2, "3D may take a third line, CLASSIC keeps two");
     const knee = G3.tip.lead && G3.tip.lead.length > 2 ? G3.tip.lead[1][0] : null;
     if (knee != null) assert.ok(knee >= right + geo.gx || knee <= left - geo.gx, "knee off the 3D strip");
   }
