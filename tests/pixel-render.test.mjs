@@ -8,7 +8,7 @@ import { CFG, T, key } from "../src/core/config.js";
 import { createWorld, loadLevel, step, newIntent } from "../src/core/sim.js";
 import { spawnEnemy } from "../src/core/entities.js";
 import { createGame } from "../src/main.js";
-import { pxBox, pxQuant, snapOff, mountFit, fitBox } from "../src/app/fit.js";
+import { pxBox, pxQuant, snapOff, mountFit, fitBox, GL_WIDE } from "../src/app/fit.js";
 import { heatProfile } from "../src/core/heat.js";
 import { readFlags } from "../src/app/flags.js";
 import { kindOf, bootRender, renderBits, renderVal } from "../src/app/renderkind.js";
@@ -440,7 +440,7 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
   }
   check("pxQuant: dpr 1/2 -> 1, 1.5/3 -> 3, 1.25 -> 5, 2.625 -> 21", pxQuant(1) === 1 && pxQuant(2) === 1 && pxQuant(3) === 3 && pxQuant(1.5) === 3 && pxQuant(1.25) === 5 && pxQuant(2.625) === 21);
   check("pxBox: content box x dpr is whole, a whole 1/64 CSS px (layout unit), within q/2 device px of the stage; snapOff lands the origin on a multiple of q device px (so it is a whole 1/64 CSS px too)", ok, JSON.stringify(bad));
-  const hs = {}, wl = {}, gl = {style: {}};
+  const hs = {}, wl = {}, gl = {style: {}, dataset: {}};
   let left0 = 267.61, top0 = 10.3;
   const px = {style: {}, dataset: {}, hidden: false, getBoundingClientRect: () => ({left: left0 + parseFloat(px.style.left || 0), top: top0 + parseFloat(px.style.top || 0)})};
   const wrap = {addEventListener(t, f) { (wl[t] = wl[t] || []).push(f); }};
@@ -454,7 +454,9 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
     const cv = {width: 600, height: 520, style: {}};
     mountFit(cv);
     const s = fitBox(1440, 900, false, 600, 520).s, onDev = (v) => Math.abs(v * 2 - Math.round(v * 2)) < 1e-6;
-    check("mountFit: #gl keeps exactly #c's CSS box (REAL 3D untouched)", gl.style.width === cv.style.width && gl.style.height === cv.style.height && !("left" in gl.style));
+    const glW = GL_WIDE * (600 * s - 2) + 2; // owner pick D (2026-11-14): on d, #gl's content box is GL_WIDE x #c's, centred on it, same height
+    check("mountFit: #gl on d is the wider REAL 3D stage (content box GL_WIDE x #c's, centred, same height, data-gk); #c untouched",
+      Math.abs(parseFloat(gl.style.width) - glW) < 1e-9 && Math.abs(parseFloat(gl.style.left) + (glW - 600 * s) / 2) < 1e-9 && gl.style.height === cv.style.height && +gl.dataset.gk === GL_WIDE && cv.style.width === 600 * s + "px", gl.style.width + " " + gl.style.left + " " + gl.dataset.gk);
     check("mountFit: #px goes content-box, data-bw/bh = its content box x dpr, a whole device px",
       px.style.boxSizing === "content-box" && +px.dataset.bw === Math.round((600 * s - 2) * 2) && +px.dataset.bh === Math.round((520 * s - 2) * 2) && parseFloat(px.style.width) * 2 === +px.dataset.bw, px.style.width + " " + px.dataset.bw);
     const r = px.getBoundingClientRect();

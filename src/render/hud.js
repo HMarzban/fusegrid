@@ -217,13 +217,13 @@ function tipGeomOf(c, G, geo, st, box, s, nameOnly, np) {
   const toast = !!st.tip.pad, plateFirst = toast && lay !== "l";
   const top = (x, y, w, maxH, grow) => (plateFirst ? slots.unshift : slots.push).call(slots, {w, maxH, place: (z) => [R4(x, y, w, grow ? Math.min(maxH, Math.max(z.h, grow)) : z.h), null]});
   if (lay === "d") {
-    const rx = ST.x + ST.w + 30, rw = Math.min(360, box.w - 22 - rx - TIPT), lw = Math.min(360, ST.x - 30 - 22 - TIPT), right = rw >= lw, w = right ? rw : lw;
+    const gx = box.gx || 0, rx = ST.x + ST.w + gx + 30, rw = Math.min(360, box.w - 22 - rx - TIPT), lw = Math.min(360, ST.x - gx - 30 - 22 - TIPT), right = rw >= lw, w = right ? rw : lw; // gx: REAL 3D's wider stage (fit.js glBox), kept clear
     const y0 = (G.plate ? G.plate.y + G.plate.h + 10 + TIPT : TIPT), y1 = Math.min(ST.y + ST.h, box.h - 184) - TIPT - 3;
     if (w >= 120) slots.push({w, maxH: y1 - y0, place: (z) => {
-      const h = z.h, cy = at ? at[1] : st.tip.pad ? y0 + h / 2 : ST.y + ST.h / 2, y = Math.max(y0, Math.min(y1 - h, cy - h / 2)), x = right ? rx + TIPT : ST.x - 30 - TIPT - w;
+      const h = z.h, cy = at ? at[1] : st.tip.pad ? y0 + h / 2 : ST.y + ST.h / 2, y = Math.max(y0, Math.min(y1 - h, cy - h / 2)), x = right ? rx + TIPT : ST.x - gx - 30 - TIPT - w;
       let lead = null;
       if (at) {
-        const ex = right ? x - TIPT : x + w + TIPT, ky = Math.max(y + 12, Math.min(y + h - 12, at[1])), kx = right ? ST.x + ST.w + 12 : ST.x - 12;
+        const ex = right ? x - TIPT : x + w + TIPT, ky = Math.max(y + 12, Math.min(y + h - 12, at[1])), kx = right ? ST.x + ST.w + gx + 12 : ST.x - gx - 12;
         lead = Math.abs(ky - at[1]) < 0.5 ? [at, [ex, ky]] : [at, [kx, at[1]], [kx, ky], [ex, ky]];
       }
       return [R4(x, y, w, h), lead];
@@ -569,8 +569,8 @@ function dockPause(G, geo) {
 
 /* the right / bottom reach of the HUD as drawn (the plate's ring, the bar, both widened when they needed it, and the board): #hud's data-r,
    which the analytics card clears; fit writes the board-wide estimate, this the truth once painted */
-function reachOf(G, geo) {
-  const T0 = HUD[G.lay].ring, rs = [geo.stage, G.bar, G.plate && ringed(G.plate, T0)].filter(Boolean);
+function reachOf(G, geo, gx = 0) {
+  const T0 = HUD[G.lay].ring, S = geo.stage, rs = [{x: S.x, y: S.y, w: S.w + gx, h: S.h}, G.bar, G.plate && ringed(G.plate, T0)].filter(Boolean);
   return Math.ceil(Math.max(...rs.map((r) => r.x + r.w))) + "," + Math.ceil(Math.max(...rs.map((r) => r.y + r.h)));
 }
 
@@ -592,11 +592,11 @@ export function createHud() {
       shown = true; last = key;
       const c = h.ctx, q = h.el && h.w ? h.el.width / h.w : 1;
       c.clearRect(0, 0, h.w, h.h);
-      const G = hudGeom(c, geo, st, {w: h.w, h: h.h, at: st.tip && st.tip.at});
+      const gx = look === "3d" && geo.gx > 0 ? geo.gx : 0, G = hudGeom(c, geo, st, {w: h.w, h: h.h, at: st.tip && st.tip.at, gx});
       if (rec) P.begin("hud", {w: h.w, h: h.h, dpr: q, el: "hud"});
       drawHud(c, G, st, worldTokens(world.level), {px: look === "px", q, look, rec});
       dockPause(G, geo);
-      if (geo.lay === "d" && h.el && h.el.dataset) { const r = reachOf(G, geo); if (h.el.dataset.r !== r) h.el.dataset.r = r; }
+      if (geo.lay === "d" && h.el && h.el.dataset) { const r = reachOf(G, geo, gx); if (h.el.dataset.r !== r) h.el.dataset.r = r; }
     },
   };
 }

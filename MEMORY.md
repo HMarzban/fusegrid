@@ -16,6 +16,8 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — REAL 3D's wider desktop stage (veto 2, option D)
+- On `d`, `#gl` is 1.12 x the board box (fit.js `glBox`), frame and buffer widened in the wrapper, rig/lens/rim/presets untouched: the near corners land on screen (bezel 1.0746 -> 0.9594), board pixels unchanged (`tests/stage-wide.test.mjs`, three.test §4b-wide). `#gl` wears the frame; `fit.wash` carries veils and the flash over the strips; the HUD tile tip clears them. Not bumped (lead bumps CACHE_NAME). Open: a wheel over a strip does not dolly; the 0.18 s close-call border stays the board box's.
 ## 2026-11-14 — REAL 3D screens gated
 - The v2.5.0 gap "REAL 3D's new screens not checked" is closed: 36 REAL 3D captures (title, menu, controls, capture, play, hud, pause, win, lose; worlds 1 and 8; desk and phone) on the committed v216, 0 FAIL. 4 skips at world 8 (finale chosen/info, phone GAME OVER info) appear in CLASSIC 2D too: `screens.mjs` exemption gap, left open. Release note's Known line updated.
 

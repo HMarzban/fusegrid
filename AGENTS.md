@@ -814,7 +814,14 @@ not shell screens. Do not add them as `SCREEN` values.
     Hazard: STANDARD sits at bezel `|ndc| 1.0746` against the `<=1.10`
     ceiling, and the dolly-in limit is `dist` 1473.54 — no preset may sit
     below 1503. Any camera/rig/lens/`RIM_W` change must re-run
-    `tests/three.test.mjs` §4b first.
+    `tests/three.test.mjs` §4b first. Those figures are the BOARD BOX's
+    (p / l). On `d` (owner pick D, 2026-11-14, veto 2) `#gl` is `GL_WIDE`
+    1.12 x the board box across, centred (fit.js `glBox`, `data-gk`; the
+    wrapper widens the frame and buffer, `projBoard` maps back into `#c`), so
+    the board keeps its pixels and the bezel at STANDARD is `|ndc| 0.9594`,
+    on screen (§4b-wide: <= 0.97 every preset). `#gl` wears the frame and
+    glow there, and `fit.wash` carries `#c`'s / the stage's veils over the two
+    strips (`#wl` / `#wr`). The near-corner taper stays OUT.
     Never assign `#gl.width`/`#gl.height` from `sizeCanvases` — wrapper owns
     the Retina drawing buffer (`setPixelRatio` + `setSize`). Stomping it
     crops WebGL to the bottom-left quarter on dpr=2.
