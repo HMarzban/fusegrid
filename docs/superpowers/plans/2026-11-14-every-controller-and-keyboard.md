@@ -53,16 +53,9 @@
 
 Commits `4b81d1a` and `5d9c3bc` on `feature/every-controller`: `KNOWN` (id plus 21 buttons / 6 axes), `asStandard`, `standardPads` in `controlswire`; tests in `tests/gamepad.test.mjs`; AGENTS / architecture / MEMORY lines. The main checkout still holds the same three files uncommitted; restore them there (`git checkout -- src/app/gamepad.js src/app/controlswire.js tests/gamepad.test.mjs`) once the owner agrees, never a bare `git diff` / `git apply` of the whole tree (another session's v216 work sits there too).
 
-### Task 1: Trial · DONE (GO). Task 1b: the remaining real-pad checks
+### Task 1 / 1b: Trials · DONE (GO)
 
-Owner session on the trial page (`.superpowers/sdd/2026-11-14-switch2-webusb-spike/index.html`, served by `PORT=0 node serve.js`), extended with buttons for each:
-
-- [ ] After a wake, `releaseInterface(1)` and `close()`: does the pad keep sending report `0x09` (a gamepad still shows)?
-- [ ] Reload the page with the pad awake: still a gamepad, no wake needed?
-- [ ] Re-wake a pad woken in format `05` (the old bridge): it switches to `09`.
-- [ ] The game open in a second tab while the trial wakes the pad: both see it.
-- [ ] Unplug and replug: the `connect` event fires and a wake with no chooser works.
-- [ ] Record each answer in `RESULT.md`. Task 2's `wake()` follows the close / reload answers.
+Owner sessions on the trial page, 2026-11-14 (`RESULT.md` beside it): wake from the page works; the pad keeps streaming after `releaseInterface(1)` + `close()`; a replug fires `connect` and wakes with no chooser; waking again is harmless; 05 -> 09 switches with no replug (the local tool); WebHID vibration felt. Not measured: a reload with the pad awake, a second tab (`auto()` re-waking a pad it cannot see yet covers both). An "XBOX 360 For Windows" pad on the same Mac reads `standard`, 17 buttons, 4 axes, actuator true.
 
 ### Task 2: `src/app/switch2.js`, the waker
 
@@ -86,7 +79,7 @@ Owner session on the trial page (`.superpowers/sdd/2026-11-14-switch2-webusb-spi
     03 91 00 0a 00 04 00 00 09 00 00 00
     03 91 00 0d 00 08 00 00 01 00 ff ff ff ff ff ff
     ```
-  - `export async function wake(device): Promise<"woken"|"busy"|"failed">`: `open()` if not open, `selectConfiguration(1)` only if `configuration` is null, `claimInterface(1)` (a refusal is `"busy"`), every packet `transferOut(2, p)` (any non-`ok` is `"failed"`), no `transferIn`; then `releaseInterface(1)` and `close()` if Task 1b says the pad stays awake, else keep it open and say so in a comment.
+  - `export async function wake(device): Promise<"woken"|"busy"|"failed">`: `open()` if not open, `selectConfiguration(1)` only if `configuration` is null, `claimInterface(1)` (a refusal is `"busy"`), every packet `transferOut(2, p)` (any non-`ok` is `"failed"`), no `transferIn`; then `releaseInterface(1)` and `close()` (Task 1b: the pad keeps streaming).
   - `export function usbReach({usb, policy, platform}): boolean`: true only when `usb` exists, `policy` allows `"usb"` (`document.permissionsPolicy?.allowsFeature("usb")`, or `document.featurePolicy`), and `platform` is a measured one (today `"macOS"`, from `navigator.userAgentData?.platform`, falling back to `/Mac OS X/` in the user agent).
   - `export function createWaker({usb, pads}): {request(): Promise<"woken"|"cancelled"|"busy"|"failed"|"blocked">, auto(): Promise<number>, state(): "idle"|"waking"|"woken"|"cancelled"|"busy"|"failed"|"blocked", stop(): void}`. `pads()` is `getGamepads`. `auto()` wakes each `getDevices()` pad that `pads()` does not already show (a visible pad is left alone), and listens on `usb` `connect` for `SW2_USB` devices until `stop()`. `request()` is the chooser: `NotFoundError` is `"cancelled"`, `SecurityError` is `"blocked"`; it always wakes, visible or not.
 
