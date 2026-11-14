@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-14 — v2.5.0 release note covers v215 to v218
+- Owner: "update the release note for v2.5.0 with v215 to v218". The GitHub release body now spans shell v201 → v218 (the tag stays on v214's commit `952cf95`, said in the note): floor-only menu room, toast over the score row, REAL 3D's wider desktop stage, faster update checks, the self-repairing offline copy (own scope only), Safari's SLOW CONNECTION catch, v218's REAL 3D fixes; Known re-measured on v218 (startup +67 KB gzip, precache +313 KB vs v2.4.0; 736 tests; world 8 measured; phone REAL 3D corners still cut).
+
 ## 2026-11-14 — v218: v217's loose ends
 - World-8 run-end gates measured (check notch / crack info pairs, `cell n ahead`, WIN chosen exemption "no level left to win", stale lose exemption removed); REAL 3D tile tips may take a third line; orbit controls on #stage (wheel / right-drag over the strips, survives a released #gl); first-load stage glBox wide with REAL 3D saved. Stayed out of the controller files: another session is working on them. 736 tests, strict captures clean; Pushed on the owner's "Yes, push v218"; Pages CI green, live `sw.js` v218.
 
