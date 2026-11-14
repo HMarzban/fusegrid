@@ -221,12 +221,12 @@ the cntroller side ha?" reversed the 2026-11-02 ruling that kept it a CONSOLE PA
 CONSOLE PANEL kit in `menudraw.js` (`plate`, `head`, `foot`, `paintRow`, `listGeom` / `listHit`, `pageBox`, `segs`, the ellipsis `clip` / `wrap`)
 is gone with its last page; menudraw keeps only the fonts and colours the controller drawings' glyphs read (`TEXT`, `MUTED`, `sans`). MENU is on
 the world kit since UI upgrade Task 3.1 (MENU page, below). Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v218` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v219` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v218", the running build,
+as `rev`) and `update.js` (the card's "You are on v219", the running build,
 never a guessed next one) — never a second literal. The desk MENU's foot ends
-`| v218`; the phone column carries it as SOURCE's teaser (the round 7 frame);
-SETTINGS keeps its `BUILD v218` kicker. Never on the HUD.
+`| v219`; the phone column carries it as SOURCE's teaser (the round 7 frame);
+SETTINGS keeps its `BUILD v219` kicker. Never on the HUD.
 PAUSE is on the world kit since UI upgrade Task 5.1 (`src/render/pages/pause.js`, boot; `scenes.js` re-exports `PAUSE_ROWS`, `PAUSE_SHAPE`,
 `PAUSE_ROW_H` / `_D`, `pauseGeom`, `pauseHit`, `pauseKick`, `pauseKickers` / `pauseKicker`; the round 7 S7-pages 10-pause frame). It sits over
 `#c`'s frozen board in all three looks, drawn on the stage (`#sh` over `#c` at device px, Task 9.12; on a portrait phone on `#sh`'s over box under the HUD plate, Task 9.8: see SHELL BOX), through the one painter `drawPause` that `drawOverlay`'s PAUSE branch calls (view 0 only; views 1-3
@@ -628,7 +628,7 @@ not shell screens. Do not add them as `SCREEN` values.
   else), `src/net/localpair.js` (`?net=local`),
   `src/render/shellview.js` (`drawShell` + the `kindSize`/`dims` logical box),
   `src/app/update.js` (`mountUpdate`: registers the SW and owns the NEW
-  VERSION READY card; `U` is its key, live only while the card shows),
+  VERSION READY card; `U` (the printed letter, `letterOf`; never a chord) is its key, live only while the card shows),
   `src/app/loadbar.js` + the `#load` plate and inline `#loadjs` script in `index.html` (the honest loading bar, v197: finished files against totals `tests/loadbar.test.mjs` pins to the real graphs, `--write` re-pins; indeterminate when there are no numbers, shown after about 150 ms, a failure card with RETRY / USE CLASSIC 2D (a held run start's FLOOR TILES card: RETRY / BACK TO MENU, `__load.fail`'s drop label, its line naming no ART STYLE fix, shell v210); `rcache.js` paints it before a lazy look's fetch and bake; `#wrap` stays hidden until the title paints; `armUnlock`'s `skip` keeps the card's buttons from pressing the title; since v209 the first load is direction B · RICH: `#loadst`, boot only and beside `#load` (a fixed child would be placed against `#load`'s translate) so the chip and a look's docked card keep `#load`'s own box, draws `#c`'s border box as the stage, its floor (`--k-fl0` / `--k-fl1`) filling cell by cell with the finished files (round(195 n / (files + 1)), whole rows from the bottom), and the title's kit plate and logo B (inline SVG from `glyphs.js`; the stacked build on a portrait phone, re-placed on resize) at the title's rects in `#c`'s content box (fit.js `fitBox` and `portraitGeo`'s top, menudraw `titleLogoBox` and the prompt's backing, draw2d `titleSpot`; `tests/firstload.test.mjs` pins them at 1366x768, 1280x720, 852x393, 393x852 and 375x667); logo B's fuse lights from the collar as the progress (never done), the spark riding the front, so STARTING is the spark at the tip. `#load` is its status box in the title prompt's backing (sans 900 at the prompt's size, floored 20 / 16 px: the 14 / 11 px caps; `SLOW CONNECTION · STILL TRYING` replaces the count) and, on a 30 s stall or a failure, a kit card under the plate, lifted just enough to end 8 px inside the window where it does not fit there (a landscape phone, over the plate's foot) (`#loadsub` the second line; a failure has the coral notch and headline and the fuse goes out). REAL 3D (saved `r3d`, or `?render=3d|iso`) skips the floor, its board being tilted; REDUCE FLASH or reduced motion hold the spark's amber frame; it fades over 180 ms at the hand-off and never shows on a load under 150 ms),
   `src/app/fit.js` (`mountFit`: stage scale per layout reserve `FIT_RES`, and
   `body[data-lay]` = `d` desktop / `p` touch portrait / `l` touch landscape —
@@ -1095,8 +1095,9 @@ not shell screens. Do not add them as `SCREEN` values.
   (ids `S E W N SHL SHR TRL TRR SELECT START dU dD dL dR`); what a player reads names the controller in hand (owner ruling R-LABELS, 2026-11-14:
   "our system must be smart and detact true and show the users the right lable", reversing "by position only, no maker's name"): `src/app/padfamily.js`
   `familyOf(id)` reads the vendor id (Chrome `Vendor: 045e`, Firefox `045e-028e-`; `045e` xbox, `054c` playstation, `057e` nintendo, the Switch 2
-  bridge included), else the name, else `generic`; the id is matched there only, never printed, stored or sent, and the family goes nowhere near
-  analytics. `FAMILY_LABEL` (pinned equal to words.js `PAD_FAMILY_WORDS`): Xbox `A B X Y`, `LB RB LT RT`, `VIEW MENU`; PlayStation `CROSS CIRCLE
+  bridge included), else the name, else `generic` (Steam Input and DS4Windows present an Xbox pad and read as one; Firefox's unpadded ids, e.g.
+  `54c-9cc-`, miss the vendor match: open); the id is matched there only, never printed, stored or sent, and the family goes nowhere near
+  analytics (`tests/analytics.test.mjs` holds every event param and user property free of a controller field, v219). `FAMILY_LABEL` (pinned equal to words.js `PAD_FAMILY_WORDS`): Xbox `A B X Y`, `LB RB LT RT`, `VIEW MENU`; PlayStation `CROSS CIRCLE
   SQUARE TRIANGLE` (a painted keycap draws them as kit `glyph` cross / circle / square / triangle, kit/paint.js `PAD_GLYPH`; a painted text run, PAUSE's foot and
   the HUD toast's `BOMB ✕`, draws the glyph inline at its cap height through kit `runText` / `runW`, the fit counting the glyph's width; the live region,
   the probe's text and screen-reader text keep the word; a DOM keycap the characters, `btnCap`; a run with no such word is kit `text`, call for call), `L1 R1 L2 R2`, `CREATE OPTIONS`; Nintendo by position `B A Y X`, `L R ZL ZR`, `− +`
@@ -1123,7 +1124,7 @@ not shell screens. Do not add them as `SCREEN` values.
   `{k: "page", d, to}`, `{off: 1}`, `{}`; while a rebind listens, the plate (or, with no drawing, the capture plate) is inert and off it cancels; the wire
   takes the page key as a focus on the page's first row, nothing confirmed). Top to bottom: kicker SETTINGS (PAUSE: `PAUSED · LEVEL n`) over the display
   title, KEYBOARD | CONTROLLER as kit tab bricks in a wall trough, the rows (MOVE BOMB THROW REMOTE PAUSE, a course, CONFIRM BACK or SENSITIVITY VIBRATION,
-  a course, RESET coral with the reset glyph): bound inputs as kit keys (a position glyph and its word; a key's legend; MOVE's four keys; PAUSE's rebindable
+  a course, RESET coral with the reset glyph): bound inputs as kit keys (a position glyph and the button's name for the controller in hand: the family's label, a generic pad's the position word; a key's legend; MOVE's four keys; PAUSE's rebindable
   input `+ START` and a FIXED wall plaque; CONFIRM / BACK FIXED), stepping down whole (the words beside glyph keys, then PAUSE's fixed partner, then MOVE's
   set as one key); SENSITIVITY and VIBRATION steppers (◀ a well window with the word and a meter of bricks ▶; a door on the phone); a changed row a cream
   dot and `CHANGED` on its status line; a swap `SWAPPED`; armed RESET `PRESS AGAIN`; focus the band and the bare bomb, the drawing ringing the focused
@@ -1157,7 +1158,7 @@ not shell screens. Do not add them as `SCREEN` values.
   (`worldTokens` of `app.level`, or the played room's from PAUSE view 3: shellview hands `level`), unbound ones quiet, the focused row's button
   ringed (`padRing`: none on SENSITIVITY / VIBRATION / RESET), VIBRATION lights both grips, no cord or spark anywhere. The static drawing is one
   `kit/cache.js` layer keyed by world, W, dpr and the lit set; ring and press draw live. Callouts (`padCallouts` / `padPlan`, drawn by
-  `drawCallouts`): one per bound input by position, ACTION over the position word, START with a FIXED tag; plain orthogonal leaders, START /
+  `drawCallouts`): one per bound input by position, ACTION over the button's name for the controller in hand (the family's label; a generic pad's the position word), START with a FIXED tag; plain orthogonal leaders, START /
   SELECT / WEST rise to a lane, the rest run straight out and drop through a gutter knee (the lower leader on the inner knee). `padFit` takes the
   largest W whose plan passes `padCross` (leader vs leader, a leader within r + 2 of another input, a bound shoulder or trigger included) and
   fits the art box, never under `PAD_KEEP` 0.7 of the compact size; under `PAD_FULL` 180 or with no clean plan (a rebind of a trigger or shoulder beside WEST) it draws the compact
@@ -1186,8 +1187,31 @@ not shell screens. Do not add them as `SCREEN` values.
   id is never printed or stored. A pad the browser hands over in its own HID order (mapping "") that `gamepad.js` `KNOWN` lists (by id and
   by its button and axis counts, 21 / 6) is put back in the standard order before anything reads it (`asStandard` / `standardPads`, applied once in `controlswire`; the id is matched,
   never printed or stored): today the Switch 2 Pro Controller (057e:2069; D-PAD from its buttons 8-11, Y axes flipped, its 12-bit sticks
-  scaled 1.37). Browsers see that pad only after a USB start-up sequence (report format 09), which nothing in the game sends yet; it gives
-  Chrome no vibration actuator (2026-11-14, owner's own pad). Keyboard diagonals stay about 1.41x while a pad is 4-way, disclosed. **The owner has
+  scaled 1.37). Browsers see that pad only after a USB start-up sequence, which the game sends itself (plan
+  `docs/superpowers/plans/2026-11-14-every-controller-and-keyboard.md`, shell v219): `src/app/switch2.js` (lazy: SRC / LATER / loadbar LAZY, never
+  boot) `wake` claims USB interface 1 and sends ten packets ported from SDL (`src/joystick/hidapi/SDL_hidapi_switch2.c`, zlib licence) and ALTERED
+  (report format 09, not SDL's 05: the pad then sends HID report 0x09, which the browser maps to a gamepad), then releases and closes; `usbReach`
+  is WebUSB + the page's `usb` policy + macOS (the one measured platform), so the controller wire builds a waker nowhere else. `auto()` runs once at
+  the title and on every USB `connect`: a pad granted before wakes with no prompt, one already playing is skipped. CONTROLS' CONTROLLER tab shows
+  the CONNECT row (`SW2_WORDS`: SWITCH 2 CONTROLLER, door CONNECT / CONNECTED whenever a Switch 2 is in the pad list (`seen`) / ALLOW VIBRATION) after
+  VIBRATION, only with a waker; its help takes the rule's place in the pane (`sw2Help`: the vibration clause only with WebHID). Enter, a click or a
+  touch `pointerup` opens Chrome's chooser (`request()`, inside the press: a touch pointerdown or a controller press has no activation, so a pad
+  press says `PRESS ENTER OR CLICK` and the foot reads `CONNECT ENTER` / `ALLOW ENTER`); results CONNECTED, NOT CONNECTED · TRY AGAIN, IN USE BY
+  ANOTHER APP, COULD NOT START IT HERE, NOT ALLOWED ON THIS PAGE. The pad gives Chrome no vibration actuator, so ALLOW VIBRATION (WebHID present,
+  none allowed, a Switch 2 in the list: `vibOffer`) asks for the HID device (`allow()`; a later visit `restore()`s it through `getDevices()`), and
+  `standardPads(get, actuatorFor)` puts the waker's stand-in on the mapped pad where it has none: a `dual-rumble` actuator that streams SDL's HD
+  rumble (`rumblePacket`, report 0x02, the encoder of the trial page the owner felt, 2026-11-14) every 12 ms while an effect runs, one zero
+  packet at its end, `reset()`, hidden, `pagehide` or a HID disconnect; a real actuator always wins, and `rumble.js` drives it like any other.
+  One HID device per waker: two Switch 2 Pros share one buzz (documented, one pad measured). Bluetooth: not seen by the browser. A hat D-PAD (an
+  axis) is parked until a captured pad has one (plan Task 5). `tools/pads/probe.html` (dev-only, not in SRC; stores and sends nothing) walks a pad
+  and prints its `KNOWN` row; `docs/controllers.md` is the measured matrix (only real captures, everything else `not measured`). Keys print in the
+  player's own layout: controlswire `keyNames()` (session only, never stored) fills from `navigator.keyboard.getLayoutMap()` at mount and on every
+  window focus, and from each plain keydown, through `controls.js` `layoutName` (one printable ASCII character, a letter upper-cased; a numpad key
+  keeps NUM n), read by `wordsOf(dev, c, names, family)`, the CONTROLS rows and the keyboard drawing's legends. THE LETTER RULE: every letter
+  shortcut (R C B T Q E M Y N U) answers `controls.js` `letterOf(code, key)`, the printed Latin letter wherever it sits (QWERTZ's Y is the code
+  KeyZ; a letter position printing punctuation, AZERTY's M key, is no letter; another script keeps the code's letter); binds and movement stay on
+  `code`; `refuseKey` refuses a key that PRINTS a shortcut letter (stored binds are judged by place only, never dropped); a chorded press (Ctrl, Cmd,
+  Alt, AltGraph) answers neither the consent nor the update card. Keyboard diagonals stay about 1.41x while a pad is 4-way, disclosed. **The owner has
   played on a real controller (2026-11-02) and reported it works; details not yet reported, so M1-M7 stay open. On 2026-11-03 the owner felt the VIBRATION row's test buzz on a real controller on macOS; the in-run patterns are not yet reported.** No URL flag; `__GAME__.ctl` is the test hook. `keys.test` carries the pad matrix.
 - Pickup feedback (owner: "agree with research team, let's work on all of
   them", 2026-10-10). All names/copy come from `POWER[].name` / `.help` —
@@ -1299,7 +1323,7 @@ not shell screens. Do not add them as `SCREEN` values.
   if they like it they can then answer"): the CONSOLE PANEL plate docked 16px
   bottom-right (touch portrait: across the bottom), no backdrop, never grabs
   the keyboard; ALLOW (`Y`) and NO THANKS (`N`) at EQUAL weight (never a big
-  yes and a muted no), and only Y / N are taken while it shows. It shows on
+  yes and a muted no), and only Y / N (the printed letters, `letterOf`; a chorded one passes on) are taken while it shows. It shows on
   MENU and its pages, and in GAME only on a keyboard layout when
   `cardClears` (it sits beside or under the `#c` stage); never INTRO /
   ATTRACT, never a touch run (the bomb button's corner); it waits while NEW
@@ -1812,6 +1836,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; the tile boards were `?gen=3` only from v188 to v197).
+- Release state (2026-11-14): shell **v219** (every controller and keyboard, plan `docs/superpowers/plans/2026-11-14-every-controller-and-keyboard.md`: the Switch 2 Pro Controller in the standard order (`KNOWN`), woken over WebUSB by CONTROLS' CONNECT row (Chrome on macOS only) with its vibration after ALLOW VIBRATION (WebHID, the `dual-rumble` stand-in); button labels by controller family (owner ruling R-LABELS: Xbox, PlayStation glyphs, Nintendo; generic keeps positions); keys printed in the player's layout and letter shortcuts by the printed letter (chords answer no card); `tools/pads/probe.html` and `docs/controllers.md`; the hat D-PAD (Task 5) parked until a captured pad; main's v218 merged in first) is PREPARED on `feature/every-controller`, not live. 770 tests; CONTROLS / pad captures (CLASSIC 2D, worlds 1 and 8, desk and phone, 26 each) under `--strict`: desk 0 fail, 0 skipped; phone 2 fail (`controlscapture` text 4.48 on the capture plate's `·`) + 10 skipped, only when it runs after the pad recipes in one run (alone it passes 13 / 13; the same on the pre-merge branch, so not from the merge). Open: owner acceptance on the hardware at hand (Step 4, batched), then the owner merges and pushes.
 - Release state (2026-11-14): shell **v218** (v217's loose ends closed: world-8 run-end gates no longer skip (endkit declares a won cell's check notch and the crack on the level fallen as info pairs, 16.3:1 and 7.3:1; not-reached cells are named `cell n ahead`; WIN's chosen exemption is "no level left to win"; the stale desk-only lose info exemption goes); tile tips beside REAL 3D's wider stage may take a third line, never shorter than CLASSIC (`stage-wide.test`); the orbit controls listen on `#stage` too, so the wheel and right-drag work over the side strips and survive a released `#gl`; the first load's stage is glBox wide when REAL 3D is saved on a desktop, so the hand-off does not step the frame (`firstload.test` pins it to fit.js `glBox`). 736 tests; v218 REAL 3D desk hud / title / win / lose and win / lose at worlds 1, 5, 8 desk + phone: 0 fail, 0 skipped under `--strict`) is LIVE 2026-11-14 on the owner's "Yes, push v218" (Pages CI green, live `sw.js` v218).
 - Release state (2026-11-14): shell **v217** (the owner's three veto picks from the contact sheets, 2026-11-14: veto 1 D, the room behind every menu page is the world's floor only, no wall or brick (`kit/room.js`); veto 3 B, the controller toast sits over the chip plate on `d` and `p`, covering each chip whole, PAUSE clear (`hud.js` tipGeomOf; `screens.mjs` padtoast exempts info where the LIVES chip is under it); veto 2 D, REAL 3D's wider desktop stage (`GL_WIDE` 1.12, see the rig paragraph; built in a worktree, merged). 735 tests; combined v217 captures (REAL 3D desk menu / padtoast / play, CLASSIC 2D phone menu / padtoast) 0 FAIL, 0 skipped under `--strict`. Known: four tile tips show their short line in REAL 3D at 1366 / 1280 (the tip column is ~42 px narrower); a mouse wheel or right-click over the 3D side strips does nothing (listeners on `#c`); a narrow desktop window clamps the widening; a cold first load with REAL 3D saved may jump from the board box to the wider stage; ~12 % more 3D pixel work on desktop) is LIVE 2026-11-14 on the owner's "Yes, push v217" (Pages CI green, live `sw.js` v217).
 - Release state (2026-11-14): shell **v215** (the update path, after the owner's Safari showed COULD NOT LOAD THE GAME on live v214 and RETRY only reloaded into the same state; it cleared on its own a little later, so the trigger, most likely a stale offline copy left from v201 or saved during the deploy, was never captured. Fresh WebKit, iOS 27 Safari in the Simulator and the v201 -> v214 upgrade path all boot clean. v215: the boot HEAL and the WebKit link-error catch above, update checks every 5 min while visible; verified by poisoning `src/main.js` in the offline copy in Playwright WebKit and Chromium: one automatic reload, the title on a fresh cache) went LIVE 2026-11-14 on the owner's "Yes, push v215" (Pages CI green). Shell **v216** (same day) scopes it after an automated security review: the heal unregisters only the registration whose scope is the game's folder (v215 unregistered every worker on the shared `hmarzban.github.io` origin, other Pages projects included), the error listener matches the game's folder instead of a bare origin prefix (a look-alike host passed), and a filename-less error must be a `SyntaxError`; re-verified in WebKit and Chromium, 725 tests; LIVE 2026-11-14 on the owner's "Yes, push v216" (Pages CI green, live `sw.js` v216).

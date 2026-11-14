@@ -13,6 +13,7 @@ import {
   mountAnalytics,
 } from "../src/app/analytics.js";
 import { SCREEN, OPT_ROWS, createMenuApp } from "../src/app/menuapp.js";
+import { readFileSync, readdirSync } from "node:fs";
 
 let pass = 0,
   fail = 0;
@@ -280,6 +281,37 @@ for (const how of ["KeyY", "KeyN", ".yes", ".no"]) {
   ga.tick();
   D.card().fire("pointerdown", ptr());
   check("armed STATS: a tap on the consent card's body or Privacy link cancels the reset and answers nothing", app.resetArm === false && ga.consent !== 0 && ga.consent !== 1, app.resetArm + "/" + ga.consent);
+}
+
+// ---- v219 privacy: no event param and no user property carries anything about a controller (docs/privacy.md, controller access) ----
+{
+  const PAD = /family|vendor|product|sw2|hid|usb|pad|controller|gamepad|rumble|vib|^id$|Id$|_id$/i;
+  const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(d + "/" + e.name) : /\.js$/.test(e.name) ? [d + "/" + e.name] : []));
+  const files = walk(new URL("../src", import.meta.url).pathname);
+  const keysOf = (obj) => [...obj.matchAll(/(?:^|[{,])\s*([A-Za-z_$][\w$]*)\s*:/g)].map((m) => m[1]);
+  const calls = [];
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    for (const m of src.matchAll(/\bga\.event\(\s*"([a-z_]+)"\s*,\s*(\{[^}]*\})/g)) calls.push({ f: f.replace(/.*\/src\//, "src/"), name: m[1], keys: keysOf(m[2]) });
+    if (/gtag\(\s*"event"/.test(src) && !/\/app\/analytics\.js$/.test(f)) calls.push({ f, name: "gtag", keys: ["<direct gtag event>"] });
+  }
+  const names = calls.map((c) => c.name).sort().join();
+  check("controller privacy: the only analytics events are run_start and run_end, both sent from src/main.js", names === "run_end,run_start" && calls.every((c) => c.f === "src/main.js"), JSON.stringify(calls.map((c) => c.f + ":" + c.name)));
+  const ALLOWED = new Set(["mode", "room", "heat", "pact", "pace", "result", "score", "secs"]);
+  const bad = calls.flatMap((c) => c.keys.filter((k) => !ALLOWED.has(k) || PAD.test(k)).map((k) => c.name + "." + k));
+  check("controller privacy: every event param is a run fact (mode, room, heat, pact, pace, result, score, secs), none a controller field", bad.length === 0 && calls.every((c) => c.keys.length > 0), bad.join());
+  const asrc = readFileSync(new URL("../src/app/analytics.js", import.meta.url), "utf8");
+  const up = asrc.match(/gtag\("set",\s*"user_properties",\s*(\{[^;]*\})\);/);
+  check("controller privacy: the user properties in the source are days_played and look only", !!up && keysOf(up[1]).sort().join() === "days_played,look", up && up[1]);
+  const imps = [...asrc.matchAll(/^import\s*\{([^}]*)\}\s*from\s*"([^"]+)"/gm)].map((m) => m[2] + ":" + m[1].trim());
+  check("controller privacy: analytics.js reads no controller module (only the store and controls.js letterOf, the printed Y / N)", imps.join("|") === "./store.js:defaultStore|./controls.js:letterOf", imps.join("|"));
+  const D = mkDom(), st = mkStore();
+  const ga = mountAnalytics({ id: ID, store: st, win: D.win, doc: D.doc, loc: LOC, now: () => "NOW", days: 3, look: () => "3d", ...atMenu(SCREEN.MENU) });
+  ga.tick(); D.key("KeyY");
+  ga.event("run_start", { mode: "run", room: 1, heat: 0, pact: 0, pace: 0 });
+  const q = dl(D.win), props = q.filter((c) => c[0] === "set" && c[1] === "user_properties").map((c) => Object.keys(c[2]).sort().join());
+  const sent = q.flatMap((c) => c.filter((x) => x && typeof x === "object").flatMap((x) => Object.keys(x)));
+  check("controller privacy, live: one user_properties set, days_played and look only; nothing sent names a controller", props.join("|") === "days_played,look" && !sent.some((k) => /family|vendor|product|sw2|hid|usb|pad|controller|gamepad/i.test(k)), props.join("|") + " / " + sent.join());
 }
 
 console.log("\n  ANALYTICS RESULT: " + pass + " PASS / " + fail + " FAIL");
