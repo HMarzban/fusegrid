@@ -94,6 +94,16 @@ export const HUD_RES = Object.freeze({
 export const FIT_RES = Object.freeze({ d: [40, 163], p: [16, 388], l: [332, 16] });
 export const FIT_BASE = Object.freeze({ d: [40, 48], p: [16, 250], l: [332, 16] });
 
+/* REAL 3D's wider stage on d (owner pick D, 2026-11-14, veto 2 "REAL 3D near corners at the default zoom"): #gl's content box is gk x #c's
+   content box across (gk GL_WIDE, never past the viewport) and centred on it, so the cabinet rim's near corners land on the canvas while
+   the board keeps its pixel size: the wrapper widens the camera's frustum with the canvas (data-gk), rig and lens untouched. p and l keep
+   #c's box (gk 1; l's side gutters are the HUD's). gx: the CSS px #gl overhangs #c on each side. Only #gl: #c and #px never change. */
+export const GL_WIDE = 1.12;
+export function glBox(sw, bx, lay, W) {
+  const c0 = sw - 2 * bx, gk = lay === "d" && c0 > 0 ? Math.max(1, Math.min(GL_WIDE, (W - 2 * bx) / c0)) : 1, w = gk * c0 + 2 * bx;
+  return { gk, w, left: (sw - w) / 2, gx: (w - sw) / 2 };
+}
+
 export const stageCss = (s, cw, ch, bx = 0, by = 0) => Math.min((cw * s - 2 * bx) / cw, (ch * s - 2 * by) / ch);
 
 export function fitBox(W, H, touch, cw, ch, hud) {
@@ -139,7 +149,7 @@ export function hudGeo(W, H, cw, ch, lay, game) {
   if (lay === "d") {
     const D = HUD_RES.d, T = D.tip, sy = Math.max(0, (H - D.top - sh - D.bot) / 2) + D.top, tx = sx + sw + T.gap, tw = Math.min(T.max, W - T.edge - tx);
     const pt = sy - D.top + D.air + D.ring;
-    return { lay, s, stage: R(sx, sy, sw, sh), plate: R(sx, pt, sw, D.box), bar: R(sx, sy + sh + D.gap, sw, D.bar),
+    return { lay, s, gx: glBox(sw, 1, lay, W).gx, stage: R(sx, sy, sw, sh), plate: R(sx, pt, sw, D.box), bar: R(sx, sy + sh + D.gap, sw, D.bar),
       tip: tw >= T.min ? { x: tx, w: tw, y0: pt, y1: Math.min(sy + sh, H - T.card) } : null };
   }
   if (lay === "p") {
@@ -251,7 +261,10 @@ export function mountFit(canvas) {
     if (typeof document === "undefined") return;
     const gl = document.getElementById && document.getElementById("gl"), px = document.getElementById && document.getElementById("px");
     if (gl) {
-      gl.style.width = canvas.style.width;
+      const G = glBox(canvas.width * s, bx, lay, window.innerWidth);
+      if (G.gk > 1) { gl.style.width = G.w + "px"; gl.style.left = G.left + "px"; }
+      else { gl.style.width = canvas.style.width; if (gl.style.left) gl.style.left = ""; }
+      if (gl.dataset) { if (G.gk > 1) gl.dataset.gk = String(G.gk); else delete gl.dataset.gk; }
       gl.style.height = canvas.style.height;
     }
     const body = document.body, tp = document.getElementById && document.getElementById("touchpad");

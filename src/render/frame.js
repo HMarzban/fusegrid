@@ -6,7 +6,8 @@
                            2x into an offscreen layer (one drawImage per frame);
                            with no canvas factory (Node) it paints straight.
      wellPx(c, level)      PIXEL: the same read in whole art px, stepped alpha.
-     stageGlow(el, level)  a soft biome glow on the canvas box-shadow.
+     stageGlow(el, level)  a soft biome glow on the canvas box-shadow (level null
+                           takes a glow it put back off: REAL 3D's #gl off d).
      stageBack(el, level)  REAL 3D: the stage behind the rim, as CSS.
    Colours are the biome's own slots plus black alpha: lip = wallHi, glow =
    brickA (ICE bg0). Light is top-left everywhere. The HUD is off the board
@@ -99,6 +100,7 @@ const GLOW = new WeakMap();
 const RING = "0 0 0 4px #0a0e18";
 export function stageGlow(el, level) {
   if (!el || !el.style) return;
+  if (level == null) { if (GLOW.has(el)) { GLOW.delete(el); el.style.boxShadow = ""; } return; }
   const k = bio(level).name;
   if (GLOW.get(el) === k) return;
   GLOW.set(el, k);

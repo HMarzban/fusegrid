@@ -46,12 +46,16 @@ const clock=()=>typeof performance!=="undefined"&&performance.now?performance.no
    re-read every frame (the wheel dolly and shake move it). Pure over the
    camera; refreshes matrixWorld itself, since stub mode never runs
    gl.render, unless held (the pickup labels refresh once per frame and then
-   project every box through the held matrix). */
+   project every box through the held matrix). The camera's frame may be
+   wider than the board (the desktop stage, fit.js glBox: Wf = W x gk, centred
+   on #c), so ndc maps to that frame and back into #c's box: a board point
+   lands on the same overlay px at every gk. */
 const PV=new THREE.Vector3();
 export function projBoard(camera,bx,by,h=0,held){
   if(!held)camera.updateMatrixWorld();
   PV.set(bx-W/2,h,by-H/2).project(camera);
-  return {x:(PV.x+1)*W/2,y:(1-PV.y)*H/2};
+  const Wf=camera.view&&camera.view.enabled?camera.view.fullWidth:camera.aspect*H;
+  return {x:(PV.x+1)*Wf/2-(Wf-W)/2,y:(1-PV.y)*H/2};
 }
 
 function makeOverlayCtx(canvas){
@@ -107,6 +111,16 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   const scene3=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(CAM_FOV,W/H,1,3000);
   camera.setViewOffset(W,H,0,-VIEW_DY,W,H);
+  /* the desktop stage (owner pick D, 2026-11-14): fit.js writes #gl's data-gk
+     (its content box is gk x #c's, centred on it); the frame and the drawing
+     buffer widen with it, the vertical lens and the rig never move, so the
+     board keeps its pixel size and the rim's near corners land on screen */
+  let gk=1;
+  const gkOf=()=>{ const v=glCanvas&&glCanvas.dataset?+glCanvas.dataset.gk:1; return v>1&&isFinite(v)?v:1; };
+  function widen(){ const k=gkOf(); if(k===gk)return;
+    gk=k; camera.setViewOffset(W*gk,H,0,-VIEW_DY,W*gk,H);
+    if(gl)gl.setSize(W*gk,H,false);
+    inv=true; if(active)stage(); }
   /* S3: fx-store particles ride the scene ROOT (not sc.group) so level
      rebuilds never orphan live bursts; syncFx wipes them on world change. */
   const fxp=createParticles();
@@ -165,8 +179,9 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   const unpin=()=>{ const l=gl&&gl.info&&gl.info.programs; if(l)pins.release(l); };
   const aclock=ambientClock();
   /* the shared side of a scene: the stage's CSS background and glow (#gl,
-     #c), only once activated (v202 swap on ready) */
-  function stage(){ if(sc){ stageBack(glCanvas,sc.level); stageGlow(overlayCanvas,sc.level); } }
+     #c), only once activated (v202 swap on ready). On the wider desktop stage
+     #gl wears the glow too (index.html drops #c's frame while #gl shows) */
+  function stage(){ if(sc){ stageBack(glCanvas,sc.level); stageGlow(overlayCanvas,sc.level); stageGlow(glCanvas,gk>1?sc.level:null); } }
   function rebuild(world){
     if(sc){ scene3.remove(sc.group); disposeGroup(sc.group); }
     if(repin){ repin=false; unpin(); }
@@ -347,6 +362,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
 
   function render(world, dt, o){
     if(!world)return;
+    widen();
     if(!active)activate();
     const paused=world.state==="PAUSE", ev=world.events.length>0;
     if(world!==lastW||world.time<wT-1e-9){ skew=0; pzT=null; }
@@ -414,10 +430,10 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
       dropTwin(twin); }
     if(draw)fxp.update(getFx());
     if(live&&draw){
-      const wantW=Math.floor(W*dprUsed), wantH=Math.floor(H*dprUsed);
+      const wantW=Math.floor(W*gk*dprUsed), wantH=Math.floor(H*dprUsed);
       if(gl.domElement.width!==wantW||gl.domElement.height!==wantH){
-        gl.setSize(W,H,false);
-        camera.aspect=W/H; camera.updateProjectionMatrix();
+        gl.setSize(W*gk,H,false);
+        camera.setViewOffset(W*gk,H,0,-VIEW_DY,W*gk,H);
        }
       if(armed){ gl.shadowMap.needsUpdate=shadowNeed; if(shadowNeed&&gl.shadowMap.enabled)shadowUpdates++; }
       gl.render(scene3,camera);
